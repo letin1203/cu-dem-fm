@@ -1,0 +1,191 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(cuid())
+  username  String   @unique
+  email     String   @unique
+  password  String
+  role      String   @default("USER") // "ADMIN", "MOD", "USER"
+  isActive  Boolean  @default(true)
+  lastLogin DateTime?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relationships
+  player   Player? @relation(fields: [playerId], references: [id])
+  playerId String? @unique
+
+  @@map("users")
+}
+
+model Player {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  position    String
+  yearOfBirth Int
+  tier        Int      @default(1)
+  money       Int      @default(0)
+  avatar      String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relationships
+  team                    Team?                        @relation(fields: [teamId], references: [id])
+  teamId                  String?
+  user                    User?
+  stats                   PlayerStats?
+  matchEvents             MatchEvent[]
+  tournamentAttendances   TournamentPlayerAttendance[]
+
+  @@map("players")
+}
+
+model PlayerStats {
+  id            String @id @default(cuid())
+  gamesPlayed   Int    @default(0)
+  goals         Int    @default(0)
+  assists       Int    @default(0)
+  yellowCards   Int    @default(0)
+  redCards      Int    @default(0)
+  minutesPlayed Int    @default(0)
+
+  // Relationships
+  player   Player @relation(fields: [playerId], references: [id], onDelete: Cascade)
+  playerId String @unique
+
+  @@map("player_stats")
+}
+
+model Team {
+  id      String   @id @default(cuid())
+  name    String   @unique
+  logo    String?
+  founded DateTime
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relationships
+  players         Player[]
+  stats           TeamStats?
+  tournaments     TournamentTeam[]
+  homeMatches     Match[]          @relation("HomeTeam")
+  awayMatches     Match[]          @relation("AwayTeam")
+  wonTournaments  Tournament[]     @relation("TournamentWinner")
+
+  @@map("teams")
+}
+
+model TeamStats {
+  id           String @id @default(cuid())
+  gamesPlayed  Int    @default(0)
+  wins         Int    @default(0)
+  draws        Int    @default(0)
+  losses       Int    @default(0)
+  goalsFor     Int    @default(0)
+  goalsAgainst Int    @default(0)
+  points       Int    @default(0)
+
+  // Relationships
+  team   Team   @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  teamId String @unique
+
+  @@map("team_stats")
+}
+
+model Tournament {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  type      String   // "LEAGUE", "KNOCKOUT", "GROUP", "WEEKLY"
+  status    String   @default("UPCOMING") // "UPCOMING", "ONGOING", "COMPLETED"
+  startDate DateTime
+  endDate   DateTime?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relationships
+  teams              TournamentTeam[]
+  matches            Match[]
+  winner             Team?                    @relation("TournamentWinner", fields: [winnerId], references: [id])
+  winnerId           String?
+  playerAttendances  TournamentPlayerAttendance[]
+
+  @@map("tournaments")
+}
+
+model TournamentPlayerAttendance {
+  id           String   @id @default(cuid())
+  status       String   @default("NULL") // "NULL", "NOT_ATTEND", "ATTEND"
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  // Relationships
+  tournament   Tournament @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+  tournamentId String
+  player       Player     @relation(fields: [playerId], references: [id], onDelete: Cascade)
+  playerId     String
+
+  @@unique([tournamentId, playerId])
+  @@map("tournament_player_attendances")
+}
+
+model TournamentTeam {
+  // Relationships
+  tournament   Tournament @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+  tournamentId String
+  team         Team       @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  teamId       String
+
+  @@id([tournamentId, teamId])
+  @@map("tournament_teams")
+}
+
+model Match {
+  id            String   @id @default(cuid())
+  homeScore     Int?
+  awayScore     Int?
+  status        String   @default("SCHEDULED") // "SCHEDULED", "LIVE", "COMPLETED", "POSTPONED"
+  scheduledDate DateTime
+  venue         String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  // Relationships
+  tournament   Tournament   @relation(fields: [tournamentId], references: [id])
+  tournamentId String
+  homeTeam     Team         @relation("HomeTeam", fields: [homeTeamId], references: [id])
+  homeTeamId   String
+  awayTeam     Team         @relation("AwayTeam", fields: [awayTeamId], references: [id])
+  awayTeamId   String
+  events       MatchEvent[]
+
+  @@map("matches")
+}
+
+model MatchEvent {
+  id          String   @id @default(cuid())
+  type        String   // "GOAL", "OWN_GOAL", "YELLOW_CARD", "RED_CARD", "SUBSTITUTION"
+  minute      Int
+  team        String   // "HOME", "AWAY"
+  description String?
+  createdAt   DateTime @default(now())
+
+  // Relationships
+  match    Match  @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  matchId  String
+  player   Player @relation(fields: [playerId], references: [id])
+  playerId String
+
+  @@map("match_events")
+}
+
+

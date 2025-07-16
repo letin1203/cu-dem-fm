@@ -48,7 +48,12 @@ export const authenticate = async (
       return;
     }
 
-    req.user = user;
+    req.user = {
+      id: user.id,
+      username: user.username,
+      email: user.email,
+      role: user.role as 'ADMIN' | 'MOD' | 'USER',
+    };
     next();
   } catch (error) {
     res.status(401).json({

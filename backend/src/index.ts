@@ -39,11 +39,25 @@ const limiter = rateLimit({
 });
 
 // Middleware
-app.use(helmet());
-app.use(cors({
-  origin: process.env.FRONTEND_URL || 'http://localhost:5173',
-  credentials: true,
+app.use(helmet({
+  crossOriginResourcePolicy: { policy: "cross-origin" }
 }));
+
+// CORS configuration
+const corsOptions = {
+  origin: process.env.CORS_ORIGIN || process.env.FRONTEND_URL || 'http://localhost:5173',
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+  exposedHeaders: ['X-Total-Count'],
+  optionsSuccessStatus: 200 // some legacy browsers (IE11, various SmartTVs) choke on 204
+};
+
+app.use(cors(corsOptions));
+
+// Handle preflight requests
+app.options('*', cors(corsOptions));
+
 app.use(compression());
 app.use(morgan('combined'));
 app.use(limiter);
@@ -76,7 +90,10 @@ app.use(errorHandler);
 app.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);
   console.log(`📱 Environment: ${process.env.NODE_ENV || 'development'}`);
-  console.log(`🔗 Frontend URL: ${process.env.FRONTEND_URL || 'http://localhost:5173'}`);
+  console.log(`🔗 Frontend URL: ${process.env.CORS_ORIGIN || process.env.FRONTEND_URL || 'http://localhost:5173'}`);
+  console.log(`🌐 CORS Origin: ${process.env.CORS_ORIGIN || 'Not set'}`);
+  console.log(`🔒 JWT Secret: ${process.env.JWT_SECRET ? '***configured***' : 'Not set'}`);
+  console.log(`🗄️ Database: ${process.env.DATABASE_URL ? '***connected***' : 'Not configured'}`);
 });
 
 export default app;

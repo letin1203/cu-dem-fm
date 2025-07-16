@@ -262,7 +262,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useTournamentsStore } from '../stores/tournaments'
 import { useTeamsStore } from '../stores/teams'
 import { useAuthStore } from '../stores/auth'
@@ -281,6 +281,8 @@ const showAddForm = ref(false)
 const editingTournament = ref<Tournament | null>(null)
 const selectedTournament = ref<Tournament | null>(null)
 const selectedTeamId = ref('')
+
+// Additional Cost Modal variables
 
 // Helper function to safely format dates
 const formatDate = (date: string | Date | null | undefined): string => {

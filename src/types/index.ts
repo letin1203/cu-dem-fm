@@ -79,6 +79,24 @@ export interface TournamentPlayerAttendance {
   updatedAt: string | Date
 }
 
+export interface SystemSettings {
+  id: string
+  stadiumCost: number
+  sponsorMoney: number
+  clubFund: number
+  createdAt: string | Date
+  updatedAt: string | Date
+}
+
+export interface AdditionalCost {
+  id: string
+  description: string
+  amount: number
+  tournamentId: string
+  createdAt: string | Date
+  updatedAt: string | Date
+}
+
 export interface Match {
   id: string
   tournamentId: string

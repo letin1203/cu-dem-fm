@@ -1,4 +1,5 @@
 import { Router, Response } from 'express';
+import bcrypt from 'bcryptjs';
 import { prisma } from '../lib/prisma';
 import { updateUserSchema, paginationSchema } from '../schemas/validation';
 import { authenticate, authorize, AuthenticatedRequest } from '../middleware/auth';
@@ -70,6 +71,116 @@ router.get('/', authenticate, authorize(['ADMIN']), async (req: AuthenticatedReq
     res.status(400).json({
       success: false,
       error: error instanceof Error ? error.message : 'Invalid query parameters',
+    });
+  }
+});
+
+// Create user (Admin only)
+router.post('/', authenticate, authorize(['ADMIN']), async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  try {
+    const { username, email, password, role, playerId, isActive } = req.body;
+
+    if (!username || !password) {
+      res.status(400).json({
+        success: false,
+        error: 'Username and password are required',
+      });
+      return;
+    }
+
+    // Auto-generate email if not provided
+    const userEmail = email || `${username}@football.com`;
+
+    // Check if user already exists
+    const existingUser = await prisma.user.findFirst({
+      where: {
+        OR: [
+          { username },
+          { email: userEmail },
+        ],
+      },
+    });
+
+    if (existingUser) {
+      res.status(400).json({
+        success: false,
+        error: 'User with this username or email already exists',
+      });
+      return;
+    }
+
+    // Validate player assignment if provided
+    if (playerId) {
+      const player = await prisma.player.findUnique({
+        where: { id: playerId },
+        include: { user: true },
+      });
+
+      if (!player) {
+        res.status(400).json({
+          success: false,
+          error: 'Player not found',
+        });
+        return;
+      }
+
+      if (player.user) {
+        res.status(400).json({
+          success: false,
+          error: 'Player is already linked to another user',
+        });
+        return;
+      }
+    }
+
+    const hashedPassword = await bcrypt.hash(password, 12);
+
+    const user = await prisma.user.create({
+      data: {
+        username,
+        email: userEmail,
+        password: hashedPassword,
+        role: role || 'USER',
+        isActive: isActive !== undefined ? isActive : true,
+        playerId: playerId || undefined,
+      },
+      select: {
+        id: true,
+        username: true,
+        email: true,
+        role: true,
+        isActive: true,
+        lastLogin: true,
+        createdAt: true,
+        updatedAt: true,
+        player: {
+          select: {
+            id: true,
+            name: true,
+            position: true,
+            tier: true,
+            avatar: true,
+            team: {
+              select: {
+                id: true,
+                name: true,
+                logo: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    res.status(201).json({
+      success: true,
+      data: user,
+      message: 'User created successfully',
+    });
+  } catch (error) {
+    res.status(400).json({
+      success: false,
+      error: error instanceof Error ? error.message : 'Invalid user data',
     });
   }
 });
@@ -206,6 +317,34 @@ router.put('/:id', authenticate, async (req: AuthenticatedRequest, res: Response
           error: 'Username or email already exists',
         });
         return;
+      }
+    }
+
+    // Validate player assignment if provided
+    if (updateData.playerId !== undefined) {
+      if (updateData.playerId) {
+        // Check if player exists
+        const player = await prisma.player.findUnique({
+          where: { id: updateData.playerId },
+          include: { user: true },
+        });
+
+        if (!player) {
+          res.status(400).json({
+            success: false,
+            error: 'Player not found',
+          });
+          return;
+        }
+
+        // Check if player is already linked to another user
+        if (player.user && player.user.id !== id) {
+          res.status(400).json({
+            success: false,
+            error: 'Player is already linked to another user',
+          });
+          return;
+        }
       }
     }
 
@@ -347,6 +486,121 @@ router.patch('/:id/status', authenticate, authorize(['ADMIN']), async (req: Auth
     res.status(500).json({
       success: false,
       error: 'Failed to update user status',
+    });
+  }
+});
+
+// Create bulk user+player (Admin only)
+router.post('/bulk-user-player', authenticate, authorize(['ADMIN']), async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  try {
+    // Generate random names
+    const firstNames = ['Alex', 'Jordan', 'Taylor', 'Cameron', 'Morgan', 'Casey', 'Riley', 'Drew', 'Sage', 'Rowan'];
+    const lastNames = ['Smith', 'Johnson', 'Williams', 'Brown', 'Jones', 'Garcia', 'Miller', 'Davis', 'Rodriguez', 'Martinez'];
+    
+    const randomFirstName = firstNames[Math.floor(Math.random() * firstNames.length)];
+    const randomLastName = lastNames[Math.floor(Math.random() * lastNames.length)];
+    const playerName = `${randomFirstName} ${randomLastName}`;
+    
+    // Generate random username
+    const randomNum = Math.floor(Math.random() * 10000);
+    const username = `user${randomNum}`;
+    
+    // Check if username already exists
+    const existingUser = await prisma.user.findUnique({
+      where: { username },
+    });
+    
+    if (existingUser) {
+      res.status(400).json({
+        success: false,
+        error: 'Generated username already exists. Please try again.',
+      });
+      return;
+    }
+    
+    // Check if player name already exists
+    const existingPlayer = await prisma.player.findUnique({
+      where: { name: playerName },
+    });
+    
+    if (existingPlayer) {
+      res.status(400).json({
+        success: false,
+        error: 'Generated player name already exists. Please try again.',
+      });
+      return;
+    }
+
+    // Create player first
+    const player = await prisma.player.create({
+      data: {
+        name: playerName,
+        position: 'Forward',
+        yearOfBirth: 1990,
+        tier: 5,
+        money: 0,
+      },
+    });
+
+    // Create user linked to the player
+    const hashedPassword = await bcrypt.hash('123456', 12);
+    const user = await prisma.user.create({
+      data: {
+        username,
+        email: `${username}@football.com`,
+        password: hashedPassword,
+        role: 'USER',
+        isActive: true,
+        playerId: player.id,
+      },
+      select: {
+        id: true,
+        username: true,
+        email: true,
+        role: true,
+        isActive: true,
+        lastLogin: true,
+        createdAt: true,
+        updatedAt: true,
+        player: {
+          select: {
+            id: true,
+            name: true,
+            position: true,
+            tier: true,
+            avatar: true,
+            team: {
+              select: {
+                id: true,
+                name: true,
+                logo: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    res.status(201).json({
+      success: true,
+      data: {
+        user,
+        player: {
+          id: player.id,
+          name: player.name,
+          position: player.position,
+          yearOfBirth: player.yearOfBirth,
+          tier: player.tier,
+          money: player.money,
+        },
+      },
+      message: 'User and player created successfully',
+    });
+  } catch (error) {
+    console.error('Bulk creation error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to create user and player',
     });
   }
 });

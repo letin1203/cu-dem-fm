@@ -51,10 +51,13 @@
              :class="getCardBackgroundClass(ongoingTournament.id)">
           <div class="flex flex-col space-y-4">
             <!-- Tournament Info -->
-            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-3 sm:space-y-0">
-              <div>
-                <h3 class="text-lg font-semibold text-gray-900">{{ ongoingTournament.name }}</h3>
-                <div class="flex flex-wrap items-center gap-2 mt-1 text-sm text-gray-600">
+            <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between space-y-3 sm:space-y-0">
+              <div class="flex-1">
+                <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between">
+                  <h3 class="text-lg font-semibold text-gray-900">{{ ongoingTournament.name }}</h3>
+                </div>
+                <!-- Badge and Date/Time moved below title -->
+                <div class="flex flex-wrap items-center gap-2 mt-2 text-sm text-gray-600">
                   <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium"
                         :class="getStatusBadge(ongoingTournament.status)">
                     {{ ongoingTournament.status }}
@@ -62,26 +65,46 @@
                   <span>{{ formatDate(ongoingTournament.startDate) }}</span>
                   <span>{{ formatTime(ongoingTournament.startDate) }}</span>
                 </div>
-              </div>
-              <div class="flex items-center space-x-2">
-                <button
-                  v-if="authStore.hasPermission('canEditTournaments')"
-                  @click="editTournament(ongoingTournament)"
-                  class="text-blue-600 hover:text-blue-800"
-                >
-                  <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                  </svg>
-                </button>
-                <button
-                  v-if="authStore.hasPermission('canDeleteTournaments')"
-                  @click="deleteTournament(ongoingTournament.id)"
-                  class="text-red-600 hover:text-red-800"
-                >
-                  <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                  </svg>
-                </button>
+                <!-- Action buttons moved to top right -->
+                  <div class="flex items-center justify-end space-x-2 mt-2 sm:mt-0">
+                    <button
+                      v-if="authStore.hasRole('admin')"
+                      @click="openAdditionalCostModal(ongoingTournament)"
+                      class="text-green-600 hover:text-green-800"
+                      title="Manage Additional Costs"
+                    >
+                      <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1" />
+                      </svg>
+                    </button>
+                    <button
+                      v-if="authStore.hasPermission('canDeleteTournaments')"
+                      @click="deleteTournament(ongoingTournament.id)"
+                      class="text-red-600 hover:text-red-800"
+                    >
+                      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                      </svg>
+                    </button>
+                  </div>
+                <!-- Financial Information -->
+                <div v-if="systemStore.currentSettings" class="flex flex-wrap items-center gap-4 mt-2 text-sm">
+                  <span class="text-green-600 font-medium">
+                    💰 Sponsor: ${{ systemStore.currentSettings.sponsorMoney.toLocaleString() }}
+                  </span>
+                  <span class="text-red-600 font-medium">
+                    🏟️ Stadium: ${{ systemStore.currentSettings.stadiumCost.toLocaleString() }}
+                  </span>
+                  <span class="text-orange-600 font-medium">
+                    💸 Additional: ${{ getTournamentAdditionalCostsTotal(ongoingTournament.id).toLocaleString() }}
+                  </span>
+                  <span class="text-blue-600 font-medium">
+                    📊 Net: ${{ calculateTournamentNet(ongoingTournament.id).toLocaleString() }}
+                  </span>
+                  <span v-if="getAttendanceStats(ongoingTournament.id)?.attendingCount" class="text-purple-600 font-medium">
+                    👥 Est. Cost per Player: ${{ calculateCostPerPlayer(ongoingTournament.id).toLocaleString() }}
+                  </span>
+                </div>
               </div>
             </div>
             
@@ -201,18 +224,27 @@
             
             <!-- Random Team Button (Admin/Mod only) -->
             <div v-if="authStore.hasPermission('canEditTournaments') && getTournamentTeams(ongoingTournament).length === 0" class="flex flex-col items-center pt-2 border-t border-gray-200">
-              <button
-                @click="generateRandomTeams(ongoingTournament.id)"
-                :disabled="!canGenerateTeams(ongoingTournament.id) || teamGenerationLoading"
-                class="px-6 py-2 rounded-lg font-medium transition-colors duration-200"
-                :class="[
-                  !canGenerateTeams(ongoingTournament.id) || teamGenerationLoading
-                    ? 'opacity-50 cursor-not-allowed bg-gray-400 text-white' 
-                    : 'bg-purple-600 text-white hover:bg-purple-700 hover:shadow-md'
-                ]"
-              >
-                {{ teamGenerationLoading ? 'Generating...' : 'Random Team' }}
-              </button>
+              <div class="flex space-x-3">
+                <button
+                  @click="generateRandomTeams(ongoingTournament.id)"
+                  :disabled="!canGenerateTeams(ongoingTournament.id) || teamGenerationLoading"
+                  class="px-6 py-2 rounded-lg font-medium transition-colors duration-200"
+                  :class="[
+                    !canGenerateTeams(ongoingTournament.id) || teamGenerationLoading
+                      ? 'opacity-50 cursor-not-allowed bg-gray-400 text-white' 
+                      : 'bg-purple-600 text-white hover:bg-purple-700 hover:shadow-md'
+                  ]"
+                >
+                  {{ teamGenerationLoading ? 'Generating...' : 'Random Team' }}
+                </button>
+                <button
+                  v-if="authStore.hasRole('admin')"
+                  @click="endTournament(ongoingTournament.id)"
+                  class="px-6 py-2 rounded-lg font-medium bg-red-600 text-white hover:bg-red-700 hover:shadow-md transition-colors duration-200"
+                >
+                  End Tournament
+                </button>
+              </div>
               <div class="text-xs text-gray-500 mt-1 text-center">
                 <span v-if="!canGenerateTeams(ongoingTournament.id)">
                   Need {{ 10 - (getAttendanceStats(ongoingTournament.id)?.attendingCount || 0) }} more attending players
@@ -236,43 +268,171 @@
           <div
             v-for="tournament in oldTournaments"
             :key="tournament.id"
-            class="card hover:shadow-lg transition-shadow"
+            class="card transition-colors duration-200"
+            :class="getCardBackgroundClass(tournament.id)"
           >
-            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-3 sm:space-y-0">
-              <div>
-                <h3 class="text-lg font-semibold text-gray-900">{{ tournament.name }}</h3>
-                <div class="flex flex-wrap items-center gap-2 mt-1 text-sm text-gray-600">
-                  <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium"
-                        :class="getStatusBadge(tournament.status)">
-                    {{ tournament.status }}
-                  </span>
-                  <span>{{ formatDate(tournament.startDate) }}</span>
-                  <span>{{ formatTime(tournament.startDate) }}</span>
-                  <span>{{ tournament.teams.length }} teams</span>
-                  <span v-if="tournament.winner" class="text-yellow-600 font-medium">
-                    🏆 {{ tournament.winner.name }}
-                  </span>
+            <div class="flex flex-col space-y-4">
+              <!-- Tournament Info -->
+              <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between space-y-3 sm:space-y-0">
+                <div class="flex-1">
+                  <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between">
+                    <h3 class="text-lg font-semibold text-gray-900">{{ tournament.name }}</h3>
+                    <!-- Action buttons moved to top right - hide money icon if no teams -->
+                    <div class="flex items-center space-x-2 mt-2 sm:mt-0">
+                      <button
+                        v-if="authStore.hasRole('admin') && getTournamentTeams(tournament).length > 0"
+                        @click="openAdditionalCostModal(tournament)"
+                        class="text-green-600 hover:text-green-800"
+                        title="Manage Additional Costs"
+                      >
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1" />
+                        </svg>
+                      </button>
+                      <button
+                        v-if="authStore.hasPermission('canDeleteTournaments')"
+                        @click="deleteTournament(tournament.id)"
+                        class="text-red-600 hover:text-red-800"
+                      >
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        </svg>
+                      </button>
+                    </div>
+                  </div>
+                  <!-- Badge and Date/Time moved below title -->
+                  <div class="flex flex-wrap items-center gap-2 mt-2 text-sm text-gray-600">
+                    <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium"
+                          :class="getStatusBadge(tournament.status)">
+                      {{ tournament.status }}
+                    </span>
+                    <span>{{ formatDate(tournament.startDate) }}</span>
+                    <span>{{ formatTime(tournament.startDate) }}</span>
+                    <span v-if="tournament.winner" class="text-yellow-600 font-medium">
+                      🏆 {{ tournament.winner.name }}
+                    </span>
+                  </div>
+                  <!-- Financial Information or Postponed Status -->
+                  <div v-if="getTournamentTeams(tournament).length > 0" class="mt-2">
+                    <div v-if="systemStore.currentSettings" class="flex flex-wrap items-center gap-4 text-sm">
+                      <span class="text-green-600 font-medium">
+                        💰 Sponsor: ${{ systemStore.currentSettings.sponsorMoney.toLocaleString() }}
+                      </span>
+                      <span class="text-red-600 font-medium">
+                        🏟️ Stadium: ${{ systemStore.currentSettings.stadiumCost.toLocaleString() }}
+                      </span>
+                      <span class="text-orange-600 font-medium">
+                        💸 Additional: ${{ getTournamentAdditionalCostsTotal(tournament.id).toLocaleString() }}
+                      </span>
+                      <span class="text-blue-600 font-medium">
+                        📊 Net: ${{ calculateTournamentNet(tournament.id).toLocaleString() }}
+                      </span>
+                      <span v-if="getAttendanceStats(tournament.id)?.attendingCount" class="text-purple-600 font-medium">
+                        👥 Est. Cost per Player: ${{ calculateCostPerPlayer(tournament.id).toLocaleString() }}
+                      </span>
+                    </div>
+                  </div>
+                  <div v-else class="mt-2">
+                    <div class="text-red-600 font-bold text-2xl">
+                      POSTPONED
+                    </div>
+                  </div>
                 </div>
               </div>
-              <div class="flex items-center space-x-2">
-                <button
-                  v-if="authStore.hasPermission('canEditTournaments')"
-                  @click="editTournament(tournament)"
-                  class="text-blue-600 hover:text-blue-800"
-                >
-                  <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+              
+              <!-- Attendance Progress Bar -->
+              <div v-if="attendanceStats.has(tournament.id)" class="mt-4 p-4 bg-gradient-to-r from-blue-50 to-green-50 rounded-lg border border-gray-200">
+                <div class="flex justify-between items-center mb-3">
+                  <span class="text-sm font-semibold text-gray-800">Player Attendance</span>
+                  <span class="text-sm font-medium text-gray-700 bg-white px-2 py-1 rounded-full">
+                    {{ getAttendanceStats(tournament.id)?.attendingCount || 0 }} / {{ getAttendanceStats(tournament.id)?.totalPlayers || 0 }}
+                  </span>
+                </div>
+                <div class="w-full bg-gray-200 rounded-full h-4 mb-3 shadow-inner">
+                  <div 
+                    class="bg-gradient-to-r from-green-500 to-green-600 h-4 rounded-full transition-all duration-700 ease-out shadow-sm relative overflow-hidden"
+                    :style="{ width: `${getAttendancePercentage(tournament.id)}%` }"
+                  >
+                    <div class="absolute inset-0 bg-white/20 animate-pulse"></div>
+                  </div>
+                </div>
+                <div class="grid grid-cols-3 gap-2 text-xs">
+                  <button 
+                    @click="openAttendanceModal(tournament.id, 'attending')"
+                    class="text-center p-2 bg-green-100 rounded-lg hover:bg-green-200 transition-colors cursor-pointer"
+                  >
+                    <div class="font-semibold text-green-800">{{ getAttendanceStats(tournament.id)?.attendingCount || 0 }}</div>
+                    <div class="text-green-600">Attending</div>
+                  </button>
+                  <button 
+                    @click="openAttendanceModal(tournament.id, 'not-attending')"
+                    class="text-center p-2 bg-red-100 rounded-lg hover:bg-red-200 transition-colors cursor-pointer"
+                  >
+                    <div class="font-semibold text-red-800">{{ getAttendanceStats(tournament.id)?.notAttendingCount || 0 }}</div>
+                    <div class="text-red-600">Not Attending</div>
+                  </button>
+                  <div class="text-center p-2 bg-blue-100 rounded-lg">
+                    <div class="font-semibold text-blue-800">{{ getAttendanceStats(tournament.id)?.responseRate || 0 }}%</div>
+                    <div class="text-blue-600">Response Rate</div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Tournament Teams Display -->
+              <div v-if="getTournamentTeams(tournament).length > 0" class="mt-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
+                <h4 class="text-lg font-semibold text-gray-800 mb-3 flex items-center">
+                  <svg class="w-5 h-5 mr-2 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.196-2.196M5 20h5v-2a3 3 0 015.196-2.196M12 4v.01M12 4a7 7 0 018 7c0 2-1 3-1 3s-1 1-1 3v2H8v-2s-1-1-1-3c0-2 1-3 1-3a7 7 0 018-7z" />
                   </svg>
-                </button>
-                <button
-                  v-if="authStore.hasPermission('canDeleteTournaments')"
-                  @click="deleteTournament(tournament.id)"
-                  class="text-red-600 hover:text-red-800"
-                >
-                  <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                  </svg>
-                </button>
+                  Tournament Teams ({{ getTournamentTeams(tournament).length }})
+                </h4>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                  <div
+                    v-for="team in getTournamentTeams(tournament)"
+                    :key="team.id"
+                    class="bg-white rounded-lg p-4 border border-gray-200 hover:shadow-md transition-shadow"
+                  >
+                    <!-- Team Header -->
+                    <div class="flex items-center mb-3">
+                      <div class="w-10 h-10 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full flex items-center justify-center mr-3">
+                        <span class="text-white font-bold text-lg">{{ team.name.charAt(team.name.length - 1) }}</span>
+                      </div>
+                      <div>
+                        <h5 class="font-semibold text-gray-900">{{ team.name }}</h5>
+                        <p class="text-sm text-gray-600">{{ team.players?.length || 0 }} players</p>
+                      </div>
+                    </div>
+
+                    <!-- Team Players -->
+                    <div v-if="team.players && team.players.length > 0" class="space-y-2">
+                      <div
+                        v-for="player in team.players"
+                        :key="player.id"
+                        class="flex items-center justify-between p-2 bg-gray-50 rounded text-sm"
+                      >
+                        <div class="flex items-center">
+                          <div class="w-6 h-6 bg-gray-300 rounded-full flex items-center justify-center mr-2 text-xs font-medium">
+                            {{ player.name.charAt(0).toUpperCase() }}
+                          </div>
+                          <span class="font-medium text-gray-900">{{ player.name }}</span>
+                        </div>
+                        <div class="flex items-center text-gray-600">
+                          <span class="text-xs mr-1">{{ player.position }}</span>
+                          <span class="text-xs">T{{ player.tier }}</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <!-- Team Stats -->
+                    <div v-if="team.players && team.players.length > 0" class="mt-3 pt-3 border-t border-gray-200">
+                      <div class="flex justify-between text-xs text-gray-600">
+                        <span>Total Tier: {{ team.players.reduce((sum: number, p: any) => sum + p.tier, 0) }}</span>
+                        <span>Avg: {{ (team.players.reduce((sum: number, p: any) => sum + p.tier, 0) / team.players.length).toFixed(1) }}</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -377,6 +537,200 @@
       </div>
     </div>
   </div>
+
+  <!-- Additional Cost Modal -->
+  <div v-if="showAdditionalCostModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center z-50">
+    <div class="bg-white rounded-lg p-6 w-full max-w-md">
+      <div class="flex justify-between items-center mb-4">
+        <h2 class="text-lg font-semibold">Additional Costs</h2>
+        <button @click="closeAdditionalCostModal" class="text-gray-400 hover:text-gray-600">
+          ✕
+        </button>
+      </div>
+      
+      <!-- Add/Edit Cost Form -->
+      <form @submit.prevent="saveAdditionalCost" class="space-y-4 mb-6">
+        <div>
+          <label class="form-label">Description</label>
+          <input
+            v-model="additionalCostForm.description"
+            type="text"
+            required
+            minlength="3"
+            maxlength="100"
+            class="form-input"
+            :class="{ 'border-red-500': additionalCostForm.description.length > 0 && additionalCostForm.description.length < 3 }"
+            placeholder="Enter cost description (min 3 characters)"
+          >
+          <p v-if="additionalCostForm.description.length > 0 && additionalCostForm.description.length < 3" 
+             class="text-red-500 text-xs mt-1">
+            Description must be at least 3 characters long
+          </p>
+        </div>
+        
+        <div>
+          <label class="form-label">Amount</label>
+          <input
+            v-model.number="additionalCostForm.amount"
+            type="number"
+            required
+            min="0.01"
+            max="999999"
+            step="0.01"
+            class="form-input"
+            :class="{ 'border-red-500': additionalCostForm.amount <= 0 }"
+            placeholder="Enter amount (must be greater than 0)"
+          >
+          <p v-if="additionalCostForm.amount <= 0 && additionalCostForm.amount !== null" 
+             class="text-red-500 text-xs mt-1">
+            Amount must be greater than 0
+          </p>
+        </div>
+        
+        <button 
+          type="submit" 
+          :disabled="additionalCostLoading || additionalCostForm.description.trim().length < 3 || additionalCostForm.amount <= 0"
+          class="btn-primary w-full"
+          :class="{ 'opacity-50 cursor-not-allowed': additionalCostLoading }"
+        >
+          {{ additionalCostLoading ? (editingCostId ? 'Updating...' : 'Adding...') : (editingCostId ? 'Update Cost' : 'Add Cost') }}
+        </button>
+        <button 
+          v-if="editingCostId"
+          type="button"
+          @click="cancelEdit"
+          class="btn-secondary w-full mt-2"
+        >
+          Cancel Edit
+        </button>
+      </form>
+      
+      <!-- Additional Costs List -->
+      <div>
+        <h3 class="font-medium text-gray-900 mb-3">Current Additional Costs</h3>
+        <div v-if="currentAdditionalCosts.length === 0" class="text-gray-500 text-sm">
+          No additional costs added yet
+        </div>
+        <div v-else class="space-y-2">
+          <div
+            v-for="cost in currentAdditionalCosts"
+            :key="cost.id"
+            class="flex justify-between items-center p-3 bg-gray-50 rounded"
+          >
+            <div>
+              <div class="font-medium">{{ cost.description }}</div>
+              <div class="text-sm text-gray-500">${{ cost.amount.toLocaleString() }}</div>
+            </div>
+            <div class="flex space-x-2">
+              <button
+                @click="editAdditionalCost(cost)"
+                class="text-blue-600 hover:text-blue-800 text-sm"
+                title="Edit Cost"
+              >
+                Edit
+              </button>
+              <button
+                @click="deleteAdditionalCost(cost.id)"
+                class="text-red-600 hover:text-red-800 text-sm"
+                title="Delete Cost"
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Total -->
+        <div v-if="currentAdditionalCosts.length > 0" class="mt-4 pt-4 border-t">
+          <div class="flex justify-between font-semibold">
+            <span>Total Additional Costs:</span>
+            <span>${{ totalAdditionalCosts.toLocaleString() }}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- End Tournament Confirmation Modal -->
+  <div v-if="showEndTournamentModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50" @click="showEndTournamentModal = false">
+    <div class="bg-white rounded-lg p-6 max-w-md w-full" @click.stop>
+      <h3 class="text-lg font-semibold text-gray-900 mb-4">End Tournament</h3>
+      <p class="text-gray-600 mb-6">
+        Are you sure you want to end this tournament? This will mark it as COMPLETED and cannot be undone.
+      </p>
+      <div class="flex justify-end space-x-3">
+        <button
+          @click="showEndTournamentModal = false"
+          class="px-4 py-2 text-gray-600 hover:text-gray-800 transition-colors"
+        >
+          Cancel
+        </button>
+        <button
+          @click="confirmEndTournament"
+          class="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 transition-colors"
+        >
+          End Tournament
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Delete Tournament Confirmation Modal -->
+  <div v-if="showDeleteTournamentModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50" @click="showDeleteTournamentModal = false">
+    <div class="bg-white rounded-lg p-6 max-w-lg w-full" @click.stop>
+      <h3 class="text-lg font-semibold text-gray-900 mb-4">Delete Tournament</h3>
+      <div class="text-gray-600 mb-6">
+        <p class="mb-2">Are you sure you want to delete <strong>"{{ deleteTournamentData?.name }}"</strong>?</p>
+        <div v-if="deleteTournamentInfo" class="bg-red-50 p-3 rounded-lg">
+          <p class="font-medium text-red-800 mb-2">This will permanently remove:</p>
+          <ul class="text-red-700 text-sm space-y-1">
+            <li v-if="deleteTournamentInfo.teamCount > 0">• {{ deleteTournamentInfo.teamCount }} team assignments</li>
+            <li v-if="deleteTournamentInfo.attendanceCount > 0">• {{ deleteTournamentInfo.attendanceCount }} player attendance records</li>
+            <li v-if="deleteTournamentInfo.additionalCostCount > 0">• {{ deleteTournamentInfo.additionalCostCount }} additional cost entries</li>
+          </ul>
+          <p class="text-red-800 font-medium mt-2">This action cannot be undone.</p>
+        </div>
+      </div>
+      <div class="flex justify-end space-x-3">
+        <button
+          @click="showDeleteTournamentModal = false"
+          class="px-4 py-2 text-gray-600 hover:text-gray-800 transition-colors"
+        >
+          Cancel
+        </button>
+        <button
+          @click="confirmDeleteTournament"
+          class="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 transition-colors"
+        >
+          Delete Tournament
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Delete Additional Cost Confirmation Modal -->
+  <div v-if="showDeleteCostModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50" @click="showDeleteCostModal = false">
+    <div class="bg-white rounded-lg p-6 max-w-md w-full" @click.stop>
+      <h3 class="text-lg font-semibold text-gray-900 mb-4">Delete Additional Cost</h3>
+      <p class="text-gray-600 mb-6">
+        Are you sure you want to delete this additional cost? This action cannot be undone.
+      </p>
+      <div class="flex justify-end space-x-3">
+        <button
+          @click="showDeleteCostModal = false"
+          class="px-4 py-2 text-gray-600 hover:text-gray-800 transition-colors"
+        >
+          Cancel
+        </button>
+        <button
+          @click="confirmDeleteCost"
+          class="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 transition-colors"
+        >
+          Delete Cost
+        </button>
+      </div>
+    </div>
+  </div>
 </template>
 
 <script setup lang="ts">
@@ -385,6 +739,7 @@ import { useToast } from 'vue-toastification'
 import { useTournamentsStore } from '../stores/tournaments'
 import { useAuthStore } from '../stores/auth'
 import { useTeamsStore } from '../stores/teams'
+import { useSystemStore } from '../stores/system'
 import type { Tournament, CreateTournamentRequest, TournamentPlayerAttendance, TournamentAttendanceStats, TournamentAttendanceDetails } from '../types'
 import { apiClient } from '../api/client'
 
@@ -392,6 +747,7 @@ const toast = useToast()
 const tournamentsStore = useTournamentsStore()
 const authStore = useAuthStore()
 const teamsStore = useTeamsStore()
+const systemStore = useSystemStore()
 
 const loading = ref(false)
 const loadingMore = ref(false)
@@ -412,6 +768,62 @@ const attendanceModalLoading = ref(false)
 
 // Team generation
 const teamGenerationLoading = ref(false)
+
+// Additional Cost Modal variables
+const showAdditionalCostModal = ref(false)
+const selectedTournamentForCosts = ref<Tournament | null>(null)
+const additionalCostForm = ref({
+  description: '',
+  amount: 0
+})
+const editingCostId = ref<string | null>(null)
+const additionalCostLoading = ref(false)
+
+// Confirmation Modal variables
+const showEndTournamentModal = ref(false)
+const endTournamentId = ref<string | null>(null)
+
+const showDeleteTournamentModal = ref(false)
+const deleteTournamentData = ref<Tournament | null>(null)
+const deleteTournamentInfo = ref<{
+  teamCount: number
+  attendanceCount: number
+  additionalCostCount: number
+} | null>(null)
+
+const showDeleteCostModal = ref(false)
+const deleteCostId = ref<string | null>(null)
+
+// Computed properties for additional costs
+const currentAdditionalCosts = computed(() => systemStore.additionalCosts)
+const totalAdditionalCosts = computed(() => 
+  currentAdditionalCosts.value.reduce((total, cost) => total + cost.amount, 0)
+)
+
+// Helper functions for tournament-specific additional costs
+const getTournamentAdditionalCosts = (tournamentId: string) => {
+  return currentAdditionalCosts.value.filter(cost => cost.tournamentId === tournamentId)
+}
+
+const getTournamentAdditionalCostsTotal = (tournamentId: string) => {
+  return getTournamentAdditionalCosts(tournamentId).reduce((total, cost) => total + cost.amount, 0)
+}
+
+// Financial calculation functions
+const calculateTournamentNet = (tournamentId: string) => {
+  if (!systemStore.currentSettings) return 0
+  const sponsor = systemStore.currentSettings.sponsorMoney
+  const stadium = systemStore.currentSettings.stadiumCost
+  const additionalCosts = getTournamentAdditionalCostsTotal(tournamentId)
+  return sponsor - stadium - additionalCosts
+}
+
+const calculateCostPerPlayer = (tournamentId: string) => {
+  const net = calculateTournamentNet(tournamentId)
+  const attendingCount = getAttendanceStats(tournamentId)?.attendingCount || 0
+  if (attendingCount === 0) return 0
+  return Math.round(net / attendingCount)
+}
 
 // Pagination for old tournaments
 const oldTournamentPage = ref(1)
@@ -735,8 +1147,8 @@ const createWeeklyTournament = async () => {
       name: `Weekly Tournament - ${formatDate(startDate)}`,
       type: 'WEEKLY' as const,
       status: 'UPCOMING' as const,
-      startDate: startDateISO
-      // endDate and teamIds are optional for weekly tournaments
+      startDate: startDateISO,
+      endDate: endDateISO
     }
     
     await tournamentsStore.addTournament(tournamentData)
@@ -799,16 +1211,200 @@ const editTournament = (tournament: Tournament) => {
   // You can implement this based on your tournament editing needs
 }
 
-const deleteTournament = async (id: string) => {
-  if (!confirm('Are you sure you want to delete this weekly tournament?')) return
+const endTournament = async (tournamentId: string) => {
+  endTournamentId.value = tournamentId
+  showEndTournamentModal.value = true
+}
+
+const confirmEndTournament = async () => {
+  if (!endTournamentId.value) return
   
   try {
-    await tournamentsStore.deleteTournament(id)
-    await fetchData()
-    toast.success('Tournament deleted successfully!')
+    const response = await apiClient.put(`/tournaments/${endTournamentId.value}`, {
+      status: 'COMPLETED'
+    })
+    
+    if (response.success) {
+      toast.success('Tournament ended successfully!')
+      await fetchData()
+    } else {
+      toast.error('Failed to end tournament')
+    }
   } catch (err: any) {
-    console.error('Delete tournament error:', err)
-    toast.error(err.response?.data?.error || 'Failed to delete tournament')
+    console.error('End tournament error:', err)
+    toast.error(err.response?.data?.error || 'Failed to end tournament')
+  } finally {
+    showEndTournamentModal.value = false
+    endTournamentId.value = null
+  }
+}
+
+const deleteTournament = async (id: string) => {
+  // Find the tournament to show detailed confirmation
+  const tournament = weeklyTournaments.value.find(t => t.id === id) || 
+                    oldTournaments.value.find(t => t.id === id);
+  
+  if (!tournament) {
+    toast.error('Tournament not found');
+    return;
+  }
+
+  const teamCount = getTournamentTeams(tournament).length;
+  const attendanceCount = attendanceStats.value.get(id)?.totalPlayers || 0;
+  const additionalCostCount = getTournamentAdditionalCosts(id).length;
+  
+  // Set up modal data
+  deleteTournamentData.value = tournament;
+  deleteTournamentInfo.value = {
+    teamCount,
+    attendanceCount,
+    additionalCostCount
+  };
+  showDeleteTournamentModal.value = true;
+}
+
+const confirmDeleteTournament = async () => {
+  if (!deleteTournamentData.value) return;
+  
+  try {
+    await tournamentsStore.deleteTournament(deleteTournamentData.value.id);
+    
+    // Clear local data
+    attendanceMap.value.delete(deleteTournamentData.value.id);
+    attendanceStats.value.delete(deleteTournamentData.value.id);
+    
+    await fetchData();
+    toast.success(`Tournament deleted successfully! Removed all associated teams, attendance records, and additional costs.`);
+  } catch (err: any) {
+    console.error('Delete tournament error:', err);
+    toast.error(err.response?.data?.error || 'Failed to delete tournament');
+  } finally {
+    showDeleteTournamentModal.value = false;
+    deleteTournamentData.value = null;
+    deleteTournamentInfo.value = null;
+  }
+}
+
+// Additional Cost functions
+const openAdditionalCostModal = async (tournament: Tournament) => {
+  selectedTournamentForCosts.value = tournament
+  showAdditionalCostModal.value = true
+  editingCostId.value = null
+  additionalCostForm.value = {
+    description: '',
+    amount: 0
+  }
+  // Fetch additional costs for this tournament
+  await systemStore.fetchAdditionalCosts(tournament.id)
+}
+
+const closeAdditionalCostModal = () => {
+  showAdditionalCostModal.value = false
+  selectedTournamentForCosts.value = null
+  editingCostId.value = null
+  additionalCostForm.value = {
+    description: '',
+    amount: 0
+  }
+}
+
+const editAdditionalCost = (cost: any) => {
+  additionalCostForm.value = {
+    description: cost.description,
+    amount: cost.amount
+  }
+  editingCostId.value = cost.id
+}
+
+const cancelEdit = () => {
+  additionalCostForm.value = {
+    description: '',
+    amount: 0
+  }
+  editingCostId.value = null
+}
+
+const saveAdditionalCost = async () => {
+  if (!selectedTournamentForCosts.value || additionalCostLoading.value) return
+  
+  // Client-side validation
+  if (additionalCostForm.value.description.trim().length < 3) {
+    toast.error('Description must be at least 3 characters long')
+    return
+  }
+  
+  if (additionalCostForm.value.amount <= 0) {
+    toast.error('Amount must be greater than 0')
+    return
+  }
+  
+  try {
+    additionalCostLoading.value = true
+    
+    const costData = {
+      description: additionalCostForm.value.description.trim(),
+      amount: additionalCostForm.value.amount
+    }
+    
+    let response
+    if (editingCostId.value) {
+      // Edit existing cost
+      response = await systemStore.updateAdditionalCost(editingCostId.value, costData)
+      if (response) {
+        toast.success('Additional cost updated successfully')
+      }
+    } else {
+      // Add new cost
+      response = await systemStore.createAdditionalCost({
+        tournamentId: selectedTournamentForCosts.value.id,
+        ...costData
+      })
+      if (response) {
+        toast.success('Additional cost added successfully')
+      }
+    }
+    
+    if (response) {
+      // Reset form
+      additionalCostForm.value = {
+        description: '',
+        amount: 0
+      }
+      editingCostId.value = null
+      // Refresh the costs
+      await systemStore.fetchAdditionalCosts(selectedTournamentForCosts.value.id)
+    }
+  } catch (err: any) {
+    console.error('Save additional cost error:', err)
+    toast.error(err.response?.data?.error || 'Failed to save additional cost')
+  } finally {
+    additionalCostLoading.value = false
+  }
+}
+
+const deleteAdditionalCost = async (costId: string) => {
+  deleteCostId.value = costId;
+  showDeleteCostModal.value = true;
+}
+
+const confirmDeleteCost = async () => {
+  if (!deleteCostId.value) return;
+  
+  try {
+    const success = await systemStore.deleteAdditionalCost(deleteCostId.value);
+    if (success) {
+      toast.success('Additional cost deleted successfully');
+      // Refresh the costs if we have a selected tournament
+      if (selectedTournamentForCosts.value) {
+        await systemStore.fetchAdditionalCosts(selectedTournamentForCosts.value.id);
+      }
+    }
+  } catch (err: any) {
+    console.error('Delete additional cost error:', err);
+    toast.error(err.response?.data?.error || 'Failed to delete additional cost');
+  } finally {
+    showDeleteCostModal.value = false;
+    deleteCostId.value = null;
   }
 }
 
@@ -817,7 +1413,8 @@ const fetchData = async () => {
   try {
     await Promise.all([
       tournamentsStore.fetchTournaments(),
-      teamsStore.fetchTeams()
+      teamsStore.fetchTeams(),
+      systemStore.fetchSystemSettings()
     ])
     await loadOldTournaments(1)
     

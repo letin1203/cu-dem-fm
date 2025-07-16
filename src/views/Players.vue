@@ -12,6 +12,19 @@
       </button>
     </div>
 
+    <!-- Filter Section -->
+    <div class="card p-4">
+      <div class="max-w-md">
+        <label class="form-label">Filter by Player Name</label>
+        <input
+          v-model="playerNameFilter"
+          type="text"
+          class="form-input"
+          placeholder="Search player name..."
+        >
+      </div>
+    </div>
+
     <!-- Players Table/Cards -->
     <div class="card p-0 sm:p-6 overflow-hidden">
       <!-- Loading State -->
@@ -28,8 +41,13 @@
       </div>
 
       <!-- Empty State -->
-      <div v-else-if="players.length === 0" class="text-center py-8">
-        <div class="text-gray-500 mb-4">No players found</div>
+      <div v-else-if="filteredPlayers.length === 0" class="text-center py-8">
+        <div class="text-gray-500 mb-4" v-if="playerNameFilter">
+          No players match the filter "{{ playerNameFilter }}".
+        </div>
+        <div class="text-gray-500 mb-4" v-else>
+          No players found
+        </div>
         <button 
           v-if="authStore.hasPermission('canEditPlayers')"
           @click="showAddForm = true" 
@@ -44,7 +62,7 @@
         <!-- Mobile Cards View -->
       <div class="block sm:hidden">
         <div
-          v-for="player in players"
+          v-for="player in filteredPlayers"
           :key="player.id"
           class="border-b border-gray-200 p-4 last:border-b-0"
         >
@@ -103,6 +121,23 @@
             </div>
           </div>
         </div>
+        
+        <!-- Load All Players Button for Mobile -->
+        <div v-if="!playersStore.isShowingAll" class="text-center mt-6 p-4 border-t border-gray-200">
+          <button
+            @click="loadAllPlayers"
+            :disabled="playersStore.loadingAll"
+            class="btn-primary w-full"
+            :class="{ 'opacity-50 cursor-not-allowed': playersStore.loadingAll }"
+          >
+            <span v-if="playersStore.loadingAll" class="flex items-center justify-center">
+              <div class="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+              Loading All Players...
+            </span>
+            <span v-else>
+              Load All Players ({{ remainingPlayersCount }} more)
+            </span>        </button>
+      </div>
       </div>
 
       <!-- Desktop Table View -->
@@ -131,7 +166,7 @@
             </tr>
           </thead>
           <tbody class="bg-white divide-y divide-gray-200">
-            <tr v-for="player in players" :key="player.id" class="hover:bg-gray-50">
+            <tr v-for="player in filteredPlayers" :key="player.id" class="hover:bg-gray-50">
               <td class="px-6 py-4 whitespace-nowrap">
                 <div class="flex items-center">
                   <div class="flex-shrink-0 h-10 w-10">
@@ -193,6 +228,24 @@
             </tr>
           </tbody>
         </table>
+      </div>
+      
+      <!-- Load All Players Button -->
+      <div v-if="!playersStore.isShowingAll" class="text-center mt-6 p-6 border-t border-gray-200">
+        <button
+          @click="loadAllPlayers"
+          :disabled="playersStore.loadingAll"
+          class="btn-primary"
+          :class="{ 'opacity-50 cursor-not-allowed': playersStore.loadingAll }"
+        >
+          <span v-if="playersStore.loadingAll" class="flex items-center justify-center">
+            <div class="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+            Loading All Players...
+          </span>
+          <span v-else>
+            Load All Players ({{ remainingPlayersCount }} more)
+          </span>
+        </button>
       </div>
       </div>
     </div>
@@ -282,7 +335,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { usePlayersStore } from '../stores/players'
 import { useTeamsStore } from '../stores/teams'
 import { useAuthStore } from '../stores/auth'
@@ -297,17 +350,38 @@ const loading = computed(() => playersStore.loading)
 const error = computed(() => playersStore.error)
 const showAddForm = ref(false)
 const editingPlayer = ref<Player | null>(null)
+const playerNameFilter = ref('')
+
+// Computed properties for pagination and filtering
+const filteredPlayers = computed(() => {
+  if (!playerNameFilter.value) return players.value
+  return players.value.filter(player => 
+    player.name.toLowerCase().includes(playerNameFilter.value.toLowerCase())
+  )
+})
+
+const remainingPlayersCount = computed(() => {
+  return Math.max(0, playersStore.totalPlayers - players.value.length)
+})
+
+// Load all players function
+const loadAllPlayers = async () => {
+  await playersStore.loadAllPlayers()
+}
 
 onMounted(async () => {
   await Promise.all([
-    playersStore.fetchPlayers(),
+    playersStore.fetchPlayers(), // Load first 100 players
     teamsStore.fetchTeams()
   ])
 })
 
-onMounted(async () => {
-  await playersStore.fetchPlayers()
-  await teamsStore.fetchTeams()
+// Watch for filter changes and reset pagination when filter is cleared
+watch(playerNameFilter, (newValue, oldValue) => {
+  // If filter is cleared (from something to empty), reload all players
+  if (oldValue && !newValue) {
+    playersStore.fetchPlayers()
+  }
 })
 
 const formData = ref({
@@ -355,7 +429,11 @@ function submitForm() {
       })
   } else {
     playersStore.addPlayer(playerData)
-      .then(() => cancelForm())
+      .then(() => {
+        cancelForm()
+        // Refresh the players list to include the new player
+        playersStore.fetchPlayers()
+      })
       .catch(() => {
         // Error is handled by the store
       })
@@ -376,7 +454,13 @@ function cancelForm() {
 
 function deletePlayer(id: string) {
   if (confirm('Are you sure you want to delete this player?')) {
-    playersStore.deletePlayer(id)
+    playersStore.deletePlayer(id).then(() => {
+      // If we're on a page beyond the first and have no more players on current page,
+      // we might need to reload to adjust pagination
+      if (playersStore.players.length === 0 && playersStore.currentPage > 1) {
+        playersStore.fetchPlayers()
+      }
+    })
   }
 }
 </script>

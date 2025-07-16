@@ -7,6 +7,7 @@ import Players from '../views/Players.vue'
 import Teams from '../views/Teams.vue'
 import Users from '../views/Users.vue'
 import PlayerProfile from '../views/PlayerProfile.vue'
+import SystemSettings from '../views/SystemSettings.vue'
 import Login from '../components/Login.vue'
 
 const router = createRouter({
@@ -63,6 +64,12 @@ const router = createRouter({
       name: 'users',
       component: Users,
       meta: { requiresAuth: true, permission: 'canManageUsers' }
+    },
+    {
+      path: '/system-settings',
+      name: 'systemSettings',
+      component: SystemSettings,
+      meta: { requiresAuth: true, role: 'admin' }
     }
   ]
 })
@@ -77,6 +84,7 @@ router.beforeEach((to, from, next) => {
   const requiresAuth = to.matched.some(record => record.meta.requiresAuth)
   const requiresGuest = to.matched.some(record => record.meta.requiresGuest)
   const permission = to.meta.permission as string
+  const role = to.meta.role as string
 
   if (requiresGuest && authStore.isAuthenticated) {
     // If user is logged in and trying to access guest routes (like login), redirect to weekly tournament
@@ -86,6 +94,9 @@ router.beforeEach((to, from, next) => {
     next('/login')
   } else if (permission && !authStore.hasPermission(permission as any)) {
     // If user doesn't have permission for this route, redirect to weekly tournament
+    next('/weekly-tournament')
+  } else if (role && !authStore.hasRole(role as any)) {
+    // If user doesn't have required role for this route, redirect to weekly tournament
     next('/weekly-tournament')
   } else {
     next()

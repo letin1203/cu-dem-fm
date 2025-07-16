@@ -160,13 +160,22 @@ const navigationItems = [
   { name: 'Matches', path: '/matches', icon: CalendarIcon, permission: 'canViewMatches' },
   { name: 'Teams', path: '/teams', icon: UserGroupIcon, permission: 'canViewTeams' },
   { name: 'Players', path: '/players', icon: UsersIcon, permission: 'canViewPlayers' },
-  { name: 'Users', path: '/users', icon: CogIcon, permission: 'canManageUsers' }
+  { name: 'Users', path: '/users', icon: CogIcon, permission: 'canManageUsers' },
+  { name: 'System Settings', path: '/system-settings', icon: CogIcon, role: 'admin' }
 ]
 
 const visibleNavigationItems = computed(() => {
-  return navigationItems.filter(item => 
-    authStore.hasPermission(item.permission as any)
-  )
+  return navigationItems.filter(item => {
+    // Check for permission-based access
+    if (item.permission) {
+      return authStore.hasPermission(item.permission as any)
+    }
+    // Check for role-based access
+    if (item.role) {
+      return authStore.hasRole(item.role as any)
+    }
+    return true
+  })
 })
 
 const linkedPlayer = computed(() => {

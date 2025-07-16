@@ -328,6 +328,9 @@ router.delete('/:id', authenticate, authorize(['ADMIN']), async (req: Authentica
       where: { id },
       include: {
         matches: true,
+        teams: true,
+        playerAttendances: true,
+        additionalCosts: true,
       },
     });
 
@@ -348,15 +351,17 @@ router.delete('/:id', authenticate, authorize(['ADMIN']), async (req: Authentica
       return;
     }
 
+    // Delete the tournament (cascade deletes will handle related data)
     await prisma.tournament.delete({
       where: { id },
     });
 
     res.json({
       success: true,
-      message: 'Tournament deleted successfully',
+      message: `Tournament deleted successfully. Removed ${existingTournament.teams.length} team assignments, ${existingTournament.playerAttendances.length} attendance records, and ${existingTournament.additionalCosts.length} additional costs.`,
     });
   } catch (error) {
+    console.error('Delete tournament error:', error);
     res.status(500).json({
       success: false,
       error: 'Failed to delete tournament',

@@ -777,3 +777,39 @@ const corsOptions = {
 **Render will auto-redeploy** with the fix (~2-3 minutes)
 
 ---
+
+### 🌐 **Custom Domain Setup**
+
+**Domain**: `cudemsg.fun` 🎉
+
+**Vercel Configuration**:
+- **Primary Domain**: `https://cudemsg.fun`
+- **WWW Domain**: `https://www.cudemsg.fun`
+- **SSL**: Automatically managed by Vercel
+
+**DNS Records Required**:
+```
+Type: A Record
+Name: @
+Value: 76.76.19.61
+
+Type: CNAME Record  
+Name: www
+Value: cname.vercel-dns.com
+```
+
+**Updated CORS Configuration for Custom Domain**:
+```bash
+CORS_ORIGIN=https://cudemsg.fun,https://www.cudemsg.fun,https://cu-dem-fm.vercel.app
+```
+
+**Status**:
+- ✅ **Domain Active**: https://www.cudemsg.fun  
+- ⚠️ **CORS Update Needed**: Update CORS_ORIGIN on Render to include custom domain
+
+**Final Live URLs**:
+- ✅ **Frontend**: https://cudemsg.fun
+- ✅ **Backend**: https://cu-dem-fm.onrender.com/api
+- ✅ **GitHub**: https://github.com/letin1203/cu-dem-fm
+
+---

@@ -244,7 +244,7 @@ export const useAuthStore = defineStore('auth', () => {
     try {
       const response = await apiClient.deleteUser(id)
       if (response.success) {
-        users.value = users.value.filter(u => u.id !== id)
+        users.value = users.value.filter(user => user.id !== id)
         return true
       }
       return false
@@ -254,13 +254,36 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
+  async function createBulkUserPlayer(): Promise<boolean> {
+    try {
+      const response = await apiClient.createBulkUserPlayer()
+      if (response.success && response.data) {
+        // Convert role to lowercase for frontend compatibility
+        const responseData = response.data as any
+        const newUser = {
+          ...responseData.user,
+          role: responseData.user.role.toLowerCase() as UserRole
+        }
+        users.value.push(newUser)
+        return true
+      }
+      return false
+    } catch (error) {
+      console.error('Failed to create bulk user+player:', error)
+      return false
+    }
+  }
+
   async function updateUserStatus(id: string, isActive: boolean): Promise<boolean> {
     try {
       const response = await apiClient.updateUserStatus(id, isActive)
-      if (response.success) {
-        const index = users.value.findIndex(u => u.id === id)
-        if (index !== -1) {
-          users.value[index].isActive = isActive
+      if (response.success && response.data) {
+        const userIndex = users.value.findIndex(user => user.id === id)
+        if (userIndex !== -1) {
+          users.value[userIndex] = {
+            ...users.value[userIndex],
+            isActive
+          }
         }
         return true
       }
@@ -332,6 +355,7 @@ export const useAuthStore = defineStore('auth', () => {
     addUser,
     updateUser,
     deleteUser,
+    createBulkUserPlayer,
     updateUserStatus,
     initializeAuth,
     clearAndReauthenticate,

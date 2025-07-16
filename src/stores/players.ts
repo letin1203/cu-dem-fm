@@ -6,9 +6,15 @@ import { apiClient } from '@/api/client'
 export const usePlayersStore = defineStore('players', () => {
   const players = ref<Player[]>([])
   const loading = ref(false)
+  const loadingAll = ref(false)
   const error = ref<string | null>(null)
+  const currentPage = ref(1)
+  const limit = ref(100) // Load 100 players initially
+  const totalPlayers = ref(0)
+  const totalPages = ref(0)
+  const hasMore = computed(() => currentPage.value < totalPages.value)
+  const isShowingAll = computed(() => players.value.length >= totalPlayers.value)
 
-  const totalPlayers = computed(() => players.value.length)
   const topScorers = computed(() => 
     players.value
       .sort((a, b) => b.stats.goals - a.stats.goals)
@@ -26,17 +32,65 @@ export const usePlayersStore = defineStore('players', () => {
     
     try {
       loading.value = true
+      currentPage.value = 1
+      players.value = []
       error.value = null
-      const response = await apiClient.get('/players')
+      
+      const response = await apiClient.get('/players', {
+        params: {
+          page: currentPage.value,
+          limit: limit.value
+        }
+      })
+      
       if (response.success && response.data) {
         const data = response.data as any
         players.value = data.players || []
+        
+        // Update pagination info
+        if (data.pagination) {
+          totalPlayers.value = data.pagination.total
+          totalPages.value = data.pagination.pages
+        }
       }
     } catch (err) {
       error.value = 'Failed to fetch players'
       console.error('Fetch players error:', err)
     } finally {
       loading.value = false
+    }
+  }
+
+  async function loadAllPlayers() {
+    if (loadingAll.value || isShowingAll.value) return
+    
+    try {
+      loadingAll.value = true
+      error.value = null
+      
+      // Fetch all remaining players
+      const response = await apiClient.get('/players', {
+        params: {
+          page: 1,
+          limit: totalPlayers.value // Load all players
+        }
+      })
+      
+      if (response.success && response.data) {
+        const data = response.data as any
+        players.value = data.players || []
+        
+        // Update pagination info
+        if (data.pagination) {
+          totalPlayers.value = data.pagination.total
+          totalPages.value = data.pagination.pages
+        }
+      }
+    } catch (err) {
+      error.value = 'Failed to load all players'
+      console.error('Load all players error:', err)
+    } finally {
+      loadingAll.value = false
     }
   }
 
@@ -122,11 +176,18 @@ export const usePlayersStore = defineStore('players', () => {
   return {
     players,
     loading,
+    loadingAll,
     error,
+    currentPage,
+    limit,
     totalPlayers,
+    totalPages,
+    hasMore,
+    isShowingAll,
     topScorers,
     topTierPlayers,
     fetchPlayers,
+    loadAllPlayers,
     addPlayer,
     updatePlayer,
     deletePlayer,

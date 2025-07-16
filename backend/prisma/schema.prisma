@@ -118,6 +118,7 @@ model Tournament {
   winner             Team?                    @relation("TournamentWinner", fields: [winnerId], references: [id])
   winnerId           String?
   playerAttendances  TournamentPlayerAttendance[]
+  additionalCosts    AdditionalCost[]
 
   @@map("tournaments")
 }
@@ -186,6 +187,31 @@ model MatchEvent {
   playerId String
 
   @@map("match_events")
+}
+
+model SystemSettings {
+  id           String @id @default(cuid())
+  stadiumCost  Int    @default(10000) // Default stadium cost for weekly tournaments
+  sponsorMoney Int    @default(50000) // Default sponsor money for weekly tournaments
+  clubFund     Int    @default(0)     // Total club fund money
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@map("system_settings")
+}
+
+model AdditionalCost {
+  id           String @id @default(cuid())
+  description  String
+  amount       Int
+  tournamentId String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  // Relationships
+  tournament Tournament @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+
+  @@map("additional_costs")
 }
 
 

@@ -28,6 +28,7 @@ export const updateUserSchema = z.object({
   email: z.string().email().optional(),
   role: UserRole.optional(),
   isActive: z.boolean().optional(),
+  playerId: z.string().optional().nullable(),
 });
 
 // Player schemas

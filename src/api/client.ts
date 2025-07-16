@@ -135,6 +135,10 @@ class ApiClient {
     return this.patch(`/users/${id}/status`, { isActive });
   }
 
+  async createBulkUserPlayer() {
+    return this.post('/users/bulk-user-player');
+  }
+
   // Players endpoints
   async getPlayers(params?: any) {
     return this.get('/players', { params });
@@ -266,6 +270,32 @@ class ApiClient {
 
   async getMatchStats() {
     return this.get('/stats/matches');
+  }
+
+  // System Settings endpoints
+  async getSystemSettings() {
+    return this.get('/system-settings');
+  }
+
+  async updateSystemSettings(data: any) {
+    return this.put('/system-settings', data);
+  }
+
+  // Additional Costs endpoints
+  async getAdditionalCosts(tournamentId: string) {
+    return this.get(`/additional-costs/tournament/${tournamentId}`);
+  }
+
+  async createAdditionalCost(data: any) {
+    return this.post('/additional-costs', data);
+  }
+
+  async updateAdditionalCost(id: string, data: any) {
+    return this.put(`/additional-costs/${id}`, data);
+  }
+
+  async deleteAdditionalCost(id: string) {
+    return this.delete(`/additional-costs/${id}`);
   }
 }
 

@@ -3,9 +3,27 @@
     <!-- Header -->
     <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-3 sm:space-y-0">
       <h1 class="text-2xl sm:text-3xl font-bold text-gray-900">User Management</h1>
-      <button @click="showAddForm = true" class="btn-primary w-full sm:w-auto">
-        Add New User
-      </button>
+      <div class="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2">
+        <button @click="createBulkUserPlayer" class="btn-secondary w-full sm:w-auto">
+          Add Bulk User/Player
+        </button>
+        <button @click="showAddForm = true" class="btn-primary w-full sm:w-auto">
+          Add New User
+        </button>
+      </div>
+    </div>
+
+    <!-- Filter Section -->
+    <div class="card p-4">
+      <div class="max-w-md">
+        <label class="form-label">Filter by Username</label>
+        <input
+          v-model="usernameFilter"
+          type="text"
+          class="form-input"
+          placeholder="Search username..."
+        >
+      </div>
     </div>
 
     <!-- Users Cards -->
@@ -24,9 +42,14 @@
       </div>
       
       <!-- Empty State -->
-      <div v-else-if="users.length === 0" class="p-8 text-center">
+      <div v-else-if="filteredUsers.length === 0" class="p-8 text-center">
         <div class="text-gray-400 mb-2">👥 No users found</div>
-        <p class="text-gray-600">No users are currently registered in the system.</p>
+        <p class="text-gray-600" v-if="usernameFilter">
+          No users match the filter "{{ usernameFilter }}".
+        </p>
+        <p class="text-gray-600" v-else>
+          No users are currently registered in the system.
+        </p>
         <button @click="showAddForm = true" class="mt-2 btn-primary">Add First User</button>
       </div>
       
@@ -34,7 +57,7 @@
       <div v-else class="p-4 sm:p-6">
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
           <div 
-            v-for="user in users" 
+            v-for="user in filteredUsers" 
             :key="user.id" 
             class="bg-white border border-gray-200 rounded-lg p-4 sm:p-6 hover:shadow-lg transition-shadow"
           >
@@ -228,6 +251,15 @@ const showAddForm = ref(false)
 const editingUser = ref<User | null>(null)
 const isLoading = ref(false)
 const error = ref<string | null>(null)
+const usernameFilter = ref('')
+
+// Filtered users based on username search
+const filteredUsers = computed(() => {
+  if (!usernameFilter.value) return users.value
+  return users.value.filter(user => 
+    user.username.toLowerCase().includes(usernameFilter.value.toLowerCase())
+  )
+})
 
 // Fetch data when component mounts
 onMounted(async () => {
@@ -385,6 +417,16 @@ function cancelForm() {
 function deleteUser(id: string) {
   if (confirm('Are you sure you want to delete this user?')) {
     authStore.deleteUser(id)
+  }
+}
+
+async function createBulkUserPlayer() {
+  const success = await authStore.createBulkUserPlayer()
+  if (success) {
+    // Optionally show success message or refresh players list
+    playersStore.fetchPlayers().catch(err => console.warn('Failed to refresh players:', err))
+  } else {
+    alert('Failed to create user and player. Please try again.')
   }
 }
 </script>

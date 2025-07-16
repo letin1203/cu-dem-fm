@@ -441,7 +441,7 @@ curl https://cu-dem-fm-backend.onrender.com/api/health
 
 ---
 
-## **Step 3: 🎨 Frontend Deployment (Vercel)**
+## **Step 3: Frontend Deployment (Vercel)**
 
 ### **3.1 Update Frontend Configuration**
 Create `.env.production` in root folder:
@@ -482,8 +482,9 @@ apiClient.interceptors.request.use((config) => {
    - **Root Directory**: `./` (root)
    - **Build Command**: `npm run build`
    - **Output Directory**: `dist`
-6. Add Environment Variables:
-   - `VITE_API_BASE_URL`: `https://cu-dem-fm-backend.onrender.com/api`
+6. Add Environment Variable:
+   - `VITE_API_BASE_URL`: `https://cu-dem-fm.onrender.com/api`
+7. Deploy!
 
 ### **3.3 Custom Domain (Optional)**
 1. Go to Vercel project settings
@@ -502,7 +503,7 @@ CORS_ORIGIN=https://your-vercel-app.vercel.app
 
 ### **4.2 Test Full Application**
 1. **Frontend**: `https://your-app.vercel.app`
-2. **Backend**: `https://cu-dem-fm-backend.onrender.com`
+2. **Backend**: `https://cu-dem-fm-onrender.com`
 3. **Database**: Connected via Supabase
 
 ### **4.3 Monitor and Debug**
@@ -632,5 +633,147 @@ PORT=10000
 1. Click "Save Changes"
 2. Render will automatically redeploy
 3. Your API will be fully functional
+
+---
+
+### ✅ **Step 3: Frontend Deployment to Vercel**
+
+**Current Status**: 
+- ✅ TypeScript build errors fixed
+- ✅ Production build successful (434 modules)
+- ✅ Preview tested locally
+- ✅ Vercel configuration ready
+- ✅ Environment variables configured
+
+### **Step 3.1: Deploy to Vercel**
+
+**Option A: Vercel CLI (Recommended)**
+```bash
+npm install -g vercel
+vercel login
+vercel --prod
+```
+
+**Option B: Vercel Dashboard**
+1. Go to [vercel.com](https://vercel.com)
+2. Sign up with GitHub
+3. Import your repository: `https://github.com/letin1203/cu-dem-fm`
+4. Configure:
+   - **Framework Preset**: Vite
+   - **Root Directory**: `./` (root)
+   - **Build Command**: `npm run build`
+   - **Output Directory**: `dist`
+5. Add Environment Variable:
+   - `VITE_API_BASE_URL`: `https://cu-dem-fm.onrender.com/api`
+6. Deploy!
+
+### **Step 3.2: Update Backend CORS**
+After frontend deployment, update Render environment:
+```bash
+CORS_ORIGIN=https://your-vercel-app.vercel.app
+```
+
+**Build Output**:
+```
+✓ 434 modules transformed
+dist/index.html      0.46 kB │ gzip: 0.29 kB
+dist/assets/index.css 45.00 kB │ gzip: 7.50 kB  
+dist/assets/index.js 270.15 kB │ gzip: 87.01 kB
+✓ built in 3.09s
+```
+
+---
+
+### ✅ **Step 3 Complete: Frontend Deployed to Vercel**
+
+**Frontend URL**: `https://cu-dem-fm.vercel.app` ✅
+
+### **Step 4: Update Backend CORS Configuration**
+
+**Required**: Update Render environment variable to allow frontend access
+
+**On Render Dashboard**:
+1. Go to your service: `cu-dem-fm` 
+2. **Environment** tab
+3. Update `CORS_ORIGIN` variable:
+   ```
+   CORS_ORIGIN=https://cu-dem-fm.vercel.app
+   ```
+4. **Save Changes** (will trigger automatic redeploy)
+
+**Environment Variables Summary**:
+```bash
+DATABASE_URL=postgresql://postgres:nf1bIPwDST0v5OAw@db.rjsczmpelcgacjkwaqhf.supabase.co:5432/postgres
+JWT_SECRET=cu-dem-fm-super-secret-jwt-key-2025-football-management
+NODE_ENV=production
+CORS_ORIGIN=https://cu-dem-fm.vercel.app
+PORT=10000
+```
+
+---
+
+## 🎉 **Deployment Status Summary**
+
+### **✅ Completed:**
+- ✅ **Database**: Supabase PostgreSQL ready
+- ✅ **Backend**: Deployed to Render (`https://cu-dem-fm.onrender.com`)
+- ✅ **Frontend**: Deployed to Vercel (`https://cu-dem-fm.vercel.app`)
+- ✅ **GitHub**: Repository integrated with CI/CD
+- ✅ **Build**: All TypeScript errors resolved
+
+### **⚠️ Final Step Required:**
+**Configure Render Environment Variables**
+
+Go to [Render Dashboard](https://dashboard.render.com) → Your Service → Environment:
+
+```bash
+DATABASE_URL=postgresql://postgres:nf1bIPwDST0v5OAw@db.rjsczmpelcgacjkwaqhf.supabase.co:5432/postgres
+JWT_SECRET=cu-dem-fm-super-secret-jwt-key-2025-football-management
+NODE_ENV=production
+CORS_ORIGIN=https://cu-dem-fm.vercel.app
+PORT=10000
+```
+
+**After saving**: Render will redeploy automatically (~2-3 minutes)
+
+### **🔗 Live URLs:**
+- **Frontend**: https://cu-dem-fm.vercel.app
+- **Backend**: https://cu-dem-fm.onrender.com/api
+- **GitHub**: https://github.com/letin1203/cu-dem-fm
+
+### **📱 Test Your App:**
+1. **Frontend loads** ✅
+2. **Backend API responds** (after env vars)
+3. **Database queries work** (after env vars)
+4. **User authentication** (after env vars)
+5. **Full functionality** (after env vars)
+
+**🚀 Your Cu Dem FM is ready for production!**
+
+---
+
+### 🔧 **CORS Issues Fixed**
+
+**Problem**: `strict-origin-when-cross-origin` error between Vercel frontend and Render backend
+
+**Solution Applied**:
+- ✅ Updated backend to use `CORS_ORIGIN` environment variable
+- ✅ Added comprehensive CORS configuration with proper headers
+- ✅ Explicit preflight OPTIONS handling
+- ✅ Improved helmet configuration for cross-origin requests
+
+**CORS Configuration**:
+```typescript
+const corsOptions = {
+  origin: process.env.CORS_ORIGIN || 'http://localhost:5173',
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+  exposedHeaders: ['X-Total-Count'],
+  optionsSuccessStatus: 200
+};
+```
+
+**Render will auto-redeploy** with the fix (~2-3 minutes)
 
 ---

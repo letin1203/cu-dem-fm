@@ -205,21 +205,46 @@
             
             <!-- Attendance Toggle Button -->
             <div v-if="getAttendanceButtonText(ongoingTournament.id) !== 'No Player'" class="flex justify-center pt-2 border-t border-gray-200">
-              <button
-                @click="toggleAttendance(ongoingTournament.id)"
-                :disabled="attendanceLoading.has(ongoingTournament.id)"
-                class="px-6 py-2 rounded-lg font-medium transition-colors duration-200"
-                :class="[
-                  attendanceLoading.has(ongoingTournament.id)
-                    ? 'opacity-50 cursor-not-allowed' 
-                    : 'hover:shadow-md',
-                  getAttendanceButtonText(ongoingTournament.id) === 'Attend'
-                    ? 'bg-green-600 text-white hover:bg-green-700'
-                    : 'bg-red-600 text-white hover:bg-red-700'
-                ]"
-              >
-                {{ attendanceLoading.has(ongoingTournament.id) ? 'Loading...' : getAttendanceButtonText(ongoingTournament.id) }}
-              </button>
+              <div class="flex space-x-3">
+                <button
+                  @click="toggleAttendance(ongoingTournament.id)"
+                  :disabled="attendanceLoading.has(ongoingTournament.id)"
+                  class="px-6 py-2 rounded-lg font-medium transition-colors duration-200"
+                  :class="[
+                    attendanceLoading.has(ongoingTournament.id)
+                      ? 'opacity-50 cursor-not-allowed' 
+                      : 'hover:shadow-md',
+                    getAttendanceButtonText(ongoingTournament.id) === 'Attend'
+                      ? 'bg-green-600 text-white hover:bg-green-700'
+                      : 'bg-red-600 text-white hover:bg-red-700'
+                  ]"
+                >
+                  {{ attendanceLoading.has(ongoingTournament.id) ? 'Loading...' : getAttendanceButtonText(ongoingTournament.id) }}
+                </button>
+                
+                <!-- Water Button -->
+                <button
+                  v-if="getUserAttendanceStatus(ongoingTournament.id) === 'ATTEND'"
+                  @click="toggleWater(ongoingTournament.id)"
+                  :disabled="waterLoading.has(ongoingTournament.id)"
+                  class="px-4 py-2 rounded-lg font-medium transition-colors duration-200"
+                  :class="[
+                    waterLoading.has(ongoingTournament.id)
+                      ? 'opacity-50 cursor-not-allowed' 
+                      : 'hover:shadow-md',
+                    getUserWaterStatus(ongoingTournament.id)
+                      ? 'bg-blue-600 text-white hover:bg-blue-700'
+                      : 'bg-gray-300 text-gray-700 hover:bg-gray-400'
+                  ]"
+                >
+                  <div class="flex items-center space-x-1">
+                    <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                      <path fill-rule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clip-rule="evenodd"/>
+                    </svg>
+                    <span>{{ waterLoading.has(ongoingTournament.id) ? 'Loading...' : (getUserWaterStatus(ongoingTournament.id) ? 'Water ✓' : 'Water') }}</span>
+                  </div>
+                </button>
+              </div>
             </div>
             
             <!-- Random Team Button (Admin/Mod only) -->
@@ -759,6 +784,9 @@ const attendanceMap = ref<Map<string, TournamentPlayerAttendance>>(new Map())
 const attendanceLoading = ref<Set<string>>(new Set())
 const attendanceStats = ref<Map<string, TournamentAttendanceStats>>(new Map())
 
+// Water tracking
+const waterLoading = ref<Set<string>>(new Set())
+
 // Modal for attendance details
 const showAttendanceModal = ref(false)
 const attendanceModalData = ref<TournamentAttendanceDetails[]>([])
@@ -945,6 +973,7 @@ const fetchAttendance = async (tournamentId: string): Promise<void> => {
           tournamentId, 
           playerId: '', 
           status: 'NO_PLAYER' as any,
+          withWater: false,
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString()
         }
@@ -1455,4 +1484,51 @@ onMounted(() => {
 onUnmounted(() => {
   window.removeEventListener('scroll', handleScroll)
 })
+
+// Water-related functions
+const getUserWaterStatus = (tournamentId: string): boolean => {
+  const attendance = attendanceMap.value.get(tournamentId)
+  return attendance?.withWater || false
+}
+
+const getUserAttendanceStatus = (tournamentId: string): string => {
+  const attendance = attendanceMap.value.get(tournamentId)
+  if (!attendance || (attendance as any).status === 'NO_PLAYER') return 'NO_PLAYER'
+  return attendance.status || 'NULL'
+}
+
+const toggleWater = async (tournamentId: string): Promise<void> => {
+  if (waterLoading.value.has(tournamentId)) return
+  
+  const currentAttendance = attendanceMap.value.get(tournamentId)
+  
+  // Only allow water toggle if user is attending
+  if (!currentAttendance || currentAttendance.status !== 'ATTEND') {
+    return
+  }
+  
+  try {
+    waterLoading.value.add(tournamentId)
+    
+    const newWaterStatus = !currentAttendance.withWater
+    
+    const response = await apiClient.put<TournamentPlayerAttendance>(
+      `/tournaments/${tournamentId}/attendance`,
+      { 
+        status: currentAttendance.status,
+        withWater: newWaterStatus
+      }
+    )
+    
+    if (response.success && response.data) {
+      attendanceMap.value.set(tournamentId, response.data)
+      toast.success(newWaterStatus ? 'Water preference added!' : 'Water preference removed!')
+    }
+  } catch (err: any) {
+    console.error('Toggle water error:', err)
+    toast.error(err.response?.data?.error || 'Failed to update water preference')
+  } finally {
+    waterLoading.value.delete(tournamentId)
+  }
+}
 </script>

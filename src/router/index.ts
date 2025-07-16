@@ -8,6 +8,7 @@ import Teams from '../views/Teams.vue'
 import Users from '../views/Users.vue'
 import PlayerProfile from '../views/PlayerProfile.vue'
 import SystemSettings from '../views/SystemSettings.vue'
+import DatabaseAdmin from '../views/DatabaseAdmin.vue'
 import Login from '../components/Login.vue'
 
 const router = createRouter({
@@ -69,6 +70,12 @@ const router = createRouter({
       path: '/system-settings',
       name: 'systemSettings',
       component: SystemSettings,
+      meta: { requiresAuth: true, role: 'admin' }
+    },
+    {
+      path: '/database-admin',
+      name: 'databaseAdmin',
+      component: DatabaseAdmin,
       meta: { requiresAuth: true, role: 'admin' }
     }
   ]

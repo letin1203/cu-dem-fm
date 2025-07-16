@@ -143,7 +143,8 @@ import {
   CalendarIcon,
   UserGroupIcon,
   UsersIcon,
-  CogIcon
+  CogIcon,
+  CircleStackIcon
 } from '@heroicons/vue/24/outline'
 import type { UserRole } from '../types'
 
@@ -161,7 +162,8 @@ const navigationItems = [
   { name: 'Teams', path: '/teams', icon: UserGroupIcon, permission: 'canViewTeams' },
   { name: 'Players', path: '/players', icon: UsersIcon, permission: 'canViewPlayers' },
   { name: 'Users', path: '/users', icon: CogIcon, permission: 'canManageUsers' },
-  { name: 'System Settings', path: '/system-settings', icon: CogIcon, role: 'admin' }
+  { name: 'System Settings', path: '/system-settings', icon: CogIcon, role: 'admin' },
+  { name: 'Database Admin', path: '/database-admin', icon: CircleStackIcon, role: 'admin' }
 ]
 
 const visibleNavigationItems = computed(() => {

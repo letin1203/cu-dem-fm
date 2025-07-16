@@ -552,7 +552,7 @@ router.put('/:id/attendance', authenticate, async (req: AuthenticatedRequest, re
   try {
     const { id: tournamentId } = req.params;
     const userId = req.user!.id;
-    const { status } = updateAttendanceSchema.parse(req.body);
+    const { status, withWater } = updateAttendanceSchema.parse(req.body);
 
     // Get user's player
     const user = await prisma.user.findUnique({
@@ -581,6 +581,12 @@ router.put('/:id/attendance', authenticate, async (req: AuthenticatedRequest, re
       return;
     }
 
+    // Prepare update data
+    const updateData: any = { status };
+    if (withWater !== undefined) {
+      updateData.withWater = withWater;
+    }
+
     // Update or create attendance
     const attendance = await prisma.tournamentPlayerAttendance.upsert({
       where: {
@@ -589,13 +595,12 @@ router.put('/:id/attendance', authenticate, async (req: AuthenticatedRequest, re
           playerId: user.player.id,
         },
       },
-      update: {
-        status,
-      },
+      update: updateData,
       create: {
         tournamentId,
         playerId: user.player.id,
         status,
+        withWater: withWater ?? false,
       },
     });
 

@@ -17,6 +17,7 @@ import { matchRoutes } from './routes/matches';
 import { statsRoutes } from './routes/stats';
 import { systemSettingsRoutes } from './routes/systemSettings';
 import { additionalCostsRoutes } from './routes/additionalCosts';
+import databaseRoutes from './routes/database';
 
 // Load environment variables
 dotenv.config();
@@ -98,6 +99,7 @@ app.use('/api/matches', matchRoutes);
 app.use('/api/stats', statsRoutes);
 app.use('/api/system-settings', systemSettingsRoutes);
 app.use('/api/additional-costs', additionalCostsRoutes);
+app.use('/api/database', databaseRoutes);
 
 // Error handling middleware
 app.use(notFoundHandler);

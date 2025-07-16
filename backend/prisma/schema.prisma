@@ -126,6 +126,7 @@ model Tournament {
 model TournamentPlayerAttendance {
   id           String   @id @default(cuid())
   status       String   @default("NULL") // "NULL", "NOT_ATTEND", "ATTEND"
+  withWater    Boolean  @default(false) // Whether player needs water
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 

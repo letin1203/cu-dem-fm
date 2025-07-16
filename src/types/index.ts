@@ -73,6 +73,7 @@ export interface CreateTournamentRequest {
 export interface TournamentPlayerAttendance {
   id: string
   status: 'NULL' | 'NOT_ATTEND' | 'ATTEND'
+  withWater: boolean
   tournamentId: string
   playerId: string
   createdAt: string | Date

@@ -134,6 +134,7 @@ export const matchQuerySchema = paginationSchema.extend({
 // Tournament Player Attendance schemas
 export const updateAttendanceSchema = z.object({
   status: AttendanceStatus,
+  withWater: z.boolean().optional(),
 });
 
 export type LoginInput = z.infer<typeof loginSchema>;

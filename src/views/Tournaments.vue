@@ -137,9 +137,9 @@
             <label class="form-label">Type</label>
             <select v-model="formData.type" required class="form-input">
               <option value="">Select type</option>
-              <option value="league">League</option>
-              <option value="knockout">Knockout</option>
-              <option value="group">Group Stage</option>
+              <option value="LEAGUE">League</option>
+              <option value="KNOCKOUT">Knockout</option>
+              <option value="GROUP">Group Stage</option>
             </select>
           </div>
           
@@ -370,7 +370,7 @@ function viewTournament(tournament: Tournament) {
 function submitForm() {
   const tournamentData = {
     name: formData.value.name,
-    type: formData.value.type as 'league' | 'knockout' | 'group',
+    type: formData.value.type as 'LEAGUE' | 'KNOCKOUT' | 'GROUP',
     status: formData.value.status as 'UPCOMING' | 'ONGOING' | 'COMPLETED',
     startDate: new Date(formData.value.startDate),
     endDate: formData.value.endDate ? new Date(formData.value.endDate) : undefined,

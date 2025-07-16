@@ -538,25 +538,99 @@ vercel logs  # Frontend logs
 
 ---
 
-## **📊 Free Tier Limits**
+## 🔧 **Render Deployment Troubleshooting**
 
-| Service | Limits | Upgrade Cost |
-|---------|--------|--------------|
-| **Vercel** | 100GB bandwidth/month | $20/month Pro |
-| **Render** | 750 hours/month | $7/month Starter |
-| **Supabase** | 500MB database, 2GB bandwidth | $25/month Pro |
+### **Common Build Issues & Solutions:**
 
-**Total Cost**: **$0/month** (within limits) → **$52/month** (all upgraded)
+#### **1. TypeScript Declaration Files Missing**
+**Error**: `Could not find declaration file for module 'express'`
+
+**Solution**: Move TypeScript dependencies to main dependencies
+```json
+{
+  "dependencies": {
+    // Move these from devDependencies to dependencies
+    "@types/express": "^4.17.21",
+    "@types/cors": "^2.8.17",
+    "typescript": "^5.3.3",
+    "prisma": "^5.7.1"
+  }
+}
+```
+
+#### **2. Node.js Version Consistency**
+**Issue**: Render uses different Node.js version than local
+
+**Solution**: Add version specification files
+```bash
+# .nvmrc (root level)
+20.17.0
+
+# backend/.nvmrc 
+20.17.0
+
+# backend/package.json
+"engines": {
+  "node": "20.17.0"
+}
+```
+
+#### **3. TypeScript Type Casting Issues**
+**Error**: `Type 'string' is not assignable to type '"ADMIN" | "MOD" | "USER"'`
+
+**Solution**: Explicit type casting in auth middleware
+```typescript
+req.user = {
+  id: user.id,
+  username: user.username,
+  email: user.email,
+  role: user.role as 'ADMIN' | 'MOD' | 'USER',
+};
+```
+
+### **Render Build Command**
+```bash
+npm install && npx prisma generate && npm run build
+```
+
+### **Render Start Command**
+```bash
+npm start
+```
+
+### **Environment Variables for Render**
+- `DATABASE_URL`: Your Supabase connection string
+- `JWT_SECRET`: Strong production secret
+- `NODE_ENV`: `production`
+- `CORS_ORIGIN`: Your Vercel frontend URL
 
 ---
 
-## **🎉 You're Live!**
+### ✅ **Step 2 Complete: Backend Deployed to Render**
 
-Your Cu Dem FM application is now deployed with:
-- ✅ **Frontend**: Fast, global CDN via Vercel
-- ✅ **Backend**: Reliable API hosting via Render  
-- ✅ **Database**: Managed PostgreSQL via Supabase
-- ✅ **Free Tier**: Everything included at no cost
-- ✅ **Auto Deployment**: Push to GitHub = instant updates
+**Backend URL**: `https://cu-dem-fm.onrender.com` ✅
 
-**Next Steps**: Share your live URL and start managing football tournaments! 🏈
+**Current Status**: 
+- ✅ Build successful
+- ✅ Server running on port 10000
+- ⚠️ Database connection needed (environment variables)
+
+### **Step 2.1: Configure Render Environment Variables**
+
+Go to your Render dashboard → Your service → Environment:
+
+```bash
+# Required Environment Variables for Render:
+DATABASE_URL=postgresql://postgres:nf1bIPwDST0v5OAw@db.rjsczmpelcgacjkwaqhf.supabase.co:5432/postgres
+JWT_SECRET=cu-dem-fm-super-secret-jwt-key-2025-football-management
+NODE_ENV=production
+CORS_ORIGIN=https://your-vercel-app.vercel.app  # Will update after frontend deployment
+PORT=10000
+```
+
+**After adding environment variables**:
+1. Click "Save Changes"
+2. Render will automatically redeploy
+3. Your API will be fully functional
+
+---

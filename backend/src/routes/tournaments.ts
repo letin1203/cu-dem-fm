@@ -1,4 +1,5 @@
 import { Router, Response } from 'express';
+import { z } from 'zod';
 import { prisma } from '../lib/prisma';
 import { createTournamentSchema, updateTournamentSchema, paginationSchema, updateAttendanceSchema, updateTeamScoreSchema, updateTournamentScoresSchema } from '../schemas/validation';
 import { authenticate, authorize, AuthenticatedRequest } from '../middleware/auth';
@@ -960,6 +961,109 @@ router.get('/:id/attendance-details', async (req: AuthenticatedRequest, res: Res
     res.status(500).json({
       success: false,
       error: 'Failed to get attendance details',
+    });
+  }
+});
+
+// Update tournament team scores
+router.put('/:id/scores', authenticate, authorize(['ADMIN', 'MOD']), async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  try {
+    const { id: tournamentId } = req.params;
+    const { scores } = updateTournamentScoresSchema.parse(req.body);
+
+    // Verify tournament exists and is ongoing
+    const tournament = await prisma.tournament.findUnique({
+      where: { id: tournamentId },
+      include: {
+        teams: {
+          include: {
+            team: true,
+          },
+        },
+      },
+    });
+
+    if (!tournament) {
+      res.status(404).json({
+        success: false,
+        error: 'Tournament not found',
+      });
+      return;
+    }
+
+    if (tournament.status !== 'ONGOING') {
+      res.status(400).json({
+        success: false,
+        error: 'Can only update scores for ongoing tournaments',
+      });
+      return;
+    }
+
+    // Get all team IDs in this tournament
+    const tournamentTeamIds = tournament.teams.map(tt => tt.teamId);
+    
+    // Validate that all score updates are for teams in this tournament
+    const scoreTeamIds = Object.keys(scores);
+    const invalidTeamIds = scoreTeamIds.filter(teamId => !tournamentTeamIds.includes(teamId));
+    
+    if (invalidTeamIds.length > 0) {
+      res.status(400).json({
+        success: false,
+        error: `Invalid team IDs: ${invalidTeamIds.join(', ')}. Teams not in this tournament.`,
+      });
+      return;
+    }
+
+    // Update team scores
+    const updatePromises = Object.entries(scores).map(([teamId, score]) =>
+      prisma.team.update({
+        where: { id: teamId },
+        data: { score },
+      })
+    );
+
+    await Promise.all(updatePromises);
+
+    // Get updated tournament data
+    const updatedTournament = await prisma.tournament.findUnique({
+      where: { id: tournamentId },
+      include: {
+        teams: {
+          include: {
+            team: {
+              select: {
+                id: true,
+                name: true,
+                score: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    res.json({
+      success: true,
+      message: 'Team scores updated successfully',
+      data: {
+        tournament: updatedTournament,
+        updatedScores: scores,
+      },
+    });
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      res.status(400).json({
+        success: false,
+        error: 'Invalid request data',
+        details: error.errors,
+      });
+      return;
+    }
+
+    console.error('Update scores error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to update scores',
     });
   }
 });

@@ -805,7 +805,7 @@
         </button>
         <button
           @click="confirmEndTournament"
-          :disabled="endTournamentId && getTournamentTeams(weeklyTournaments.find(t => t.id === endTournamentId) || {} as Tournament).length > 0 && !selectedWinningTeam"
+          :disabled="!!endTournamentId && getTournamentTeams(weeklyTournaments.find(t => t.id === endTournamentId) || {} as Tournament).length > 0 && !selectedWinningTeam"
           class="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
         >
           End Tournament

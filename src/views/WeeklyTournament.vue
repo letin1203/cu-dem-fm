@@ -864,20 +864,11 @@
           <!-- Winner Team -->
           <div v-if="selectedWinningTeam" class="bg-green-50 border border-green-200 rounded-lg p-4">
             <div class="flex items-center justify-between">
-              <div class="flex items-center">
-                <div class="w-10 h-10 bg-gradient-to-r from-yellow-400 to-yellow-600 rounded-full flex items-center justify-center mr-3">
-                  <svg class="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 20 20">
-                    <path fill-rule="evenodd" d="M5 2a1 1 0 011 1v1h1a1 1 0 010 2H6v1a1 1 0 01-2 0V6H3a1 1 0 010-2h1V3a1 1 0 011-1zm0 10a1 1 0 011 1v1h1a1 1 0 110 2H6v1a1 1 0 11-2 0v-1H3a1 1 0 110-2h1v-1a1 1 0 011-1zM12 2a1 1 0 01.967.744L14.146 7.2 17.5 9.134a1 1 0 010 1.732L14.146 12.8l-1.179 4.456a1 1 0 01-1.934 0L9.854 12.8 6.5 10.866a1 1 0 010-1.732L9.854 7.2l1.179-4.456A1 1 0 0112 2z" clip-rule="evenodd"/>
-                  </svg>
-                </div>
-                <div>
-                  <h4 class="font-semibold text-green-800">🏆 Winner: {{ selectedWinningTeam.name }}</h4>
-                  <p class="text-sm text-green-600">{{ selectedWinningTeam.players?.length || 0 }} players</p>
-                </div>
+              <div class="flex-1">
+                <h4 class="font-semibold text-green-800">🏆 Winner: {{ selectedWinningTeam.name }}</h4>
               </div>
               <div class="text-right">
-                <div class="text-2xl font-bold text-green-700">⚽: {{ selectedWinningTeam.score || 0 }}</div>
-                <div class="text-xs text-green-600">Highest Score</div>
+                <span class="text-lg font-bold text-green-700">⚽: {{ selectedWinningTeam.score || 0 }}</span>
               </div>
             </div>
           </div>
@@ -885,18 +876,11 @@
           <!-- Loser Team -->
           <div v-if="selectedLosingTeam" class="bg-red-50 border border-red-200 rounded-lg p-4">
             <div class="flex items-center justify-between">
-              <div class="flex items-center">
-                <div class="w-10 h-10 bg-gradient-to-r from-gray-400 to-gray-600 rounded-full flex items-center justify-center mr-3">
-                  <span class="text-white font-bold text-lg">{{ getTeamNumber(selectedLosingTeam.name) }}</span>
-                </div>
-                <div>
-                  <h4 class="font-semibold text-red-800">😔 Loser: {{ selectedLosingTeam.name }}</h4>
-                  <p class="text-sm text-red-600">{{ selectedLosingTeam.players?.length || 0 }} players</p>
-                </div>
+              <div class="flex-1">
+                <h4 class="font-semibold text-red-800">😔 Loser: {{ selectedLosingTeam.name }}</h4>
               </div>
               <div class="text-right">
-                <div class="text-2xl font-bold text-red-700">⚽: {{ selectedLosingTeam.score || 0 }}</div>
-                <div class="text-xs text-red-600">Lowest Score</div>
+                <span class="text-lg font-bold text-red-700">⚽: {{ selectedLosingTeam.score || 0 }}</span>
               </div>
             </div>
           </div>
@@ -905,12 +889,13 @@
         <!-- Money Calculation Info -->
         <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
           <h5 class="font-semibold text-blue-800 mb-2">💰 Money Calculations:</h5>
-          <ul class="text-sm text-blue-700 space-y-1">
+          <ul class="text-xs text-blue-700 space-y-1">
+            <li>• Tournament cost per player: -{{ calculateCostPerPlayer(endTournamentId).toLocaleString() }} VND</li>
             <li>• Betting winners: +{{ getBettingWinAmount(getTournamentTeams(weeklyTournaments.find(t => t.id === endTournamentId) || {} as Tournament).length).toLocaleString() }} VND</li>
             <li>• Betting losers: -10,000 VND</li>
-            <li>• Loser team players: -5,000 VND (additional penalty)</li>
+            <li>• Loser team players: -5,000 VND</li>
             <li>• Winner team gets free water (no water cost)</li>
-            <li>• Other teams pay water cost if selected</li>
+            <li>• Other players pay water cost if selected</li>
           </ul>
         </div>
       </div>

@@ -1485,6 +1485,26 @@ router.put('/:id/end', authenticate, async (req: AuthenticatedRequest, res: Resp
       return;
     }
 
+    // Calculate cost per player
+    const totalAttending = tournament.playerAttendances.length;
+    let costPerPlayer = 0;
+    if (totalAttending > 0) {
+      // Get additional costs for this tournament
+      const additionalCosts = await prisma.additionalCost.aggregate({
+        where: { tournamentId: tournamentId },
+        _sum: { amount: true }
+      });
+      const additionalCostSum = additionalCosts._sum.amount || 0;
+      
+      // Calculate net cost: stadium cost - sponsor money + additional costs
+      const netCost = systemSettings.stadiumCost - systemSettings.sponsorMoney + additionalCostSum;
+      const baseCostPerPlayer = netCost / totalAttending;
+      
+      // Round up to nearest 5000 and add 5000
+      const roundedUp = Math.ceil(baseCostPerPlayer / 5000) * 5000;
+      costPerPlayer = roundedUp + 5000;
+    }
+
     let totalDeducted = 0;
     let totalAdded = 0;
     let playersUpdated = 0;
@@ -1547,8 +1567,15 @@ router.put('/:id/end', authenticate, async (req: AuthenticatedRequest, res: Resp
         }
       }
 
-      // Update player money if there's any change
-      if (moneyChange !== 0) {
+      // Tournament cost per player (applies to all attending players)
+      if (costPerPlayer > 0) {
+        moneyChange -= costPerPlayer;
+        totalDeducted += costPerPlayer;
+        reason += `Tournament cost: -${costPerPlayer.toLocaleString()}; `;
+      }
+
+      // Update player money (always update since all attending players pay tournament cost)
+      if (moneyChange !== 0 || costPerPlayer > 0) {
         playersUpdated++;
         const newMoney = player.money + moneyChange;
         
@@ -1587,6 +1614,7 @@ router.put('/:id/end', authenticate, async (req: AuthenticatedRequest, res: Resp
         totalDeducted,
         totalAdded,
         netChange: totalAdded - totalDeducted,
+        costPerPlayer,
         tournament: updatedTournament,
         winner: winnerTeam,
         loser: loserTeam

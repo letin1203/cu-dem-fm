@@ -160,12 +160,14 @@
                   <!-- Team Header -->
                   <div class="flex items-center mb-3">
                     <div class="w-10 h-10 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full flex items-center justify-center mr-3">
-                      <span class="text-white font-bold text-lg">{{ team.name.charAt(team.name.length - 1) }}</span>
+                      <span class="text-white font-bold text-lg">{{ getTeamNumber(team.name) }}</span>
                     </div>
                     <div class="flex-1">
                       <div class="flex items-center justify-between">
                         <h5 class="font-semibold text-gray-900">{{ team.name }}</h5>
-                        <span v-if="ongoingTournament.status === 'ONGOING'" class="text-lg font-bold text-blue-600">{{ team.score || 0 }}</span>
+                        <span v-if="ongoingTournament.status === 'ONGOING'" class="text-lg font-bold text-blue-600 flex items-center">
+                          ⚽: {{ team.score || 0 }}
+                        </span>
                       </div>
                       <p class="text-sm text-gray-600">{{ team.players?.length || 0 }} players</p>
                     </div>
@@ -461,12 +463,14 @@
                     <!-- Team Header -->
                     <div class="flex items-center mb-3">
                       <div class="w-10 h-10 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full flex items-center justify-center mr-3">
-                        <span class="text-white font-bold text-lg">{{ team.name.charAt(team.name.length - 1) }}</span>
+                        <span class="text-white font-bold text-lg">{{ getTeamNumber(team.name) }}</span>
                       </div>
                       <div class="flex-1">
                         <div class="flex items-center justify-between">
                           <h5 class="font-semibold text-gray-900">{{ team.name }}</h5>
-                          <span v-if="tournament.status === 'COMPLETED'" class="text-lg font-bold text-gray-600">{{ team.score || 0 }}</span>
+                          <span v-if="tournament.status === 'COMPLETED'" class="text-lg font-bold text-gray-600 flex items-center">
+                            ⚽: {{ team.score || 0 }}
+                          </span>
                         </div>
                         <p class="text-sm text-gray-600">{{ team.players?.length || 0 }} players</p>
                       </div>
@@ -766,16 +770,16 @@
             <div class="flex items-center justify-between mb-3">
               <div class="flex items-center">
                 <div class="w-10 h-10 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full flex items-center justify-center mr-3">
-                  <span class="text-white font-bold text-lg">{{ team.name.charAt(team.name.length - 1) }}</span>
+                  <span class="text-white font-bold text-lg">{{ getTeamNumber(team.name) }}</span>
                 </div>
                 <div>
-                  <div class="flex items-center space-x-2">
-                    <h5 class="font-semibold text-gray-900">{{ team.name }}</h5>
-                    <span class="text-lg font-bold text-blue-600">{{ getTeamScore(team.id) }}</span>
-                  </div>
+                  <h5 class="font-semibold text-gray-900">{{ team.name }}</h5>
                   <p class="text-sm text-gray-600">{{ team.players?.length || 0 }} players</p>
                 </div>
               </div>
+              <span class="text-lg font-bold text-blue-600 flex items-center">
+                ⚽: {{ getTeamScore(team.id) }}
+              </span>
             </div>
 
             <!-- Score Controls -->
@@ -792,7 +796,6 @@
               
               <div class="text-center">
                 <div class="text-3xl font-bold text-gray-900">{{ getTeamScore(team.id) }}</div>
-                <div class="text-sm text-gray-500">Score</div>
               </div>
               
               <button
@@ -840,7 +843,7 @@
       <!-- Tournament teams for winner selection -->
       <div v-if="endTournamentId && getTournamentTeams(weeklyTournaments.find(t => t.id === endTournamentId) || {} as Tournament).length > 0" class="mb-6">
         <p class="text-gray-600 mb-4">
-          Select the winning team by clicking on a team card, then confirm to end the tournament.
+          Select the winning team by clicking on a team card, then confirm to end the tournament. The team with the highest score is automatically selected.
         </p>
         
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 mb-4">
@@ -855,25 +858,39 @@
                 : 'border-gray-200 hover:border-gray-300'
             ]"
           >
-            <h4 class="font-semibold text-sm text-gray-900 mb-2 flex items-center">
-              <!-- Winner crown icon -->
-              <svg 
-                v-if="selectedWinningTeam?.id === team.id" 
-                class="w-4 h-4 text-yellow-500 mr-1" 
-                fill="currentColor" 
-                viewBox="0 0 20 20"
-              >
-                <path fill-rule="evenodd" d="M5 2a1 1 0 011 1v1h1a1 1 0 010 2H6v1a1 1 0 01-2 0V6H3a1 1 0 010-2h1V3a1 1 0 011-1zm0 10a1 1 0 011 1v1h1a1 1 0 110 2H6v1a1 1 0 11-2 0v-1H3a1 1 0 110-2h1v-1a1 1 0 011-1zM12 2a1 1 0 01.967.744L14.146 7.2 17.5 9.134a1 1 0 010 1.732L14.146 12.8l-1.179 4.456a1 1 0 01-1.934 0L9.854 12.8 6.5 10.866a1 1 0 010-1.732L9.854 7.2l1.179-4.456A1 1 0 0112 2z" clip-rule="evenodd"/>
-              </svg>
-              {{ team.name }}
-            </h4>
-            <div class="space-y-1">
-              <div v-for="player in team.players.slice(0, 3)" :key="player.id" class="flex items-center justify-between text-xs">
-                <span class="text-gray-600 truncate">{{ player.name }}</span>
-                <span class="text-gray-500">{{ '⭐'.repeat(player.tier) }}</span>
+            <!-- Team Header with Number and Score -->
+            <div class="flex items-center justify-between mb-3">
+              <div class="flex items-center">
+                <div class="w-8 h-8 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full flex items-center justify-center mr-2">
+                  <span class="text-white font-bold text-sm">{{ getTeamNumber(team.name) }}</span>
+                </div>
+                <h4 class="font-semibold text-sm text-gray-900 flex items-center">
+                  <!-- Winner crown icon -->
+                  <svg 
+                    v-if="selectedWinningTeam?.id === team.id" 
+                    class="w-4 h-4 text-yellow-500 mr-1" 
+                    fill="currentColor" 
+                    viewBox="0 0 20 20"
+                  >
+                    <path fill-rule="evenodd" d="M5 2a1 1 0 011 1v1h1a1 1 0 010 2H6v1a1 1 0 01-2 0V6H3a1 1 0 010-2h1V3a1 1 0 011-1zm0 10a1 1 0 011 1v1h1a1 1 0 110 2H6v1a1 1 0 11-2 0v-1H3a1 1 0 110-2h1v-1a1 1 0 011-1zM12 2a1 1 0 01.967.744L14.146 7.2 17.5 9.134a1 1 0 010 1.732L14.146 12.8l-1.179 4.456a1 1 0 01-1.934 0L9.854 12.8 6.5 10.866a1 1 0 010-1.732L9.854 7.2l1.179-4.456A1 1 0 0112 2z" clip-rule="evenodd"/>
+                  </svg>
+                  {{ team.name }}
+                </h4>
               </div>
-              <div v-if="team.players.length > 3" class="text-xs text-gray-500">
-                +{{ team.players.length - 3 }} more players
+              <!-- Team Score -->
+              <div class="flex items-center">
+                <span class="text-sm text-gray-600 mr-1">⚽:</span>
+                <span class="text-lg font-bold text-blue-600">{{ team.score || 0 }}</span>
+              </div>
+            </div>
+            
+            <!-- Team Info -->
+            <div class="text-xs text-gray-600">
+              <div class="flex justify-between">
+                <span>{{ team.players?.length || 0 }} players</span>
+                <span v-if="team.players?.length > 0">
+                  Avg Tier: {{ (team.players.reduce((sum: number, p: any) => sum + p.tier, 0) / team.players.length).toFixed(1) }}
+                </span>
               </div>
             </div>
           </div>
@@ -1353,7 +1370,8 @@ const getTournamentTeams = (tournament: Tournament): any[] => {
       id: team.id,
       name: team.name,
       logo: team.logo,
-      players: team.players || []
+      players: team.players || [],
+      score: team.score || 0
     }
   })
 }
@@ -1507,20 +1525,26 @@ const openScoresModal = async (tournamentId: string) => {
       const response = await apiClient.getTournamentScores(tournamentId)
       console.log('API scores response:', response)
       
-      if (response.success && response.data) {
+      if (response.success && response.data && (response.data as any).teamScores) {
         // Update team scores with current values from API response
-        const scoresData = response.data as Record<string, number>
-        console.log('Scores data from API:', scoresData)
+        const teamScoresArray = (response.data as any).teamScores as Array<{teamId: string, name: string, score: number}>
+        console.log('Team scores array from API:', teamScoresArray)
+        
+        // Convert array to Map for easier lookup
+        const scoresMap = new Map<string, number>()
+        teamScoresArray.forEach(teamScore => {
+          scoresMap.set(teamScore.teamId, teamScore.score)
+        })
         
         teams.forEach(team => {
-          const scoreFromApi = scoresData[team.id] !== undefined ? scoresData[team.id] : (team.score || 0)
+          const scoreFromApi = scoresMap.get(team.id) !== undefined ? scoresMap.get(team.id)! : (team.score || 0)
           console.log(`Setting score for team ${team.name} (${team.id}): ${scoreFromApi}`)
           teamScores.value.set(team.id, scoreFromApi)
         })
         
         console.log('Final teamScores Map:', Object.fromEntries(teamScores.value))
       } else {
-        console.log('API failed, using team scores')
+        console.log('API failed or no teamScores, using team scores')
         // Fallback to team scores if API fails
         teams.forEach(team => {
           teamScores.value.set(team.id, team.score || 0)
@@ -1603,13 +1627,18 @@ const saveScores = async () => {
 const refreshModalScores = async (tournamentId: string) => {
   try {
     const response = await apiClient.getTournamentScores(tournamentId)
-    if (response.success && response.data) {
-      const scoresData = response.data as Record<string, number>
+    if (response.success && response.data && (response.data as any).teamScores) {
+      const teamScoresArray = (response.data as any).teamScores as Array<{teamId: string, name: string, score: number}>
       const tournament = weeklyTournaments.value.find(t => t.id === tournamentId)
       if (tournament) {
         const teams = getTournamentTeams(tournament)
+        const scoresMap = new Map<string, number>()
+        teamScoresArray.forEach(teamScore => {
+          scoresMap.set(teamScore.teamId, teamScore.score)
+        })
+        
         teams.forEach(team => {
-          const scoreFromApi = scoresData[team.id] !== undefined ? scoresData[team.id] : (team.score || 0)
+          const scoreFromApi = scoresMap.get(team.id) !== undefined ? scoresMap.get(team.id)! : (team.score || 0)
           teamScores.value.set(team.id, scoreFromApi)
         })
       }
@@ -1621,6 +1650,17 @@ const refreshModalScores = async (tournamentId: string) => {
 
 const endTournament = async (tournamentId: string) => {
   endTournamentId.value = tournamentId
+  
+  // Auto-select the team with the highest score as winner
+  const tournament = weeklyTournaments.value.find(t => t.id === tournamentId)
+  if (tournament) {
+    const teams = getTournamentTeams(tournament)
+    const highestScoreTeam = getHighestScoreTeam(teams)
+    if (highestScoreTeam) {
+      selectedWinningTeam.value = highestScoreTeam
+    }
+  }
+  
   showEndTournamentModal.value = true
 }
 
@@ -1834,6 +1874,23 @@ const confirmDeleteCost = async () => {
     showDeleteCostModal.value = false;
     deleteCostId.value = null;
   }
+}
+
+// Helper function to extract team number from team name
+const getTeamNumber = (teamName: string): string => {
+  // Extract number from team name like "Team 1 - 2025-07-21" => "1"
+  const match = teamName.match(/Team (\d+)/)
+  return match ? match[1] : teamName.charAt(teamName.length - 1)
+}
+
+// Helper function to get the team with the highest score
+const getHighestScoreTeam = (teams: any[]): any | null => {
+  if (!teams || teams.length === 0) return null
+  return teams.reduce((highest, current) => {
+    const currentScore = current.score || 0
+    const highestScore = highest.score || 0
+    return currentScore > highestScore ? current : highest
+  })
 }
 
 // Fetch all data

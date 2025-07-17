@@ -1561,11 +1561,24 @@ const saveScores = async () => {
     
     if (response.success) {
       toast.success('Scores saved successfully!')
+      
+      // Update local tournament data immediately with new scores for instant UI feedback
+      const tournament = weeklyTournaments.value.find(t => t.id === scoresTournamentId.value)
+      if (tournament?.teams) {
+        tournament.teams.forEach(team => {
+          if (scores[team.id] !== undefined) {
+            (team as any).score = scores[team.id]
+          }
+        })
+      }
+      
       showScoresModal.value = false
       scoresTournamentId.value = null
       
-      // Refresh tournament data to show updated scores
-      await tournamentsStore.fetchTournaments()
+      // Also refresh tournament data from backend to ensure consistency
+      setTimeout(() => {
+        tournamentsStore.fetchTournaments()
+      }, 100)
     } else {
       throw new Error(response.error || 'Failed to save scores')
     }

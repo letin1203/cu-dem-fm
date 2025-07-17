@@ -31,6 +31,7 @@ export interface Team {
   name: string
   logo?: string
   founded: string | Date
+  score?: number
   players: Player[]
   stats: TeamStats
   createdAt: string | Date

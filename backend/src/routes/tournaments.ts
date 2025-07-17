@@ -766,7 +766,8 @@ router.get('/:id/attendance-stats', async (req: AuthenticatedRequest, res: Respo
     const attendingCount = attendanceStats.filter((a: any) => a.status === 'ATTEND').length;
     const notAttendingCount = attendanceStats.filter((a: any) => a.status === 'NOT_ATTEND').length;
     const nullCount = attendanceStats.filter((a: any) => a.status === 'NULL').length;
-    const bettingCount = attendanceStats.filter((a: any) => a.bet === true).length;
+    // Only count betting from players who are attending
+    const bettingCount = attendanceStats.filter((a: any) => a.status === 'ATTEND' && a.bet === true).length;
 
     res.json({
       success: true,

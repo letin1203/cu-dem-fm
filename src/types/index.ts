@@ -7,6 +7,15 @@ export interface Player {
   money: number // Player's money/value
   teamId?: string
   team?: {
+    name: string
+    logo?: string
+  }
+  stats: PlayerStats
+  avatar?: string
+  createdAt: string | Date
+  updatedAt: string | Date
+}
+
 export interface TournamentAttendanceDetails {
   id: string
   status: 'NULL' | 'NOT_ATTEND' | 'ATTEND'
@@ -23,13 +32,6 @@ export interface TournamentAttendanceDetails {
     tier: number
     avatar?: string
   }
-}   name: string
-    logo?: string
-  }
-  stats: PlayerStats
-  avatar?: string
-  createdAt: string | Date
-  updatedAt: string | Date
 }
 
 export interface PlayerStats {

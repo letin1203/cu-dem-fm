@@ -908,6 +908,7 @@
           <ul class="text-sm text-blue-700 space-y-1">
             <li>• Betting winners: +{{ getBettingWinAmount(getTournamentTeams(weeklyTournaments.find(t => t.id === endTournamentId) || {} as Tournament).length).toLocaleString() }} VND</li>
             <li>• Betting losers: -10,000 VND</li>
+            <li>• Loser team players: -5,000 VND (additional penalty)</li>
             <li>• Winner team gets free water (no water cost)</li>
             <li>• Other teams pay water cost if selected</li>
           </ul>

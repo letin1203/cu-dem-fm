@@ -1501,6 +1501,7 @@ router.put('/:id/end', authenticate, async (req: AuthenticatedRequest, res: Resp
       );
 
       const isWinnerTeam = playerTeam?.team.id === winnerTeam.id;
+      const isLoserTeam = playerTeam?.team.id === loserTeam.id;
 
       // Betting calculations
       if (attendance.bet) {
@@ -1523,6 +1524,14 @@ router.put('/:id/end', authenticate, async (req: AuthenticatedRequest, res: Resp
           totalDeducted += 10000;
           reason += 'Betting loss: -10,000; ';
         }
+      }
+
+      // Loser team penalty
+      if (isLoserTeam) {
+        // Players in loser team subtract additional 5000
+        moneyChange -= 5000;
+        totalDeducted += 5000;
+        reason += 'Loser team penalty: -5,000; ';
       }
 
       // Water cost calculations

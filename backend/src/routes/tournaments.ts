@@ -44,6 +44,7 @@ router.get('/', async (req: AuthenticatedRequest, res: Response): Promise<void> 
                   position: true,
                   tier: true,
                   avatar: true,
+                  money: true,
                 },
               },
               team: {

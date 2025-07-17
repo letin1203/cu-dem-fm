@@ -106,6 +106,7 @@ export interface SystemSettings {
   stadiumCost: number
   sponsorMoney: number
   clubFund: number
+  waterCost?: number
   createdAt: string | Date
   updatedAt: string | Date
 }

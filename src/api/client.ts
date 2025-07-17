@@ -223,10 +223,6 @@ class ApiClient {
   }
 
   // Tournament scores endpoints
-  async getTournamentScores(tournamentId: string) {
-    return this.get(`/tournaments/${tournamentId}/scores`);
-  }
-
   async updateTournamentScores(tournamentId: string, scores: Record<string, number>) {
     return this.put(`/tournaments/${tournamentId}/scores`, { scores });
   }

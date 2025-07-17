@@ -905,6 +905,52 @@
             <li>• Other players pay water cost if selected</li>
           </ul>
         </div>
+
+        <!-- Preview Change Block -->
+        <div class="bg-gray-50 border border-gray-200 rounded-lg p-4 mb-4">
+          <h5 class="font-semibold text-gray-800 mb-2">🔎 Preview Money Changes</h5>
+          <div v-for="team in getTournamentTeams(weeklyTournaments.find(t => t.id === endTournamentId) || {} as Tournament)" :key="team.id" class="mb-4">
+            <div class="font-semibold text-blue-700 mb-2">{{ team.name }}</div>
+            <div v-for="player in team.players.filter((p: any) => endTournamentId && getAttendanceStatus(endTournamentId, p.id) === 'ATTEND')" :key="player.id" class="bg-white rounded-lg p-3 mb-2 border border-gray-100">
+              <!-- Player Header -->
+              <div class="flex items-center justify-between mb-2">
+                <div class="flex items-center">
+                  <div class="w-6 h-6 bg-gray-300 rounded-full flex items-center justify-center mr-2 text-xs font-medium">
+                    {{ player.name.charAt(0).toUpperCase() }}
+                  </div>
+                  <span class="font-medium text-gray-900">{{ player.name }}</span>
+                  <span class="ml-2 text-xs text-gray-500">{{ player.position }}</span>
+                  <span class="ml-2 text-xs text-gray-500">T{{ player.tier }}</span>
+                </div>
+              </div>
+              
+              <!-- Detailed Changes -->
+              <div v-if="endTournamentId" class="ml-8 space-y-1">
+                <div 
+                  v-for="change in getDetailedMoneyChange(endTournamentId, team, player).changes" 
+                  :key="change.type"
+                  class="flex justify-between items-center text-xs"
+                >
+                  <span class="text-gray-600">{{ change.description }}:</span>
+                  <span 
+                    :class="change.amount >= 0 ? 'text-green-600' : 'text-red-600'"
+                    class="font-medium"
+                  >
+                    {{ change.amount >= 0 ? '+' : '' }}{{ change.amount.toLocaleString() }} VND
+                  </span>
+                </div>
+                <div class="flex justify-between items-center text-xs" :class="endTournamentId && getDetailedMoneyChange(endTournamentId, team, player).total >= 0 ? 'text-green-600' : 'text-red-600'">
+                  <span>Total Change: </span>
+                  <span>{{ endTournamentId && getDetailedMoneyChange(endTournamentId, team, player).total >= 0 ? '+' : '' }}{{ endTournamentId ? getDetailedMoneyChange(endTournamentId, team, player).total.toLocaleString() : '0' }} VND</span>
+                </div>
+                <div class="flex justify-between items-center text-xs">
+                  <span>Current: </span>
+                  <span>{{ (player.money || 0).toLocaleString() }} VND</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
       
       <!-- No teams message -->
@@ -1052,7 +1098,7 @@ const betLoading = ref<Set<string>>(new Set())
 // Modal for attendance details
 const showAttendanceModal = ref(false)
 const attendanceModalData = ref<TournamentAttendanceDetails[]>([])
-const attendanceDetailsMap = ref<Map<string, TournamentAttendanceDetails>>(new Map())
+const attendanceDetailsMap = ref<Map<string, TournamentAttendanceDetails[]>>(new Map())
 const attendanceModalTitle = ref('')
 const attendanceModalType = ref<'attending' | 'not-attending' | 'betting'>('attending')
 const attendanceModalLoading = ref(false)
@@ -1440,6 +1486,8 @@ const getTournamentTeams = (tournament: Tournament): any[] => {
     })
   }
   
+   
+  
   // Tournament teams come as { team: { id, name, logo, score } } structure
   return tournament.teams.map((tournamentTeam: any) => {
     const team = tournamentTeam.team || tournamentTeam
@@ -1597,43 +1645,13 @@ const openScoresModal = async (tournamentId: string) => {
     console.log('Opening scores modal for tournament:', tournamentId)
     console.log('Teams found:', teams.map(t => ({ id: t.id, name: t.name, score: t.score })))
     
-    // Try to load current scores from API
-    try {
-      const response = await apiClient.getTournamentScores(tournamentId)
-      console.log('API scores response:', response)
-      
-      if (response.success && response.data && (response.data as any).teamScores) {
-        // Update team scores with current values from API response
-        const teamScoresArray = (response.data as any).teamScores as Array<{teamId: string, name: string, score: number}>
-        console.log('Team scores array from API:', teamScoresArray)
-        
-        // Convert array to Map for easier lookup
-        const scoresMap = new Map<string, number>()
-        teamScoresArray.forEach(teamScore => {
-          scoresMap.set(teamScore.teamId, teamScore.score)
-        })
-        
-        teams.forEach(team => {
-          const scoreFromApi = scoresMap.get(team.id) !== undefined ? scoresMap.get(team.id)! : (team.score || 0)
-          console.log(`Setting score for team ${team.name} (${team.id}): ${scoreFromApi}`)
-          teamScores.value.set(team.id, scoreFromApi)
-        })
-        
-        console.log('Final teamScores Map:', Object.fromEntries(teamScores.value))
-      } else {
-        console.log('API failed or no teamScores, using team scores')
-        // Fallback to team scores if API fails
-        teams.forEach(team => {
-          teamScores.value.set(team.id, team.score || 0)
-        })
-      }
-    } catch (err: any) {
-      console.error('Failed to load current scores:', err)
-      // Fallback to team scores if API fails
-      teams.forEach(team => {
-        teamScores.value.set(team.id, team.score || 0)
-      })
-    }
+    // Use team scores directly from tournament data
+    teams.forEach(team => {
+      console.log(`Setting score for team ${team.name} (${team.id}): ${team.score || 0}`)
+      teamScores.value.set(team.id, team.score || 0)
+    })
+    
+    console.log('Final teamScores Map:', Object.fromEntries(teamScores.value))
   }
 }
 
@@ -1702,26 +1720,13 @@ const saveScores = async () => {
 
 // Helper function to refresh modal scores
 const refreshModalScores = async (tournamentId: string) => {
-  try {
-    const response = await apiClient.getTournamentScores(tournamentId)
-    if (response.success && response.data && (response.data as any).teamScores) {
-      const teamScoresArray = (response.data as any).teamScores as Array<{teamId: string, name: string, score: number}>
-      const tournament = weeklyTournaments.value.find(t => t.id === tournamentId)
-      if (tournament) {
-        const teams = getTournamentTeams(tournament)
-        const scoresMap = new Map<string, number>()
-        teamScoresArray.forEach(teamScore => {
-          scoresMap.set(teamScore.teamId, teamScore.score)
-        })
-        
-        teams.forEach(team => {
-          const scoreFromApi = scoresMap.get(team.id) !== undefined ? scoresMap.get(team.id)! : (team.score || 0)
-          teamScores.value.set(team.id, scoreFromApi)
-        })
-      }
-    }
-  } catch (err: any) {
-    console.error('Failed to refresh modal scores:', err)
+  // Refresh scores from tournament data instead of API call
+  const tournament = weeklyTournaments.value.find(t => t.id === tournamentId)
+  if (tournament) {
+    const teams = getTournamentTeams(tournament)
+    teams.forEach(team => {
+      teamScores.value.set(team.id, team.score || 0)
+    })
   }
 }
 
@@ -2029,10 +2034,10 @@ const getLowestScoreTeam = (teams: any[]): any | null => {
 // Helper function to get betting count from attendance details
 const getBettingCount = (tournamentId: string): number => {
   const details = attendanceDetailsMap.value.get(tournamentId)
-  if (!details || !details.length) return 0
+  if (!details || !Array.isArray(details) || !details.length) return 0
   
   // Count players who are betting (regardless of attendance status for now)
-  return details.filter(detail => detail.bet === true).length
+  return details.filter((detail: any) => detail.bet === true).length
 }
 
 // Helper function to calculate betting win amount based on number of teams
@@ -2044,6 +2049,146 @@ const getBettingWinAmount = (numberOfTeams: number): number => {
     // 2 teams: +10000
     return 10000
   }
+}
+
+// Helper function to get attendance status for a player in a tournament
+const getAttendanceStatus = (tournamentId: string, playerId: string): string => {
+  const details = attendanceDetailsMap.value.get(tournamentId)
+  if (!details || !Array.isArray(details)) return 'NULL'
+  
+  const playerAttendance = details.find((d: any) => d.playerId === playerId)
+  return playerAttendance?.status || 'NULL'
+}
+
+// Helper function to calculate money change for a player when tournament ends
+const getMoneyChange = (tournamentId: string, team: any, player: any): number => {
+  if (!systemStore.currentSettings) return 0
+  
+  const tournament = weeklyTournaments.value.find(t => t.id === tournamentId)
+  if (!tournament) return 0
+  
+  let totalChange = 0
+  
+  // Base tournament cost per player
+  const costPerPlayer = calculateCostPerPlayer(tournamentId)
+  totalChange -= costPerPlayer
+  
+  // Check if player is betting
+  const details = attendanceDetailsMap.value.get(tournamentId)
+  const playerAttendance = Array.isArray(details) ? details.find((d: any) => d.playerId === player.id) : null
+  const isBetting = playerAttendance?.bet === true
+  const hasWater = playerAttendance?.withWater === true
+  
+  // Betting calculations
+  if (isBetting) {
+    const isWinnerTeam = selectedWinningTeam.value?.id === team.id
+    if (isWinnerTeam) {
+      // Betting winner
+      const teamCount = getTournamentTeams(tournament).length
+      const winAmount = getBettingWinAmount(teamCount)
+      totalChange += winAmount
+    } else {
+      // Betting loser
+      totalChange -= 10000
+    }
+  }
+  
+  // Team result calculations
+  const isWinnerTeam = selectedWinningTeam.value?.id === team.id
+  const isLoserTeam = selectedLosingTeam.value?.id === team.id
+  
+  if (isLoserTeam) {
+    // Loser team penalty
+    totalChange -= 5000
+  }
+  
+  // Water cost calculations
+  if (hasWater && !isWinnerTeam) {
+    // Winner team gets free water, others pay if they selected water
+    const waterCost = systemStore.currentSettings.waterCost || 5000 // Default water cost
+    totalChange -= waterCost
+  }
+  
+  return totalChange
+}
+
+// Helper function to get detailed money change breakdown for a player
+const getDetailedMoneyChange = (tournamentId: string, team: any, player: any): { changes: Array<{type: string, amount: number, description: string}>, total: number } => {
+  if (!systemStore.currentSettings) return { changes: [], total: 0 }
+  
+  const tournament = weeklyTournaments.value.find(t => t.id === tournamentId)
+  if (!tournament) return { changes: [], total: 0 }
+  
+  const changes: Array<{type: string, amount: number, description: string}> = []
+  
+  // Base tournament cost per player
+  const costPerPlayer = calculateCostPerPlayer(tournamentId)
+  changes.push({
+    type: 'cost',
+    amount: -costPerPlayer,
+    description: 'Tournament cost per player'
+  })
+  
+  // Check if player is betting
+  const details = attendanceDetailsMap.value.get(tournamentId)
+  const playerAttendance = Array.isArray(details) ? details.find((d: any) => d.playerId === player.id) : null
+  const isBetting = playerAttendance?.bet === true
+  const hasWater = playerAttendance?.withWater === true
+  
+  // Team result calculations
+  const isWinnerTeam = selectedWinningTeam.value?.id === team.id
+  const isLoserTeam = selectedLosingTeam.value?.id === team.id
+  
+  // Betting calculations
+  if (isBetting) {
+    if (isWinnerTeam) {
+      // Betting winner
+      const teamCount = getTournamentTeams(tournament).length
+      const winAmount = getBettingWinAmount(teamCount)
+      changes.push({
+        type: 'betting_win',
+        amount: winAmount,
+        description: 'Betting winner bonus'
+      })
+    } else {
+      // Betting loser
+      changes.push({
+        type: 'betting_loss',
+        amount: -10000,
+        description: 'Betting loser penalty'
+      })
+    }
+  }
+  
+  if (isLoserTeam) {
+    // Loser team penalty
+    changes.push({
+      type: 'team_loss',
+      amount: -5000,
+      description: 'Loser team penalty'
+    })
+  }
+  
+  // Water cost calculations
+  if (hasWater && !isWinnerTeam) {
+    // Winner team gets free water, others pay if they selected water
+    const waterCost = systemStore.currentSettings.waterCost || 5000
+    changes.push({
+      type: 'water',
+      amount: -waterCost,
+      description: 'Water cost'
+    })
+  } else if (hasWater && isWinnerTeam) {
+    changes.push({
+      type: 'water_free',
+      amount: 0,
+      description: 'Free water (winner team)'
+    })
+  }
+  
+  const total = changes.reduce((sum, change) => sum + change.amount, 0)
+  
+  return { changes, total }
 }
 
 // Fetch all data

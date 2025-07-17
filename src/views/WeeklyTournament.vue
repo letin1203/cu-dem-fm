@@ -162,8 +162,11 @@
                     <div class="w-10 h-10 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full flex items-center justify-center mr-3">
                       <span class="text-white font-bold text-lg">{{ team.name.charAt(team.name.length - 1) }}</span>
                     </div>
-                    <div>
-                      <h5 class="font-semibold text-gray-900">{{ team.name }}</h5>
+                    <div class="flex-1">
+                      <div class="flex items-center justify-between">
+                        <h5 class="font-semibold text-gray-900">{{ team.name }}</h5>
+                        <span v-if="ongoingTournament.status === 'ONGOING'" class="text-lg font-bold text-blue-600">{{ team.score || 0 }}</span>
+                      </div>
                       <p class="text-sm text-gray-600">{{ team.players?.length || 0 }} players</p>
                     </div>
                   </div>
@@ -193,16 +196,6 @@
                     <div class="flex justify-between text-xs text-gray-600">
                       <span>Total Tier: {{ team.players.reduce((sum: number, p: any) => sum + p.tier, 0) }}</span>
                       <span>Avg: {{ (team.players.reduce((sum: number, p: any) => sum + p.tier, 0) / team.players.length).toFixed(1) }}</span>
-                    </div>
-                  </div>
-
-                  <!-- Team Score (for ongoing tournaments) -->
-                  <div v-if="ongoingTournament.status === 'ONGOING'" class="mt-3 pt-3 border-t border-gray-200">
-                    <div class="flex justify-center">
-                      <div class="bg-blue-50 px-3 py-2 rounded-lg">
-                        <div class="text-sm font-semibold text-blue-700">Score</div>
-                        <div class="text-xl font-bold text-blue-800">{{ team.score || 0 }}</div>
-                      </div>
                     </div>
                   </div>
                 </div>
@@ -470,8 +463,11 @@
                       <div class="w-10 h-10 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full flex items-center justify-center mr-3">
                         <span class="text-white font-bold text-lg">{{ team.name.charAt(team.name.length - 1) }}</span>
                       </div>
-                      <div>
-                        <h5 class="font-semibold text-gray-900">{{ team.name }}</h5>
+                      <div class="flex-1">
+                        <div class="flex items-center justify-between">
+                          <h5 class="font-semibold text-gray-900">{{ team.name }}</h5>
+                          <span v-if="tournament.status === 'COMPLETED'" class="text-lg font-bold text-gray-600">{{ team.score || 0 }}</span>
+                        </div>
                         <p class="text-sm text-gray-600">{{ team.players?.length || 0 }} players</p>
                       </div>
                     </div>
@@ -501,16 +497,6 @@
                       <div class="flex justify-between text-xs text-gray-600">
                         <span>Total Tier: {{ team.players.reduce((sum: number, p: any) => sum + p.tier, 0) }}</span>
                         <span>Avg: {{ (team.players.reduce((sum: number, p: any) => sum + p.tier, 0) / team.players.length).toFixed(1) }}</span>
-                      </div>
-                    </div>
-
-                    <!-- Team Score (for completed tournaments) -->
-                    <div v-if="tournament.status === 'COMPLETED'" class="mt-3 pt-3 border-t border-gray-200">
-                      <div class="flex justify-center">
-                        <div class="bg-gray-50 px-3 py-2 rounded-lg">
-                          <div class="text-sm font-semibold text-gray-700">Final Score</div>
-                          <div class="text-xl font-bold text-gray-800">{{ team.score || 0 }}</div>
-                        </div>
                       </div>
                     </div>
                   </div>
@@ -783,7 +769,10 @@
                   <span class="text-white font-bold text-lg">{{ team.name.charAt(team.name.length - 1) }}</span>
                 </div>
                 <div>
-                  <h5 class="font-semibold text-gray-900">{{ team.name }}</h5>
+                  <div class="flex items-center space-x-2">
+                    <h5 class="font-semibold text-gray-900">{{ team.name }}</h5>
+                    <span class="text-lg font-bold text-blue-600">{{ getTeamScore(team.id) }}</span>
+                  </div>
                   <p class="text-sm text-gray-600">{{ team.players?.length || 0 }} players</p>
                 </div>
               </div>
@@ -1504,28 +1493,34 @@ const openScoresModal = async (tournamentId: string) => {
   scoresTournamentId.value = tournamentId
   showScoresModal.value = true
   
-  // Initialize scores for all teams to 0 first
+  // Initialize scores for all teams
   const tournament = weeklyTournaments.value.find(t => t.id === tournamentId)
   if (tournament) {
     const teams = getTournamentTeams(tournament)
     teamScores.value.clear()
-    teams.forEach(team => {
-      teamScores.value.set(team.id, 0)
-    })
-
+    
     // Try to load current scores from API
     try {
       const response = await apiClient.getTournamentScores(tournamentId)
       if (response.success && response.data) {
-        // Update team scores with current values from backend
+        // Update team scores with current values from API response
+        const scoresData = response.data as Record<string, number>
         teams.forEach(team => {
-          const currentScore = team.score || 0
-          teamScores.value.set(team.id, currentScore)
+          const scoreFromApi = scoresData[team.id] !== undefined ? scoresData[team.id] : (team.score || 0)
+          teamScores.value.set(team.id, scoreFromApi)
+        })
+      } else {
+        // Fallback to team scores if API fails
+        teams.forEach(team => {
+          teamScores.value.set(team.id, team.score || 0)
         })
       }
     } catch (err: any) {
       console.error('Failed to load current scores:', err)
-      // Continue with default 0 scores if loading fails
+      // Fallback to team scores if API fails
+      teams.forEach(team => {
+        teamScores.value.set(team.id, team.score || 0)
+      })
     }
   }
 }

@@ -200,7 +200,7 @@
             </div>
             
             <!-- Attendance Toggle Button -->
-            <div v-if="getAttendanceButtonText(ongoingTournament.id) !== 'No Player'" class="flex justify-center pt-2 border-t border-gray-200">
+            <div v-if="ongoingTournament.status === 'UPCOMING' && getAttendanceButtonText(ongoingTournament.id) !== 'No Player'" class="flex justify-center pt-2 border-t border-gray-200">
               <div class="flex space-x-3">
                 <button
                   @click="toggleAttendance(ongoingTournament.id)"

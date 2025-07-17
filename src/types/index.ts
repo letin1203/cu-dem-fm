@@ -214,3 +214,9 @@ export interface TournamentAttendanceDetails {
     avatar?: string
   }
 }
+
+export interface TournamentEndResponse {
+  message: string
+  playersUpdated: number
+  totalDeducted: number
+}

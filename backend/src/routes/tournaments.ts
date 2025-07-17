@@ -351,14 +351,57 @@ router.delete('/:id', authenticate, authorize(['ADMIN']), async (req: Authentica
       return;
     }
 
-    // Delete the tournament (cascade deletes will handle related data)
+    // For weekly tournaments, we need to clean up the teams that were created specifically for this tournament
+    let teamsDeleted = 0;
+    if (existingTournament.type === 'WEEKLY' && existingTournament.teams.length > 0) {
+      // Get the team IDs from tournament teams
+      const teamIds = existingTournament.teams.map(tt => tt.teamId);
+      
+      // Reset players' teamId to null before deleting teams
+      await prisma.player.updateMany({
+        where: {
+          teamId: {
+            in: teamIds,
+          },
+        },
+        data: {
+          teamId: null,
+        },
+      });
+      
+      // Delete team stats first (if any)
+      await prisma.teamStats.deleteMany({
+        where: {
+          teamId: {
+            in: teamIds,
+          },
+        },
+      });
+      
+      // Delete the actual teams
+      const deletedTeams = await prisma.team.deleteMany({
+        where: {
+          id: {
+            in: teamIds,
+          },
+        },
+      });
+      
+      teamsDeleted = deletedTeams.count;
+    }
+
+    // Delete the tournament (cascade deletes will handle TournamentTeam, attendance, and additional costs)
     await prisma.tournament.delete({
       where: { id },
     });
 
+    const message = existingTournament.type === 'WEEKLY' 
+      ? `Weekly tournament deleted successfully. Removed ${teamsDeleted} teams, ${existingTournament.teams.length} team assignments, ${existingTournament.playerAttendances.length} attendance records, and ${existingTournament.additionalCosts.length} additional costs.`
+      : `Tournament deleted successfully. Removed ${existingTournament.teams.length} team assignments, ${existingTournament.playerAttendances.length} attendance records, and ${existingTournament.additionalCosts.length} additional costs.`;
+
     res.json({
       success: true,
-      message: `Tournament deleted successfully. Removed ${existingTournament.teams.length} team assignments, ${existingTournament.playerAttendances.length} attendance records, and ${existingTournament.additionalCosts.length} additional costs.`,
+      message,
     });
   } catch (error) {
     console.error('Delete tournament error:', error);
@@ -789,9 +832,12 @@ router.post('/:id/generate-teams', authenticate, authorize(['ADMIN', 'MOD']), as
       lockedPlayers: Set<string>; // GK players that can't be moved
     }> = [];
 
+    // Generate unique team names using tournament start date
+    const startDate = new Date(tournament.startDate);
+    const dateStr = startDate.toISOString().split('T')[0]; // YYYY-MM-DD format
     for (let i = 0; i < teamCount; i++) {
       teams.push({
-        name: `Team ${i + 1}`, // Team 1, Team 2, etc.
+        name: `Team ${i + 1} - ${dateStr}`, // Team 1 - 2025-07-21, Team 2 - 2025-07-21, etc.
         players: [],
         totalTier: 0,
         tier9Plus: 0,
@@ -850,6 +896,16 @@ router.post('/:id/generate-teams', authenticate, authorize(['ADMIN', 'MOD']), as
       }
     }
 
+    // Calculate target players per team for balanced distribution
+    const targetPlayersPerTeam = Math.floor(playerCount / teamCount);
+    const teamsWithExtraPlayer = playerCount % teamCount;
+    
+    // Set target player count for each team
+    const teamTargets = teams.map((_, index) => ({
+      target: targetPlayersPerTeam + (index < teamsWithExtraPlayer ? 1 : 0),
+      current: teams[index].players.length // Already has GK players
+    }));
+
     // Now distribute non-GK players by tier (starting from highest)
     const tierGroups = new Map<number, typeof nonGkPlayers>();
     
@@ -881,30 +937,63 @@ router.post('/:id/generate-teams', authenticate, authorize(['ADMIN', 'MOD']), as
         
         if (tier >= 9) {
           // For high-tier players (9-10), prioritize teams with fewer high-tier players
-          let minTier9Plus = teams[0].tier9Plus;
-          for (let j = 1; j < teams.length; j++) {
-            if (teams[j].tier9Plus < minTier9Plus) {
-              minTier9Plus = teams[j].tier9Plus;
-              bestTeamIndex = j;
-            }
-          }
-        } else {
-          // For lower-tier players, balance based on total tier and tier 9+ count
+          // but also consider team capacity
           let bestScore = Infinity;
           
           for (let j = 0; j < teams.length; j++) {
-            // Calculate a balance score considering:
-            // 1. Total tier difference
-            // 2. Tier 9+ player difference (weighted more heavily)
+            // Skip teams that are already at capacity
+            if (teams[j].players.length >= teamTargets[j].target) {
+              continue;
+            }
+            
+            // Score based on tier 9+ count and remaining capacity
+            const tier9PlusScore = teams[j].tier9Plus * 10;
+            const capacityScore = (teams[j].players.length / teamTargets[j].target) * 5;
+            const totalScore = tier9PlusScore + capacityScore;
+            
+            if (totalScore < bestScore) {
+              bestScore = totalScore;
+              bestTeamIndex = j;
+            }
+          }
+          
+          // If all teams are at capacity, fall back to team with lowest tier 9+ count
+          if (bestScore === Infinity) {
+            let minTier9Plus = teams[0].tier9Plus;
+            for (let j = 1; j < teams.length; j++) {
+              if (teams[j].tier9Plus < minTier9Plus) {
+                minTier9Plus = teams[j].tier9Plus;
+                bestTeamIndex = j;
+              }
+            }
+          }
+        } else {
+          // For lower-tier players, prioritize teams with capacity first, then balance
+          let bestScore = Infinity;
+          
+          for (let j = 0; j < teams.length; j++) {
+            // Calculate score based on:
+            // 1. How close to capacity (heavily weighted)
+            // 2. Tier balance
+            // 3. Tier 9+ distribution
+            
+            const capacityRatio = teams[j].players.length / teamTargets[j].target;
+            const isOverCapacity = teams[j].players.length >= teamTargets[j].target;
+            
+            // Heavily penalize teams at or over capacity
+            let capacityScore = isOverCapacity ? 1000 : capacityRatio * 50;
+            
             const totalTierAfter = teams[j].totalTier + tier;
             const avgTotalTier = teams.reduce((sum, team) => sum + team.totalTier, 0) / teams.length;
+            const tierScore = Math.abs(totalTierAfter - avgTotalTier);
             
             const tier9PlusDiff = teams[j].tier9Plus - (teams.reduce((sum, team) => sum + team.tier9Plus, 0) / teams.length);
+            const tier9PlusScore = Math.abs(tier9PlusDiff) * 3;
             
-            const score = Math.abs(totalTierAfter - avgTotalTier) + (tier9PlusDiff * 3); // Weight tier 9+ more heavily
+            const totalScore = capacityScore + tierScore + tier9PlusScore;
             
-            if (score < bestScore) {
-              bestScore = score;
+            if (totalScore < bestScore) {
+              bestScore = totalScore;
               bestTeamIndex = j;
             }
           }
@@ -1222,6 +1311,141 @@ router.post('/:id/balance-teams', authenticate, authorize(['ADMIN']), async (req
     res.status(500).json({
       success: false,
       error: 'Failed to balance teams',
+    });
+  }
+});
+
+// End tournament with money calculations
+router.put('/:id/end', authenticate, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  try {
+    const { id: tournamentId } = req.params;
+
+    // Check if user has permission (admin only)
+    if (req.user?.role !== 'ADMIN') {
+      res.status(403).json({
+        success: false,
+        error: 'Admin access required',
+      });
+      return;
+    }
+
+    // Get tournament with teams and attendances
+    const tournament = await prisma.tournament.findUnique({
+      where: { id: tournamentId },
+      include: {
+        teams: true,
+        playerAttendances: {
+          where: { status: 'ATTEND' },
+          include: {
+            player: true
+          }
+        },
+        additionalCosts: true
+      },
+    });
+
+    if (!tournament) {
+      res.status(404).json({
+        success: false,
+        error: 'Tournament not found',
+      });
+      return;
+    }
+
+    // Check if tournament has teams
+    if (tournament.teams.length > 0) {
+      // Get system settings for calculation
+      const systemSettings = await prisma.systemSettings.findFirst();
+      if (!systemSettings) {
+        res.status(500).json({
+          success: false,
+          error: 'System settings not found',
+        });
+        return;
+      }
+
+      // Calculate total additional costs for this tournament
+      const totalAdditionalCosts = tournament.additionalCosts.reduce((sum, cost) => sum + cost.amount, 0);
+      
+      // Calculate net amount
+      const net = systemSettings.stadiumCost - systemSettings.sponsorMoney + totalAdditionalCosts;
+      
+      // Calculate cost per attending player
+      const attendingPlayers = tournament.playerAttendances;
+      
+      let costPerPlayer = 0;
+      if (attendingPlayers.length > 0) {
+        const baseCost = net / attendingPlayers.length;
+        // Round up to nearest 5000 and add 5000
+        const roundedUp = Math.ceil(baseCost / 5000) * 5000;
+        costPerPlayer = roundedUp + 5000;
+      }
+
+      // Calculate total deducted amount before updates
+      let totalDeducted = 0;
+      let playersUpdated = 0;
+
+      // Update player money for each attending player
+      const playerUpdates = attendingPlayers.map(async (attendance) => {
+        const baseCost = costPerPlayer;
+        const waterCost = attendance.withWater ? 10000 : 0;
+        const totalCost = baseCost + waterCost;
+        
+        // Subtract money from player (allow negative balance)
+        const currentMoney = attendance.player.money;
+        const newMoney = currentMoney - totalCost;
+        const actualDeducted = totalCost;
+        
+        totalDeducted += actualDeducted;
+        playersUpdated += 1;
+        
+        return prisma.player.update({
+          where: { id: attendance.player.id },
+          data: { money: newMoney }
+        });
+      });
+
+      // Execute all player updates
+      await Promise.all(playerUpdates);
+
+      // Update tournament status to COMPLETED
+      const updatedTournament = await prisma.tournament.update({
+        where: { id: tournamentId },
+        data: { status: 'COMPLETED' },
+      });
+
+      // Return response with money calculation details
+      res.json({
+        success: true,
+        data: {
+          message: `Tournament ended successfully! ${playersUpdated} players had money deducted.`,
+          playersUpdated,
+          totalDeducted,
+          tournament: updatedTournament
+        }
+      });
+    } else {
+      // Update tournament status to COMPLETED (no money calculations)
+      const updatedTournament = await prisma.tournament.update({
+        where: { id: tournamentId },
+        data: { status: 'COMPLETED' },
+      });
+
+      res.json({
+        success: true,
+        data: {
+          message: 'Tournament ended successfully! No money calculations performed (no teams).',
+          playersUpdated: 0,
+          totalDeducted: 0,
+          tournament: updatedTournament
+        }
+      });
+    }
+  } catch (error) {
+    console.error('End tournament error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to end tournament',
     });
   }
 });

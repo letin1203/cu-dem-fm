@@ -58,7 +58,13 @@ export const useSystemStore = defineStore('system', () => {
     try {
       const response = await apiClient.getAdditionalCosts(tournamentId)
       if (response.success && response.data) {
-        additionalCosts.value = response.data as AdditionalCost[]
+        const newCosts = response.data as AdditionalCost[]
+        
+        // Remove existing costs for this tournament and add new ones
+        additionalCosts.value = [
+          ...additionalCosts.value.filter(cost => cost.tournamentId !== tournamentId),
+          ...newCosts
+        ]
       }
     } catch (err) {
       console.error('Failed to fetch additional costs:', err)

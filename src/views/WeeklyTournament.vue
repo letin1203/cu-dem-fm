@@ -99,10 +99,10 @@
                     💸 Additional: ${{ getTournamentAdditionalCostsTotal(ongoingTournament.id).toLocaleString() }}
                   </span>
                   <span class="text-blue-600 font-medium">
-                    📊 Net: ${{ calculateTournamentNet(ongoingTournament.id).toLocaleString() }}
+                    📊 Net: -${{ calculateTournamentNet(ongoingTournament.id).toLocaleString() }}
                   </span>
                   <span v-if="getAttendanceStats(ongoingTournament.id)?.attendingCount" class="text-purple-600 font-medium">
-                    👥 Est. Cost per Player: ${{ calculateCostPerPlayer(ongoingTournament.id).toLocaleString() }}
+                    👥 Est. Cost per Player: -${{ calculateCostPerPlayer(ongoingTournament.id).toLocaleString() }}
                   </span>
                 </div>
               </div>
@@ -248,9 +248,10 @@
             </div>
             
             <!-- Random Team Button (Admin/Mod only) -->
-            <div v-if="authStore.hasPermission('canEditTournaments') && getTournamentTeams(ongoingTournament).length === 0" class="flex flex-col items-center pt-2 border-t border-gray-200">
+            <div class="flex flex-col items-center pt-2 border-t border-gray-200">
               <div class="flex space-x-3">
                 <button
+                  v-if="authStore.hasPermission('canEditTournaments') && getTournamentTeams(ongoingTournament).length === 0" 
                   @click="generateRandomTeams(ongoingTournament.id)"
                   :disabled="!canGenerateTeams(ongoingTournament.id) || teamGenerationLoading"
                   class="px-6 py-2 rounded-lg font-medium transition-colors duration-200"
@@ -274,7 +275,7 @@
                 <span v-if="!canGenerateTeams(ongoingTournament.id)">
                   Need {{ 10 - (getAttendanceStats(ongoingTournament.id)?.attendingCount || 0) }} more attending players
                 </span>
-                <span v-else>
+                <span v-if="authStore.hasPermission('canEditTournaments') && getTournamentTeams(ongoingTournament).length === 0">
                   Will create {{ getTeamCount(ongoingTournament.id) }} balanced teams
                 </span>
               </div>
@@ -765,7 +766,7 @@ import { useTournamentsStore } from '../stores/tournaments'
 import { useAuthStore } from '../stores/auth'
 import { useTeamsStore } from '../stores/teams'
 import { useSystemStore } from '../stores/system'
-import type { Tournament, CreateTournamentRequest, TournamentPlayerAttendance, TournamentAttendanceStats, TournamentAttendanceDetails } from '../types'
+import type { Tournament, CreateTournamentRequest, TournamentPlayerAttendance, TournamentAttendanceStats, TournamentAttendanceDetails, TournamentEndResponse } from '../types'
 import { apiClient } from '../api/client'
 
 const toast = useToast()
@@ -843,14 +844,18 @@ const calculateTournamentNet = (tournamentId: string) => {
   const sponsor = systemStore.currentSettings.sponsorMoney
   const stadium = systemStore.currentSettings.stadiumCost
   const additionalCosts = getTournamentAdditionalCostsTotal(tournamentId)
-  return sponsor - stadium - additionalCosts
+  return stadium - sponsor + additionalCosts
 }
 
 const calculateCostPerPlayer = (tournamentId: string) => {
   const net = calculateTournamentNet(tournamentId)
   const attendingCount = getAttendanceStats(tournamentId)?.attendingCount || 0
   if (attendingCount === 0) return 0
-  return Math.round(net / attendingCount)
+  
+  const baseCost = net / attendingCount
+  // Round up to nearest 5000 and add 5000
+  const roundedUp = Math.ceil(baseCost / 5000) * 5000
+  return roundedUp + 5000
 }
 
 // Pagination for old tournaments
@@ -1249,12 +1254,21 @@ const confirmEndTournament = async () => {
   if (!endTournamentId.value) return
   
   try {
-    const response = await apiClient.put(`/tournaments/${endTournamentId.value}`, {
-      status: 'COMPLETED'
-    })
+    const response = await apiClient.put(`/tournaments/${endTournamentId.value}/end`)
     
     if (response.success) {
-      toast.success('Tournament ended successfully!')
+      const data = response.data as TournamentEndResponse
+      let message = 'Tournament ended successfully!'
+      
+      if (data.playersUpdated > 0) {
+        message += ` ${data.playersUpdated} players had money deducted.`
+      }
+      
+      if (data.totalDeducted > 0) {
+        message += ` Total deducted: ${data.totalDeducted.toLocaleString()} VND.`
+      }
+      
+      toast.success(message)
       await fetchData()
     } else {
       toast.error('Failed to end tournament')
@@ -1447,11 +1461,12 @@ const fetchData = async () => {
     ])
     await loadOldTournaments(1)
     
-    // Fetch attendance for all weekly tournaments
+    // Fetch attendance and additional costs for all weekly tournaments
     const weeklyTournamentIds = weeklyTournaments.value.map(t => t.id)
     await Promise.all([
       ...weeklyTournamentIds.map(id => fetchAttendance(id)),
-      ...weeklyTournamentIds.map(id => fetchAttendanceStats(id))
+      ...weeklyTournamentIds.map(id => fetchAttendanceStats(id)),
+      ...weeklyTournamentIds.map(id => systemStore.fetchAdditionalCosts(id))
     ])
   } catch (err: any) {
     console.error('Fetch data error:', err)

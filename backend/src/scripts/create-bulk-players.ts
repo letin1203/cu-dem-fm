@@ -4,7 +4,7 @@ import bcrypt from 'bcryptjs';
 const prisma = new PrismaClient();
 
 async function createBulkPlayersAndUsers() {
-  const tournamentId = 'cmd5vgov30001eideh1q5joev';
+  const tournamentId = 'cmd64ya4a0000c679ki2ub7dy';
   
   // Check if tournament exists
   const tournament = await prisma.tournament.findUnique({
@@ -23,9 +23,10 @@ async function createBulkPlayersAndUsers() {
 
   for (let i = 1; i <= 20; i++) {
     try {
-      const playerName = `Player${i.toString().padStart(2, '0')}`;
-      const username = `user${i.toString().padStart(2, '0')}`;
-      const email = `user${i.toString().padStart(2, '0')}@example.com`;
+      const timestamp = Date.now().toString().slice(-6); // Last 6 digits of timestamp
+      const playerName = `Player${i.toString().padStart(2, '0')}_${timestamp}`;
+      const username = `user${i.toString().padStart(2, '0')}_${timestamp}`;
+      const email = `user${i.toString().padStart(2, '0')}_${timestamp}@example.com`;
       const position = positions[Math.floor(Math.random() * positions.length)];
       const tier = Math.floor(Math.random() * 5) + 1; // Random tier 1-5
       const yearOfBirth = Math.floor(Math.random() * 20) + 1990; // Random year 1990-2009
@@ -37,7 +38,7 @@ async function createBulkPlayersAndUsers() {
           position: position,
           yearOfBirth: yearOfBirth,
           tier: tier,
-          money: 0,
+          money: 50000, // Give them some starting money to test deductions
         }
       });
 
@@ -56,16 +57,18 @@ async function createBulkPlayersAndUsers() {
 
       console.log(`✅ Created user: ${username} linked to ${playerName}`);
 
-      // Set attendance to ATTEND for the tournament
+      // Set attendance to ATTEND for the tournament with random water preference
+      const withWater = Math.random() > 0.5; // 50% chance of wanting water
       await prisma.tournamentPlayerAttendance.create({
         data: {
           tournamentId: tournamentId,
           playerId: player.id,
           status: 'ATTEND',
+          withWater: withWater,
         }
       });
 
-      console.log(`✅ Set attendance ATTEND for ${playerName} in tournament`);
+      console.log(`✅ Set attendance ATTEND for ${playerName} in tournament (water: ${withWater ? 'yes' : 'no'})`);
 
     } catch (error: any) {
       console.error(`❌ Error creating player ${i}:`, error.message);

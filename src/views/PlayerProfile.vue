@@ -3,6 +3,16 @@
     <!-- Header -->
     <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-3 sm:space-y-0">
       <h1 class="text-2xl sm:text-3xl font-bold text-gray-900">My Player Profile</h1>
+      <button 
+        @click="refreshPlayerProfile" 
+        :disabled="loading"
+        class="btn-secondary inline-flex items-center space-x-2"
+      >
+        <svg class="w-4 h-4" :class="{ 'animate-spin': loading }" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+        </svg>
+        <span>{{ loading ? 'Refreshing...' : 'Refresh' }}</span>
+      </button>
     </div>
 
     <!-- Loading State -->
@@ -354,6 +364,14 @@ const fetchPlayerProfile = async () => {
   } finally {
     loading.value = false
   }
+}
+
+// Refresh player profile with fresh data
+const refreshPlayerProfile = async () => {
+  // Force refresh by clearing cached data and getting fresh user data
+  await authStore.getCurrentUser()
+  await playersStore.fetchPlayers()
+  await fetchPlayerProfile()
 }
 
 // Lifecycle

@@ -73,6 +73,7 @@ export interface Tournament {
   teams: Team[]
   matches: Match[]
   winner?: Team
+  loser?: Team
   createdAt: string | Date
   updatedAt: string | Date
 }

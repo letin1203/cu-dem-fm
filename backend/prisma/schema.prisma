@@ -82,6 +82,7 @@ model Team {
   homeMatches     Match[]          @relation("HomeTeam")
   awayMatches     Match[]          @relation("AwayTeam")
   wonTournaments  Tournament[]     @relation("TournamentWinner")
+  lostTournaments Tournament[]     @relation("TournamentLoser")
 
   @@map("teams")
 }
@@ -118,6 +119,8 @@ model Tournament {
   matches            Match[]
   winner             Team?                    @relation("TournamentWinner", fields: [winnerId], references: [id])
   winnerId           String?
+  loser              Team?                    @relation("TournamentLoser", fields: [loserId], references: [id])
+  loserId            String?
   playerAttendances  TournamentPlayerAttendance[]
   additionalCosts    AdditionalCost[]
 

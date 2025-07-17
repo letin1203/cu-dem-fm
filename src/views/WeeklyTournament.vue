@@ -849,74 +849,68 @@
     </div>
   </div>
 
-  <!-- End Tournament Modal with Team Selection -->
+  <!-- End Tournament Modal -->
   <div v-if="showEndTournamentModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50" @click="showEndTournamentModal = false">
     <div class="bg-white rounded-lg p-6 max-w-4xl w-full max-h-[90vh] overflow-y-auto" @click.stop>
       <h3 class="text-lg font-semibold text-gray-900 mb-4">End Tournament</h3>
       
-      <!-- Tournament teams for winner selection -->
+      <!-- Tournament teams showing auto-selected winner and loser -->
       <div v-if="endTournamentId && getTournamentTeams(weeklyTournaments.find(t => t.id === endTournamentId) || {} as Tournament).length > 0" class="mb-6">
         <p class="text-gray-600 mb-4">
-          Select the winning team by clicking on a team card, then confirm to end the tournament. The team with the highest score is automatically selected.
+          The tournament will be ended with the following results based on team scores:
         </p>
         
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 mb-4">
-          <div
-            v-for="team in getTournamentTeams(weeklyTournaments.find(t => t.id === endTournamentId) || {} as Tournament)"
-            :key="team.id"
-            @click="selectedWinningTeam = team"
-            class="bg-white border rounded-lg p-3 hover:shadow-md transition-shadow cursor-pointer"
-            :class="[
-              selectedWinningTeam?.id === team.id 
-                ? 'border-green-500 bg-green-50 ring-2 ring-green-200' 
-                : 'border-gray-200 hover:border-gray-300'
-            ]"
-          >
-            <!-- Team Header with Number and Score -->
-            <div class="flex items-center justify-between mb-3">
+        <div class="space-y-4 mb-6">
+          <!-- Winner Team -->
+          <div v-if="selectedWinningTeam" class="bg-green-50 border border-green-200 rounded-lg p-4">
+            <div class="flex items-center justify-between">
               <div class="flex items-center">
-                <div class="w-8 h-8 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full flex items-center justify-center mr-2">
-                  <span class="text-white font-bold text-sm">{{ getTeamNumber(team.name) }}</span>
-                </div>
-                <h4 class="font-semibold text-sm text-gray-900 flex items-center">
-                  <!-- Winner crown icon -->
-                  <svg 
-                    v-if="selectedWinningTeam?.id === team.id" 
-                    class="w-4 h-4 text-yellow-500 mr-1" 
-                    fill="currentColor" 
-                    viewBox="0 0 20 20"
-                  >
+                <div class="w-10 h-10 bg-gradient-to-r from-yellow-400 to-yellow-600 rounded-full flex items-center justify-center mr-3">
+                  <svg class="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 20 20">
                     <path fill-rule="evenodd" d="M5 2a1 1 0 011 1v1h1a1 1 0 010 2H6v1a1 1 0 01-2 0V6H3a1 1 0 010-2h1V3a1 1 0 011-1zm0 10a1 1 0 011 1v1h1a1 1 0 110 2H6v1a1 1 0 11-2 0v-1H3a1 1 0 110-2h1v-1a1 1 0 011-1zM12 2a1 1 0 01.967.744L14.146 7.2 17.5 9.134a1 1 0 010 1.732L14.146 12.8l-1.179 4.456a1 1 0 01-1.934 0L9.854 12.8 6.5 10.866a1 1 0 010-1.732L9.854 7.2l1.179-4.456A1 1 0 0112 2z" clip-rule="evenodd"/>
                   </svg>
-                  {{ team.name }}
-                </h4>
+                </div>
+                <div>
+                  <h4 class="font-semibold text-green-800">🏆 Winner: {{ selectedWinningTeam.name }}</h4>
+                  <p class="text-sm text-green-600">{{ selectedWinningTeam.players?.length || 0 }} players</p>
+                </div>
               </div>
-              <!-- Team Score -->
-              <div class="flex items-center">
-                <span class="text-sm text-gray-600 mr-1">⚽:</span>
-                <span class="text-lg font-bold text-blue-600">{{ team.score || 0 }}</span>
+              <div class="text-right">
+                <div class="text-2xl font-bold text-green-700">⚽: {{ selectedWinningTeam.score || 0 }}</div>
+                <div class="text-xs text-green-600">Highest Score</div>
               </div>
             </div>
-            
-            <!-- Team Info -->
-            <div class="text-xs text-gray-600">
-              <div class="flex justify-between">
-                <span>{{ team.players?.length || 0 }} players</span>
-                <span v-if="team.players?.length > 0">
-                  Avg Tier: {{ (team.players.reduce((sum: number, p: any) => sum + p.tier, 0) / team.players.length).toFixed(1) }}
-                </span>
+          </div>
+          
+          <!-- Loser Team -->
+          <div v-if="selectedLosingTeam" class="bg-red-50 border border-red-200 rounded-lg p-4">
+            <div class="flex items-center justify-between">
+              <div class="flex items-center">
+                <div class="w-10 h-10 bg-gradient-to-r from-gray-400 to-gray-600 rounded-full flex items-center justify-center mr-3">
+                  <span class="text-white font-bold text-lg">{{ getTeamNumber(selectedLosingTeam.name) }}</span>
+                </div>
+                <div>
+                  <h4 class="font-semibold text-red-800">😔 Loser: {{ selectedLosingTeam.name }}</h4>
+                  <p class="text-sm text-red-600">{{ selectedLosingTeam.players?.length || 0 }} players</p>
+                </div>
+              </div>
+              <div class="text-right">
+                <div class="text-2xl font-bold text-red-700">⚽: {{ selectedLosingTeam.score || 0 }}</div>
+                <div class="text-xs text-red-600">Lowest Score</div>
               </div>
             </div>
           </div>
         </div>
         
-        <div v-if="selectedWinningTeam" class="bg-green-50 border border-green-200 rounded-lg p-3 mb-4">
-          <p class="text-green-800 font-medium">
-            <svg class="w-4 h-4 inline mr-1" fill="currentColor" viewBox="0 0 20 20">
-              <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
-            </svg>
-            Selected Winner: {{ selectedWinningTeam.name }}
-          </p>
+        <!-- Money Calculation Info -->
+        <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
+          <h5 class="font-semibold text-blue-800 mb-2">💰 Money Calculations:</h5>
+          <ul class="text-sm text-blue-700 space-y-1">
+            <li>• Betting winners: +{{ (10000 * (getTournamentTeams(weeklyTournaments.find(t => t.id === endTournamentId) || {} as Tournament).length - 1)).toLocaleString() }} VND</li>
+            <li>• Betting losers: -10,000 VND</li>
+            <li>• Winner team gets free water (no water cost)</li>
+            <li>• Other teams pay water cost if selected</li>
+          </ul>
         </div>
       </div>
       
@@ -929,15 +923,14 @@
       
       <div class="flex justify-end space-x-3">
         <button
-          @click="showEndTournamentModal = false; selectedWinningTeam = null"
+          @click="showEndTournamentModal = false; selectedWinningTeam = null; selectedLosingTeam = null"
           class="px-4 py-2 text-gray-600 hover:text-gray-800 transition-colors"
         >
           Cancel
         </button>
         <button
           @click="confirmEndTournament"
-          :disabled="!!endTournamentId && getTournamentTeams(weeklyTournaments.find(t => t.id === endTournamentId) || {} as Tournament).length > 0 && !selectedWinningTeam"
-          class="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          class="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 transition-colors"
         >
           End Tournament
         </button>
@@ -1060,6 +1053,7 @@ const additionalCostLoading = ref(false)
 const showEndTournamentModal = ref(false)
 const endTournamentId = ref<string | null>(null)
 const selectedWinningTeam = ref<any | null>(null)
+const selectedLosingTeam = ref<any | null>(null)
 
 // Scores Modal variables
 const showScoresModal = ref(false)
@@ -1685,13 +1679,16 @@ const refreshModalScores = async (tournamentId: string) => {
 const endTournament = async (tournamentId: string) => {
   endTournamentId.value = tournamentId
   
-  // Auto-select the team with the highest score as winner
+  // Auto-select the team with the highest score as winner and lowest score as loser
   const tournament = weeklyTournaments.value.find(t => t.id === tournamentId)
   if (tournament) {
     const teams = getTournamentTeams(tournament)
-    const highestScoreTeam = getHighestScoreTeam(teams)
-    if (highestScoreTeam) {
+    if (teams.length > 0) {
+      const highestScoreTeam = getHighestScoreTeam(teams)
+      const lowestScoreTeam = getLowestScoreTeam(teams)
+      
       selectedWinningTeam.value = highestScoreTeam
+      selectedLosingTeam.value = lowestScoreTeam
     }
   }
   
@@ -1702,24 +1699,27 @@ const confirmEndTournament = async () => {
   if (!endTournamentId.value) return
   
   try {
-    // Prepare request body with winner information if selected
-    const requestBody: any = {}
-    if (selectedWinningTeam.value) {
-      requestBody.winnerId = selectedWinningTeam.value.id
-    }
-    
-    const response = await apiClient.put(`/tournaments/${endTournamentId.value}/end`, requestBody)
+    // No need to send winnerId - backend will auto-select based on scores
+    const response = await apiClient.put(`/tournaments/${endTournamentId.value}/end`, {})
     
     if (response.success) {
-      const data = response.data as TournamentEndResponse
+      const data = response.data as any
       let message = 'Tournament ended successfully!'
       
-      if (selectedWinningTeam.value) {
-        message += ` Winner: ${selectedWinningTeam.value.name}.`
+      if (data.winner) {
+        message += ` Winner: ${data.winner.name} (${data.winner.score} points).`
+      }
+      
+      if (data.loser) {
+        message += ` Loser: ${data.loser.name} (${data.loser.score} points).`
       }
       
       if (data.playersUpdated > 0) {
-        message += ` ${data.playersUpdated} players had money deducted.`
+        message += ` ${data.playersUpdated} players had money updated.`
+      }
+      
+      if (data.totalAdded > 0) {
+        message += ` Total added: ${data.totalAdded.toLocaleString()} VND.`
       }
       
       if (data.totalDeducted > 0) {
@@ -1738,6 +1738,7 @@ const confirmEndTournament = async () => {
     showEndTournamentModal.value = false
     endTournamentId.value = null
     selectedWinningTeam.value = null
+    selectedLosingTeam.value = null
   }
 }
 
@@ -1779,7 +1780,7 @@ const confirmDeleteTournament = async () => {
     toast.success(`Tournament deleted successfully! Removed all associated teams, attendance records, and additional costs.`);
   } catch (err: any) {
     console.error('Delete tournament error:', err);
-    toast.error(err.response?.data?.error || 'Failed to delete tournament');
+    toast.error(err.response?.data?.error || 'Failed to delete tournament')
   } finally {
     showDeleteTournamentModal.value = false;
     deleteTournamentData.value = null;
@@ -1924,6 +1925,22 @@ const getHighestScoreTeam = (teams: any[]): any | null => {
     const currentScore = current.score || 0
     const highestScore = highest.score || 0
     return currentScore > highestScore ? current : highest
+  })
+}
+
+// Helper function to get sorted teams by score (highest to lowest)
+const getSortedTeamsByScore = (teams: any[]): any[] => {
+  if (!teams || teams.length === 0) return []
+  return [...teams].sort((a, b) => (b.score || 0) - (a.score || 0))
+}
+
+// Helper function to get the team with the lowest score
+const getLowestScoreTeam = (teams: any[]): any | null => {
+  if (!teams || teams.length === 0) return null
+  return teams.reduce((lowest, current) => {
+    const currentScore = current.score || 0
+    const lowestScore = lowest.score || 0
+    return currentScore < lowestScore ? current : lowest
   })
 }
 

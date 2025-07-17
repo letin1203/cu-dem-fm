@@ -1397,7 +1397,6 @@ router.post('/:id/balance-teams', authenticate, authorize(['ADMIN']), async (req
 router.put('/:id/end', authenticate, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   try {
     const { id: tournamentId } = req.params;
-    const { winnerId } = req.body; // Extract winnerId from request body
 
     // Check if user has permission (admin only)
     if (req.user?.role !== 'ADMIN') {
@@ -1408,13 +1407,24 @@ router.put('/:id/end', authenticate, async (req: AuthenticatedRequest, res: Resp
       return;
     }
 
-    // Get tournament with teams and attendances
+    // Get tournament with teams, attendances, and player details
     const tournament = await prisma.tournament.findUnique({
       where: { id: tournamentId },
       include: {
-        teams: true,
+        teams: {
+          include: {
+            team: {
+              include: {
+                players: {
+                  select: {
+                    id: true
+                  }
+                }
+              }
+            }
+          }
+        },
         playerAttendances: {
-          where: { status: 'ATTEND' },
           include: {
             player: true
           }
@@ -1431,117 +1441,141 @@ router.put('/:id/end', authenticate, async (req: AuthenticatedRequest, res: Resp
       return;
     }
 
-    // If winnerId is provided, validate that the team exists in the tournament
-    if (winnerId && tournament.teams.length > 0) {
-      const winnerTeam = tournament.teams.find(team => team.teamId === winnerId);
-      if (!winnerTeam) {
-        res.status(400).json({
-          success: false,
-          error: 'Winner team must be part of the tournament',
-        });
-        return;
-      }
+    if (tournament.status === 'COMPLETED') {
+      res.status(400).json({
+        success: false,
+        error: 'Tournament is already completed',
+      });
+      return;
     }
 
-    // Check if tournament has teams
-    if (tournament.teams.length > 0) {
-      // Get system settings for calculation
-      const systemSettings = await prisma.systemSettings.findFirst();
-      if (!systemSettings) {
-        res.status(500).json({
-          success: false,
-          error: 'System settings not found',
-        });
-        return;
-      }
-
-      // Calculate total additional costs for this tournament
-      const totalAdditionalCosts = tournament.additionalCosts.reduce((sum, cost) => sum + cost.amount, 0);
-      
-      // Calculate net amount
-      const net = systemSettings.stadiumCost - systemSettings.sponsorMoney + totalAdditionalCosts;
-      
-      // Calculate cost per attending player
-      const attendingPlayers = tournament.playerAttendances;
-      
-      let costPerPlayer = 0;
-      if (attendingPlayers.length > 0) {
-        const baseCost = net / attendingPlayers.length;
-        // Round up to nearest 5000 and add 5000
-        const roundedUp = Math.ceil(baseCost / 5000) * 5000;
-        costPerPlayer = roundedUp + 5000;
-      }
-
-      // Calculate total deducted amount before updates
-      let totalDeducted = 0;
-      let playersUpdated = 0;
-
-      // Update player money for each attending player
-      const playerUpdates = attendingPlayers.map(async (attendance) => {
-        const baseCost = costPerPlayer;
-        const waterCost = attendance.withWater ? 10000 : 0;
-        const totalCost = baseCost + waterCost;
-        
-        // Subtract money from player (allow negative balance)
-        const currentMoney = attendance.player.money;
-        const newMoney = currentMoney - totalCost;
-        const actualDeducted = totalCost;
-        
-        totalDeducted += actualDeducted;
-        playersUpdated += 1;
-        
-        return prisma.player.update({
-          where: { id: attendance.player.id },
-          data: { money: newMoney }
-        });
-      });
-
-      // Execute all player updates
-      await Promise.all(playerUpdates);
-
-      // Update tournament status to COMPLETED and set winner if provided
-      const updateData: any = { status: 'COMPLETED' };
-      if (winnerId) {
-        updateData.winnerId = winnerId;
-      }
-      
+    // If tournament has no teams, just mark as completed
+    if (tournament.teams.length === 0) {
       const updatedTournament = await prisma.tournament.update({
         where: { id: tournamentId },
-        data: updateData,
-      });
-
-      // Return response with money calculation details
-      res.json({
-        success: true,
-        data: {
-          message: `Tournament ended successfully! ${playersUpdated} players had money deducted.`,
-          playersUpdated,
-          totalDeducted,
-          tournament: updatedTournament
-        }
-      });
-    } else {
-      // Update tournament status to COMPLETED (no money calculations)
-      const updateData: any = { status: 'COMPLETED' };
-      if (winnerId) {
-        updateData.winnerId = winnerId;
-      }
-      
-      const updatedTournament = await prisma.tournament.update({
-        where: { id: tournamentId },
-        data: updateData,
+        data: { status: 'COMPLETED' },
       });
 
       res.json({
         success: true,
         data: {
-          message: 'Tournament ended successfully! No money calculations performed (no teams).',
+          message: 'Tournament ended successfully! No teams to process.',
           playersUpdated: 0,
           totalDeducted: 0,
+          totalAdded: 0,
           tournament: updatedTournament
         }
       });
+      return;
     }
+
+    // Auto-select winner (highest score) and loser (lowest score)
+    const teamsWithScores = tournament.teams.map(t => t.team).sort((a, b) => b.score - a.score);
+    const winnerTeam = teamsWithScores[0];
+    const loserTeam = teamsWithScores[teamsWithScores.length - 1];
+    const numberOfTeams = teamsWithScores.length;
+
+    // Get system settings for water cost calculation
+    const systemSettings = await prisma.systemSettings.findFirst();
+    if (!systemSettings) {
+      res.status(500).json({
+        success: false,
+        error: 'System settings not found',
+      });
+      return;
+    }
+
+    let totalDeducted = 0;
+    let totalAdded = 0;
+    let playersUpdated = 0;
+
+    // Process all players with attendance records
+    const playerUpdates = tournament.playerAttendances.map(async (attendance) => {
+      const player = attendance.player;
+      let moneyChange = 0;
+      let reason = '';
+
+      // Find which team this player belongs to
+      const playerTeam = tournament.teams.find(teamEntry => 
+        teamEntry.team.players.some(p => p.id === player.id)
+      );
+
+      const isWinnerTeam = playerTeam?.team.id === winnerTeam.id;
+
+      // Betting calculations
+      if (attendance.bet) {
+        if (isWinnerTeam) {
+          // Betting winner: +10000 * (number of teams - 1)
+          const bettingWinAmount = 10000 * (numberOfTeams - 1);
+          moneyChange += bettingWinAmount;
+          totalAdded += bettingWinAmount;
+          reason += `Betting win: +${bettingWinAmount.toLocaleString()}; `;
+        } else {
+          // Betting loser: -10000
+          moneyChange -= 10000;
+          totalDeducted += 10000;
+          reason += 'Betting loss: -10,000; ';
+        }
+      }
+
+      // Water cost calculations
+      if (attendance.withWater) {
+        if (isWinnerTeam) {
+          // Winner team gets free water
+          reason += 'Free water (winner team); ';
+        } else {
+          // Non-winner team pays for water
+          moneyChange -= 10000;
+          totalDeducted += 10000;
+          reason += 'Water cost: -10,000; ';
+        }
+      }
+
+      // Update player money if there's any change
+      if (moneyChange !== 0) {
+        playersUpdated++;
+        const newMoney = player.money + moneyChange;
+        
+        return prisma.player.update({
+          where: { id: player.id },
+          data: { money: newMoney }
+        });
+      }
+
+      return null;
+    });
+
+    // Execute all player updates (filter out null values)
+    const validUpdates = (await Promise.all(playerUpdates)).filter(Boolean);
+
+    // Update tournament status to COMPLETED with winner and loser
+    const updatedTournament = await prisma.tournament.update({
+      where: { id: tournamentId },
+      data: {
+        status: 'COMPLETED',
+        winnerId: winnerTeam.id,
+        loserId: loserTeam.id,
+      },
+      include: {
+        winner: { select: { id: true, name: true, score: true } },
+        loser: { select: { id: true, name: true, score: true } }
+      }
+    });
+
+    // Return response with detailed money calculation
+    res.json({
+      success: true,
+      data: {
+        message: `Tournament ended successfully! Winner: ${winnerTeam.name} (${winnerTeam.score} points), Loser: ${loserTeam.name} (${loserTeam.score} points)`,
+        playersUpdated,
+        totalDeducted,
+        totalAdded,
+        netChange: totalAdded - totalDeducted,
+        tournament: updatedTournament,
+        winner: winnerTeam,
+        loser: loserTeam
+      }
+    });
   } catch (error) {
     console.error('End tournament error:', error);
     res.status(500).json({

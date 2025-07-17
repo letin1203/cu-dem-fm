@@ -1499,17 +1499,28 @@ const openScoresModal = async (tournamentId: string) => {
     const teams = getTournamentTeams(tournament)
     teamScores.value.clear()
     
+    console.log('Opening scores modal for tournament:', tournamentId)
+    console.log('Teams found:', teams.map(t => ({ id: t.id, name: t.name, score: t.score })))
+    
     // Try to load current scores from API
     try {
       const response = await apiClient.getTournamentScores(tournamentId)
+      console.log('API scores response:', response)
+      
       if (response.success && response.data) {
         // Update team scores with current values from API response
         const scoresData = response.data as Record<string, number>
+        console.log('Scores data from API:', scoresData)
+        
         teams.forEach(team => {
           const scoreFromApi = scoresData[team.id] !== undefined ? scoresData[team.id] : (team.score || 0)
+          console.log(`Setting score for team ${team.name} (${team.id}): ${scoreFromApi}`)
           teamScores.value.set(team.id, scoreFromApi)
         })
+        
+        console.log('Final teamScores Map:', Object.fromEntries(teamScores.value))
       } else {
+        console.log('API failed, using team scores')
         // Fallback to team scores if API fails
         teams.forEach(team => {
           teamScores.value.set(team.id, team.score || 0)
@@ -1567,6 +1578,11 @@ const saveScores = async () => {
         })
       }
       
+      // Refresh modal scores to reflect the changes
+      if (scoresTournamentId.value) {
+        await refreshModalScores(scoresTournamentId.value)
+      }
+      
       showScoresModal.value = false
       scoresTournamentId.value = null
       
@@ -1580,6 +1596,26 @@ const saveScores = async () => {
   } catch (err: any) {
     console.error('Save scores error:', err)
     toast.error(err.response?.data?.error || err.message || 'Failed to save scores')
+  }
+}
+
+// Helper function to refresh modal scores
+const refreshModalScores = async (tournamentId: string) => {
+  try {
+    const response = await apiClient.getTournamentScores(tournamentId)
+    if (response.success && response.data) {
+      const scoresData = response.data as Record<string, number>
+      const tournament = weeklyTournaments.value.find(t => t.id === tournamentId)
+      if (tournament) {
+        const teams = getTournamentTeams(tournament)
+        teams.forEach(team => {
+          const scoreFromApi = scoresData[team.id] !== undefined ? scoresData[team.id] : (team.score || 0)
+          teamScores.value.set(team.id, scoreFromApi)
+        })
+      }
+    }
+  } catch (err: any) {
+    console.error('Failed to refresh modal scores:', err)
   }
 }
 

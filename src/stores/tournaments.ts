@@ -28,11 +28,25 @@ export const useTournamentsStore = defineStore('tournaments', () => {
         const data = response.data as any
         const rawTournaments = data.tournaments || []
         
+        console.log('Raw tournaments from API:', rawTournaments)
+        
         // Transform API format to expected frontend format
-        tournaments.value = rawTournaments.map((tournament: any) => ({
-          ...tournament,
-          teams: tournament.teams?.map((teamEntry: any) => teamEntry.team) || []
-        }))
+        tournaments.value = rawTournaments.map((tournament: any) => {
+          const transformedTournament = {
+            ...tournament,
+            teams: tournament.teams?.map((teamEntry: any) => {
+              const team = {
+                ...teamEntry.team,
+                score: teamEntry.team.score !== undefined ? teamEntry.team.score : 0
+              }
+              console.log(`Transformed team: ${team.name}, score: ${team.score}`)
+              return team
+            }) || []
+          }
+          return transformedTournament
+        })
+        
+        console.log('Transformed tournaments:', tournaments.value)
       }
     } catch (err) {
       error.value = 'Failed to fetch tournaments'

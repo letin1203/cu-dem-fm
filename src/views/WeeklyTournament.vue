@@ -212,10 +212,27 @@
                       : 'hover:shadow-md',
                     getAttendanceButtonText(ongoingTournament.id) === 'Attend'
                       ? 'bg-green-600 text-white hover:bg-green-700'
+                      : getAttendanceButtonText(ongoingTournament.id) === 'Attended'
+                      ? 'bg-green-600 text-white hover:bg-green-700'
                       : 'bg-red-600 text-white hover:bg-red-700'
                   ]"
                 >
-                  {{ attendanceLoading.has(ongoingTournament.id) ? 'Loading...' : getAttendanceButtonText(ongoingTournament.id) }}
+                  <div class="flex items-center space-x-1">
+                    <!-- Human icon (always shown) -->
+                    <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                      <path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd"/>
+                    </svg>
+                    <span>{{ attendanceLoading.has(ongoingTournament.id) ? 'Loading...' : getAttendanceButtonText(ongoingTournament.id) }}</span>
+                    <!-- Check icon (only shown when attended) -->
+                    <svg 
+                      v-if="getAttendanceButtonText(ongoingTournament.id) === 'Attended'" 
+                      class="w-4 h-4" 
+                      fill="currentColor" 
+                      viewBox="0 0 20 20"
+                    >
+                      <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
+                    </svg>
+                  </div>
                 </button>
                 
                 <!-- Water Button -->
@@ -238,6 +255,40 @@
                       <path fill-rule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clip-rule="evenodd"/>
                     </svg>
                     <span>{{ waterLoading.has(ongoingTournament.id) ? 'Loading...' : (getUserWaterStatus(ongoingTournament.id) ? 'Water ✓' : 'Water') }}</span>
+                  </div>
+                </button>
+                
+                <!-- Bet Button -->
+                <button
+                  v-if="getUserAttendanceStatus(ongoingTournament.id) === 'ATTEND'"
+                  @click="toggleBet(ongoingTournament.id)"
+                  :disabled="betLoading.has(ongoingTournament.id)"
+                  class="px-4 py-2 rounded-lg font-medium transition-colors duration-200"
+                  :class="[
+                    betLoading.has(ongoingTournament.id)
+                      ? 'opacity-50 cursor-not-allowed' 
+                      : 'hover:shadow-md',
+                    getUserBetStatus(ongoingTournament.id)
+                      ? 'bg-yellow-600 text-white hover:bg-yellow-700'
+                      : 'bg-gray-300 text-gray-700 hover:bg-gray-400'
+                  ]"
+                >
+                  <div class="flex items-center space-x-1">
+                    <!-- Money icon -->
+                    <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                      <path d="M8.433 7.418c.155-.103.346-.196.567-.267v1.698a2.305 2.305 0 01-.567-.267C8.07 8.34 8 8.114 8 8c0-.114.07-.34.433-.582zM11 12.849v-1.698c.22.071.412.164.567.267.364.243.433.468.433.582 0 .114-.07.34-.433.582a2.305 2.305 0 01-.567.267z"/>
+                      <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-13a1 1 0 10-2 0v.092a4.535 4.535 0 00-1.676.662C6.602 6.234 6 7.009 6 8c0 .99.602 1.765 1.324 2.246.48.32 1.054.545 1.676.662v1.941c-.391-.127-.68-.317-.843-.504a1 1 0 10-1.51 1.31c.562.649 1.413 1.076 2.353 1.253V15a1 1 0 102 0v-.092a4.535 4.535 0 001.676-.662C13.398 13.766 14 12.991 14 12c0-.99-.602-1.765-1.324-2.246A4.535 4.535 0 0011 9.092V7.151c.391.127.68.317.843.504a1 1 0 101.51-1.31c-.562-.649-1.413-1.076-2.353-1.253V5z" clip-rule="evenodd"/>
+                    </svg>
+                    <span>{{ betLoading.has(ongoingTournament.id) ? 'Loading...' : (getUserBetStatus(ongoingTournament.id) ? 'Bet ✓' : 'Bet') }}</span>
+                    <!-- Check icon (only shown when bet is placed) -->
+                    <svg 
+                      v-if="getUserBetStatus(ongoingTournament.id)" 
+                      class="w-4 h-4" 
+                      fill="currentColor" 
+                      viewBox="0 0 20 20"
+                    >
+                      <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
+                    </svg>
                   </div>
                 </button>
               </div>
@@ -554,7 +605,7 @@
               </div>
               
               <!-- Player Details Row -->
-              <div class="flex items-center space-x-4 mt-1">
+              <div class="flex items-center justify-between mt-1">
                 <span class="text-sm text-gray-600">{{ attendance.player.position }}</span>
                 <span class="flex items-center text-sm text-gray-600">
                   <span class="ml-1">
@@ -695,23 +746,81 @@
     </div>
   </div>
 
-  <!-- End Tournament Confirmation Modal -->
+  <!-- End Tournament Modal with Team Selection -->
   <div v-if="showEndTournamentModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50" @click="showEndTournamentModal = false">
-    <div class="bg-white rounded-lg p-6 max-w-md w-full" @click.stop>
+    <div class="bg-white rounded-lg p-6 max-w-4xl w-full max-h-[90vh] overflow-y-auto" @click.stop>
       <h3 class="text-lg font-semibold text-gray-900 mb-4">End Tournament</h3>
-      <p class="text-gray-600 mb-6">
-        Are you sure you want to end this tournament? This will mark it as COMPLETED and cannot be undone.
-      </p>
+      
+      <!-- Tournament teams for winner selection -->
+      <div v-if="endTournamentId && getTournamentTeams(weeklyTournaments.find(t => t.id === endTournamentId) || {} as Tournament).length > 0" class="mb-6">
+        <p class="text-gray-600 mb-4">
+          Select the winning team by clicking on a team card, then confirm to end the tournament.
+        </p>
+        
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 mb-4">
+          <div
+            v-for="team in getTournamentTeams(weeklyTournaments.find(t => t.id === endTournamentId) || {} as Tournament)"
+            :key="team.id"
+            @click="selectedWinningTeam = team"
+            class="bg-white border rounded-lg p-3 hover:shadow-md transition-shadow cursor-pointer"
+            :class="[
+              selectedWinningTeam?.id === team.id 
+                ? 'border-green-500 bg-green-50 ring-2 ring-green-200' 
+                : 'border-gray-200 hover:border-gray-300'
+            ]"
+          >
+            <h4 class="font-semibold text-sm text-gray-900 mb-2 flex items-center">
+              <!-- Winner crown icon -->
+              <svg 
+                v-if="selectedWinningTeam?.id === team.id" 
+                class="w-4 h-4 text-yellow-500 mr-1" 
+                fill="currentColor" 
+                viewBox="0 0 20 20"
+              >
+                <path fill-rule="evenodd" d="M5 2a1 1 0 011 1v1h1a1 1 0 010 2H6v1a1 1 0 01-2 0V6H3a1 1 0 010-2h1V3a1 1 0 011-1zm0 10a1 1 0 011 1v1h1a1 1 0 110 2H6v1a1 1 0 11-2 0v-1H3a1 1 0 110-2h1v-1a1 1 0 011-1zM12 2a1 1 0 01.967.744L14.146 7.2 17.5 9.134a1 1 0 010 1.732L14.146 12.8l-1.179 4.456a1 1 0 01-1.934 0L9.854 12.8 6.5 10.866a1 1 0 010-1.732L9.854 7.2l1.179-4.456A1 1 0 0112 2z" clip-rule="evenodd"/>
+              </svg>
+              {{ team.name }}
+            </h4>
+            <div class="space-y-1">
+              <div v-for="player in team.players.slice(0, 3)" :key="player.id" class="flex items-center justify-between text-xs">
+                <span class="text-gray-600 truncate">{{ player.name }}</span>
+                <span class="text-gray-500">{{ '⭐'.repeat(player.tier) }}</span>
+              </div>
+              <div v-if="team.players.length > 3" class="text-xs text-gray-500">
+                +{{ team.players.length - 3 }} more players
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <div v-if="selectedWinningTeam" class="bg-green-50 border border-green-200 rounded-lg p-3 mb-4">
+          <p class="text-green-800 font-medium">
+            <svg class="w-4 h-4 inline mr-1" fill="currentColor" viewBox="0 0 20 20">
+              <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
+            </svg>
+            Selected Winner: {{ selectedWinningTeam.name }}
+          </p>
+        </div>
+      </div>
+      
+      <!-- No teams message -->
+      <div v-else class="mb-6">
+        <p class="text-gray-600">
+          Are you sure you want to end this tournament? This will mark it as COMPLETED and cannot be undone.
+        </p>
+      </div>
+      
       <div class="flex justify-end space-x-3">
         <button
-          @click="showEndTournamentModal = false"
+          @click="showEndTournamentModal = false; selectedWinningTeam = null"
           class="px-4 py-2 text-gray-600 hover:text-gray-800 transition-colors"
         >
           Cancel
         </button>
         <button
           @click="confirmEndTournament"
-          class="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 transition-colors"
+          :disabled="endTournamentId && getTournamentTeams(weeklyTournaments.find(t => t.id === endTournamentId) || {} as Tournament).length > 0 && !selectedWinningTeam"
+          class="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
         >
           End Tournament
         </button>
@@ -807,6 +916,9 @@ const attendanceStats = ref<Map<string, TournamentAttendanceStats>>(new Map())
 const waterLoading = ref<Set<string>>(new Set())
 const playerWaterLoading = ref<Set<string>>(new Set())
 
+// Bet tracking
+const betLoading = ref<Set<string>>(new Set())
+
 // Modal for attendance details
 const showAttendanceModal = ref(false)
 const attendanceModalData = ref<TournamentAttendanceDetails[]>([])
@@ -830,6 +942,7 @@ const additionalCostLoading = ref(false)
 // Confirmation Modal variables
 const showEndTournamentModal = ref(false)
 const endTournamentId = ref<string | null>(null)
+const selectedWinningTeam = ref<any | null>(null)
 
 const showDeleteTournamentModal = ref(false)
 const deleteTournamentData = ref<Tournament | null>(null)
@@ -998,6 +1111,7 @@ const fetchAttendance = async (tournamentId: string): Promise<void> => {
           playerId: '', 
           status: 'NO_PLAYER' as any,
           withWater: false,
+          bet: false,
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString()
         }
@@ -1050,7 +1164,7 @@ const getAttendanceButtonText = (tournamentId: string): string => {
   const attendance = attendanceMap.value.get(tournamentId)
   if (!attendance || (attendance as any).status === 'NO_PLAYER') return 'No Player'
   if (attendance.status === 'NULL') return 'Attend'
-  return attendance.status === 'ATTEND' ? 'Not Attend' : 'Attend'
+  return attendance.status === 'ATTEND' ? 'Attended' : 'Attend'
 }
 
 const getCardBackgroundClass = (tournamentId: string): string => {
@@ -1116,7 +1230,9 @@ const closeAttendanceModal = (): void => {
 
 const getFilteredModalData = (): TournamentAttendanceDetails[] => {
   const targetStatus = attendanceModalType.value === 'attending' ? 'ATTEND' : 'NOT_ATTEND'
-  return attendanceModalData.value.filter(item => item.status === targetStatus)
+  return attendanceModalData.value
+    .filter(item => item.status === targetStatus)
+    .sort((a, b) => b.player.tier - a.player.tier) // Sort by tier descending (highest tier first)
 }
 
 // Team generation functions
@@ -1273,11 +1389,21 @@ const confirmEndTournament = async () => {
   if (!endTournamentId.value) return
   
   try {
-    const response = await apiClient.put(`/tournaments/${endTournamentId.value}/end`)
+    // Prepare request body with winner information if selected
+    const requestBody: any = {}
+    if (selectedWinningTeam.value) {
+      requestBody.winnerId = selectedWinningTeam.value.id
+    }
+    
+    const response = await apiClient.put(`/tournaments/${endTournamentId.value}/end`, requestBody)
     
     if (response.success) {
       const data = response.data as TournamentEndResponse
       let message = 'Tournament ended successfully!'
+      
+      if (selectedWinningTeam.value) {
+        message += ` Winner: ${selectedWinningTeam.value.name}.`
+      }
       
       if (data.playersUpdated > 0) {
         message += ` ${data.playersUpdated} players had money deducted.`
@@ -1298,6 +1424,7 @@ const confirmEndTournament = async () => {
   } finally {
     showEndTournamentModal.value = false
     endTournamentId.value = null
+    selectedWinningTeam.value = null
   }
 }
 
@@ -1525,6 +1652,12 @@ const getUserWaterStatus = (tournamentId: string): boolean => {
   return attendance?.withWater || false
 }
 
+// Bet-related functions
+const getUserBetStatus = (tournamentId: string): boolean => {
+  const attendance = attendanceMap.value.get(tournamentId)
+  return attendance?.bet || false
+}
+
 const getUserAttendanceStatus = (tournamentId: string): string => {
   const attendance = attendanceMap.value.get(tournamentId)
   if (!attendance || (attendance as any).status === 'NO_PLAYER') return 'NO_PLAYER'
@@ -1563,6 +1696,42 @@ const toggleWater = async (tournamentId: string): Promise<void> => {
     toast.error(err.response?.data?.error || 'Failed to update water preference')
   } finally {
     waterLoading.value.delete(tournamentId)
+  }
+}
+
+const toggleBet = async (tournamentId: string): Promise<void> => {
+  if (betLoading.value.has(tournamentId)) return
+  
+  const currentAttendance = attendanceMap.value.get(tournamentId)
+  
+  // Only allow bet toggle if user is attending
+  if (!currentAttendance || currentAttendance.status !== 'ATTEND') {
+    return
+  }
+  
+  try {
+    betLoading.value.add(tournamentId)
+    
+    const newBetStatus = !currentAttendance.bet
+    
+    const response = await apiClient.put<TournamentPlayerAttendance>(
+      `/tournaments/${tournamentId}/attendance`,
+      { 
+        status: currentAttendance.status,
+        withWater: currentAttendance.withWater,
+        bet: newBetStatus
+      }
+    )
+    
+    if (response.success && response.data) {
+      attendanceMap.value.set(tournamentId, response.data)
+      toast.success(newBetStatus ? 'Bet placed!' : 'Bet removed!')
+    }
+  } catch (err: any) {
+    console.error('Toggle bet error:', err)
+    toast.error(err.response?.data?.error || 'Failed to update bet status')
+  } finally {
+    betLoading.value.delete(tournamentId)
   }
 }
 

@@ -160,7 +160,8 @@ export const useAuthStore = defineStore('auth', () => {
     
     try {
       console.log('Fetching users from API...')
-      const response = await apiClient.getUsers()
+      // Fetch up to 100 users (system max)
+      const response = await apiClient.getUsers({ limit: 100 })
       console.log('API response:', response)
       
       if (response.success && response.data) {

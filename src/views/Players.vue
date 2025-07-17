@@ -13,7 +13,7 @@
     </div>
 
     <!-- Filter Section -->
-    <div class="card p-4">
+    <div class="card p-4 space-y-4">
       <div class="max-w-md">
         <label class="form-label">Filter by Player Name</label>
         <input
@@ -22,6 +22,34 @@
           class="form-input"
           placeholder="Search player name..."
         >
+      </div>
+      
+      <!-- Tier Filter -->
+      <div>
+        <label class="form-label">Filter by Tier</label>
+        <div class="flex flex-wrap gap-2 mt-2">
+          <button
+            @click="selectedTierRange = null"
+            :class="selectedTierRange === null 
+              ? 'bg-blue-600 text-white' 
+              : 'bg-gray-100 text-gray-700 hover:bg-gray-200'"
+            class="px-3 py-2 rounded-lg text-sm font-medium transition-colors"
+          >
+            All Tiers
+          </button>
+          <button
+            v-for="tierRange in tierRanges"
+            :key="tierRange.key"
+            @click="selectedTierRange = tierRange.key"
+            :class="selectedTierRange === tierRange.key 
+              ? 'bg-blue-600 text-white' 
+              : 'bg-gray-100 text-gray-700 hover:bg-gray-200'"
+            class="px-3 py-2 rounded-lg text-sm font-medium transition-colors flex items-center space-x-1"
+          >
+            <span>{{ tierRange.stars }}</span>
+            <span>{{ tierRange.label }}</span>
+          </button>
+        </div>
       </div>
     </div>
 
@@ -42,8 +70,8 @@
 
       <!-- Empty State -->
       <div v-else-if="filteredPlayers.length === 0" class="text-center py-8">
-        <div class="text-gray-500 mb-4" v-if="playerNameFilter">
-          No players match the filter "{{ playerNameFilter }}".
+        <div class="text-gray-500 mb-4" v-if="playerNameFilter || selectedTierRange">
+          No players match the current filters.
         </div>
         <div class="text-gray-500 mb-4" v-else>
           No players found
@@ -351,13 +379,40 @@ const error = computed(() => playersStore.error)
 const showAddForm = ref(false)
 const editingPlayer = ref<Player | null>(null)
 const playerNameFilter = ref('')
+const selectedTierRange = ref<string | null>(null)
+
+// Tier ranges configuration
+const tierRanges = [
+  { key: '1-2', label: '(1-2)', stars: '⭐⭐', min: 1, max: 2 },
+  { key: '3-4', label: '(3-4)', stars: '⭐⭐⭐⭐', min: 3, max: 4 },
+  { key: '5-6', label: '(5-6)', stars: '⭐⭐⭐⭐⭐⭐', min: 5, max: 6 },
+  { key: '7-8', label: '(7-8)', stars: '⭐⭐⭐⭐⭐⭐⭐⭐', min: 7, max: 8 },
+  { key: '9-10', label: '(9-10)', stars: '⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐', min: 9, max: 10 }
+]
 
 // Computed properties for pagination and filtering
 const filteredPlayers = computed(() => {
-  if (!playerNameFilter.value) return players.value
-  return players.value.filter(player => 
-    player.name.toLowerCase().includes(playerNameFilter.value.toLowerCase())
-  )
+  let result = players.value
+  
+  // Apply name filter if provided
+  if (playerNameFilter.value) {
+    result = result.filter(player => 
+      player.name.toLowerCase().includes(playerNameFilter.value.toLowerCase())
+    )
+  }
+  
+  // Apply tier filter if provided
+  if (selectedTierRange.value) {
+    const tierRange = tierRanges.find(range => range.key === selectedTierRange.value)
+    if (tierRange) {
+      result = result.filter(player => 
+        player.tier >= tierRange.min && player.tier <= tierRange.max
+      )
+    }
+  }
+  
+  // Sort by tier descending (highest tier first)
+  return result.sort((a, b) => b.tier - a.tier)
 })
 
 const remainingPlayersCount = computed(() => {
@@ -379,6 +434,13 @@ onMounted(async () => {
 // Watch for filter changes and reset pagination when filter is cleared
 watch(playerNameFilter, (newValue, oldValue) => {
   // If filter is cleared (from something to empty), reload all players
+  if (oldValue && !newValue) {
+    playersStore.fetchPlayers()
+  }
+})
+
+watch(selectedTierRange, (newValue, oldValue) => {
+  // If tier filter is cleared (from something to null), reload all players
   if (oldValue && !newValue) {
     playersStore.fetchPlayers()
   }

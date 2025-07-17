@@ -74,6 +74,7 @@ export interface TournamentPlayerAttendance {
   id: string
   status: 'NULL' | 'NOT_ATTEND' | 'ATTEND'
   withWater: boolean
+  bet: boolean
   tournamentId: string
   playerId: string
   createdAt: string | Date
@@ -150,7 +151,7 @@ export interface ChartData {
 export interface User {
   id: string
   username: string
-  email: string
+  email?: string // Made optional since we're removing email support
   password: string
   role: UserRole
   playerId?: string // Links to a player for their personal stats

@@ -595,7 +595,7 @@ router.put('/:id/attendance', authenticate, async (req: AuthenticatedRequest, re
   try {
     const { id: tournamentId } = req.params;
     const userId = req.user!.id;
-    const { status, withWater } = updateAttendanceSchema.parse(req.body);
+    const { status, withWater, bet } = updateAttendanceSchema.parse(req.body);
 
     // Get user's player
     const user = await prisma.user.findUnique({
@@ -629,6 +629,9 @@ router.put('/:id/attendance', authenticate, async (req: AuthenticatedRequest, re
     if (withWater !== undefined) {
       updateData.withWater = withWater;
     }
+    if (bet !== undefined) {
+      updateData.bet = bet;
+    }
 
     // Update or create attendance
     const attendance = await prisma.tournamentPlayerAttendance.upsert({
@@ -644,6 +647,7 @@ router.put('/:id/attendance', authenticate, async (req: AuthenticatedRequest, re
         playerId: user.player.id,
         status,
         withWater: withWater ?? false,
+        bet: bet ?? false,
       },
     });
 
@@ -664,7 +668,7 @@ router.put('/:id/attendance', authenticate, async (req: AuthenticatedRequest, re
 router.put('/:id/attendance/:playerId', authenticate, authorize(['ADMIN', 'MOD']), async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   try {
     const { id: tournamentId, playerId } = req.params;
-    const { status, withWater } = updateAttendanceSchema.parse(req.body);
+    const { status, withWater, bet } = updateAttendanceSchema.parse(req.body);
 
     // Verify tournament exists
     const tournament = await prisma.tournament.findUnique({
@@ -697,6 +701,9 @@ router.put('/:id/attendance/:playerId', authenticate, authorize(['ADMIN', 'MOD']
     if (withWater !== undefined) {
       updateData.withWater = withWater;
     }
+    if (bet !== undefined) {
+      updateData.bet = bet;
+    }
 
     // Update or create attendance
     const attendance = await prisma.tournamentPlayerAttendance.upsert({
@@ -712,6 +719,7 @@ router.put('/:id/attendance/:playerId', authenticate, authorize(['ADMIN', 'MOD']
         playerId,
         status,
         withWater: withWater ?? false,
+        bet: bet ?? false,
       },
     });
 
@@ -1387,6 +1395,7 @@ router.post('/:id/balance-teams', authenticate, authorize(['ADMIN']), async (req
 router.put('/:id/end', authenticate, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   try {
     const { id: tournamentId } = req.params;
+    const { winnerId } = req.body; // Extract winnerId from request body
 
     // Check if user has permission (admin only)
     if (req.user?.role !== 'ADMIN') {
@@ -1418,6 +1427,18 @@ router.put('/:id/end', authenticate, async (req: AuthenticatedRequest, res: Resp
         error: 'Tournament not found',
       });
       return;
+    }
+
+    // If winnerId is provided, validate that the team exists in the tournament
+    if (winnerId && tournament.teams.length > 0) {
+      const winnerTeam = tournament.teams.find(team => team.teamId === winnerId);
+      if (!winnerTeam) {
+        res.status(400).json({
+          success: false,
+          error: 'Winner team must be part of the tournament',
+        });
+        return;
+      }
     }
 
     // Check if tournament has teams
@@ -1476,10 +1497,15 @@ router.put('/:id/end', authenticate, async (req: AuthenticatedRequest, res: Resp
       // Execute all player updates
       await Promise.all(playerUpdates);
 
-      // Update tournament status to COMPLETED
+      // Update tournament status to COMPLETED and set winner if provided
+      const updateData: any = { status: 'COMPLETED' };
+      if (winnerId) {
+        updateData.winnerId = winnerId;
+      }
+      
       const updatedTournament = await prisma.tournament.update({
         where: { id: tournamentId },
-        data: { status: 'COMPLETED' },
+        data: updateData,
       });
 
       // Return response with money calculation details
@@ -1494,9 +1520,14 @@ router.put('/:id/end', authenticate, async (req: AuthenticatedRequest, res: Resp
       });
     } else {
       // Update tournament status to COMPLETED (no money calculations)
+      const updateData: any = { status: 'COMPLETED' };
+      if (winnerId) {
+        updateData.winnerId = winnerId;
+      }
+      
       const updatedTournament = await prisma.tournament.update({
         where: { id: tournamentId },
-        data: { status: 'COMPLETED' },
+        data: updateData,
       });
 
       res.json({

@@ -71,7 +71,6 @@
                 </div>
                 <div>
                   <h3 class="text-lg font-semibold text-gray-900">{{ user.username }}</h3>
-                  <p class="text-sm text-gray-500">{{ user.email }}</p>
                 </div>
               </div>
               
@@ -151,17 +150,6 @@
               required
               class="form-input"
               placeholder="Enter username"
-            >
-          </div>
-          
-          <div>
-            <label class="form-label">Email</label>
-            <input
-              v-model="formData.email"
-              type="email"
-              required
-              class="form-input"
-              placeholder="Enter email"
             >
           </div>
           
@@ -267,6 +255,7 @@ onMounted(async () => {
   error.value = null
   
   try {
+    // Load up to 100 users (system maximum)
     await authStore.fetchUsers()
     
     // Fetch players separately and don't block on it
@@ -292,7 +281,6 @@ const formatDate = (date: string | Date | null | undefined): string => {
 
 const formData = ref({
   username: '',
-  email: '',
   password: '',
   role: '' as UserRole | '',
   playerId: '',
@@ -366,7 +354,6 @@ function editUser(user: User) {
   nextTick(() => {
     formData.value = {
       username: user.username,
-      email: user.email,
       password: '',
       role: user.role,
       playerId: user.playerId || user.player?.id || '',
@@ -378,7 +365,6 @@ function editUser(user: User) {
 function submitForm() {
   const userData = {
     username: formData.value.username,
-    email: formData.value.email,
     password: formData.value.password,
     role: formData.value.role as UserRole,
     playerId: formData.value.playerId || undefined,
@@ -406,7 +392,6 @@ function cancelForm() {
   editingUser.value = null
   formData.value = {
     username: '',
-    email: '',
     password: '',
     role: '',
     playerId: '',

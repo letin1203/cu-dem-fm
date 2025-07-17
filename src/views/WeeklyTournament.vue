@@ -303,6 +303,13 @@
                 </button>
                 <button
                   v-if="authStore.hasPermission('canEditTournaments') && ongoingTournament.status === 'UPCOMING' && getTournamentTeams(ongoingTournament).length > 0"
+                  @click="openClearTeamsModal(ongoingTournament.id)"
+                  class="px-6 py-2 rounded-lg font-medium bg-red-600 text-white hover:bg-red-700 hover:shadow-md transition-colors duration-200"
+                >
+                  Clear Teams
+                </button>
+                <button
+                  v-if="authStore.hasPermission('canEditTournaments') && ongoingTournament.status === 'UPCOMING' && getTournamentTeams(ongoingTournament).length > 0"
                   @click="startTournament(ongoingTournament.id)"
                   class="px-6 py-2 rounded-lg font-medium bg-green-600 text-white hover:bg-green-700 hover:shadow-md transition-colors duration-200"
                 >
@@ -690,20 +697,20 @@
             max="999999"
             step="0.01"
             class="form-input"
-            :class="{ 'border-red-500': additionalCostForm.amount <= 0 }"
+            :class="{ 'border-red-500': additionalCostForm.amount !== null && (additionalCostForm.amount <= 0 || isNaN(additionalCostForm.amount)) }"
             placeholder="Enter amount (must be greater than 0)"
           >
-          <p v-if="additionalCostForm.amount <= 0 && additionalCostForm.amount !== null" 
+          <p v-if="additionalCostForm.amount !== null && (additionalCostForm.amount <= 0 || isNaN(additionalCostForm.amount))" 
              class="text-red-500 text-xs mt-1">
-            Amount must be greater than 0
+            Amount must be a valid number greater than 0
           </p>
         </div>
         
         <button 
           type="submit" 
-          :disabled="additionalCostLoading || additionalCostForm.description.trim().length < 3 || additionalCostForm.amount <= 0"
+          :disabled="additionalCostLoading || !isFormValid"
           class="btn-primary w-full"
-          :class="{ 'opacity-50 cursor-not-allowed': additionalCostLoading }"
+          :class="{ 'opacity-50 cursor-not-allowed': additionalCostLoading || !isFormValid }"
         >
           {{ additionalCostLoading ? (editingCostId ? 'Updating...' : 'Adding...') : (editingCostId ? 'Update Cost' : 'Add Cost') }}
         </button>
@@ -957,6 +964,33 @@
     </div>
   </div>
 
+  <!-- Clear Teams Confirmation Modal -->
+  <div v-if="showClearTeamsModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50" @click="showClearTeamsModal = false">
+    <div class="bg-white rounded-lg p-6 max-w-lg w-full" @click.stop>
+      <h3 class="text-lg font-semibold text-gray-900 mb-4">Clear Teams</h3>
+      <div class="text-gray-600 mb-6">
+        <p class="mb-2">Are you sure you want to clear all teams for this tournament?</p>
+        <p class="text-red-600 font-medium text-sm">
+          This action cannot be undone. All team assignments will be removed.
+        </p>
+      </div>
+      <div class="flex justify-end space-x-3">
+        <button
+          @click="showClearTeamsModal = false"
+          class="px-4 py-2 text-gray-600 hover:text-gray-800 transition-colors"
+        >
+          Cancel
+        </button>
+        <button
+          @click="confirmClearTeams"
+          class="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 transition-colors"
+        >
+          Clear Teams
+        </button>
+      </div>
+    </div>
+  </div>
+
   <!-- Delete Additional Cost Confirmation Modal -->
   <div v-if="showDeleteCostModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50" @click="showDeleteCostModal = false">
     <div class="bg-white rounded-lg p-6 max-w-md w-full" @click.stop>
@@ -1018,7 +1052,7 @@ const betLoading = ref<Set<string>>(new Set())
 // Modal for attendance details
 const showAttendanceModal = ref(false)
 const attendanceModalData = ref<TournamentAttendanceDetails[]>([])
-const attendanceDetailsMap = ref<Map<string, TournamentAttendanceDetails[]>>(new Map())
+const attendanceDetailsMap = ref<Map<string, TournamentAttendanceDetails>>(new Map())
 const attendanceModalTitle = ref('')
 const attendanceModalType = ref<'attending' | 'not-attending' | 'betting'>('attending')
 const attendanceModalLoading = ref(false)
@@ -1031,7 +1065,7 @@ const showAdditionalCostModal = ref(false)
 const selectedTournamentForCosts = ref<Tournament | null>(null)
 const additionalCostForm = ref({
   description: '',
-  amount: 0
+  amount: null as number | null
 })
 const editingCostId = ref<string | null>(null)
 const additionalCostLoading = ref(false)
@@ -1055,6 +1089,9 @@ const deleteTournamentInfo = ref<{
   additionalCostCount: number
 } | null>(null)
 
+const showClearTeamsModal = ref(false)
+const clearTeamsModalTournamentId = ref<string | null>(null)
+
 const showDeleteCostModal = ref(false)
 const deleteCostId = ref<string | null>(null)
 
@@ -1063,6 +1100,17 @@ const currentAdditionalCosts = computed(() => systemStore.additionalCosts)
 const totalAdditionalCosts = computed(() => 
   currentAdditionalCosts.value.reduce((total, cost) => total + cost.amount, 0)
 )
+
+// Form validation computed property
+const isFormValid = computed(() => {
+  const descriptionValid = additionalCostForm.value.description.trim().length >= 3
+  const amountValid = additionalCostForm.value.amount !== null && 
+                      additionalCostForm.value.amount !== undefined &&
+                      typeof additionalCostForm.value.amount === 'number' && 
+                      !isNaN(additionalCostForm.value.amount) && 
+                      additionalCostForm.value.amount > 0
+  return descriptionValid && amountValid
+})
 
 // Helper functions for tournament-specific additional costs
 const getTournamentAdditionalCosts = (tournamentId: string) => {
@@ -1380,14 +1428,26 @@ const getTeamCount = (tournamentId: string): number => {
 const getTournamentTeams = (tournament: Tournament): any[] => {
   if (!tournament.teams) return []
   
-  // Tournament teams come as { team: { id, name, logo, players } } structure
+  // Create a map of team players from tournamentTeamPlayers
+  const teamPlayersMap = new Map<string, any[]>()
+  
+  if (tournament.tournamentTeamPlayers) {
+    tournament.tournamentTeamPlayers.forEach((ttp: any) => {
+      if (!teamPlayersMap.has(ttp.teamId)) {
+        teamPlayersMap.set(ttp.teamId, [])
+      }
+      teamPlayersMap.get(ttp.teamId)!.push(ttp.player)
+    })
+  }
+  
+  // Tournament teams come as { team: { id, name, logo, score } } structure
   return tournament.teams.map((tournamentTeam: any) => {
     const team = tournamentTeam.team || tournamentTeam
     return {
       id: team.id,
       name: team.name,
       logo: team.logo,
-      players: team.players || [],
+      players: teamPlayersMap.get(team.id) || [],
       score: team.score || 0
     }
   })
@@ -1777,6 +1837,38 @@ const confirmDeleteTournament = async () => {
   }
 }
 
+// Clear Teams functions
+const openClearTeamsModal = (tournamentId: string) => {
+  clearTeamsModalTournamentId.value = tournamentId
+  showClearTeamsModal.value = true
+}
+
+const closeClearTeamsModal = () => {
+  showClearTeamsModal.value = false
+  clearTeamsModalTournamentId.value = null
+}
+
+const confirmClearTeams = async () => {
+  if (!clearTeamsModalTournamentId.value) return
+  
+  try {
+    const response = await apiClient.put(`/tournaments/${clearTeamsModalTournamentId.value}/clear-teams`)
+    
+    if (response.success) {
+      toast.success('All teams cleared successfully!')
+      await fetchData()
+    } else {
+      toast.error('Failed to clear teams')
+    }
+  } catch (err: any) {
+    console.error('Clear teams error:', err)
+    toast.error(err.response?.data?.error || 'Failed to clear teams')
+  } finally {
+    showClearTeamsModal.value = false
+    clearTeamsModalTournamentId.value = null
+  }
+}
+
 // Additional Cost functions
 const openAdditionalCostModal = async (tournament: Tournament) => {
   selectedTournamentForCosts.value = tournament
@@ -1784,7 +1876,7 @@ const openAdditionalCostModal = async (tournament: Tournament) => {
   editingCostId.value = null
   additionalCostForm.value = {
     description: '',
-    amount: 0
+    amount: null
   }
   // Fetch additional costs for this tournament
   await systemStore.fetchAdditionalCosts(tournament.id)
@@ -1796,7 +1888,7 @@ const closeAdditionalCostModal = () => {
   editingCostId.value = null
   additionalCostForm.value = {
     description: '',
-    amount: 0
+    amount: null
   }
 }
 
@@ -1811,7 +1903,7 @@ const editAdditionalCost = (cost: any) => {
 const cancelEdit = () => {
   additionalCostForm.value = {
     description: '',
-    amount: 0
+    amount: null
   }
   editingCostId.value = null
 }
@@ -1825,7 +1917,7 @@ const saveAdditionalCost = async () => {
     return
   }
   
-  if (additionalCostForm.value.amount <= 0) {
+  if (!additionalCostForm.value.amount || additionalCostForm.value.amount <= 0) {
     toast.error('Amount must be greater than 0')
     return
   }
@@ -1860,7 +1952,7 @@ const saveAdditionalCost = async () => {
       // Reset form
       additionalCostForm.value = {
         description: '',
-        amount: 0
+        amount: null
       }
       editingCostId.value = null
       // Refresh the costs

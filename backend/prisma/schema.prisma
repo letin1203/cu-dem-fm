@@ -46,6 +46,7 @@ model Player {
   stats                   PlayerStats?
   matchEvents             MatchEvent[]
   tournamentAttendances   TournamentPlayerAttendance[]
+  tournamentTeamPlayers   TournamentTeamPlayer[]
 
   @@map("players")
 }
@@ -76,13 +77,14 @@ model Team {
   updatedAt DateTime @updatedAt
 
   // Relationships
-  players         Player[]
-  stats           TeamStats?
-  tournaments     TournamentTeam[]
-  homeMatches     Match[]          @relation("HomeTeam")
-  awayMatches     Match[]          @relation("AwayTeam")
-  wonTournaments  Tournament[]     @relation("TournamentWinner")
-  lostTournaments Tournament[]     @relation("TournamentLoser")
+  players               Player[]
+  stats                 TeamStats?
+  tournaments           TournamentTeam[]
+  tournamentTeamPlayers TournamentTeamPlayer[]
+  homeMatches           Match[]          @relation("HomeTeam")
+  awayMatches           Match[]          @relation("AwayTeam")
+  wonTournaments        Tournament[]     @relation("TournamentWinner")
+  lostTournaments       Tournament[]     @relation("TournamentLoser")
 
   @@map("teams")
 }
@@ -116,6 +118,7 @@ model Tournament {
 
   // Relationships
   teams              TournamentTeam[]
+  tournamentTeamPlayers TournamentTeamPlayer[]
   matches            Match[]
   winner             Team?                    @relation("TournamentWinner", fields: [winnerId], references: [id])
   winnerId           String?
@@ -154,6 +157,20 @@ model TournamentTeam {
 
   @@id([tournamentId, teamId])
   @@map("tournament_teams")
+}
+
+model TournamentTeamPlayer {
+  // Relationships
+  tournament   Tournament @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+  tournamentId String
+  team         Team       @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  teamId       String
+  player       Player     @relation(fields: [playerId], references: [id], onDelete: Cascade)
+  playerId     String
+  assignedAt   DateTime   @default(now())
+
+  @@id([tournamentId, teamId, playerId])
+  @@map("tournament_team_players")
 }
 
 model Match {

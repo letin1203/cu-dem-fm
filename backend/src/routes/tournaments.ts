@@ -25,16 +25,32 @@ router.get('/', async (req: AuthenticatedRequest, res: Response): Promise<void> 
           teams: {
             include: {
               team: {
-                include: {
-                  players: {
-                    select: {
-                      id: true,
-                      name: true,
-                      position: true,
-                      tier: true,
-                      avatar: true,
-                    },
-                  },
+                select: {
+                  id: true,
+                  name: true,
+                  logo: true,
+                  score: true,
+                },
+              },
+            },
+          },
+          tournamentTeamPlayers: {
+            include: {
+              player: {
+                select: {
+                  id: true,
+                  name: true,
+                  position: true,
+                  tier: true,
+                  avatar: true,
+                },
+              },
+              team: {
+                select: {
+                  id: true,
+                  name: true,
+                  logo: true,
+                  score: true,
                 },
               },
             },
@@ -537,6 +553,114 @@ router.delete('/:id/teams/:teamId', authenticate, authorize(['ADMIN', 'MOD']), a
   }
 });
 
+// Clear all teams from tournament
+router.put('/:id/clear-teams', authenticate, authorize(['ADMIN', 'MOD']), async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  try {
+    const { id: tournamentId } = req.params;
+
+    // Verify tournament exists
+    const tournament = await prisma.tournament.findUnique({
+      where: { id: tournamentId },
+      include: {
+        teams: {
+          include: {
+            team: true,
+          },
+        },
+        matches: true,
+      },
+    });
+
+    if (!tournament) {
+      res.status(404).json({
+        success: false,
+        error: 'Tournament not found',
+      });
+      return;
+    }
+
+    // Check if tournament has matches
+    if (tournament.matches.length > 0) {
+      res.status(400).json({
+        success: false,
+        error: 'Cannot clear teams from tournament with existing matches',
+      });
+      return;
+    }
+
+    const teamIds = tournament.teams.map(tt => tt.teamId);
+    
+    if (teamIds.length === 0) {
+      res.json({
+        success: true,
+        message: 'No teams to clear',
+        data: { teamsRemoved: 0 },
+      });
+      return;
+    }
+
+    // Remove all tournament team player assignments
+    await prisma.tournamentTeamPlayer.deleteMany({
+      where: {
+        tournamentId,
+      },
+    });
+
+    // Remove all tournament team assignments
+    await prisma.tournamentTeam.deleteMany({
+      where: {
+        tournamentId,
+      },
+    });
+
+    // For weekly tournaments, delete the actual teams that were created for this tournament
+    if (tournament.type === 'WEEKLY') {
+      // Delete team stats first (if any)
+      await prisma.teamStats.deleteMany({
+        where: {
+          teamId: {
+            in: teamIds,
+          },
+        },
+      });
+
+      // Delete the actual teams
+      const deletedTeams = await prisma.team.deleteMany({
+        where: {
+          id: {
+            in: teamIds,
+          },
+        },
+      });
+
+      res.json({
+        success: true,
+        message: `Successfully cleared ${deletedTeams.count} teams from tournament`,
+        data: {
+          teamsRemoved: deletedTeams.count,
+          teamIds: teamIds,
+        },
+      });
+    } else {
+      // For other tournament types, just remove the assignments
+      res.json({
+        success: true,
+        message: `Successfully removed ${teamIds.length} team assignments from tournament`,
+        data: {
+          teamsRemoved: teamIds.length,
+          teamIds: teamIds,
+        },
+      });
+    }
+  } catch (error) {
+    console.error('Clear teams error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to clear teams from tournament',
+    });
+  }
+});
+
 // Get player attendance for a tournament
 router.get('/:id/attendance', authenticate, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   try {
@@ -766,8 +890,7 @@ router.get('/:id/attendance-stats', async (req: AuthenticatedRequest, res: Respo
     const attendingCount = attendanceStats.filter((a: any) => a.status === 'ATTEND').length;
     const notAttendingCount = attendanceStats.filter((a: any) => a.status === 'NOT_ATTEND').length;
     const nullCount = attendanceStats.filter((a: any) => a.status === 'NULL').length;
-    // Only count betting from players who are attending
-    const bettingCount = attendanceStats.filter((a: any) => a.status === 'ATTEND' && a.bet === true).length;
+    const bettingCount = attendanceStats.filter((a: any) => a.bet === true).length;
 
     res.json({
       success: true,
@@ -1100,24 +1223,21 @@ router.post('/:id/generate-teams', authenticate, authorize(['ADMIN', 'MOD']), as
         },
       });
 
-      // Assign players to the team
-      await prisma.player.updateMany({
-        where: {
-          id: {
-            in: teamData.players.map((p: any) => p.id),
-          },
-        },
-        data: {
-          teamId: team.id,
-        },
-      });
-
       // Add team to tournament
       await prisma.tournamentTeam.create({
         data: {
           tournamentId,
           teamId: team.id,
         },
+      });
+
+      // Assign players to the team in this tournament
+      await prisma.tournamentTeamPlayer.createMany({
+        data: teamData.players.map((player: any) => ({
+          tournamentId,
+          teamId: team.id,
+          playerId: player.id,
+        })),
       });
 
       createdTeams.push({

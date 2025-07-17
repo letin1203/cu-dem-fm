@@ -73,6 +73,7 @@ export interface Tournament {
   startDate: string | Date
   endDate?: string | Date
   teams: Team[]
+  tournamentTeamPlayers?: TournamentTeamPlayer[]
   matches: Match[]
   winner?: Team
   loser?: Team
@@ -242,4 +243,13 @@ export interface TournamentEndResponse {
   message: string
   playersUpdated: number
   totalDeducted: number
+}
+
+export interface TournamentTeamPlayer {
+  tournamentId: string
+  teamId: string
+  playerId: string
+  player: Player
+  team: Team
+  assignedAt: string | Date
 }

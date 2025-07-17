@@ -660,6 +660,74 @@ router.put('/:id/attendance', authenticate, async (req: AuthenticatedRequest, re
   }
 });
 
+// Update any player's attendance for a tournament (Admin/Mod only)
+router.put('/:id/attendance/:playerId', authenticate, authorize(['ADMIN', 'MOD']), async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  try {
+    const { id: tournamentId, playerId } = req.params;
+    const { status, withWater } = updateAttendanceSchema.parse(req.body);
+
+    // Verify tournament exists
+    const tournament = await prisma.tournament.findUnique({
+      where: { id: tournamentId },
+    });
+
+    if (!tournament) {
+      res.status(404).json({
+        success: false,
+        error: 'Tournament not found',
+      });
+      return;
+    }
+
+    // Verify player exists
+    const player = await prisma.player.findUnique({
+      where: { id: playerId },
+    });
+
+    if (!player) {
+      res.status(404).json({
+        success: false,
+        error: 'Player not found',
+      });
+      return;
+    }
+
+    // Prepare update data
+    const updateData: any = { status };
+    if (withWater !== undefined) {
+      updateData.withWater = withWater;
+    }
+
+    // Update or create attendance
+    const attendance = await prisma.tournamentPlayerAttendance.upsert({
+      where: {
+        tournamentId_playerId: {
+          tournamentId,
+          playerId,
+        },
+      },
+      update: updateData,
+      create: {
+        tournamentId,
+        playerId,
+        status,
+        withWater: withWater ?? false,
+      },
+    });
+
+    res.json({
+      success: true,
+      data: attendance,
+    });
+  } catch (error) {
+    console.error('Update player attendance error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to update player attendance',
+    });
+  }
+});
+
 // Get attendance statistics for a tournament
 router.get('/:id/attendance-stats', async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   try {

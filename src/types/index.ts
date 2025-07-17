@@ -202,6 +202,7 @@ export interface TournamentAttendanceStats {
 export interface TournamentAttendanceDetails {
   id: string
   status: 'NULL' | 'NOT_ATTEND' | 'ATTEND'
+  withWater?: boolean
   tournamentId: string
   playerId: string
   createdAt: string | Date

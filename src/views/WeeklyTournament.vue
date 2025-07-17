@@ -124,7 +124,7 @@
                   <div class="absolute inset-0 bg-white/20 animate-pulse"></div>
                 </div>
               </div>
-              <div class="grid grid-cols-3 gap-2 text-xs">
+              <div class="grid grid-cols-2 gap-2 text-xs">
                 <button 
                   @click="openAttendanceModal(ongoingTournament.id, 'attending')"
                   class="text-center p-2 bg-green-100 rounded-lg hover:bg-green-200 transition-colors cursor-pointer"
@@ -139,10 +139,6 @@
                   <div class="font-semibold text-red-800">{{ getAttendanceStats(ongoingTournament.id)?.notAttendingCount || 0 }}</div>
                   <div class="text-red-600">Not Attending</div>
                 </button>
-                <div class="text-center p-2 bg-blue-100 rounded-lg">
-                  <div class="font-semibold text-blue-800">{{ getAttendanceStats(ongoingTournament.id)?.responseRate || 0 }}%</div>
-                  <div class="text-blue-600">Response Rate</div>
-                </div>
               </div>
             </div>
 
@@ -382,7 +378,7 @@
                     <div class="absolute inset-0 bg-white/20 animate-pulse"></div>
                   </div>
                 </div>
-                <div class="grid grid-cols-3 gap-2 text-xs">
+                <div class="grid grid-cols-2 gap-2 text-xs">
                   <button 
                     @click="openAttendanceModal(tournament.id, 'attending')"
                     class="text-center p-2 bg-green-100 rounded-lg hover:bg-green-200 transition-colors cursor-pointer"
@@ -397,10 +393,6 @@
                     <div class="font-semibold text-red-800">{{ getAttendanceStats(tournament.id)?.notAttendingCount || 0 }}</div>
                     <div class="text-red-600">Not Attending</div>
                   </button>
-                  <div class="text-center p-2 bg-blue-100 rounded-lg">
-                    <div class="font-semibold text-blue-800">{{ getAttendanceStats(tournament.id)?.responseRate || 0 }}%</div>
-                    <div class="text-blue-600">Response Rate</div>
-                  </div>
                 </div>
               </div>
 
@@ -535,8 +527,34 @@
 
             <!-- Player Info -->
             <div class="flex-1">
-              <h4 class="font-semibold text-gray-900">{{ attendance.player.name }}</h4>
+              <!-- Player Name Row with Water Toggle Button -->
               <div class="flex items-center justify-between">
+                <h4 class="font-semibold text-gray-900">{{ attendance.player.name }}</h4>
+                
+                <!-- Water Toggle Button (Admin/Mod only) - Shows same as water status -->
+                <div v-if="attendanceModalType === 'attending' && authStore.hasAnyRole(['admin', 'mod'])" class="flex items-center">
+                  <button
+                    @click="togglePlayerWater(attendance)"
+                    :disabled="playerWaterLoading.has(attendance.player.id)"
+                    class="text-xs px-2 py-1 rounded-full transition-colors"
+                    :class="attendance.withWater 
+                      ? 'bg-blue-100 text-blue-800 hover:bg-blue-200' 
+                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'"
+                    :title="attendance.withWater ? 'Click to remove water preference' : 'Click to add water preference'"
+                  >
+                    <div v-if="playerWaterLoading.has(attendance.player.id)" class="flex items-center">
+                      <div class="animate-spin rounded-full h-3 w-3 border-b border-current mr-1"></div>
+                      <span>Loading...</span>
+                    </div>
+                    <span v-else>
+                      {{ attendance.withWater ? '💧 Water' : '🚫 No Water' }}
+                    </span>
+                  </button>
+                </div>
+              </div>
+              
+              <!-- Player Details Row -->
+              <div class="flex items-center space-x-4 mt-1">
                 <span class="text-sm text-gray-600">{{ attendance.player.position }}</span>
                 <span class="flex items-center text-sm text-gray-600">
                   <span class="ml-1">
@@ -787,6 +805,7 @@ const attendanceStats = ref<Map<string, TournamentAttendanceStats>>(new Map())
 
 // Water tracking
 const waterLoading = ref<Set<string>>(new Set())
+const playerWaterLoading = ref<Set<string>>(new Set())
 
 // Modal for attendance details
 const showAttendanceModal = ref(false)
@@ -1544,6 +1563,53 @@ const toggleWater = async (tournamentId: string): Promise<void> => {
     toast.error(err.response?.data?.error || 'Failed to update water preference')
   } finally {
     waterLoading.value.delete(tournamentId)
+  }
+}
+
+const togglePlayerWater = async (attendance: TournamentAttendanceDetails): Promise<void> => {
+  if (playerWaterLoading.value.has(attendance.player.id)) return
+  
+  // Only allow water toggle for attending players
+  if (attendance.status !== 'ATTEND') {
+    return
+  }
+  
+  try {
+    playerWaterLoading.value.add(attendance.player.id)
+    
+    const newWaterStatus = !attendance.withWater
+    
+    // Use admin endpoint to update any player's attendance
+    const response = await apiClient.put<TournamentPlayerAttendance>(
+      `/tournaments/${attendance.tournamentId}/attendance/${attendance.player.id}`,
+      { 
+        status: attendance.status,
+        withWater: newWaterStatus
+      }
+    )
+    
+    if (response.success && response.data) {
+      // Update the attendance in the modal data
+      const index = attendanceModalData.value.findIndex(a => a.id === attendance.id)
+      if (index !== -1) {
+        attendanceModalData.value[index] = {
+          ...attendanceModalData.value[index],
+          withWater: newWaterStatus
+        }
+      }
+      
+      // Also update the main attendance map if it's the current user
+      if (authStore.currentUser?.player?.id === attendance.player.id) {
+        attendanceMap.value.set(attendance.tournamentId, response.data)
+      }
+      
+      toast.success(`${attendance.player.name}: ${newWaterStatus ? 'Water preference added!' : 'Water preference removed!'}`)
+    }
+  } catch (err: any) {
+    console.error('Toggle player water error:', err)
+    toast.error(err.response?.data?.error || 'Failed to update water preference')
+  } finally {
+    playerWaterLoading.value.delete(attendance.player.id)
   }
 }
 </script>

@@ -14,15 +14,15 @@
         </div>
         
         <!-- Desktop Navigation -->
-        <div class="hidden md:flex items-center space-x-4 lg:space-x-8">
+        <div class="hidden md:flex items-center space-x-2 lg:space-x-6 xl:space-x-8">
           <router-link
             v-for="item in visibleNavigationItems"
             :key="item.name"
             :to="item.path"
-            class="text-gray-600 hover:text-primary-600 px-2 lg:px-3 py-2 rounded-md text-sm font-medium transition-colors flex items-center space-x-1"
+            class="text-gray-600 hover:text-primary-600 px-2 lg:px-3 py-2 rounded-md text-sm font-medium transition-colors flex items-center space-x-1 whitespace-nowrap"
             :class="{ 'text-primary-600 bg-primary-50': $route.path === item.path }"
           >
-            <component :is="item.icon" class="w-4 h-4 lg:w-5 lg:h-5" />
+            <component :is="item.icon" class="w-4 h-4 lg:w-5 lg:h-5 flex-shrink-0" />
             <span class="hidden lg:block">{{ item.name }}</span>
           </router-link>
           
@@ -156,14 +156,14 @@ const mobileMenuOpen = ref(false)
 const userMenuOpen = ref(false)
 
 const navigationItems = [
-  { name: 'Weekly Tournament', path: '/weekly-tournament', icon: TrophyIcon, permission: 'canViewTournaments' },
-  { name: 'Tournaments', path: '/tournaments', icon: TrophyIcon, permission: 'canViewTournaments' },
-  { name: 'Matches', path: '/matches', icon: CalendarIcon, permission: 'canViewMatches' },
+  { name: 'Weekly Tour', path: '/weekly-tournament', icon: TrophyIcon, permission: 'canViewTournaments' },
+  // { name: 'Tournaments', path: '/tournaments', icon: TrophyIcon, permission: 'canViewTournaments' },
+  // { name: 'Matches', path: '/matches', icon: CalendarIcon, permission: 'canViewMatches' },
   { name: 'Teams', path: '/teams', icon: UserGroupIcon, permission: 'canViewTeams' },
   { name: 'Players', path: '/players', icon: UsersIcon, permission: 'canViewPlayers' },
   { name: 'Users', path: '/users', icon: CogIcon, permission: 'canManageUsers' },
-  { name: 'System Settings', path: '/system-settings', icon: CogIcon, role: 'admin' },
-  { name: 'Database Admin', path: '/database-admin', icon: CircleStackIcon, role: 'admin' }
+  { name: 'Settings', path: '/system-settings', icon: CogIcon, role: 'admin' },
+  { name: 'DB Admin', path: '/database-admin', icon: CircleStackIcon, role: 'admin' }
 ]
 
 const visibleNavigationItems = computed(() => {

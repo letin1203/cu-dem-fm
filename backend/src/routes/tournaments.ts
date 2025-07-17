@@ -1505,8 +1505,15 @@ router.put('/:id/end', authenticate, async (req: AuthenticatedRequest, res: Resp
       // Betting calculations
       if (attendance.bet) {
         if (isWinnerTeam) {
-          // Betting winner: +10000 * (number of teams - 1)
-          const bettingWinAmount = 10000 * (numberOfTeams - 1);
+          // Betting winner calculation based on number of teams
+          let bettingWinAmount;
+          if (numberOfTeams >= 3) {
+            // 3+ teams: +10000 * (teams - 2)
+            bettingWinAmount = 10000 * (numberOfTeams - 2);
+          } else {
+            // 2 teams: +10000
+            bettingWinAmount = 10000;
+          }
           moneyChange += bettingWinAmount;
           totalAdded += bettingWinAmount;
           reason += `Betting win: +${bettingWinAmount.toLocaleString()}; `;

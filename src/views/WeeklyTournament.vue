@@ -906,7 +906,7 @@
         <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
           <h5 class="font-semibold text-blue-800 mb-2">💰 Money Calculations:</h5>
           <ul class="text-sm text-blue-700 space-y-1">
-            <li>• Betting winners: +{{ (10000 * (getTournamentTeams(weeklyTournaments.find(t => t.id === endTournamentId) || {} as Tournament).length - 1)).toLocaleString() }} VND</li>
+            <li>• Betting winners: +{{ getBettingWinAmount(getTournamentTeams(weeklyTournaments.find(t => t.id === endTournamentId) || {} as Tournament).length).toLocaleString() }} VND</li>
             <li>• Betting losers: -10,000 VND</li>
             <li>• Winner team gets free water (no water cost)</li>
             <li>• Other teams pay water cost if selected</li>
@@ -1942,6 +1942,17 @@ const getLowestScoreTeam = (teams: any[]): any | null => {
     const lowestScore = lowest.score || 0
     return currentScore < lowestScore ? current : lowest
   })
+}
+
+// Helper function to calculate betting win amount based on number of teams
+const getBettingWinAmount = (numberOfTeams: number): number => {
+  if (numberOfTeams >= 3) {
+    // 3+ teams: +10000 * (teams - 2)
+    return 10000 * (numberOfTeams - 2)
+  } else {
+    // 2 teams: +10000
+    return 10000
+  }
 }
 
 // Fetch all data

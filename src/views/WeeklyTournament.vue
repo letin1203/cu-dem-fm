@@ -143,7 +143,7 @@
                   @click="openAttendanceModal(ongoingTournament.id, 'betting')"
                   class="text-center p-2 bg-yellow-100 rounded-lg hover:bg-yellow-200 transition-colors cursor-pointer"
                 >
-                  <div class="font-semibold text-yellow-800">{{ getAttendanceStats(ongoingTournament.id)?.bettingCount || 0 }}</div>
+                  <div class="font-semibold text-yellow-800">{{ getBettingCount(ongoingTournament.id) }}</div>
                   <div class="text-yellow-600">Betting</div>
                 </button>
               </div>
@@ -453,7 +453,7 @@
                     @click="openAttendanceModal(tournament.id, 'betting')"
                     class="text-center p-2 bg-yellow-100 rounded-lg hover:bg-yellow-200 transition-colors cursor-pointer"
                   >
-                    <div class="font-semibold text-yellow-800">{{ getAttendanceStats(tournament.id)?.bettingCount || 0 }}</div>
+                    <div class="font-semibold text-yellow-800">{{ getBettingCount(tournament.id) }}</div>
                     <div class="text-yellow-600">Betting</div>
                   </button>
                 </div>
@@ -595,13 +595,12 @@
 
             <!-- Player Info -->
             <div class="flex-1">
-              <!-- Player Name Row with Water and Bet Toggle Buttons -->
+              <!-- Player Name Row with Water Toggle Button -->
               <div class="flex items-center justify-between">
                 <h4 class="font-semibold text-gray-900">{{ attendance.player.name }}</h4>
                 
-                <!-- Toggle Buttons Container (Admin/Mod only) -->
-                <div v-if="attendanceModalType === 'attending' && authStore.hasAnyRole(['admin', 'mod'])" class="flex items-center space-x-2">
-                  <!-- Water Toggle Button -->
+                <!-- Water Toggle Button (Admin/Mod only) - Shows same as water status -->
+                <div v-if="attendanceModalType === 'attending' && authStore.hasAnyRole(['admin', 'mod'])" class="flex items-center">
                   <button
                     @click="togglePlayerWater(attendance)"
                     :disabled="playerWaterLoading.has(attendance.player.id)"
@@ -617,25 +616,6 @@
                     </div>
                     <span v-else>
                       {{ attendance.withWater ? '💧 Water' : '🚫 No Water' }}
-                    </span>
-                  </button>
-                  
-                  <!-- Bet Toggle Button -->
-                  <button
-                    @click="togglePlayerBet(attendance)"
-                    :disabled="playerBetLoading.has(attendance.player.id)"
-                    class="text-xs px-2 py-1 rounded-full transition-colors"
-                    :class="attendance.bet 
-                      ? 'bg-yellow-100 text-yellow-800 hover:bg-yellow-200' 
-                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'"
-                    :title="attendance.bet ? 'Click to disable betting' : 'Click to enable betting'"
-                  >
-                    <div v-if="playerBetLoading.has(attendance.player.id)" class="flex items-center">
-                      <div class="animate-spin rounded-full h-3 w-3 border-b border-current mr-1"></div>
-                      <span>Loading...</span>
-                    </div>
-                    <span v-else>
-                      {{ attendance.bet ? '🎲 Betting' : '🚫 No Bet' }}
                     </span>
                   </button>
                 </div>
@@ -1031,14 +1011,14 @@ const attendanceStats = ref<Map<string, TournamentAttendanceStats>>(new Map())
 // Water tracking
 const waterLoading = ref<Set<string>>(new Set())
 const playerWaterLoading = ref<Set<string>>(new Set())
-const playerBetLoading = ref<Set<string>>(new Set())
 
-// Bet tracking  
+// Bet tracking
 const betLoading = ref<Set<string>>(new Set())
 
 // Modal for attendance details
 const showAttendanceModal = ref(false)
 const attendanceModalData = ref<TournamentAttendanceDetails[]>([])
+const attendanceDetailsMap = ref<Map<string, TournamentAttendanceDetails[]>>(new Map())
 const attendanceModalTitle = ref('')
 const attendanceModalType = ref<'attending' | 'not-attending' | 'betting'>('attending')
 const attendanceModalLoading = ref(false)
@@ -1326,6 +1306,8 @@ const fetchAttendanceDetails = async (tournamentId: string): Promise<void> => {
     const response = await apiClient.get<TournamentAttendanceDetails[]>(`/tournaments/${tournamentId}/attendance-details`)
     if (response.success && response.data) {
       attendanceModalData.value = response.data
+      // Store in map for betting count calculation
+      attendanceDetailsMap.value.set(tournamentId, response.data)
     }
   } catch (err: any) {
     console.error('Fetch attendance details error:', err)
@@ -1952,6 +1934,16 @@ const getLowestScoreTeam = (teams: any[]): any | null => {
 }
 
 // Helper function to calculate betting win amount based on number of teams
+// Helper function to get betting count from attendance details
+const getBettingCount = (tournamentId: string): number => {
+  const details = attendanceDetailsMap.value.get(tournamentId)
+  if (!details || !details.length) return 0
+  
+  // Count players who are betting (regardless of attendance status for now)
+  return details.filter(detail => detail.bet === true).length
+}
+
+// Helper function to calculate betting win amount based on number of teams
 const getBettingWinAmount = (numberOfTeams: number): number => {
   if (numberOfTeams >= 3) {
     // 3+ teams: +10000 * (teams - 2)
@@ -1977,6 +1969,7 @@ const fetchData = async () => {
     await Promise.all([
       ...weeklyTournamentIds.map(id => fetchAttendance(id)),
       ...weeklyTournamentIds.map(id => fetchAttendanceStats(id)),
+      ...weeklyTournamentIds.map(id => fetchAttendanceDetails(id)),
       ...weeklyTournamentIds.map(id => systemStore.fetchAdditionalCosts(id))
     ])
   } catch (err: any) {
@@ -2090,6 +2083,10 @@ const toggleBet = async (tournamentId: string): Promise<void> => {
     
     if (response.success && response.data) {
       attendanceMap.value.set(tournamentId, response.data)
+      
+      // Refresh attendance details to update betting count
+      await fetchAttendanceDetails(tournamentId)
+      
       toast.success(newBetStatus ? 'Bet placed!' : 'Bet removed!')
     }
   } catch (err: any) {
@@ -2137,9 +2134,6 @@ const togglePlayerWater = async (attendance: TournamentAttendanceDetails): Promi
         attendanceMap.value.set(attendance.tournamentId, response.data)
       }
       
-      // Refresh attendance stats to update counts
-      await fetchAttendanceStats(attendance.tournamentId)
-      
       toast.success(`${attendance.player.name}: ${newWaterStatus ? 'Water preference added!' : 'Water preference removed!'}`)
     }
   } catch (err: any) {
@@ -2147,56 +2141,6 @@ const togglePlayerWater = async (attendance: TournamentAttendanceDetails): Promi
     toast.error(err.response?.data?.error || 'Failed to update water preference')
   } finally {
     playerWaterLoading.value.delete(attendance.player.id)
-  }
-}
-
-const togglePlayerBet = async (attendance: TournamentAttendanceDetails): Promise<void> => {
-  if (playerBetLoading.value.has(attendance.player.id)) return
-  
-  // Only allow bet toggle for attending players
-  if (attendance.status !== 'ATTEND') {
-    return
-  }
-  
-  try {
-    playerBetLoading.value.add(attendance.player.id)
-    
-    const newBetStatus = !attendance.bet
-    
-    // Use admin endpoint to update any player's attendance
-    const response = await apiClient.put<TournamentPlayerAttendance>(
-      `/tournaments/${attendance.tournamentId}/attendance/${attendance.player.id}`,
-      { 
-        status: attendance.status,
-        bet: newBetStatus
-      }
-    )
-    
-    if (response.success && response.data) {
-      // Update the attendance in the modal data
-      const index = attendanceModalData.value.findIndex(a => a.id === attendance.id)
-      if (index !== -1) {
-        attendanceModalData.value[index] = {
-          ...attendanceModalData.value[index],
-          bet: newBetStatus
-        }
-      }
-      
-      // Also update the main attendance map if it's the current user
-      if (authStore.currentUser?.player?.id === attendance.player.id) {
-        attendanceMap.value.set(attendance.tournamentId, response.data)
-      }
-      
-      // Refresh attendance stats to update counts
-      await fetchAttendanceStats(attendance.tournamentId)
-      
-      toast.success(`${attendance.player.name}: ${newBetStatus ? 'Betting enabled!' : 'Betting disabled!'}`)
-    }
-  } catch (err: any) {
-    console.error('Toggle player bet error:', err)
-    toast.error(err.response?.data?.error || 'Failed to update betting preference')
-  } finally {
-    playerBetLoading.value.delete(attendance.player.id)
   }
 }
 </script>

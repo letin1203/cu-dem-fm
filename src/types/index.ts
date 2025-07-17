@@ -7,8 +7,23 @@ export interface Player {
   money: number // Player's money/value
   teamId?: string
   team?: {
+export interface TournamentAttendanceDetails {
+  id: string
+  status: 'NULL' | 'NOT_ATTEND' | 'ATTEND'
+  withWater?: boolean
+  bet?: boolean
+  tournamentId: string
+  playerId: string
+  createdAt: string | Date
+  updatedAt: string | Date
+  player: {
     id: string
     name: string
+    position: string
+    tier: number
+    avatar?: string
+  }
+}   name: string
     logo?: string
   }
   stats: PlayerStats
@@ -196,6 +211,7 @@ export interface TournamentAttendanceStats {
   totalPlayers: number
   attendingCount: number
   notAttendingCount: number
+  bettingCount: number
   nullCount: number
   responseRate: string
   attendanceRate: string
@@ -205,6 +221,7 @@ export interface TournamentAttendanceDetails {
   id: string
   status: 'NULL' | 'NOT_ATTEND' | 'ATTEND'
   withWater?: boolean
+  bet?: boolean
   tournamentId: string
   playerId: string
   createdAt: string | Date

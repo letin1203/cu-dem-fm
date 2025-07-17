@@ -124,7 +124,7 @@
                   <div class="absolute inset-0 bg-white/20 animate-pulse"></div>
                 </div>
               </div>
-              <div class="grid grid-cols-2 gap-2 text-xs">
+              <div class="grid grid-cols-3 gap-2 text-xs">
                 <button 
                   @click="openAttendanceModal(ongoingTournament.id, 'attending')"
                   class="text-center p-2 bg-green-100 rounded-lg hover:bg-green-200 transition-colors cursor-pointer"
@@ -138,6 +138,13 @@
                 >
                   <div class="font-semibold text-red-800">{{ getAttendanceStats(ongoingTournament.id)?.notAttendingCount || 0 }}</div>
                   <div class="text-red-600">Not Attending</div>
+                </button>
+                <button 
+                  @click="openAttendanceModal(ongoingTournament.id, 'betting')"
+                  class="text-center p-2 bg-yellow-100 rounded-lg hover:bg-yellow-200 transition-colors cursor-pointer"
+                >
+                  <div class="font-semibold text-yellow-800">{{ getAttendanceStats(ongoingTournament.id)?.bettingCount || 0 }}</div>
+                  <div class="text-yellow-600">Betting</div>
                 </button>
               </div>
             </div>
@@ -427,7 +434,7 @@
                     <div class="absolute inset-0 bg-white/20 animate-pulse"></div>
                   </div>
                 </div>
-                <div class="grid grid-cols-2 gap-2 text-xs">
+                <div class="grid grid-cols-3 gap-2 text-xs">
                   <button 
                     @click="openAttendanceModal(tournament.id, 'attending')"
                     class="text-center p-2 bg-green-100 rounded-lg hover:bg-green-200 transition-colors cursor-pointer"
@@ -441,6 +448,13 @@
                   >
                     <div class="font-semibold text-red-800">{{ getAttendanceStats(tournament.id)?.notAttendingCount || 0 }}</div>
                     <div class="text-red-600">Not Attending</div>
+                  </button>
+                  <button 
+                    @click="openAttendanceModal(tournament.id, 'betting')"
+                    class="text-center p-2 bg-yellow-100 rounded-lg hover:bg-yellow-200 transition-colors cursor-pointer"
+                  >
+                    <div class="font-semibold text-yellow-800">{{ getAttendanceStats(tournament.id)?.bettingCount || 0 }}</div>
+                    <div class="text-yellow-600">Betting</div>
                   </button>
                 </div>
               </div>
@@ -556,7 +570,7 @@
         
         <!-- No Data State -->
         <div v-else-if="getFilteredModalData().length === 0" class="text-center py-8">
-          <p class="text-gray-600">No players {{ attendanceModalType === 'attending' ? 'attending' : 'not attending' }} this tournament.</p>
+          <p class="text-gray-600">No players {{ attendanceModalType === 'attending' ? 'attending' : attendanceModalType === 'not-attending' ? 'not attending' : 'betting on' }} this tournament.</p>
         </div>
         
         <!-- Player List -->
@@ -624,7 +638,7 @@
       <!-- Modal Footer -->
       <div class="flex justify-between items-center p-6 border-t border-gray-200 bg-gray-50">
         <p class="text-sm text-gray-600">
-          {{ getFilteredModalData().length }} player{{ getFilteredModalData().length !== 1 ? 's' : '' }} {{ attendanceModalType === 'attending' ? 'attending' : 'not attending' }}
+          {{ getFilteredModalData().length }} player{{ getFilteredModalData().length !== 1 ? 's' : '' }} {{ attendanceModalType === 'attending' ? 'attending' : attendanceModalType === 'not-attending' ? 'not attending' : 'betting' }}
         </p>
         <button 
           @click="closeAttendanceModal"
@@ -1026,7 +1040,7 @@ const betLoading = ref<Set<string>>(new Set())
 const showAttendanceModal = ref(false)
 const attendanceModalData = ref<TournamentAttendanceDetails[]>([])
 const attendanceModalTitle = ref('')
-const attendanceModalType = ref<'attending' | 'not-attending'>('attending')
+const attendanceModalType = ref<'attending' | 'not-attending' | 'betting'>('attending')
 const attendanceModalLoading = ref(false)
 
 // Team generation
@@ -1321,9 +1335,15 @@ const fetchAttendanceDetails = async (tournamentId: string): Promise<void> => {
   }
 }
 
-const openAttendanceModal = async (tournamentId: string, type: 'attending' | 'not-attending'): Promise<void> => {
+const openAttendanceModal = async (tournamentId: string, type: 'attending' | 'not-attending' | 'betting'): Promise<void> => {
   attendanceModalType.value = type
-  attendanceModalTitle.value = type === 'attending' ? 'Players Attending' : 'Players Not Attending'
+  if (type === 'attending') {
+    attendanceModalTitle.value = 'Players Attending'
+  } else if (type === 'not-attending') {
+    attendanceModalTitle.value = 'Players Not Attending'
+  } else if (type === 'betting') {
+    attendanceModalTitle.value = 'Betting Players'
+  }
   showAttendanceModal.value = true
   attendanceModalData.value = [] // Clear previous data
   
@@ -1337,10 +1357,24 @@ const closeAttendanceModal = (): void => {
 }
 
 const getFilteredModalData = (): TournamentAttendanceDetails[] => {
-  const targetStatus = attendanceModalType.value === 'attending' ? 'ATTEND' : 'NOT_ATTEND'
-  return attendanceModalData.value
-    .filter(item => item.status === targetStatus)
-    .sort((a, b) => b.player.tier - a.player.tier) // Sort by tier descending (highest tier first)
+  if (attendanceModalType.value === 'betting') {
+    // Filter by bet field for betting players
+    return attendanceModalData.value
+      .filter(item => item.bet === true)
+      .sort((a, b) => b.player.tier - a.player.tier) // Sort by tier descending (highest tier first)
+  } else {
+    // Filter by status for attending/not-attending players
+    let targetStatus: string
+    if (attendanceModalType.value === 'attending') {
+      targetStatus = 'ATTEND'
+    } else if (attendanceModalType.value === 'not-attending') {
+      targetStatus = 'NOT_ATTEND'
+    }
+    
+    return attendanceModalData.value
+      .filter(item => item.status === targetStatus)
+      .sort((a, b) => b.player.tier - a.player.tier) // Sort by tier descending (highest tier first)
+  }
 }
 
 // Team generation functions

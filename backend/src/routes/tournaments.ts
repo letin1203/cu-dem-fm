@@ -760,12 +760,13 @@ router.get('/:id/attendance-stats', async (req: AuthenticatedRequest, res: Respo
     // Get attendance statistics
     const attendanceStats = await prisma.tournamentPlayerAttendance.findMany({
       where: { tournamentId },
-      select: { status: true },
+      select: { status: true, bet: true },
     });
 
     const attendingCount = attendanceStats.filter((a: any) => a.status === 'ATTEND').length;
     const notAttendingCount = attendanceStats.filter((a: any) => a.status === 'NOT_ATTEND').length;
     const nullCount = attendanceStats.filter((a: any) => a.status === 'NULL').length;
+    const bettingCount = attendanceStats.filter((a: any) => a.bet === true).length;
 
     res.json({
       success: true,
@@ -773,6 +774,7 @@ router.get('/:id/attendance-stats', async (req: AuthenticatedRequest, res: Respo
         totalPlayers,
         attendingCount,
         notAttendingCount,
+        bettingCount,
         nullCount,
         responseRate: totalPlayers > 0 ? ((attendingCount + notAttendingCount) / totalPlayers * 100).toFixed(1) : '0',
         attendanceRate: (attendingCount + notAttendingCount) > 0 ? (attendingCount / (attendingCount + notAttendingCount) * 100).toFixed(1) : '0',

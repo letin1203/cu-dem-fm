@@ -138,6 +138,15 @@ export const updateAttendanceSchema = z.object({
   bet: z.boolean().optional(),
 });
 
+// Team Score Management schemas
+export const updateTeamScoreSchema = z.object({
+  score: z.number().int().min(0, 'Score must be non-negative'),
+});
+
+export const updateTournamentScoresSchema = z.object({
+  scores: z.record(z.string(), z.number().int().min(0)),
+});
+
 export type LoginInput = z.infer<typeof loginSchema>;
 export type RegisterInput = z.infer<typeof registerSchema>;
 export type UpdateUserInput = z.infer<typeof updateUserSchema>;
@@ -155,3 +164,5 @@ export type PaginationQuery = z.infer<typeof paginationSchema>;
 export type PlayerQuery = z.infer<typeof playerQuerySchema>;
 export type MatchQuery = z.infer<typeof matchQuerySchema>;
 export type UpdateAttendanceInput = z.infer<typeof updateAttendanceSchema>;
+export type UpdateTeamScoreInput = z.infer<typeof updateTeamScoreSchema>;
+export type UpdateTournamentScoresInput = z.infer<typeof updateTournamentScoresSchema>;

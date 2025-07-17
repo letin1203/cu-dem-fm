@@ -195,6 +195,16 @@
                       <span>Avg: {{ (team.players.reduce((sum: number, p: any) => sum + p.tier, 0) / team.players.length).toFixed(1) }}</span>
                     </div>
                   </div>
+
+                  <!-- Team Score (for ongoing tournaments) -->
+                  <div v-if="ongoingTournament.status === 'ONGOING'" class="mt-3 pt-3 border-t border-gray-200">
+                    <div class="flex justify-center">
+                      <div class="bg-blue-50 px-3 py-2 rounded-lg">
+                        <div class="text-sm font-semibold text-blue-700">Score</div>
+                        <div class="text-xl font-bold text-blue-800">{{ team.score || 0 }}</div>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -295,6 +305,13 @@
                   class="px-6 py-2 rounded-lg font-medium bg-green-600 text-white hover:bg-green-700 hover:shadow-md transition-colors duration-200"
                 >
                   Start Tournament
+                </button>
+                <button
+                  v-if="authStore.hasPermission('canEditTournaments') && ongoingTournament.status === 'ONGOING' && getTournamentTeams(ongoingTournament).length > 0"
+                  @click="openScoresModal(ongoingTournament.id)"
+                  class="px-6 py-2 rounded-lg font-medium bg-blue-600 text-white hover:bg-blue-700 hover:shadow-md transition-colors duration-200"
+                >
+                  Scores
                 </button>
                 <button
                   v-if="authStore.hasRole('admin') && ongoingTournament.status === 'ONGOING'"
@@ -484,6 +501,16 @@
                       <div class="flex justify-between text-xs text-gray-600">
                         <span>Total Tier: {{ team.players.reduce((sum: number, p: any) => sum + p.tier, 0) }}</span>
                         <span>Avg: {{ (team.players.reduce((sum: number, p: any) => sum + p.tier, 0) / team.players.length).toFixed(1) }}</span>
+                      </div>
+                    </div>
+
+                    <!-- Team Score (for completed tournaments) -->
+                    <div v-if="tournament.status === 'COMPLETED'" class="mt-3 pt-3 border-t border-gray-200">
+                      <div class="flex justify-center">
+                        <div class="bg-gray-50 px-3 py-2 rounded-lg">
+                          <div class="text-sm font-semibold text-gray-700">Final Score</div>
+                          <div class="text-xl font-bold text-gray-800">{{ team.score || 0 }}</div>
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -732,6 +759,90 @@
     </div>
   </div>
 
+  <!-- Tournament Score Modal -->
+  <div v-if="showScoresModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50" @click="showScoresModal = false">
+    <div class="bg-white rounded-lg p-6 max-w-4xl w-full max-h-[90vh] overflow-y-auto" @click.stop>
+      <h3 class="text-lg font-semibold text-gray-900 mb-4">Tournament Scores</h3>
+      
+      <!-- Team scores -->
+      <div v-if="scoresTournamentId && getTournamentTeams(weeklyTournaments.find(t => t.id === scoresTournamentId) || {} as Tournament).length > 0" class="mb-6">
+        <p class="text-gray-600 mb-4">
+          Manage team scores for the ongoing tournament.
+        </p>
+        
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div
+            v-for="team in getTournamentTeams(weeklyTournaments.find(t => t.id === scoresTournamentId) || {} as Tournament)"
+            :key="team.id"
+            class="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow"
+          >
+            <!-- Team Header -->
+            <div class="flex items-center justify-between mb-3">
+              <div class="flex items-center">
+                <div class="w-10 h-10 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full flex items-center justify-center mr-3">
+                  <span class="text-white font-bold text-lg">{{ team.name.charAt(team.name.length - 1) }}</span>
+                </div>
+                <div>
+                  <h5 class="font-semibold text-gray-900">{{ team.name }}</h5>
+                  <p class="text-sm text-gray-600">{{ team.players?.length || 0 }} players</p>
+                </div>
+              </div>
+            </div>
+
+            <!-- Score Controls -->
+            <div class="flex items-center justify-center space-x-4 mt-4 p-3 bg-gray-50 rounded-lg">
+              <button
+                @click="decreaseScore(team.id)"
+                class="w-10 h-10 bg-red-500 text-white rounded-full flex items-center justify-center hover:bg-red-600 transition-colors"
+                :disabled="getTeamScore(team.id) <= 0"
+              >
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 12H4"/>
+                </svg>
+              </button>
+              
+              <div class="text-center">
+                <div class="text-3xl font-bold text-gray-900">{{ getTeamScore(team.id) }}</div>
+                <div class="text-sm text-gray-500">Score</div>
+              </div>
+              
+              <button
+                @click="increaseScore(team.id)"
+                class="w-10 h-10 bg-green-500 text-white rounded-full flex items-center justify-center hover:bg-green-600 transition-colors"
+              >
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/>
+                </svg>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- No teams message -->
+      <div v-else class="mb-6">
+        <p class="text-gray-600">
+          No teams found for this tournament.
+        </p>
+      </div>
+      
+      <div class="flex justify-end space-x-3">
+        <button
+          @click="showScoresModal = false; scoresTournamentId = null"
+          class="px-4 py-2 text-gray-600 hover:text-gray-800 transition-colors"
+        >
+          Close
+        </button>
+        <button
+          @click="saveScores"
+          class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
+        >
+          Save Scores
+        </button>
+      </div>
+    </div>
+  </div>
+
   <!-- End Tournament Modal with Team Selection -->
   <div v-if="showEndTournamentModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50" @click="showEndTournamentModal = false">
     <div class="bg-white rounded-lg p-6 max-w-4xl w-full max-h-[90vh] overflow-y-auto" @click.stop>
@@ -929,6 +1040,11 @@ const additionalCostLoading = ref(false)
 const showEndTournamentModal = ref(false)
 const endTournamentId = ref<string | null>(null)
 const selectedWinningTeam = ref<any | null>(null)
+
+// Scores Modal variables
+const showScoresModal = ref(false)
+const scoresTournamentId = ref<string | null>(null)
+const teamScores = ref<Map<string, number>>(new Map())
 
 const showDeleteTournamentModal = ref(false)
 const deleteTournamentData = ref<Tournament | null>(null)
@@ -1381,6 +1497,81 @@ const startTournament = async (tournamentId: string) => {
   } catch (err: any) {
     console.error('Start tournament error:', err)
     toast.error(err.response?.data?.error || 'Failed to start tournament')
+  }
+}
+
+const openScoresModal = async (tournamentId: string) => {
+  scoresTournamentId.value = tournamentId
+  showScoresModal.value = true
+  
+  // Initialize scores for all teams to 0 first
+  const tournament = weeklyTournaments.value.find(t => t.id === tournamentId)
+  if (tournament) {
+    const teams = getTournamentTeams(tournament)
+    teamScores.value.clear()
+    teams.forEach(team => {
+      teamScores.value.set(team.id, 0)
+    })
+
+    // Try to load current scores from API
+    try {
+      const response = await apiClient.getTournamentScores(tournamentId)
+      if (response.success && response.data) {
+        // Update team scores with current values from backend
+        teams.forEach(team => {
+          const currentScore = team.score || 0
+          teamScores.value.set(team.id, currentScore)
+        })
+      }
+    } catch (err: any) {
+      console.error('Failed to load current scores:', err)
+      // Continue with default 0 scores if loading fails
+    }
+  }
+}
+
+const getTeamScore = (teamId: string): number => {
+  return teamScores.value.get(teamId) || 0
+}
+
+const increaseScore = (teamId: string) => {
+  const currentScore = teamScores.value.get(teamId) || 0
+  teamScores.value.set(teamId, currentScore + 1)
+}
+
+const decreaseScore = (teamId: string) => {
+  const currentScore = teamScores.value.get(teamId) || 0
+  if (currentScore > 0) {
+    teamScores.value.set(teamId, currentScore - 1)
+  }
+}
+
+const saveScores = async () => {
+  if (!scoresTournamentId.value) return
+  
+  try {
+    // Prepare scores data for API call
+    const scores = Array.from(teamScores.value.entries()).map(([teamId, score]) => ({
+      teamId,
+      score
+    }))
+
+    // Call the API to update tournament scores
+    const response = await apiClient.updateTournamentScores(scoresTournamentId.value, scores)
+    
+    if (response.success) {
+      toast.success('Scores saved successfully!')
+      showScoresModal.value = false
+      scoresTournamentId.value = null
+      
+      // Refresh tournament data to show updated scores
+      await tournamentsStore.fetchTournaments()
+    } else {
+      throw new Error(response.error || 'Failed to save scores')
+    }
+  } catch (err: any) {
+    console.error('Save scores error:', err)
+    toast.error(err.response?.data?.error || err.message || 'Failed to save scores')
   }
 }
 

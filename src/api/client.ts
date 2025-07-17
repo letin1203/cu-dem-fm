@@ -222,6 +222,15 @@ class ApiClient {
     return this.delete(`/tournaments/${tournamentId}/teams/${teamId}`);
   }
 
+  // Tournament scores endpoints
+  async getTournamentScores(tournamentId: string) {
+    return this.get(`/tournaments/${tournamentId}/scores`);
+  }
+
+  async updateTournamentScores(tournamentId: string, scores: Array<{ teamId: string; score: number }>) {
+    return this.put(`/tournaments/${tournamentId}/scores`, { scores });
+  }
+
   // Matches endpoints
   async getMatches(params?: any) {
     return this.get('/matches', { params });

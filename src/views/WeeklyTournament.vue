@@ -218,10 +218,6 @@
                   ]"
                 >
                   <div class="flex items-center space-x-1">
-                    <!-- Human icon (always shown) -->
-                    <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                      <path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd"/>
-                    </svg>
                     <span>{{ attendanceLoading.has(ongoingTournament.id) ? 'Loading...' : getAttendanceButtonText(ongoingTournament.id) }}</span>
                     <!-- Check icon (only shown when attended) -->
                     <svg 
@@ -251,9 +247,6 @@
                   ]"
                 >
                   <div class="flex items-center space-x-1">
-                    <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                      <path fill-rule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clip-rule="evenodd"/>
-                    </svg>
                     <span>{{ waterLoading.has(ongoingTournament.id) ? 'Loading...' : (getUserWaterStatus(ongoingTournament.id) ? 'Water ✓' : 'Water') }}</span>
                   </div>
                 </button>
@@ -274,21 +267,7 @@
                   ]"
                 >
                   <div class="flex items-center space-x-1">
-                    <!-- Money icon -->
-                    <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                      <path d="M8.433 7.418c.155-.103.346-.196.567-.267v1.698a2.305 2.305 0 01-.567-.267C8.07 8.34 8 8.114 8 8c0-.114.07-.34.433-.582zM11 12.849v-1.698c.22.071.412.164.567.267.364.243.433.468.433.582 0 .114-.07.34-.433.582a2.305 2.305 0 01-.567.267z"/>
-                      <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-13a1 1 0 10-2 0v.092a4.535 4.535 0 00-1.676.662C6.602 6.234 6 7.009 6 8c0 .99.602 1.765 1.324 2.246.48.32 1.054.545 1.676.662v1.941c-.391-.127-.68-.317-.843-.504a1 1 0 10-1.51 1.31c.562.649 1.413 1.076 2.353 1.253V15a1 1 0 102 0v-.092a4.535 4.535 0 001.676-.662C13.398 13.766 14 12.991 14 12c0-.99-.602-1.765-1.324-2.246A4.535 4.535 0 0011 9.092V7.151c.391.127.68.317.843.504a1 1 0 101.51-1.31c-.562-.649-1.413-1.076-2.353-1.253V5z" clip-rule="evenodd"/>
-                    </svg>
                     <span>{{ betLoading.has(ongoingTournament.id) ? 'Loading...' : (getUserBetStatus(ongoingTournament.id) ? 'Bet ✓' : 'Bet') }}</span>
-                    <!-- Check icon (only shown when bet is placed) -->
-                    <svg 
-                      v-if="getUserBetStatus(ongoingTournament.id)" 
-                      class="w-4 h-4" 
-                      fill="currentColor" 
-                      viewBox="0 0 20 20"
-                    >
-                      <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
-                    </svg>
                   </div>
                 </button>
               </div>
@@ -311,7 +290,14 @@
                   {{ teamGenerationLoading ? 'Generating...' : 'Random Team' }}
                 </button>
                 <button
-                  v-if="authStore.hasRole('admin')"
+                  v-if="authStore.hasPermission('canEditTournaments') && ongoingTournament.status === 'UPCOMING' && getTournamentTeams(ongoingTournament).length > 0"
+                  @click="startTournament(ongoingTournament.id)"
+                  class="px-6 py-2 rounded-lg font-medium bg-green-600 text-white hover:bg-green-700 hover:shadow-md transition-colors duration-200"
+                >
+                  Start Tournament
+                </button>
+                <button
+                  v-if="authStore.hasRole('admin') && ongoingTournament.status === 'ONGOING'"
                   @click="endTournament(ongoingTournament.id)"
                   class="px-6 py-2 rounded-lg font-medium bg-red-600 text-white hover:bg-red-700 hover:shadow-md transition-colors duration-200"
                 >
@@ -1019,10 +1005,10 @@ const weeklyTournaments = computed(() => {
   )
 })
 
-// Get ongoing tournament (filter by status = 'ONGOING')
+// Get ongoing tournament (filter by status = 'UPCOMING' or 'ONGOING')
 const ongoingTournament = computed(() => {
   return weeklyTournaments.value.find(tournament => 
-    tournament.status === 'UPCOMING'
+    tournament.status === 'UPCOMING' || tournament.status === 'ONGOING'
   )
 })
 
@@ -1378,6 +1364,24 @@ const editTournament = (tournament: Tournament) => {
   // Since we're reusing tournament functionality
   console.log('Edit tournament:', tournament.id)
   // You can implement this based on your tournament editing needs
+}
+
+const startTournament = async (tournamentId: string) => {
+  try {
+    const response = await apiClient.put(`/tournaments/${tournamentId}`, {
+      status: 'ONGOING'
+    })
+    
+    if (response.success) {
+      toast.success('Tournament started successfully!')
+      await fetchData()
+    } else {
+      toast.error('Failed to start tournament')
+    }
+  } catch (err: any) {
+    console.error('Start tournament error:', err)
+    toast.error(err.response?.data?.error || 'Failed to start tournament')
+  }
 }
 
 const endTournament = async (tournamentId: string) => {

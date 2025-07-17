@@ -3,7 +3,7 @@ import { PrismaClient } from '@prisma/client';
 const prisma = new PrismaClient();
 
 async function testTeamGenerationWithExistingPlayers() {
-  const tournamentId = 'cmd6vxfyw0000icofhoa0x5xc';
+  const tournamentId = 'cmd70fpik001fwf4mi95ci15z';
   
   // First, clear any existing attendance for this tournament
   await prisma.tournamentPlayerAttendance.deleteMany({
@@ -37,15 +37,17 @@ async function testTeamGenerationWithExistingPlayers() {
   console.log('Setting attendance for 20 existing players...');
   for (const player of existingPlayers) {
     const withWater = Math.random() > 0.5; // Random water preference
+    const bet = Math.random() > 0.7; // 30% chance of betting
     await prisma.tournamentPlayerAttendance.create({
       data: {
         tournamentId,
         playerId: player.id,
         status: 'ATTEND',
         withWater,
+        bet,
       }
     });
-    console.log(`✅ Set attendance for ${player.name} (water: ${withWater ? 'yes' : 'no'})`);
+    console.log(`✅ Set attendance for ${player.name} (water: ${withWater ? 'yes' : 'no'}, bet: ${bet ? 'yes' : 'no'})`);
   }
 
   // Get attending players count
@@ -54,7 +56,9 @@ async function testTeamGenerationWithExistingPlayers() {
       tournamentId,
       status: 'ATTEND'
     },
-    include: {
+    select: {
+      withWater: true,
+      bet: true,
       player: {
         select: {
           id: true,
@@ -97,14 +101,21 @@ async function testTeamGenerationWithExistingPlayers() {
   // Show player breakdown by tier and position
   const positionCounts = new Map();
   const tierCounts = new Map();
-  attendingPlayers.forEach(({ player }) => {
+  let waterCount = 0;
+  let betCount = 0;
+  
+  attendingPlayers.forEach(({ player, withWater, bet }) => {
     positionCounts.set(player.position, (positionCounts.get(player.position) || 0) + 1);
     tierCounts.set(player.tier, (tierCounts.get(player.tier) || 0) + 1);
+    if (withWater) waterCount++;
+    if (bet) betCount++;
   });
 
   console.log('\nPlayer breakdown:');
   console.log('Positions:', Array.from(positionCounts.entries()).map(([pos, count]) => `${pos}:${count}`).join(', '));
   console.log('Tiers:', Array.from(tierCounts.entries()).sort((a, b) => b[0] - a[0]).map(([tier, count]) => `T${tier}:${count}`).join(', '));
+  console.log(`Water: ${waterCount}/${playerCount} (${((waterCount/playerCount)*100).toFixed(1)}%)`);
+  console.log(`Betting: ${betCount}/${playerCount} (${((betCount/playerCount)*100).toFixed(1)}%)`);
 
   // Check current teams if they exist
   const currentTeams = await prisma.tournamentTeam.findMany({

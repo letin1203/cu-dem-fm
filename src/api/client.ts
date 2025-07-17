@@ -227,7 +227,7 @@ class ApiClient {
     return this.get(`/tournaments/${tournamentId}/scores`);
   }
 
-  async updateTournamentScores(tournamentId: string, scores: Array<{ teamId: string; score: number }>) {
+  async updateTournamentScores(tournamentId: string, scores: Record<string, number>) {
     return this.put(`/tournaments/${tournamentId}/scores`, { scores });
   }
 

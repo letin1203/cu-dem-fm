@@ -1550,11 +1550,11 @@ const saveScores = async () => {
   if (!scoresTournamentId.value) return
   
   try {
-    // Prepare scores data for API call
-    const scores = Array.from(teamScores.value.entries()).map(([teamId, score]) => ({
-      teamId,
-      score
-    }))
+    // Prepare scores data for API call - convert Map to object
+    const scores: Record<string, number> = {}
+    teamScores.value.forEach((score, teamId) => {
+      scores[teamId] = score
+    })
 
     // Call the API to update tournament scores
     const response = await apiClient.updateTournamentScores(scoresTournamentId.value, scores)

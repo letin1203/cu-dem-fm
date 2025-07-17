@@ -1,3 +1,4 @@
+// Use built-in fetch for Node.js 18+
 async function debugTeamData() {
   try {
     // Get all tournaments
@@ -32,12 +33,12 @@ async function debugTeamData() {
         
         for (const tournamentTeam of tournament.teams) {
           const team = tournamentTeam.team;
-          const playersInTeam = teamPlayersMap.get(team.id) || [];
+          const players = teamPlayersMap.get(team.id) || [];
           console.log(`  Team: ${team.name}`);
-          console.log(`  Players in team: ${playersInTeam.length}`);
+          console.log(`  Players in team: ${players.length}`);
           
-          if (playersInTeam.length > 0) {
-            playersInTeam.forEach(player => {
+          if (players.length > 0) {
+            players.forEach(player => {
               console.log(`    - ${player.name} (${player.position}, T${player.tier})`);
             });
           }

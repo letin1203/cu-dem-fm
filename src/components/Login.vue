@@ -116,15 +116,38 @@
             </button>
           </div>
         </div>
+
+        <!-- Version Information -->
+        <div class="mt-6 pt-4 border-t border-gray-200">
+          <div class="text-center">
+            <div v-if="versionInfo" class="space-y-1 text-xs text-gray-500">
+              <div class="flex justify-between items-center">
+                <span>Frontend:</span>
+                <span class="font-mono">v{{ versionInfo.frontend.version }}</span>
+              </div>
+              <div class="flex justify-between items-center">
+                <span>Backend:</span>
+                <span class="font-mono">v{{ versionInfo.backend.version }}</span>
+              </div>
+              <div class="text-center text-gray-400 mt-2">
+                <span class="text-xs">{{ versionInfo.backend.environment }}</span>
+              </div>
+            </div>
+            <div v-else class="text-xs text-gray-400">
+              Loading version info...
+            </div>
+          </div>
+        </div>
       </form>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
+import { apiClient } from '../api/client'
 import type { LoginCredentials } from '../types'
 
 const router = useRouter()
@@ -137,6 +160,19 @@ const credentials = ref<LoginCredentials>({
 
 const error = ref('')
 const isLoading = ref(false)
+const versionInfo = ref<any>(null)
+
+// Fetch version information on component mount
+onMounted(async () => {
+  try {
+    const response = await apiClient.getVersion()
+    if (response && response.success) {
+      versionInfo.value = response.data
+    }
+  } catch (err) {
+    console.warn('Failed to fetch version info:', err)
+  }
+})
 
 async function handleLogin() {
   error.value = ''

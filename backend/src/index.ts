@@ -111,6 +111,25 @@ app.get('/api/health', (req, res) => {
   });
 });
 
+// Version endpoint
+app.get('/api/version', (req, res) => {
+  const packageJson = require('../../package.json');
+  res.status(200).json({
+    success: true,
+    data: {
+      backend: {
+        name: packageJson.name,
+        version: packageJson.version,
+        environment: process.env.NODE_ENV || 'development'
+      },
+      frontend: {
+        name: 'football-mamagement',
+        version: '1.2.0' // This should match the frontend package.json
+      }
+    }
+  });
+});
+
 // Error handling middleware
 app.use(notFoundHandler);
 app.use(errorHandler);

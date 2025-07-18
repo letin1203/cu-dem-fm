@@ -168,6 +168,11 @@ class ApiClient {
     return this.post('/auth/logout');
   }
 
+  // Version endpoint
+  async getVersion() {
+    return this.get('/version');
+  }
+
   // Users endpoints
   async getUsers(params?: any) {
     return this.get('/users', { params });

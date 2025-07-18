@@ -101,6 +101,16 @@ app.use('/api/system-settings', systemSettingsRoutes);
 app.use('/api/additional-costs', additionalCostsRoutes);
 app.use('/api/database', databaseRoutes);
 
+// Health check under API
+app.get('/api/health', (req, res) => {
+  res.status(200).json({
+    status: 'OK',
+    timestamp: new Date().toISOString(),
+    uptime: process.uptime(),
+    environment: process.env.NODE_ENV || 'development'
+  });
+});
+
 // Error handling middleware
 app.use(notFoundHandler);
 app.use(errorHandler);

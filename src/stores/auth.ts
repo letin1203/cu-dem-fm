@@ -79,7 +79,7 @@ export const useAuthStore = defineStore('auth', () => {
     try {
       const response = await apiClient.login(credentials)
       
-      if (response.success && response.data) {
+      if (response && response.success && response.data) {
         const data = response.data as any
         // Convert role to lowercase for frontend compatibility
         currentUser.value = {

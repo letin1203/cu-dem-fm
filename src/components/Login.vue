@@ -150,8 +150,21 @@ async function handleLogin() {
     } else {
       error.value = 'Invalid username or password'
     }
-  } catch (err) {
-    error.value = 'An error occurred during login'
+  } catch (err: any) {
+    console.error('Login error:', err)
+    
+    // Handle specific timeout errors
+    if (err.code === 'ECONNABORTED' && err.message?.includes('timeout')) {
+      error.value = 'Connection timeout. The server may be starting up (this can take up to 60 seconds on first load). Please wait a moment and try again.'
+    } else if (err.code === 'NETWORK_ERROR' || err.code === 'ERR_NETWORK') {
+      error.value = 'Network connection error. Please check your internet connection and try again.'
+    } else if (err.response?.status === 500) {
+      error.value = 'Server error. The server may be starting up. Please wait a moment and try again.'
+    } else if (err.response?.data?.error) {
+      error.value = err.response.data.error
+    } else {
+      error.value = 'Login failed. Please check your credentials and try again.'
+    }
   } finally {
     isLoading.value = false
   }

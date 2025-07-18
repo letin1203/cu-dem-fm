@@ -13,7 +13,7 @@ class ApiClient {
   constructor() {
     this.client = axios.create({
       baseURL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001/api',
-      timeout: 10000,
+      timeout: 30000, // Increased timeout to 30 seconds for cold starts
       headers: {
         'Content-Type': 'application/json',
       },
@@ -35,10 +35,34 @@ class ApiClient {
       }
     );
 
-    // Response interceptor to handle errors
+    // Response interceptor to handle errors and retries
     this.client.interceptors.response.use(
       (response: any) => response,
-      (error: any) => {
+      async (error: any) => {
+        const originalRequest = error.config;
+        
+        // Retry logic for timeout errors (cold start issues)
+        if (error.code === 'ECONNABORTED' && error.message.includes('timeout') && !originalRequest._retry) {
+          originalRequest._retry = true;
+          originalRequest.timeout = 60000; // Very long timeout for retry (60s)
+          console.log('Request timed out, retrying with longer timeout...');
+          
+          // Add a small delay before retry
+          await new Promise(resolve => setTimeout(resolve, 1000));
+          return this.client(originalRequest);
+        }
+        
+        // Also handle network errors that might indicate cold starts
+        if ((error.code === 'NETWORK_ERROR' || error.code === 'ERR_NETWORK') && !originalRequest._retry) {
+          originalRequest._retry = true;
+          originalRequest.timeout = 60000;
+          console.log('Network error, retrying...');
+          
+          // Add a delay before retry
+          await new Promise(resolve => setTimeout(resolve, 2000));
+          return this.client(originalRequest);
+        }
+        
         if (error.response?.status === 401) {
           // Clear token and redirect to login
           localStorage.removeItem('auth_token');
@@ -99,7 +123,37 @@ class ApiClient {
 
   // Auth endpoints
   async login(credentials: { username: string; password: string }) {
-    return this.post('/auth/login', credentials);
+    // Special handling for login with additional retry logic
+    const maxRetries = 3;
+    let retryCount = 0;
+    
+    while (retryCount < maxRetries) {
+      try {
+        console.log(`Login attempt ${retryCount + 1}/${maxRetries}`);
+        return await this.post('/auth/login', credentials);
+      } catch (error: any) {
+        retryCount++;
+        
+        if (retryCount >= maxRetries) {
+          throw error;
+        }
+        
+        // Check if it's a timeout or network error that might be due to cold start
+        const isRetryableError = error.code === 'ECONNABORTED' || 
+                                error.code === 'NETWORK_ERROR' || 
+                                error.code === 'ERR_NETWORK' ||
+                                (error.message && error.message.includes('timeout'));
+        
+        if (isRetryableError) {
+          const delay = retryCount * 3000; // Increasing delay: 3s, 6s
+          console.log(`Login failed with ${error.code || 'timeout'}, retrying in ${delay}ms...`);
+          await new Promise(resolve => setTimeout(resolve, delay));
+        } else {
+          // Non-retryable error, throw immediately
+          throw error;
+        }
+      }
+    }
   }
 
   async register(userData: { username: string; email: string; password: string; role?: string }) {
@@ -301,6 +355,17 @@ class ApiClient {
 
   async deleteAdditionalCost(id: string) {
     return this.delete(`/additional-costs/${id}`);
+  }
+
+  // Method to wake up the backend (for cold start issues)
+  async wakeUpBackend(): Promise<void> {
+    try {
+      // Try a simple request to wake up the backend
+      await this.client.get('/auth/me', { timeout: 45000 });
+    } catch (error) {
+      // Ignore errors, this is just to wake up the backend
+      console.log('Backend wake-up request completed');
+    }
   }
 }
 

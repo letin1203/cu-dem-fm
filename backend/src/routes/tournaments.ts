@@ -1381,5 +1381,209 @@ router.post('/:id/generate-teams', authenticate, authorize(['ADMIN', 'MOD']), as
   }
 });
 
+// End tournament - calculate money changes and finalize
+router.put('/:id/end', authenticate, authorize(['ADMIN', 'MOD']), async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  try {
+    const { id } = req.params;
+
+    // Fetch tournament with all related data
+    const tournament = await prisma.tournament.findUnique({
+      where: { id },
+      include: {
+        teams: {
+          include: {
+            team: true,
+          },
+        },
+        tournamentTeamPlayers: {
+          include: {
+            player: true,
+            team: true,
+          },
+        },
+        playerAttendances: {
+          include: {
+            player: true,
+          },
+        },
+        additionalCosts: true,
+      },
+    });
+
+    if (!tournament) {
+      res.status(404).json({
+        success: false,
+        error: 'Tournament not found',
+      });
+      return;
+    }
+
+    if (tournament.status !== 'ONGOING' && tournament.status !== 'ACTIVE') {
+      res.status(400).json({
+        success: false,
+        error: 'Only active tournaments can be ended',
+      });
+      return;
+    }
+
+    // Find winner and loser teams based on scores
+    const teams = tournament.teams.map(t => t.team).filter(Boolean);
+    if (teams.length === 0) {
+      res.status(400).json({
+        success: false,
+        error: 'No teams found in tournament',
+      });
+      return;
+    }
+
+    const sortedTeams = teams.sort((a, b) => (b.score || 0) - (a.score || 0));
+    const winnerTeam = sortedTeams[0];
+    const loserTeam = sortedTeams[sortedTeams.length - 1];
+
+    // Check if there's a clear winner/loser (no ties)
+    if (winnerTeam.score === loserTeam.score) {
+      res.status(400).json({
+        success: false,
+        error: 'Cannot end tournament with tied scores',
+      });
+      return;
+    }
+
+    // Get all attending players
+    const attendingPlayers = tournament.playerAttendances
+      .filter(att => att.status === 'ATTENDING')
+      .map(att => att.player);
+
+    // Calculate money changes
+    let totalAdded = 0;
+    let totalDeducted = 0;
+    const moneyUpdates: Array<{ playerId: string; oldMoney: number; newMoney: number; change: number }> = [];
+
+    // Get tournament settings
+    const loserPenalty = 50000; // Default loser penalty
+    const waterCostPerPlayer = 5000; // Default water cost
+    const tournamentCostPerPlayer = tournament.costPerPlayer || 0;
+    const bettingWinAmount = 10000; // Base betting win amount
+    const bettingLossAmount = 10000; // Betting loss penalty
+    const teamLoserPenalty = 5000; // Team loser penalty
+
+    // Calculate betting win amount based on number of teams
+    const teamCount = teams.length;
+    const bettingWinBonus = teamCount >= 3 ? bettingWinAmount * (teamCount - 2) : bettingWinAmount;
+
+    // Calculate water cost total
+    const waterCostPlayersCount = tournament.playerAttendances
+      .filter(att => att.status === 'ATTENDING' && att.withWater)
+      .length;
+    const totalWaterCost = waterCostPlayersCount * waterCostPerPlayer;
+
+    // Calculate additional costs total
+    const totalAdditionalCosts = tournament.additionalCosts.reduce((sum, cost) => sum + cost.amount, 0);
+
+    // Process each attending player
+    for (const player of attendingPlayers) {
+      const attendance = tournament.playerAttendances.find(att => att.playerId === player.id);
+      if (!attendance) continue;
+
+      const playerTeamAssignment = tournament.tournamentTeamPlayers.find(ttp => ttp.playerId === player.id);
+      const playerTeam = playerTeamAssignment?.team;
+      
+      let moneyChange = 0;
+
+      // Tournament cost per player (applies to all)
+      if (tournamentCostPerPlayer > 0) {
+        moneyChange -= tournamentCostPerPlayer;
+      }
+
+      // Betting calculations
+      if (attendance.bet) {
+        if (playerTeam && playerTeam.id === winnerTeam.id) {
+          // Betting winner gets bonus
+          moneyChange += bettingWinBonus;
+        } else {
+          // Betting loser pays penalty
+          moneyChange -= bettingLossAmount;
+        }
+      }
+
+      // Team loser penalty (in addition to betting penalty if applicable)
+      if (playerTeam && playerTeam.id === loserTeam.id) {
+        moneyChange -= teamLoserPenalty;
+      }
+
+      // Water cost (winner team gets free water)
+      if (attendance.withWater && playerTeam && playerTeam.id !== winnerTeam.id) {
+        moneyChange -= waterCostPerPlayer;
+      }
+
+      // Additional costs distribution (split among all attending players)
+      if (totalAdditionalCosts > 0) {
+        const additionalCostPerPlayer = Math.floor(totalAdditionalCosts / attendingPlayers.length);
+        moneyChange -= additionalCostPerPlayer;
+      }
+
+      // Update player money
+      const newMoney = player.money + moneyChange;
+      await prisma.player.update({
+        where: { id: player.id },
+        data: { money: newMoney },
+      });
+
+      moneyUpdates.push({
+        playerId: player.id,
+        oldMoney: player.money,
+        newMoney,
+        change: moneyChange,
+      });
+
+      if (moneyChange > 0) {
+        totalAdded += moneyChange;
+      } else if (moneyChange < 0) {
+        totalDeducted += Math.abs(moneyChange);
+      }
+    }
+
+    // Update tournament status to completed
+    await prisma.tournament.update({
+      where: { id },
+      data: { 
+        status: 'COMPLETED',
+        completedAt: new Date(),
+      },
+    });
+
+    res.json({
+      success: true,
+      data: {
+        tournament: {
+          id: tournament.id,
+          name: tournament.name,
+          status: 'COMPLETED',
+        },
+        winner: {
+          id: winnerTeam.id,
+          name: winnerTeam.name,
+          score: winnerTeam.score,
+        },
+        loser: {
+          id: loserTeam.id,
+          name: loserTeam.name,
+          score: loserTeam.score,
+        },
+        playersUpdated: moneyUpdates.length,
+        totalAdded,
+        totalDeducted,
+        moneyUpdates,
+      },
+    });
+  } catch (error) {
+    console.error('End tournament error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to end tournament',
+    });
+  }
+});
+
 export { router as tournamentRoutes };
 export default router;

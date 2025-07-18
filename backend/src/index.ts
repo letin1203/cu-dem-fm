@@ -113,21 +113,44 @@ app.get('/api/health', (req, res) => {
 
 // Version endpoint
 app.get('/api/version', (req, res) => {
-  const packageJson = require('../../package.json');
-  res.status(200).json({
-    success: true,
-    data: {
-      backend: {
-        name: packageJson.name,
-        version: packageJson.version,
-        environment: process.env.NODE_ENV || 'development'
-      },
-      frontend: {
-        name: 'football-mamagement',
-        version: '1.2.0' // This should match the frontend package.json
+  // Read package.json version directly
+  const fs = require('fs');
+  const path = require('path');
+  
+  try {
+    const packageJsonPath = path.join(__dirname, '../../package.json');
+    const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
+    
+    res.status(200).json({
+      success: true,
+      data: {
+        backend: {
+          name: packageJson.name,
+          version: packageJson.version,
+          environment: process.env.NODE_ENV || 'development'
+        },
+        frontend: {
+          name: 'football-mamagement',
+          version: '1.2.0' // This should match the frontend package.json
+        }
       }
-    }
-  });
+    });
+  } catch (error) {
+    res.status(200).json({
+      success: true,
+      data: {
+        backend: {
+          name: 'football-management-backend',
+          version: '1.2.0',
+          environment: process.env.NODE_ENV || 'development'
+        },
+        frontend: {
+          name: 'football-mamagement',
+          version: '1.2.0'
+        }
+      }
+    });
+  }
 });
 
 // Error handling middleware

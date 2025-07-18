@@ -113,6 +113,8 @@ model Tournament {
   status    String   @default("UPCOMING") // "UPCOMING", "ONGOING", "COMPLETED"
   startDate DateTime
   endDate   DateTime?
+  completedAt DateTime?
+  costPerPlayer Int @default(0)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 

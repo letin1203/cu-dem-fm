@@ -162,7 +162,7 @@
                 <div
                   v-for="team in getTournamentTeams(ongoingTournament)"
                   :key="team.id"
-                  class="bg-white rounded-lg p-4 border border-gray-200 hover:shadow-md transition-shadow"
+                  class="bg-white/80 backdrop-blur-sm rounded-lg p-4 border border-primary-200 hover:shadow-md transition-shadow"
                 >
                   <!-- Team Header -->
                   <div class="flex items-center mb-3">
@@ -254,7 +254,7 @@
                       ? 'opacity-50 cursor-not-allowed' 
                       : 'hover:shadow-md',
                     getUserWaterStatus(ongoingTournament.id)
-                      ? 'bg-blue-600 text-white hover:bg-blue-700'
+                      ? 'bg-primary-600 text-white hover:bg-primary-700'
                       : 'bg-gray-300 text-gray-700 hover:bg-gray-400'
                   ]"
                 >
@@ -318,7 +318,7 @@
                 <button
                   v-if="authStore.hasPermission('canEditTournaments') && ongoingTournament.status === 'ONGOING' && getTournamentTeams(ongoingTournament).length > 0"
                   @click="openScoresModal(ongoingTournament.id)"
-                  class="px-6 py-2 rounded-lg font-medium bg-blue-600 text-white hover:bg-blue-700 hover:shadow-md transition-colors duration-200"
+                  class="px-6 py-2 rounded-lg font-medium bg-primary-600 text-white hover:bg-primary-700 hover:shadow-md transition-colors duration-200"
                 >
                   Scores
                 </button>
@@ -857,7 +857,7 @@
         </button>
         <button
           @click="saveScores"
-          class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
+          class="px-4 py-2 bg-primary-600 text-white rounded hover:bg-primary-700 transition-colors"
         >
           Save Scores
         </button>
@@ -903,9 +903,9 @@
         </div>
         
         <!-- Money Calculation Info -->
-        <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
-          <h5 class="font-semibold text-blue-800 mb-2">💰 Money Calculations:</h5>
-          <ul class="text-xs text-blue-700 space-y-1">
+        <div class="bg-primary-50 border border-primary-200 rounded-lg p-4 mb-4">
+          <h5 class="font-semibold text-primary-800 mb-2">💰 Money Calculations:</h5>
+          <ul class="text-xs text-primary-700 space-y-1">
             <li>• Tournament cost per player: -{{ calculateCostPerPlayer(endTournamentId).toLocaleString() }} VND</li>
             <li>• Betting winners: +{{ getBettingWinAmount(getTournamentTeams(weeklyTournaments.find(t => t.id === endTournamentId) || {} as Tournament).length).toLocaleString() }} VND</li>
             <li>• Betting losers: -10,000 VND</li>
@@ -919,7 +919,7 @@
         <div class="bg-gray-50 border border-gray-200 rounded-lg p-4 mb-4">
           <h5 class="font-semibold text-gray-800 mb-2">🔎 Preview Money Changes</h5>
           <div v-for="team in getTournamentTeams(weeklyTournaments.find(t => t.id === endTournamentId) || {} as Tournament)" :key="team.id" class="mb-4">
-            <div class="font-semibold text-blue-700 mb-2">{{ team.name }}</div>
+            <div class="font-semibold text-primary-700 mb-2">{{ team.name }}</div>
             <div v-for="player in team.players.filter((p: any) => endTournamentId && getAttendanceStatus(endTournamentId, p.id) === 'ATTEND')" :key="player.id" class="bg-white rounded-lg p-3 mb-2 border border-gray-100">
               <!-- Player Header -->
               <div class="flex items-center justify-between mb-2">

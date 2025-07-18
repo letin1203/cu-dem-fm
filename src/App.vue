@@ -1,5 +1,5 @@
 <template>
-  <div class="min-h-screen bg-gray-50">
+  <div class="min-h-screen bg-gradient-to-br from-primary-50 via-secondary-50 to-primary-100">
     <Navigation v-if="authStore.isAuthenticated" />
     <main 
       :class="[

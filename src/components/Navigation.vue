@@ -1,5 +1,5 @@
 <template>
-  <nav class="bg-white shadow-lg">
+  <nav class="bg-white/80 backdrop-blur-md shadow-lg border-b border-primary-200">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
       <div class="flex justify-between h-16">
         <!-- Logo -->
@@ -8,8 +8,8 @@
             <svg class="h-6 w-6 sm:h-8 sm:w-8 text-primary-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
             </svg>
-            <span class="text-lg sm:text-xl font-bold text-gray-900 hidden xs:block">Football Manager</span>
-            <span class="text-lg font-bold text-gray-900 xs:hidden">FM</span>
+            <span class="text-lg sm:text-xl font-bold text-primary-900 hidden xs:block">Football Manager</span>
+            <span class="text-lg font-bold text-primary-900 xs:hidden">FM</span>
           </router-link>
         </div>
         
@@ -19,8 +19,8 @@
             v-for="item in visibleNavigationItems"
             :key="item.name"
             :to="item.path"
-            class="text-gray-600 hover:text-primary-600 px-2 lg:px-3 py-2 rounded-md text-sm font-medium transition-colors flex items-center space-x-1 whitespace-nowrap"
-            :class="{ 'text-primary-600 bg-primary-50': $route.path === item.path }"
+            class="text-primary-700 hover:text-primary-800 hover:bg-primary-100/50 px-2 lg:px-3 py-2 rounded-md text-sm font-medium transition-colors flex items-center space-x-1 whitespace-nowrap"
+            :class="{ 'text-primary-800 bg-primary-200/50': $route.path === item.path }"
           >
             <component :is="item.icon" class="w-4 h-4 lg:w-5 lg:h-5 flex-shrink-0" />
             <span class="hidden lg:block">{{ item.name }}</span>
@@ -30,10 +30,10 @@
           <div class="relative ml-3">
             <button
               @click="userMenuOpen = !userMenuOpen"
-              class="flex items-center space-x-2 text-gray-600 hover:text-primary-600 px-3 py-2 rounded-md text-sm font-medium"
+              class="flex items-center space-x-2 text-primary-700 hover:text-primary-800 hover:bg-primary-100/50 px-3 py-2 rounded-md text-sm font-medium"
             >
-              <div class="h-6 w-6 rounded-full bg-primary-100 flex items-center justify-center">
-                <span class="text-primary-600 font-medium text-xs">
+              <div class="h-6 w-6 rounded-full bg-primary-200 flex items-center justify-center">
+                <span class="text-primary-800 font-medium text-xs">
                   {{ authStore.currentUser?.username.charAt(0).toUpperCase() }}
                 </span>
               </div>

@@ -325,7 +325,13 @@
                 <button
                   v-if="authStore.hasRole('admin') && ongoingTournament.status === 'ONGOING'"
                   @click="endTournament(ongoingTournament.id)"
-                  class="px-6 py-2 rounded-lg font-medium bg-red-600 text-white hover:bg-red-700 hover:shadow-md transition-colors duration-200"
+                  :disabled="!canEndTournament(ongoingTournament.id)"
+                  :class="[
+                    'px-6 py-2 rounded-lg font-medium transition-colors duration-200',
+                    canEndTournament(ongoingTournament.id) 
+                      ? 'bg-red-600 text-white hover:bg-red-700 hover:shadow-md' 
+                      : 'bg-gray-400 text-gray-200 cursor-not-allowed'
+                  ]"
                 >
                   End Tournament
                 </button>
@@ -336,6 +342,9 @@
                 </span>
                 <span v-if="authStore.hasPermission('canEditTournaments') && getTournamentTeams(ongoingTournament).length === 0">
                   Will create {{ getTeamCount(ongoingTournament.id) }} balanced teams
+                </span>
+                <span v-if="authStore.hasRole('admin') && ongoingTournament.status === 'ONGOING' && !canEndTournament(ongoingTournament.id)" class="text-orange-600">
+                  {{ getTournamentEndStatusMessage(ongoingTournament.id) }}
                 </span>
               </div>
             </div>
@@ -1731,6 +1740,13 @@ const refreshModalScores = async (tournamentId: string) => {
 }
 
 const endTournament = async (tournamentId: string) => {
+  // Check if tournament can be ended
+  if (!canEndTournament(tournamentId)) {
+    const statusMessage = getTournamentEndStatusMessage(tournamentId)
+    toast.error(`Cannot end tournament: ${statusMessage}`)
+    return
+  }
+  
   endTournamentId.value = tournamentId
   
   // Auto-select the team with the highest score as winner and lowest score as loser
@@ -2060,135 +2076,60 @@ const getAttendanceStatus = (tournamentId: string, playerId: string): string => 
   return playerAttendance?.status || 'NULL'
 }
 
-// Helper function to calculate money change for a player when tournament ends
-const getMoneyChange = (tournamentId: string, team: any, player: any): number => {
-  if (!systemStore.currentSettings) return 0
-  
+// Check if tournament can be ended (clear winner and loser)
+const canEndTournament = (tournamentId: string): boolean => {
   const tournament = weeklyTournaments.value.find(t => t.id === tournamentId)
-  if (!tournament) return 0
+  if (!tournament || tournament.status !== 'ONGOING') return false
   
-  let totalChange = 0
+  const teams = getTournamentTeams(tournament)
+  if (teams.length < 2) return false
   
-  // Base tournament cost per player
-  const costPerPlayer = calculateCostPerPlayer(tournamentId)
-  totalChange -= costPerPlayer
+  // Get all unique scores
+  const scores = teams.map(team => team.score || 0)
+  const uniqueScores = [...new Set(scores)].sort((a, b) => b - a) // Sort descending
   
-  // Check if player is betting
-  const details = attendanceDetailsMap.value.get(tournamentId)
-  const playerAttendance = Array.isArray(details) ? details.find((d: any) => d.playerId === player.id) : null
-  const isBetting = playerAttendance?.bet === true
-  const hasWater = playerAttendance?.withWater === true
+  if (uniqueScores.length < 2) return false // All teams have same score
   
-  // Betting calculations
-  if (isBetting) {
-    const isWinnerTeam = selectedWinningTeam.value?.id === team.id
-    if (isWinnerTeam) {
-      // Betting winner
-      const teamCount = getTournamentTeams(tournament).length
-      const winAmount = getBettingWinAmount(teamCount)
-      totalChange += winAmount
-    } else {
-      // Betting loser
-      totalChange -= 10000
-    }
-  }
+  const highestScore = uniqueScores[0]
+  const lowestScore = uniqueScores[uniqueScores.length - 1]
   
-  // Team result calculations
-  const isWinnerTeam = selectedWinningTeam.value?.id === team.id
-  const isLoserTeam = selectedLosingTeam.value?.id === team.id
+  // Count teams with highest score
+  const teamsWithHighestScore = teams.filter(team => (team.score || 0) === highestScore)
+  // Count teams with lowest score  
+  const teamsWithLowestScore = teams.filter(team => (team.score || 0) === lowestScore)
   
-  if (isLoserTeam) {
-    // Loser team penalty
-    totalChange -= 5000
-  }
-  
-  // Water cost calculations
-  if (hasWater && !isWinnerTeam) {
-    // Winner team gets free water, others pay if they selected water
-    const waterCost = systemStore.currentSettings.waterCost || 5000 // Default water cost
-    totalChange -= waterCost
-  }
-  
-  return totalChange
+  // Can end only if there's exactly one team with highest score and one with lowest score
+  return teamsWithHighestScore.length === 1 && teamsWithLowestScore.length === 1
 }
 
-// Helper function to get detailed money change breakdown for a player
-const getDetailedMoneyChange = (tournamentId: string, team: any, player: any): { changes: Array<{type: string, amount: number, description: string}>, total: number } => {
-  if (!systemStore.currentSettings) return { changes: [], total: 0 }
-  
+// Get tournament end status message
+const getTournamentEndStatusMessage = (tournamentId: string): string => {
   const tournament = weeklyTournaments.value.find(t => t.id === tournamentId)
-  if (!tournament) return { changes: [], total: 0 }
+  if (!tournament || tournament.status !== 'ONGOING') return ''
   
-  const changes: Array<{type: string, amount: number, description: string}> = []
+  const teams = getTournamentTeams(tournament)
+  if (teams.length < 2) return 'Need at least 2 teams'
   
-  // Base tournament cost per player
-  const costPerPlayer = calculateCostPerPlayer(tournamentId)
-  changes.push({
-    type: 'cost',
-    amount: -costPerPlayer,
-    description: 'Tournament cost per player'
-  })
+  const scores = teams.map(team => team.score || 0)
+  const uniqueScores = [...new Set(scores)].sort((a, b) => b - a)
   
-  // Check if player is betting
-  const details = attendanceDetailsMap.value.get(tournamentId)
-  const playerAttendance = Array.isArray(details) ? details.find((d: any) => d.playerId === player.id) : null
-  const isBetting = playerAttendance?.bet === true
-  const hasWater = playerAttendance?.withWater === true
+  if (uniqueScores.length < 2) return 'All teams have the same score'
   
-  // Team result calculations
-  const isWinnerTeam = selectedWinningTeam.value?.id === team.id
-  const isLoserTeam = selectedLosingTeam.value?.id === team.id
+  const highestScore = uniqueScores[0]
+  const lowestScore = uniqueScores[uniqueScores.length - 1]
   
-  // Betting calculations
-  if (isBetting) {
-    if (isWinnerTeam) {
-      // Betting winner
-      const teamCount = getTournamentTeams(tournament).length
-      const winAmount = getBettingWinAmount(teamCount)
-      changes.push({
-        type: 'betting_win',
-        amount: winAmount,
-        description: 'Betting winner bonus'
-      })
-    } else {
-      // Betting loser
-      changes.push({
-        type: 'betting_loss',
-        amount: -10000,
-        description: 'Betting loser penalty'
-      })
-    }
+  const teamsWithHighestScore = teams.filter(team => (team.score || 0) === highestScore)
+  const teamsWithLowestScore = teams.filter(team => (team.score || 0) === lowestScore)
+  
+  if (teamsWithHighestScore.length > 1) {
+    return `${teamsWithHighestScore.length} teams tied for highest score (${highestScore})`
   }
   
-  if (isLoserTeam) {
-    // Loser team penalty
-    changes.push({
-      type: 'team_loss',
-      amount: -5000,
-      description: 'Loser team penalty'
-    })
+  if (teamsWithLowestScore.length > 1) {
+    return `${teamsWithLowestScore.length} teams tied for lowest score (${lowestScore})`
   }
   
-  // Water cost calculations
-  if (hasWater && !isWinnerTeam) {
-    // Winner team gets free water, others pay if they selected water
-    const waterCost = systemStore.currentSettings.waterCost || 5000
-    changes.push({
-      type: 'water',
-      amount: -waterCost,
-      description: 'Water cost'
-    })
-  } else if (hasWater && isWinnerTeam) {
-    changes.push({
-      type: 'water_free',
-      amount: 0,
-      description: 'Free water (winner team)'
-    })
-  }
-  
-  const total = changes.reduce((sum, change) => sum + change.amount, 0)
-  
-  return { changes, total }
+  return '' // Can end tournament
 }
 
 // Fetch all data
@@ -2379,5 +2320,84 @@ const togglePlayerWater = async (attendance: TournamentAttendanceDetails): Promi
   } finally {
     playerWaterLoading.value.delete(attendance.player.id)
   }
+}
+
+// Helper function to get detailed money change breakdown for a player
+const getDetailedMoneyChange = (tournamentId: string, team: any, player: any): { changes: Array<{type: string, amount: number, description: string}>, total: number } => {
+  if (!systemStore.currentSettings) return { changes: [], total: 0 }
+  
+  const tournament = weeklyTournaments.value.find(t => t.id === tournamentId)
+  if (!tournament) return { changes: [], total: 0 }
+  
+  const changes: Array<{type: string, amount: number, description: string}> = []
+  
+  // Base tournament cost per player
+  const costPerPlayer = calculateCostPerPlayer(tournamentId)
+  changes.push({
+    type: 'cost',
+    amount: -costPerPlayer,
+    description: 'Tournament cost per player'
+  })
+  
+  // Check if player is betting
+  const details = attendanceDetailsMap.value.get(tournamentId)
+  const playerAttendance = Array.isArray(details) ? details.find((d: any) => d.playerId === player.id) : null
+  const isBetting = playerAttendance?.bet === true
+  const hasWater = playerAttendance?.withWater === true
+  
+  // Team result calculations
+  const isWinnerTeam = selectedWinningTeam.value?.id === team.id
+  const isLoserTeam = selectedLosingTeam.value?.id === team.id
+  
+  // Betting calculations
+  if (isBetting) {
+    if (isWinnerTeam) {
+      // Betting winner
+      const teamCount = getTournamentTeams(tournament).length
+      const winAmount = getBettingWinAmount(teamCount)
+      changes.push({
+        type: 'betting_win',
+        amount: winAmount,
+        description: 'Betting winner bonus'
+      })
+    } else {
+      // Betting loser
+      changes.push({
+        type: 'betting_loss',
+        amount: -10000,
+        description: 'Betting loser penalty'
+      })
+    }
+  }
+  
+  if (isLoserTeam) {
+    // Loser team penalty
+    changes.push({
+      type: 'team_loss',
+      amount: -5000,
+      description: 'Loser team penalty'
+    })
+  }
+  
+  // Water cost calculations
+  if (hasWater && !isWinnerTeam) {
+    // Winner team gets free water, others pay if they selected water
+    const waterCost = systemStore.currentSettings.waterCost || 5000
+    changes.push({
+      type: 'water',
+      amount: -waterCost,
+      description: 'Water cost'
+    })
+  } else if (hasWater && isWinnerTeam) {
+    changes.push({
+      type: 'water_free',
+      amount: 0,
+      description: 'Free water (winner team)'
+    })
+  }
+  
+  const total = changes.reduce((sum, change) => sum + change.amount, 0)
+  
+  return { changes, total }
 }
 </script>

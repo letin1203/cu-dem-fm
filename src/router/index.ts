@@ -2,6 +2,7 @@ import { createRouter, createWebHistory } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
 import Tournaments from '../views/Tournaments.vue'
 import WeeklyTournament from '../views/WeeklyTournament.vue'
+import WeeklyTournamentRefactored from '../views/WeeklyTournamentRefactored.vue'
 import Matches from '../views/Matches.vue'
 import Players from '../views/Players.vue'
 import Teams from '../views/Teams.vue'
@@ -40,6 +41,12 @@ const router = createRouter({
       path: '/weekly-tournament',
       name: 'weeklyTournament',
       component: WeeklyTournament,
+      meta: { requiresAuth: true, permission: 'canViewTournaments' }
+    },
+    {
+      path: '/weekly-refactored',
+      name: 'weeklyRefactored',
+      component: WeeklyTournamentRefactored,
       meta: { requiresAuth: true, permission: 'canViewTournaments' }
     },
     {

@@ -57,6 +57,11 @@ router.get('/', async (req: AuthenticatedRequest, res: Response): Promise<void> 
               },
             },
           },
+          additionalCosts: {
+            orderBy: {
+              createdAt: 'desc',
+            },
+          },
           matches: {
             select: {
               id: true,
@@ -136,6 +141,33 @@ router.get('/:id', async (req: AuthenticatedRequest, res: Response): Promise<voi
                 stats: true,
               },
             },
+          },
+        },
+        tournamentTeamPlayers: {
+          include: {
+            player: {
+              select: {
+                id: true,
+                name: true,
+                position: true,
+                tier: true,
+                avatar: true,
+                money: true,
+              },
+            },
+            team: {
+              select: {
+                id: true,
+                name: true,
+                logo: true,
+                score: true,
+              },
+            },
+          },
+        },
+        additionalCosts: {
+          orderBy: {
+            createdAt: 'desc',
           },
         },
         matches: {
@@ -721,18 +753,38 @@ router.put('/:id/attendance', authenticate, async (req: AuthenticatedRequest, re
   try {
     const { id: tournamentId } = req.params;
     const userId = req.user!.id;
-    const { status, withWater, bet } = updateAttendanceSchema.parse(req.body);
+    const { status, withWater, bet, playerId, toggleWater, toggleBet } = req.body;
 
-    // Get user's player
-    const user = await prisma.user.findUnique({
-      where: { id: userId },
-      include: { player: true },
-    });
+    // If playerId is provided and user is admin/mod, use that player instead
+    let targetPlayerId = userId;
+    if (playerId && req.user!.role && ['ADMIN', 'MOD'].includes(req.user!.role)) {
+      targetPlayerId = playerId;
+    } else if (playerId) {
+      res.status(403).json({
+        success: false,
+        error: 'Insufficient permissions to modify other players',
+      });
+      return;
+    }
 
-    if (!user?.player) {
+    // Get the target player
+    let player;
+    if (targetPlayerId === userId) {
+      const user = await prisma.user.findUnique({
+        where: { id: userId },
+        include: { player: true },
+      });
+      player = user?.player;
+    } else {
+      player = await prisma.player.findUnique({
+        where: { id: targetPlayerId },
+      });
+    }
+
+    if (!player) {
       res.status(404).json({
         success: false,
-        error: 'Player not found for user',
+        error: 'Player not found',
       });
       return;
     }
@@ -750,7 +802,81 @@ router.put('/:id/attendance', authenticate, async (req: AuthenticatedRequest, re
       return;
     }
 
-    // Prepare update data
+    // Handle toggle water request
+    if (toggleWater) {
+      const currentAttendance = await prisma.tournamentPlayerAttendance.findUnique({
+        where: {
+          tournamentId_playerId: {
+            tournamentId,
+            playerId: player.id,
+          },
+        },
+      });
+
+      const newWaterStatus = !(currentAttendance?.withWater ?? false);
+      
+      const attendance = await prisma.tournamentPlayerAttendance.upsert({
+        where: {
+          tournamentId_playerId: {
+            tournamentId,
+            playerId: player.id,
+          },
+        },
+        update: { withWater: newWaterStatus },
+        create: {
+          tournamentId,
+          playerId: player.id,
+          status: 'ATTENDING',
+          withWater: newWaterStatus,
+          bet: false,
+        },
+      });
+
+      res.json({
+        success: true,
+        data: attendance,
+      });
+      return;
+    }
+
+    // Handle toggle bet request
+    if (toggleBet) {
+      const currentAttendance = await prisma.tournamentPlayerAttendance.findUnique({
+        where: {
+          tournamentId_playerId: {
+            tournamentId,
+            playerId: player.id,
+          },
+        },
+      });
+
+      const newBetStatus = !(currentAttendance?.bet ?? false);
+      
+      const attendance = await prisma.tournamentPlayerAttendance.upsert({
+        where: {
+          tournamentId_playerId: {
+            tournamentId,
+            playerId: player.id,
+          },
+        },
+        update: { bet: newBetStatus },
+        create: {
+          tournamentId,
+          playerId: player.id,
+          status: 'ATTENDING',
+          withWater: false,
+          bet: newBetStatus,
+        },
+      });
+
+      res.json({
+        success: true,
+        data: attendance,
+      });
+      return;
+    }
+
+    // Prepare update data for regular attendance update
     const updateData: any = { status };
     if (withWater !== undefined) {
       updateData.withWater = withWater;
@@ -764,13 +890,13 @@ router.put('/:id/attendance', authenticate, async (req: AuthenticatedRequest, re
       where: {
         tournamentId_playerId: {
           tournamentId,
-          playerId: user.player.id,
+          playerId: player.id,
         },
       },
       update: updateData,
       create: {
         tournamentId,
-        playerId: user.player.id,
+        playerId: player.id,
         status,
         withWater: withWater ?? false,
         bet: bet ?? false,

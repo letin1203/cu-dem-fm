@@ -74,6 +74,7 @@ export interface Tournament {
   endDate?: string | Date
   teams: Team[]
   tournamentTeamPlayers?: TournamentTeamPlayer[]
+  additionalCosts?: AdditionalCost[]
   matches: Match[]
   winner?: Team
   loser?: Team

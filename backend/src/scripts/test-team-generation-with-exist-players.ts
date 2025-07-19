@@ -3,7 +3,7 @@ import { PrismaClient } from '@prisma/client';
 const prisma = new PrismaClient();
 
 async function testTeamGenerationWithExistingPlayers() {
-  const tournamentId = 'cmd77yo2e0000g3iaudionejn';
+  const tournamentId = 'cmd8rop4d0000xpzo2cf8rsdk';
   
   // First, clear any existing attendance for this tournament
   await prisma.tournamentPlayerAttendance.deleteMany({

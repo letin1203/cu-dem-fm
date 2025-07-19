@@ -12,9 +12,6 @@
       >
         {{ loading ? 'Creating...' : 'Create New' }}
       </button>
-      <div v-else-if="authStore.hasPermission('canEditTournaments')" class="text-sm text-gray-500">
-        Weekly tournament already exists for {{ formatNextMonday(nextMonday) }}
-      </div>
     </div>
 
     <!-- Filter Tabs -->

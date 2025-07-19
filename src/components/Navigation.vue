@@ -157,6 +157,7 @@ const userMenuOpen = ref(false)
 
 const navigationItems = [
   { name: 'Weekly Tour', path: '/weekly-tournament', icon: TrophyIcon, permission: 'canViewTournaments' },
+  { name: 'Weekly Refactored', path: '/weekly-refactored', icon: TrophyIcon, permission: 'canViewTournaments' },
   // { name: 'Tournaments', path: '/tournaments', icon: TrophyIcon, permission: 'canViewTournaments' },
   // { name: 'Matches', path: '/matches', icon: CalendarIcon, permission: 'canViewMatches' },
   { name: 'Teams', path: '/teams', icon: UserGroupIcon, permission: 'canViewTeams' },

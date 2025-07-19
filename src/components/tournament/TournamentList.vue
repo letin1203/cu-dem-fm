@@ -24,17 +24,17 @@
         <div v-if="ongoingTournament" class="card transition-colors duration-200">
           <TournamentCard
             :tournament="ongoingTournament"
-            :attendance-details="attendanceDetailsMap.get(ongoingTournament.id) || []"
-            :tournament-team-players="tournamentTeamPlayersMap.get(ongoingTournament.id) || []"
-            :additional-costs="additionalCostsMap.get(ongoingTournament.id) || []"
+            :attendance-details="attendanceDetailsMap?.get?.(ongoingTournament?.id) || []"
+            :tournament-team-players="tournamentTeamPlayersMap?.get?.(ongoingTournament?.id) || []"
+            :additional-costs="additionalCostsMap?.get?.(ongoingTournament?.id) || []"
             :system-settings="systemSettings"
-            :attendance-loading="attendanceLoading.has(ongoingTournament.id)"
+            :attendance-loading="attendanceLoading?.has?.(ongoingTournament?.id)"
             :current-user="currentUser"
             :total-players="players.length"
-            :generate-teams-loading="generateTeamsLoading.has(ongoingTournament.id)"
-            :clear-teams-loading="clearTeamsLoading.has(ongoingTournament.id)"
-            :water-loading="false"
-            :bet-loading="false"
+            :generate-teams-loading="generateTeamsLoading?.has?.(ongoingTournament?.id)"
+            :clear-teams-loading="clearTeamsLoading?.has?.(ongoingTournament?.id)"
+            :water-loading="waterLoadingMap?.get?.(ongoingTournament?.id) || false"
+            :bet-loading="betLoadingMap?.get?.(ongoingTournament?.id) || false"
             @generate-teams="handleGenerateTeams"
             @clear-teams="handleClearTeams"
             @end-tournament="handleEndTournament"
@@ -43,6 +43,8 @@
             @update-score="handleUpdateScore"
             @toggle-attendance="handleToggleAttendance"
             @delete-tournament="handleDeleteTournament"
+            @toggle-water="handleToggleWater"
+            @toggle-bet="handleToggleBet"
           />
         </div>
         <div v-else class="text-center py-12">
@@ -68,17 +70,17 @@
             v-for="tournament in oldTournaments"
             :key="tournament.id"
             :tournament="tournament"
-            :attendance-details="attendanceDetailsMap.get(tournament.id) || []"
-            :tournament-team-players="tournamentTeamPlayersMap.get(tournament.id) || []"
-            :additional-costs="additionalCostsMap.get(tournament.id) || []"
+            :attendance-details="attendanceDetailsMap?.get?.(tournament?.id) || []"
+            :tournament-team-players="tournamentTeamPlayersMap?.get?.(tournament?.id) || []"
+            :additional-costs="additionalCostsMap?.get?.(tournament?.id) || []"
             :system-settings="systemSettings"
-            :attendance-loading="attendanceLoading.has(tournament.id)"
+            :attendance-loading="attendanceLoading?.has?.(tournament?.id)"
             :current-user="currentUser"
             :total-players="players.length"
-            :generate-teams-loading="generateTeamsLoading.has(tournament.id)"
-            :clear-teams-loading="clearTeamsLoading.has(tournament.id)"
-            :water-loading="false"
-            :bet-loading="false"
+            :generate-teams-loading="generateTeamsLoading?.has?.(tournament?.id)"
+            :clear-teams-loading="clearTeamsLoading?.has?.(tournament?.id)"
+            :water-loading="waterLoadingMap?.get?.(tournament?.id) || false"
+            :bet-loading="betLoadingMap?.get?.(tournament?.id) || false"
             @generate-teams="handleGenerateTeams"
             @clear-teams="handleClearTeams"
             @end-tournament="handleEndTournament"
@@ -87,6 +89,8 @@
             @update-score="handleUpdateScore"
             @toggle-attendance="handleToggleAttendance"
             @delete-tournament="handleDeleteTournament"
+            @toggle-water="handleToggleWater"
+            @toggle-bet="handleToggleBet"
           />
         </div>
       </div>
@@ -106,17 +110,17 @@
           v-for="tournament in tournaments"
           :key="tournament.id"
           :tournament="tournament"
-          :attendance-details="attendanceDetailsMap.get(tournament.id) || []"
-          :tournament-team-players="tournamentTeamPlayersMap.get(tournament.id) || []"
-          :additional-costs="additionalCostsMap.get(tournament.id) || []"
+          :attendance-details="attendanceDetailsMap?.get?.(tournament?.id) || []"
+          :tournament-team-players="tournamentTeamPlayersMap?.get?.(tournament?.id) || []"
+          :additional-costs="additionalCostsMap?.get?.(tournament?.id) || []"
           :system-settings="systemSettings"
-          :attendance-loading="attendanceLoading.has(tournament.id)"
+          :attendance-loading="attendanceLoading?.has?.(tournament?.id)"
           :current-user="currentUser"
           :total-players="players.length"
-          :generate-teams-loading="generateTeamsLoading.has(tournament.id)"
-          :clear-teams-loading="clearTeamsLoading.has(tournament.id)"
-          :water-loading="false"
-          :bet-loading="false"
+          :generate-teams-loading="generateTeamsLoading?.has?.(tournament?.id)"
+          :clear-teams-loading="clearTeamsLoading?.has?.(tournament?.id)"
+          :water-loading="waterLoadingMap?.get?.(tournament?.id) || false"
+          :bet-loading="betLoadingMap?.get?.(tournament?.id) || false"
           @generate-teams="handleGenerateTeams"
           @clear-teams="handleClearTeams"
           @end-tournament="handleEndTournament"
@@ -125,6 +129,8 @@
           @update-score="handleUpdateScore"
           @toggle-attendance="handleToggleAttendance"
           @delete-tournament="handleDeleteTournament"
+          @toggle-water="handleToggleWater"
+          @toggle-bet="handleToggleBet"
         />
       </div>
     </div>
@@ -172,10 +178,12 @@
 
 <script setup lang="ts">
 import { ref, computed } from 'vue'
+import { nextTick } from 'vue'
 import TournamentCard from './TournamentCard.vue'
 import AttendanceModal from './AttendanceModal.vue'
 import EndTournamentModal from './EndTournamentModal.vue'
 import AdditionalCostsModal from './AdditionalCostsModal.vue'
+import { apiClient } from '../../api/client'
 import type { Tournament, Player, Team } from '../../types'
 
 interface Props {
@@ -211,6 +219,8 @@ const endTournamentId = ref('')
 const endTournamentTeams = ref<Team[]>([])
 const selectedWinningTeam = ref<Team | null>(null)
 const selectedLosingTeam = ref<Team | null>(null)
+const waterLoadingMap = ref(new Map<string, boolean>())
+const betLoadingMap = ref(new Map<string, boolean>())
 
 // Filter configuration
 const filters = ['Ongoing', 'Old Tournament']
@@ -299,12 +309,52 @@ const handleUpdateAttendance = (tournamentId: string, playerId: string, status: 
   emits('update-attendance', tournamentId, playerId, status)
 }
 
-const handleToggleWater = (tournamentId: string, playerId: string) => {
-  emits('toggle-water', tournamentId, playerId)
+const handleToggleWater = async (tournamentId: string, playerId: string) => {
+  if (waterLoadingMap.value.get(tournamentId)) return
+  const map = waterLoadingMap.value
+  map.set(tournamentId, true)
+  try {
+    const response = await apiClient.put(`/tournaments/${tournamentId}/attendance`, {
+      playerId,
+      toggleWater: true
+    })
+    // Refresh attendance details to update UI
+    if (response.success) {
+      const detailsRes = await apiClient.get(`/tournaments/${tournamentId}/attendance-details`)
+      if (detailsRes.success && Array.isArray(detailsRes.data)) {
+        props.attendanceDetailsMap.set(tournamentId, detailsRes.data)
+        await nextTick()
+      }
+    }
+  } catch (err) {
+    // TODO: handle error (show notification, etc.)
+  } finally {
+    map.set(tournamentId, false)
+  }
 }
 
-const handleToggleBet = (tournamentId: string, playerId: string) => {
-  emits('toggle-bet', tournamentId, playerId)
+const handleToggleBet = async (tournamentId: string, playerId: string) => {
+  if (betLoadingMap.value.get(tournamentId)) return
+  const map = betLoadingMap.value
+  map.set(tournamentId, true)
+  try {
+    const response = await apiClient.put(`/tournaments/${tournamentId}/attendance`, {
+      playerId,
+      toggleBet: true
+    })
+    // Refresh attendance details to update UI
+    if (response.success) {
+      const detailsRes = await apiClient.get(`/tournaments/${tournamentId}/attendance-details`)
+      if (detailsRes.success && Array.isArray(detailsRes.data)) {
+        props.attendanceDetailsMap.set(tournamentId, detailsRes.data)
+        await nextTick()
+      }
+    }
+  } catch (err) {
+    // TODO: handle error (show notification, etc.)
+  } finally {
+    map.set(tournamentId, false)
+  }
 }
 
 const handleCloseEndTournamentModal = () => {

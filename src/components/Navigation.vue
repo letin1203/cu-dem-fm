@@ -1,5 +1,5 @@
 <template>
-  <nav class="bg-white/80 backdrop-blur-md shadow-lg border-b border-primary-200">
+  <nav v-if="authStore.currentUser" class="bg-white/80 backdrop-blur-md shadow-lg border-b border-primary-200">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
       <div class="flex justify-between h-16">
         <!-- Logo -->
@@ -11,10 +11,27 @@
             <span class="text-lg sm:text-xl font-bold text-primary-900 hidden xs:block">Football Manager</span>
             <span class="text-lg font-bold text-primary-900 xs:hidden">FM</span>
           </router-link>
+          <!-- Club Money Display (Mobile) -->
+          <div v-if="systemStore.currentSettings && systemStore.currentSettings.clubFund !== undefined" class="flex items-center space-x-2 px-2 py-2 rounded-md bg-primary-50 text-primary-800 font-semibold text-sm">
+            <svg class="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4-1.79-4-4-4zm0 0V4m0 16v-4" />
+            </svg>
+            <span>Club Money: </span>
+            <span class="ml-1">{{ systemStore.currentSettings.clubFund.toLocaleString() }}₫</span>
+          </div>
         </div>
         
         <!-- Desktop Navigation -->
         <div class="hidden md:flex items-center space-x-2 lg:space-x-6 xl:space-x-8">
+          <!-- Club Money Display -->
+          <div v-if="systemStore.currentSettings && systemStore.currentSettings.clubFund !== undefined" class="flex items-center space-x-2 px-2 py-2 rounded-md bg-primary-50 text-primary-800 font-semibold text-sm">
+            <svg class="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4-1.79-4-4-4zm0 0V4m0 16v-4" />
+            </svg>
+            <span>Club Money: </span>
+            <span class="ml-1">{{ systemStore.currentSettings.clubFund.toLocaleString() }}₫</span>
+          </div>
+          
           <router-link
             v-for="item in visibleNavigationItems"
             :key="item.name"
@@ -87,10 +104,10 @@
         </div>
       </div>
     </div>
-
     <!-- Mobile Navigation Menu -->
     <div v-if="mobileMenuOpen" class="md:hidden bg-white border-t border-gray-200">
       <div class="px-2 pt-2 pb-3 space-y-1">
+        
         <router-link
           v-for="item in visibleNavigationItems"
           :key="item.name"
@@ -138,6 +155,7 @@ import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
 import { usePlayersStore } from '../stores/players'
+import { useSystemStore } from '../stores/system'
 import { 
   TrophyIcon,
   CalendarIcon,
@@ -151,20 +169,19 @@ import type { UserRole } from '../types'
 const router = useRouter()
 const authStore = useAuthStore()
 const playersStore = usePlayersStore()
+const systemStore = useSystemStore()
 
 const mobileMenuOpen = ref(false)
 const userMenuOpen = ref(false)
 
 const navigationItems = [
   { name: 'Weekly Tour', path: '/weekly-tournament', icon: TrophyIcon, permission: 'canViewTournaments' },
-  { name: 'Weekly Refactored', path: '/weekly-refactored', icon: TrophyIcon, permission: 'canViewTournaments' },
   // { name: 'Tournaments', path: '/tournaments', icon: TrophyIcon, permission: 'canViewTournaments' },
   // { name: 'Matches', path: '/matches', icon: CalendarIcon, permission: 'canViewMatches' },
-  { name: 'Teams', path: '/teams', icon: UserGroupIcon, permission: 'canViewTeams' },
+  //{ name: 'Teams', path: '/teams', icon: UserGroupIcon, permission: 'canViewTeams' },
   { name: 'Players', path: '/players', icon: UsersIcon, permission: 'canViewPlayers' },
   { name: 'Users', path: '/users', icon: CogIcon, permission: 'canManageUsers' },
   { name: 'Settings', path: '/system-settings', icon: CogIcon, role: 'admin' },
-  { name: 'DB Admin', path: '/database-admin', icon: CircleStackIcon, role: 'admin' }
 ]
 
 const visibleNavigationItems = computed(() => {

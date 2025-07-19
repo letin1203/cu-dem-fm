@@ -43,6 +43,13 @@
           </div>
         </div>
 
+        <div class="flex items-center justify-between">
+          <label class="flex items-center text-sm text-primary-700">
+            <input type="checkbox" v-model="rememberMe" class="form-checkbox h-4 w-4 text-primary-600 rounded" />
+            <span class="ml-2">Remember Me</span>
+          </label>
+        </div>
+
         <div v-if="error" class="rounded-md bg-red-50 p-4">
           <div class="flex">
             <div class="flex-shrink-0">
@@ -149,6 +156,7 @@ import { useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
 import { apiClient } from '../api/client'
 import type { LoginCredentials } from '../types'
+import axios from 'axios' // Import axios for API calls
 
 const router = useRouter()
 const authStore = useAuthStore()
@@ -158,9 +166,12 @@ const credentials = ref<LoginCredentials>({
   password: ''
 })
 
+const rememberMe = ref(false)
 const error = ref('')
 const isLoading = ref(false)
 const versionInfo = ref<any>(null)
+
+// The interceptor logic has been moved to a global location
 
 // Fetch version information on component mount
 onMounted(async () => {
@@ -172,16 +183,24 @@ onMounted(async () => {
   } catch (err) {
     console.warn('Failed to fetch version info:', err)
   }
+
+  // Try to restore user session if token exists
+  await authStore.initializeAuth?.()
 })
 
 async function handleLogin() {
   error.value = ''
   isLoading.value = true
-  
   try {
     const success = await authStore.login(credentials.value)
-    
     if (success) {
+      if (rememberMe.value) {
+        localStorage.setItem('fm_rememberMe', 'true')
+        localStorage.setItem('fm_username', credentials.value.username)
+      } else {
+        localStorage.removeItem('fm_rememberMe')
+        localStorage.removeItem('fm_username')
+      }
       router.push('/')
     } else {
       error.value = 'Invalid username or password'
@@ -210,4 +229,11 @@ function setDemoCredentials(username: string, password: string) {
   credentials.value.username = username
   credentials.value.password = password
 }
+
+onMounted(() => {
+  if (localStorage.getItem('fm_rememberMe') === 'true') {
+    rememberMe.value = true
+    credentials.value.username = localStorage.getItem('fm_username') || ''
+  }
+})
 </script>

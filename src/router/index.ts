@@ -2,7 +2,7 @@ import { createRouter, createWebHistory } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
 import Tournaments from '../views/Tournaments.vue'
 import WeeklyTournament from '../views/WeeklyTournament.vue'
-import WeeklyTournamentRefactored from '../views/WeeklyTournamentRefactored.vue'
+// ...existing code...
 import Matches from '../views/Matches.vue'
 import Players from '../views/Players.vue'
 import Teams from '../views/Teams.vue'
@@ -16,14 +16,14 @@ const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes: [
     {
+      path: '/',
+      redirect: '/weekly-tournament'
+    },
+    {
       path: '/login',
       name: 'login',
       component: Login,
       meta: { requiresGuest: true }
-    },
-    {
-      path: '/',
-      redirect: '/weekly-tournament' // Redirect root to weekly tournament as default
     },
     {
       path: '/matches',
@@ -41,12 +41,6 @@ const router = createRouter({
       path: '/weekly-tournament',
       name: 'weeklyTournament',
       component: WeeklyTournament,
-      meta: { requiresAuth: true, permission: 'canViewTournaments' }
-    },
-    {
-      path: '/weekly-refactored',
-      name: 'weeklyRefactored',
-      component: WeeklyTournamentRefactored,
       meta: { requiresAuth: true, permission: 'canViewTournaments' }
     },
     {
@@ -91,27 +85,13 @@ const router = createRouter({
 // Navigation guard
 router.beforeEach((to, from, next) => {
   const authStore = useAuthStore()
-  
-  // Initialize auth from localStorage
-  authStore.initializeAuth()
-
   const requiresAuth = to.matched.some(record => record.meta.requiresAuth)
   const requiresGuest = to.matched.some(record => record.meta.requiresGuest)
-  const permission = to.meta.permission as string
-  const role = to.meta.role as string
 
-  if (requiresGuest && authStore.isAuthenticated) {
-    // If user is logged in and trying to access guest routes (like login), redirect to weekly tournament
-    next('/weekly-tournament')
-  } else if (requiresAuth && !authStore.isAuthenticated) {
-    // If route requires auth and user is not logged in, redirect to login
+  if (requiresAuth && !authStore.isAuthenticated) {
     next('/login')
-  } else if (permission && !authStore.hasPermission(permission as any)) {
-    // If user doesn't have permission for this route, redirect to weekly tournament
-    next('/weekly-tournament')
-  } else if (role && !authStore.hasRole(role as any)) {
-    // If user doesn't have required role for this route, redirect to weekly tournament
-    next('/weekly-tournament')
+  } else if (requiresGuest && authStore.isAuthenticated) {
+    next('/')
   } else {
     next()
   }

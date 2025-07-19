@@ -4,12 +4,17 @@ import type { User, UserRole, LoginCredentials, AuthState, Permission } from '..
 import { apiClient } from '../api/client'
 
 export const useAuthStore = defineStore('auth', () => {
-  const currentUser = ref<User | null>(null)
+  // Restore currentUser from localStorage if available
+  const storedUser = localStorage.getItem('current_user')
+  const currentUser = ref<User | null>(storedUser ? JSON.parse(storedUser) : null)
   const token = ref<string | null>(localStorage.getItem('auth_token'))
   const isLoading = ref(false)
-  const users = ref<User[]>([]) // This will be populated from API
+  const users = ref<User[]>([])
 
-  const isAuthenticated = computed(() => currentUser.value !== null && token.value !== null)
+  // Only true if both token and currentUser are valid
+  const isAuthenticated = computed(() => {
+    return token.value !== null && currentUser.value !== null
+  })
   
   const authState = computed((): AuthState => ({
     user: currentUser.value,
@@ -75,22 +80,19 @@ export const useAuthStore = defineStore('auth', () => {
 
   async function login(credentials: LoginCredentials): Promise<boolean> {
     isLoading.value = true
-    
     try {
       const response = await apiClient.login(credentials)
-      
       if (response && response.success && response.data) {
         const data = response.data as any
-        // Convert role to lowercase for frontend compatibility
         currentUser.value = {
           ...data.user,
           role: data.user.role.toLowerCase()
         }
+        localStorage.setItem('current_user', JSON.stringify(currentUser.value))
         token.value = data.token
         localStorage.setItem('auth_token', data.token)
         return true
       }
-      
       return false
     } catch (error) {
       console.error('Login failed:', error)
@@ -101,12 +103,10 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   function forceLogout(): void {
-    // Immediate logout without API call (for expired tokens, etc.)
     currentUser.value = null
     token.value = null
     localStorage.removeItem('auth_token')
-    
-    // Redirect to login page
+    localStorage.removeItem('current_user')
     if (typeof window !== 'undefined') {
       window.location.href = '/login'
     }
@@ -123,32 +123,41 @@ export const useAuthStore = defineStore('auth', () => {
       currentUser.value = null
       token.value = null
       localStorage.removeItem('auth_token')
-      
-      // If shouldRedirect is true, redirect to login page
+      localStorage.removeItem('current_user')
       if (shouldRedirect && typeof window !== 'undefined') {
-        // Use window.location to ensure redirect happens even if router is not available
         window.location.href = '/login'
       }
     }
   }
 
   async function getCurrentUser(): Promise<void> {
-    if (!token.value) return
-    
+    if (!token.value) {
+      currentUser.value = null
+      localStorage.removeItem('current_user')
+      return
+    }
+
     try {
       const response = await apiClient.getCurrentUser()
       if (response.success && response.data) {
-        // Convert role to lowercase for frontend compatibility
         const userData = response.data as User
         currentUser.value = {
           ...userData,
           role: userData.role.toLowerCase() as UserRole
         }
+        localStorage.setItem('current_user', JSON.stringify(currentUser.value))
+      } else {
+        token.value = null
+        currentUser.value = null
+        localStorage.removeItem('auth_token')
+        localStorage.removeItem('current_user')
       }
     } catch (error) {
       console.error('Failed to get current user:', error)
-      // If getting current user fails, logout and redirect to login
-      logout(true)
+      token.value = null
+      currentUser.value = null
+      localStorage.removeItem('auth_token')
+      localStorage.removeItem('current_user')
     }
   }
 
@@ -312,7 +321,13 @@ export const useAuthStore = defineStore('auth', () => {
     const storedToken = localStorage.getItem('auth_token')
     if (storedToken) {
       token.value = storedToken
-      await getCurrentUser()
+      try {
+        await getCurrentUser()
+      } catch (err) {
+        token.value = null
+        currentUser.value = null
+        localStorage.removeItem('auth_token')
+      }
     }
   }
 
@@ -321,8 +336,7 @@ export const useAuthStore = defineStore('auth', () => {
     currentUser.value = null
     token.value = null
     localStorage.removeItem('auth_token')
-    
-    // Try to get fresh data if there was a token
+    localStorage.removeItem('current_user')
     const storedToken = localStorage.getItem('auth_token')
     if (storedToken) {
       token.value = storedToken
@@ -330,10 +344,7 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
-  // Initialize auth state on store creation
-  if (typeof window !== 'undefined' && token.value) {
-    getCurrentUser()
-  }
+  // Do not initialize auth state on store creation. Only initialize once in main.ts.
 
   return {
     // State
@@ -341,12 +352,12 @@ export const useAuthStore = defineStore('auth', () => {
     token,
     isLoading,
     users,
-    
+
     // Getters
     isAuthenticated,
     authState,
     userPermissions,
-    
+
     // Actions
     login,
     logout,

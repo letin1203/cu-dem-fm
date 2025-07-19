@@ -492,13 +492,19 @@ const toggleAttendance = async (tournamentId: string) => {
     const attendanceDetails = attendanceDetailsMap.value.get(tournamentId) || []
     const userAttendance = attendanceDetails.find((a: any) => a.player?.id === playerId)
     let newStatus = 'ATTEND'
+    let payload: any = { playerId }
     if (userAttendance) {
-      newStatus = userAttendance.status === 'ATTEND' ? 'NOT_ATTEND' : 'ATTEND'
+      if (userAttendance.status === 'ATTEND') {
+        newStatus = 'NOT_ATTEND'
+        payload = { playerId, status: newStatus, withWater: false, bet: false }
+      } else {
+        newStatus = 'ATTEND'
+        payload = { playerId, status: newStatus }
+      }
+    } else {
+      payload = { playerId, status: newStatus }
     }
-    const response = await apiClient.put(`/tournaments/${tournamentId}/attendance`, {
-      playerId,
-      status: newStatus
-    })
+    const response = await apiClient.put(`/tournaments/${tournamentId}/attendance`, payload)
     if (response.success) {
       toast.success('Attendance updated!')
       // Force refresh and reactivity

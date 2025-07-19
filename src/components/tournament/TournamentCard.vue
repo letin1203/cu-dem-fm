@@ -47,19 +47,19 @@
       <!-- Financial Information -->
       <div v-if="systemSettings" class="flex flex-wrap items-center gap-4 mt-2 text-sm mb-4">
         <span class="text-green-600 font-medium">
-          💰 Sponsor: ${{ systemSettings.sponsorMoney.toLocaleString() }}
+          💰 Sponsor: {{ systemSettings.sponsorMoney.toLocaleString() }} VND
         </span>
         <span class="text-red-600 font-medium">
-          🏟️ Stadium: ${{ systemSettings.stadiumCost.toLocaleString() }}
+          🏟️ Stadium: {{ systemSettings.stadiumCost.toLocaleString() }} VND
         </span>
         <span class="text-orange-600 font-medium">
-          💸 Additional: ${{ getTournamentAdditionalCostsTotal().toLocaleString() }}
+          💸 Additional: {{ getTournamentAdditionalCostsTotal().toLocaleString() }} VND
         </span>
         <span class="text-blue-600 font-medium">
-          📊 Net: -${{ calculateTournamentNet().toLocaleString() }}
+          📊 Net: {{ calculateTournamentNet().toLocaleString() }} VND
         </span>
         <span v-if="getAttendingCount() > 0" class="text-purple-600 font-medium">
-          👥 Est. Cost per Player: -${{ calculateCostPerPlayer().toLocaleString() }}
+          👥 Est. Cost per Player: {{ calculateCostPerPlayer().toLocaleString() }} VND
         </span>
       </div>
 
@@ -123,11 +123,7 @@
               attendanceLoading
                 ? 'opacity-50 cursor-not-allowed' 
                 : 'hover:shadow-md',
-              getAttendanceButtonText() === 'Attend'
-                ? 'bg-green-600 text-white hover:bg-green-700'
-                : getAttendanceButtonText() === 'Attended'
-                ? 'bg-green-600 text-white hover:bg-green-700'
-                : 'bg-red-600 text-white hover:bg-red-700'
+              'bg-green-600 text-white hover:bg-green-700'
             ]"
           >
             <div class="flex items-center space-x-1">
@@ -147,11 +143,11 @@
           <!-- Water Button -->
           <button
             v-if="getUserAttendanceStatus() === 'ATTEND'"
-            @click="$emit('toggle-water', tournament.id)"
-            :disabled="waterLoading"
+            @click="handleWaterClick"
+            :disabled="waterLoading || waterDebounce"
             class="px-4 py-2 rounded-lg font-medium transition-colors duration-200"
             :class="[
-              waterLoading
+              (waterLoading || waterDebounce) === true
                 ? 'opacity-50 cursor-not-allowed' 
                 : 'hover:shadow-md',
               getUserWaterStatus()
@@ -160,18 +156,18 @@
             ]"
           >
             <div class="flex items-center space-x-1">
-              <span>{{ waterLoading ? 'Loading...' : (getUserWaterStatus() ? 'Water ✓' : 'Water') }}</span>
+              <span>{{ waterLoading === true ? 'Loading...' : (getUserWaterStatus() ? 'Water ✓' : 'Water') }}</span>
             </div>
           </button>
 
           <!-- Bet Button -->
           <button
             v-if="getUserAttendanceStatus() === 'ATTEND'"
-            @click="$emit('toggle-bet', tournament.id)"
-            :disabled="betLoading"
+            @click="handleBetClick"
+            :disabled="betLoading || betDebounce"
             class="px-4 py-2 rounded-lg font-medium transition-colors duration-200"
             :class="[
-              betLoading
+              (betLoading || betDebounce) === true
                 ? 'opacity-50 cursor-not-allowed' 
                 : 'hover:shadow-md',
               getUserBetStatus()
@@ -180,103 +176,126 @@
             ]"
           >
             <div class="flex items-center space-x-1">
-              <span>{{ betLoading ? 'Loading...' : (getUserBetStatus() ? 'Bet ✓' : 'Bet') }}</span>
+              <span>{{ betLoading === true ? 'Loading...' : (getUserBetStatus() ? 'Bet ✓' : 'Bet') }}</span>
             </div>
           </button>
         </div>
       </div>
 
       <!-- Random Team Button (Admin/Mod only) -->
-      <div v-if="tournament.status === 'UPCOMING'" class="flex flex-col items-center pt-2 border-t border-gray-200 mb-4">
+      <div v-if="tournament.status === 'UPCOMING' || tournament.status === 'ONGOING'" class="flex flex-col items-center pt-2 border-t border-gray-200 mb-4">
         <div class="flex space-x-3">
           <button
-            v-if="authStore.hasPermission('canEditTournaments') && tournamentTeams.length === 0" 
+            v-if="authStore.hasPermission('canEditTournaments') && tournamentTeams.length === 0"
             @click="$emit('generate-teams', tournament.id)"
             :disabled="!canGenerateTeams || generateTeamsLoading"
             class="px-6 py-2 rounded-lg font-medium transition-colors duration-200"
             :class="[
               !canGenerateTeams || generateTeamsLoading
-                ? 'opacity-50 cursor-not-allowed bg-gray-400 text-white' 
+                ? 'opacity-50 cursor-not-allowed bg-gray-400 text-white'
                 : 'bg-purple-600 text-white hover:bg-purple-700 hover:shadow-md'
             ]"
           >
             {{ generateTeamsLoading ? 'Generating...' : 'Random Team' }}
           </button>
           <button
-            v-if="authStore.hasPermission('canEditTournaments') && tournamentTeams.length > 0"
+            v-if="authStore.hasPermission('canEditTournaments') && tournament.status === 'UPCOMING' && tournamentTeams.length > 0"
             @click="$emit('clear-teams', tournament.id)"
             :disabled="clearTeamsLoading"
             class="px-6 py-2 rounded-lg font-medium bg-red-600 text-white hover:bg-red-700 hover:shadow-md transition-colors duration-200"
           >
             {{ clearTeamsLoading ? 'Clearing...' : 'Clear Teams' }}
           </button>
+          <button
+            v-if="authStore.hasPermission('canEditTournaments') && tournament.status === 'UPCOMING' && tournamentTeams.length > 0"
+            @click="$emit('start-tournament', tournament.id)"
+            class="px-6 py-2 rounded-lg font-medium bg-green-600 text-white hover:bg-green-700 hover:shadow-md transition-colors duration-200"
+          >
+            Start Tournament
+          </button>
+          <button
+            v-if="authStore.hasPermission('canEditTournaments') && tournament.status === 'ONGOING' && tournamentTeams.length > 0"
+            @click="$emit('open-scores', tournament.id)"
+            class="px-6 py-2 rounded-lg font-medium bg-primary-600 text-white hover:bg-primary-700 hover:shadow-md transition-colors duration-200"
+          >
+            Scores
+          </button>
         </div>
-        
         <div v-if="canGenerateTeams && tournamentTeams.length === 0" class="text-sm text-gray-500 mt-2">
           Will create {{ getExpectedTeamCount() }} balanced teams
         </div>
       </div>
 
       <!-- Teams Display -->
-      <div v-if="tournamentTeams.length > 0" class="space-y-3">
-        <div class="flex items-center justify-between">
-          <h4 class="font-medium text-gray-900">Teams ({{ tournamentTeams.length }})</h4>
-          <button
-            v-if="authStore.hasPermission('canEditTournaments')"
-            @click="$emit('open-additional-costs', tournament.id)"
-            class="text-sm text-primary-600 hover:text-primary-800"
-          >
-            Additional Costs
-          </button>
-        </div>
-
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <div 
-            v-for="(team, index) in tournamentTeams" 
+      <div v-if="tournamentTeams.length > 0" class="mt-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
+        <h4 class="text-lg font-semibold text-gray-800 mb-3 flex items-center">
+          <svg class="w-5 h-5 mr-2 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.196-2.196M5 20h5v-2a3 3 0 015.196-2.196M12 4v.01M12 4a7 7 0 018 7c0 2-1 3-1 3s-1 1-1 3v2H8v-2s-1-1-1-3c0-2 1-3 1-3a7 7 0 018-7z" />
+          </svg>
+          Tournament Teams ({{ tournamentTeams.length }})
+        </h4>
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+          <div
+            v-for="team in tournamentTeams"
             :key="team.id"
-            class="border border-gray-200 rounded-lg p-3"
+            class="bg-white rounded-lg p-4 border border-gray-200 hover:shadow-md transition-shadow"
           >
-            <div class="flex items-center justify-between mb-2">
-              <h5 class="font-medium text-gray-900">{{ team.name }}</h5>
-              <div class="flex items-center space-x-2">
-                <input
-                  v-if="authStore.hasPermission('canEditTournaments')"
-                  v-model.number="team.score"
-                  @blur="$emit('update-score', tournament.id, team.id, team.score || 0)"
-                  type="number"
-                  min="0"
-                  class="w-16 px-2 py-1 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                  placeholder="Score"
-                />
-                <span v-else class="text-sm font-medium">{{ team.score || 0 }}</span>
+            <!-- Team Header -->
+            <div class="flex items-center mb-3">
+              <div class="w-10 h-10 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full flex items-center justify-center mr-3">
+                <span class="text-white font-bold text-lg">{{ team.name }}</span>
+              </div>
+              <div class="flex-1">
+                <div class="flex items-center justify-between">
+                  <h5 class="font-semibold text-gray-900">{{ team.name }}</h5>
+                  <span v-if="tournament.status === 'COMPLETED'" class="text-lg font-bold text-gray-600 flex items-center">
+                    ⚽: {{ team.score || 0 }}
+                  </span>
+                  <input
+                    v-else-if="authStore.hasPermission('canEditTournaments')"
+                    v-model.number="team.score"
+                    @blur="$emit('update-score', tournament.id, team.id, team.score || 0)"
+                    type="number"
+                    min="0"
+                    class="w-16 px-2 py-1 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                    placeholder="Score"
+                  />
+                  <span v-else class="text-sm font-medium">{{ team.score || 0 }}</span>
+                </div>
+                <p class="text-sm text-gray-600">{{ getTeamPlayers(team.id).length }} players</p>
               </div>
             </div>
-            
-            <div class="space-y-1">
-              <div v-for="player in getTeamPlayers(team.id)" :key="player.id" class="text-sm text-gray-600">
-                {{ player.name }} ({{ player.position }}, T{{ player.tier }})
-              </div>
-            </div>
-            
-            <div class="mt-2 text-xs text-gray-500">
-              <span>GK: {{ getTeamGoalkeeperCount(team.id) }}</span>
-              <span class="mx-2">•</span>
-              <span>Tier 9+: {{ getTeamTier9PlusCount(team.id) }}</span>
-              <span class="mx-2">•</span>
-              <span>Total Tier: {{ getTeamTotalTier(team.id) }}</span>
-            </div>
-          </div>
-        </div>
 
-        <!-- Cost Summary -->
-        <div class="bg-gray-50 p-3 rounded-lg text-sm">
-          <div class="flex justify-between">
-            <span>Cost per player:</span>
-            <span>{{ calculateCostPerPlayer().toLocaleString() }} VND</span>
+            <!-- Team Players -->
+            <div v-if="getTeamPlayers(team.id).length > 0" class="space-y-2">
+              <div
+                v-for="player in getTeamPlayers(team.id)"
+                :key="player.id"
+                class="flex items-center justify-between p-2 bg-gray-50 rounded text-sm"
+              >
+                <div class="flex items-center">
+                  <div class="w-6 h-6 bg-gray-300 rounded-full flex items-center justify-center mr-2 text-xs font-medium">
+                    {{ player.name.charAt(0).toUpperCase() }}
+                  </div>
+                  <span class="font-medium text-gray-900">{{ player.name }}</span>
+                </div>
+                <div class="flex items-center text-gray-600">
+                  <span class="text-xs mr-1">{{ player.position }}</span>
+                  <span class="text-xs">T{{ player.tier }}</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Team Stats -->
+            <div v-if="getTeamPlayers(team.id).length > 0" class="mt-3 pt-3 border-t border-gray-200">
+              <div class="flex justify-between text-xs text-gray-600">
+                <span>Total Tier: {{ getTeamTotalTier(team.id) }}</span>
+                <span>Avg: {{ (getTeamTotalTier(team.id) / getTeamPlayers(team.id).length).toFixed(1) }}</span>
+              </div>
+            </div>
           </div>
         </div>
       </div>
-      
       <div v-else class="text-center py-4 text-gray-500">
         No teams generated yet
       </div>
@@ -285,7 +304,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import { useAuthStore } from '../../stores/auth'
 import type { Tournament } from '../../types'
 
@@ -307,6 +326,26 @@ interface Props {
 const props = defineProps<Props>()
 
 const authStore = useAuthStore()
+
+// Debounce for Bet button
+const betDebounce = ref(false)
+const waterDebounce = ref(false)
+
+// ...existing code...
+
+function handleBetClick() {
+  if (betDebounce.value || props.betLoading) return
+  betDebounce.value = true
+  setTimeout(() => { betDebounce.value = false }, 500)
+  emit('toggle-bet', props.tournament.id, props.currentUser.player.id)
+}
+
+function handleWaterClick() {
+  if (waterDebounce.value || props.waterLoading) return
+  waterDebounce.value = true
+  setTimeout(() => { waterDebounce.value = false }, 500)
+  emit('toggle-water', props.tournament.id, props.currentUser.player.id)
+}
 
 // Computed properties
 const tournamentTeams = computed(() => {
@@ -431,65 +470,67 @@ const getTournamentAdditionalCostsTotal = () => {
   return props.additionalCosts.reduce((total: number, cost: any) => total + cost.amount, 0)
 }
 
+// Money calculation logic (ref WeeklyTournament.vue)
 const calculateTournamentNet = () => {
   if (!props.systemSettings) return 0
-  const sponsor = props.systemSettings.sponsorMoney
-  const stadium = props.systemSettings.stadiumCost
-  const additional = getTournamentAdditionalCostsTotal()
-  return Math.abs(sponsor - stadium - additional)
+  const sponsor = props.systemSettings.sponsorMoney || 0
+  const stadium = props.systemSettings.stadiumCost || 0
+  const additional = getTournamentAdditionalCostsTotal() || 0
+  // Net = Stadium + Additional - Sponsor
+  return stadium + additional - sponsor
 }
 
 const calculateCostPerPlayer = () => {
+  const net = calculateTournamentNet()
   const attendingCount = getAttendingCount()
   if (attendingCount === 0) return 0
-  return Math.round(calculateTournamentNet() / attendingCount)
+  const baseCost = net / attendingCount
+  // Round up to nearest 5000 and add 5000
+  const roundedUp = Math.ceil(baseCost / 5000) * 5000
+  return roundedUp + 5000
 }
 
 const getAttendanceButtonText = () => {
-  if (!props.currentUser) return 'No Player'
-  
+  if (!props.currentUser || !props.currentUser.player) return 'No Player'
+  const playerId = props.currentUser.player.id
   const userAttendance = props.attendanceDetails.find(
-    attendance => attendance.player.id === props.currentUser.playerId
+    attendance => attendance.player && attendance.player.id === playerId
   )
-  
-  if (!userAttendance) return 'Attend'
-  
-  switch (userAttendance.status) {
-    case 'ATTEND':
-      return 'Attended'
-    case 'NOT_ATTEND':
-      return 'Not Attend'
-    default:
-      return 'Attend'
-  }
+  // WeeklyTournament logic: If NOT_ATTEND, show 'Attend' and green button
+  if (!userAttendance || userAttendance.status === 'NOT_ATTEND') return 'Attend'
+  if (userAttendance.status === 'ATTEND') return 'Attended'
+  return 'Attend'
 }
 
 const getUserAttendanceStatus = () => {
-  if (!props.currentUser) return null
+  if (!props.currentUser || !props.currentUser.player) return null
+  const playerId = props.currentUser.player.id
   const userAttendance = props.attendanceDetails.find(
-    attendance => attendance.player.id === props.currentUser.playerId
+    attendance => attendance.player && attendance.player.id === playerId
   )
   return userAttendance ? userAttendance.status : null
 }
 
 const getUserWaterStatus = () => {
-  if (!props.currentUser) return false
+  if (!props.currentUser || !props.currentUser.player) return false
+  const playerId = props.currentUser.player.id
   const userAttendance = props.attendanceDetails.find(
-    attendance => attendance.player.id === props.currentUser.playerId
+    attendance => attendance.player && attendance.player.id === playerId
   )
   return userAttendance ? !!userAttendance.withWater : false
 }
 
 const getUserBetStatus = () => {
-  if (!props.currentUser) return false
+  if (!props.currentUser || !props.currentUser.player) return false
+  const playerId = props.currentUser.player.id
   const userAttendance = props.attendanceDetails.find(
-    attendance => attendance.player.id === props.currentUser.playerId
+    attendance => attendance.player && attendance.player.id === playerId
   )
   return userAttendance ? !!userAttendance.bet : false
 }
 
 // Define emits
-defineEmits<{
+const emit = defineEmits<{
   'generate-teams': [tournamentId: string]
   'clear-teams': [tournamentId: string]
   'end-tournament': [tournamentId: string]
@@ -497,8 +538,10 @@ defineEmits<{
   'open-additional-costs': [tournamentId: string]
   'update-score': [tournamentId: string, teamId: string, score: number]
   'toggle-attendance': [tournamentId: string]
-  'toggle-water': [tournamentId: string]
-  'toggle-bet': [tournamentId: string]
+  'toggle-water': [tournamentId: string, playerId: string]
+  'toggle-bet': [tournamentId: string, playerId: string]
   'delete-tournament': [tournamentId: string]
+  'start-tournament': [tournamentId: string]
+  'open-scores': [tournamentId: string]
 }>()
 </script>

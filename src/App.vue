@@ -1,12 +1,10 @@
 <template>
   <div class="min-h-screen bg-gradient-to-br from-primary-50 via-secondary-50 to-primary-100">
-    <Navigation v-if="authStore.isAuthenticated" />
+    <Navigation v-if="isAuthenticated && $route.name !== 'login'" />
     <main 
       :class="[
         'w-full mx-auto',
-        authStore.isAuthenticated 
-          ? 'py-4 px-4 sm:py-6 sm:px-6 lg:px-8 max-w-7xl' 
-          : ''
+        isAuthenticated && $route.name !== 'login' ? 'py-4 px-4 sm:py-6 sm:px-6 lg:px-8 max-w-7xl' : '' 
       ]"
     >
       <RouterView />
@@ -15,15 +13,10 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted } from 'vue'
-import { RouterView } from 'vue-router'
+import { computed } from 'vue'
 import Navigation from './components/Navigation.vue'
 import { useAuthStore } from './stores/auth'
 
 const authStore = useAuthStore()
-
-onMounted(() => {
-  // Initialize authentication state from localStorage
-  authStore.initializeAuth()
-})
+const isAuthenticated = computed(() => authStore.isAuthenticated)
 </script>

@@ -826,9 +826,9 @@ router.put('/:id/attendance', authenticate, async (req: AuthenticatedRequest, re
         create: {
           tournamentId,
           playerId: player.id,
-          status: 'ATTENDING',
+          status: currentAttendance?.status || 'ATTEND',
           withWater: newWaterStatus,
-          bet: false,
+          bet: currentAttendance?.bet ?? false,
         },
       });
 
@@ -863,8 +863,8 @@ router.put('/:id/attendance', authenticate, async (req: AuthenticatedRequest, re
         create: {
           tournamentId,
           playerId: player.id,
-          status: 'ATTENDING',
-          withWater: false,
+          status: currentAttendance?.status || 'ATTEND',
+          withWater: currentAttendance?.withWater ?? false,
           bet: newBetStatus,
         },
       });

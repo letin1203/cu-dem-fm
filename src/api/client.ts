@@ -1,5 +1,7 @@
 import axios from 'axios';
 
+const REFRESH_ENDPOINT = '/auth/refresh';
+
 export interface ApiResponse<T = any> {
   success: boolean;
   data?: T;
@@ -69,6 +71,28 @@ class ApiClient {
           // Redirect to login page
           if (typeof window !== 'undefined' && window.location.pathname !== '/login') {
             window.location.href = '/login';
+          }
+        }
+        return Promise.reject(error);
+      }
+    );
+
+    // Global response interceptor for silent token refresh
+    axios.interceptors.response.use(
+      response => response,
+      async error => {
+        const originalRequest = error.config;
+        if (error.response?.status === 401 && !originalRequest._retry) {
+          originalRequest._retry = true;
+          try {
+            await axios.post(REFRESH_ENDPOINT);
+            return axios(originalRequest);
+          } catch (refreshError) {
+            localStorage.removeItem('auth_token');
+            if (typeof window !== 'undefined') {
+              window.location.href = '/login';
+            }
+            return Promise.reject(refreshError);
           }
         }
         return Promise.reject(error);

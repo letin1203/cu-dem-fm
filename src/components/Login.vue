@@ -8,17 +8,17 @@
           </svg>
         </div>
         <h2 class="mt-6 text-center text-3xl font-extrabold text-primary-900">
-          Sign in to Football Manager
+          Đăng nhập Quản lý bóng đá
         </h2>
         <p class="mt-2 text-center text-sm text-primary-700">
-          Enter your credentials to access the application
+          Nhập thông tin đăng nhập để truy cập ứng dụng
         </p>
       </div>
       
       <form class="mt-8 space-y-6 bg-white/80 backdrop-blur-sm rounded-lg p-6 shadow-lg border border-primary-200" @submit.prevent="handleLogin">
         <div class="rounded-md shadow-sm -space-y-px">
           <div>
-            <label for="username" class="sr-only">Username</label>
+            <label for="username" class="sr-only">Tên đăng nhập</label>
             <input
               id="username"
               v-model="credentials.username"
@@ -26,11 +26,11 @@
               type="text"
               required
               class="appearance-none rounded-none relative block w-full px-3 py-2 border border-primary-300 placeholder-primary-400 text-primary-900 rounded-t-md focus:outline-none focus:ring-primary-500 focus:border-primary-500 focus:z-10 sm:text-sm"
-              placeholder="Username"
+              placeholder="Tên đăng nhập"
             >
           </div>
           <div>
-            <label for="password" class="sr-only">Password</label>
+            <label for="password" class="sr-only">Mật khẩu</label>
             <input
               id="password"
               v-model="credentials.password"
@@ -38,7 +38,7 @@
               type="password"
               required
               class="appearance-none rounded-none relative block w-full px-3 py-2 border border-primary-300 placeholder-primary-400 text-primary-900 rounded-b-md focus:outline-none focus:ring-primary-500 focus:border-primary-500 focus:z-10 sm:text-sm"
-              placeholder="Password"
+              placeholder="Mật khẩu"
             >
           </div>
         </div>
@@ -46,7 +46,7 @@
         <div class="flex items-center justify-between">
           <label class="flex items-center text-sm text-primary-700">
             <input type="checkbox" v-model="rememberMe" class="form-checkbox h-4 w-4 text-primary-600 rounded" />
-            <span class="ml-2">Remember Me</span>
+            <span class="ml-2">Ghi nhớ đăng nhập</span>
           </label>
         </div>
 
@@ -71,31 +71,31 @@
             :disabled="isLoading"
             class="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            <span v-if="!isLoading">Sign in</span>
+            <span v-if="!isLoading">Đăng nhập</span>
             <span v-else class="flex items-center">
               <svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-white" fill="none" viewBox="0 0 24 24">
                 <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
                 <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
               </svg>
-              Signing in...
+              Đang đăng nhập...
             </span>
           </button>
         </div>
 
         <!-- Demo credentials -->
         <div class="mt-6 border-t border-gray-200 pt-6">
-          <h3 class="text-sm font-medium text-gray-900 mb-3">Demo Accounts:</h3>
+          <h3 class="text-sm font-medium text-gray-900 mb-3">Tài khoản mẫu:</h3>
           <div class="space-y-2 text-xs text-gray-600">
             <div class="flex justify-between">
-              <span class="font-medium">Admin:</span>
+              <span class="font-medium">Quản trị viên:</span>
               <span>admin / admin123</span>
             </div>
             <div class="flex justify-between">
-              <span class="font-medium">Moderator:</span>
+              <span class="font-medium">Điều hành viên:</span>
               <span>moderator / mod123</span>
             </div>
             <div class="flex justify-between">
-              <span class="font-medium">User:</span>
+              <span class="font-medium">Người dùng:</span>
               <span>player1 / user123</span>
             </div>
           </div>
@@ -105,21 +105,21 @@
               @click="setDemoCredentials('admin', 'admin123')"
               class="text-xs text-primary-600 hover:text-primary-800 mr-4"
             >
-              Use Admin
+              Dùng tài khoản quản trị
             </button>
             <button
               type="button"
               @click="setDemoCredentials('moderator', 'mod123')"
               class="text-xs text-primary-600 hover:text-primary-800 mr-4"
             >
-              Use Mod
+              Dùng tài khoản điều hành
             </button>
             <button
               type="button"
               @click="setDemoCredentials('player1', 'user123')"
               class="text-xs text-primary-600 hover:text-primary-800"
             >
-              Use User
+              Dùng tài khoản người dùng
             </button>
           </div>
         </div>
@@ -218,7 +218,7 @@ async function handleLogin() {
     } else if (err.response?.data?.error) {
       error.value = err.response.data.error
     } else {
-      error.value = 'Login failed. Please check your credentials and try again.'
+      error.value = 'Đăng nhập thất bại. Vui lòng kiểm tra lại thông tin và thử lại.'
     }
   } finally {
     isLoading.value = false

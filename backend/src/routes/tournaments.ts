@@ -289,6 +289,13 @@ router.post('/', authenticate, authorize(['ADMIN', 'MOD']), async (req: Authenti
       data: tournament,
     });
   } catch (error) {
+    if ((error as { code?: string }).code === 'P2002') {
+      res.status(409).json({
+        success: false,
+        error: 'A tournament with this name already exists',
+      });
+      return;
+    }
     res.status(400).json({
       success: false,
       error: error instanceof Error ? error.message : 'Invalid tournament data',
@@ -1577,18 +1584,18 @@ router.put('/:id/end', authenticate, authorize(['ADMIN', 'MOD']), async (req: Au
 
     // Get all attending players
     const attendingPlayers = tournament.playerAttendances
-      .filter(att => att.status === 'ATTENDING')
+      .filter(att => att.status === 'ATTEND' || att.status === 'ATTENDING')
       .map(att => att.player);
 
     // Calculate money changes
     let totalAdded = 0;
     let totalDeducted = 0;
     const moneyUpdates: Array<{ playerId: string; oldMoney: number; newMoney: number; change: number }> = [];
+    const systemSettings = await prisma.systemSettings.findFirst();
 
     // Get tournament settings
     const loserPenalty = 50000; // Default loser penalty
     const waterCostPerPlayer = 5000; // Default water cost
-    const tournamentCostPerPlayer = tournament.costPerPlayer || 0;
     const bettingWinAmount = 10000; // Base betting win amount
     const bettingLossAmount = 10000; // Betting loss penalty
     const teamLoserPenalty = 5000; // Team loser penalty
@@ -1597,14 +1604,14 @@ router.put('/:id/end', authenticate, authorize(['ADMIN', 'MOD']), async (req: Au
     const teamCount = teams.length;
     const bettingWinBonus = teamCount >= 3 ? bettingWinAmount * (teamCount - 2) : bettingWinAmount;
 
-    // Calculate water cost total
-    const waterCostPlayersCount = tournament.playerAttendances
-      .filter(att => att.status === 'ATTENDING' && att.withWater)
-      .length;
-    const totalWaterCost = waterCostPlayersCount * waterCostPerPlayer;
-
     // Calculate additional costs total
     const totalAdditionalCosts = tournament.additionalCosts.reduce((sum, cost) => sum + cost.amount, 0);
+    const sponsorMoney = systemSettings?.sponsorMoney ?? 0;
+    const stadiumCost = systemSettings?.stadiumCost ?? 0;
+    const netTournamentCost = stadiumCost - sponsorMoney + totalAdditionalCosts;
+    const tournamentCostPerPlayer = attendingPlayers.length > 0
+      ? Math.ceil((netTournamentCost / attendingPlayers.length) / 5000) * 5000 + 5000
+      : 0;
 
     // Process each attending player
     for (const player of attendingPlayers) {
@@ -1642,17 +1649,22 @@ router.put('/:id/end', authenticate, authorize(['ADMIN', 'MOD']), async (req: Au
         moneyChange -= waterCostPerPlayer;
       }
 
-      // Additional costs distribution (split among all attending players)
-      if (totalAdditionalCosts > 0) {
-        const additionalCostPerPlayer = Math.floor(totalAdditionalCosts / attendingPlayers.length);
-        moneyChange -= additionalCostPerPlayer;
-      }
-
       // Update player money
       const newMoney = player.money + moneyChange;
       await prisma.player.update({
         where: { id: player.id },
         data: { money: newMoney },
+      });
+
+      await prisma.playerMoneyHistory.create({
+        data: {
+          playerId: player.id,
+          tournamentId: tournament.id,
+          amount: moneyChange,
+          balanceBefore: player.money,
+          balanceAfter: newMoney,
+          description: `Tổng kết giải đấu: ${tournament.name}`,
+        },
       });
 
       moneyUpdates.push({
@@ -1675,6 +1687,9 @@ router.put('/:id/end', authenticate, authorize(['ADMIN', 'MOD']), async (req: Au
       data: { 
         status: 'COMPLETED',
         completedAt: new Date(),
+        sponsorMoney,
+        stadiumCost,
+        costPerPlayer: tournamentCostPerPlayer,
       },
     });
 

@@ -65,6 +65,37 @@ router.get('/', async (req: AuthenticatedRequest, res: Response): Promise<void> 
   }
 });
 
+// Get paginated money-change history for a player
+router.get('/:id/money-history', async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  try {
+    const { id } = req.params;
+    const page = Math.max(1, Number.parseInt(String(req.query.page || '1'), 10) || 1);
+    const limit = Math.min(100, Math.max(1, Number.parseInt(String(req.query.limit || '10'), 10) || 10));
+    const skip = (page - 1) * limit;
+
+    const [history, total] = await Promise.all([
+      prisma.playerMoneyHistory.findMany({
+        where: { playerId: id },
+        include: { tournament: { select: { id: true, name: true } } },
+        orderBy: { createdAt: 'desc' },
+        skip,
+        take: limit,
+      }),
+      prisma.playerMoneyHistory.count({ where: { playerId: id } }),
+    ]);
+
+    res.json({
+      success: true,
+      data: {
+        history,
+        pagination: { page, limit, total, pages: Math.ceil(total / limit) },
+      },
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, error: 'Failed to fetch money history' });
+  }
+});
+
 // Get player by ID
 router.get('/:id', async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   try {
@@ -103,6 +134,14 @@ router.get('/:id', async (req: AuthenticatedRequest, res: Response): Promise<voi
             createdAt: 'desc',
           },
           take: 10,
+        },
+        moneyHistory: {
+          include: {
+            tournament: {
+              select: { id: true, name: true },
+            },
+          },
+          orderBy: { createdAt: 'desc' },
         },
       },
     });
@@ -181,19 +220,35 @@ router.put('/:id', authenticate, authorize(['ADMIN', 'MOD']), async (req: Authen
       return;
     }
 
-    const player = await prisma.player.update({
-      where: { id },
-      data: updateData,
-      include: {
-        team: {
-          select: {
-            id: true,
-            name: true,
-            logo: true,
+    const player = await prisma.$transaction(async (tx) => {
+      const updatedPlayer = await tx.player.update({
+        where: { id },
+        data: updateData,
+        include: {
+          team: {
+            select: {
+              id: true,
+              name: true,
+              logo: true,
+            },
           },
+          stats: true,
         },
-        stats: true,
-      },
+      });
+
+      if (updateData.money !== undefined && updateData.money !== existingPlayer.money) {
+        await tx.playerMoneyHistory.create({
+          data: {
+            playerId: id,
+            amount: updateData.money - existingPlayer.money,
+            balanceBefore: existingPlayer.money,
+            balanceAfter: updateData.money,
+            description: 'Điều chỉnh số dư thủ công',
+          },
+        });
+      }
+
+      return updatedPlayer;
     });
 
     res.json({

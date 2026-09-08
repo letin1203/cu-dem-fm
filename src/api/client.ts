@@ -231,6 +231,10 @@ class ApiClient {
     return this.get(`/players/${id}`);
   }
 
+  async getPlayerMoneyHistory(id: string, params?: { page?: number; limit?: number }) {
+    return this.get(`/players/${id}/money-history`, { params });
+  }
+
   async createPlayer(data: any) {
     return this.post('/players', data);
   }

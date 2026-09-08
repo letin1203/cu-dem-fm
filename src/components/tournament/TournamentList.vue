@@ -51,19 +51,19 @@
           <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012-2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
           </svg>
-          <h3 class="mt-2 text-sm font-medium text-gray-900">No ongoing tournament</h3>
-          <p class="mt-1 text-sm text-gray-500">There are no ongoing tournaments at the moment.</p>
+          <h3 class="mt-2 text-sm font-medium text-gray-900">Không có giải đấu đang diễn ra</h3>
+          <p class="mt-1 text-sm text-gray-500">Hiện không có giải đấu nào đang diễn ra.</p>
         </div>
       </div>
 
       <!-- Old Tournament Tab -->
-      <div v-else-if="activeFilter === 'Old Tournament'">
+      <div v-else-if="activeFilter === 'Giải đấu cũ'">
         <div v-if="oldTournaments.length === 0" class="text-center py-12">
           <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012-2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
           </svg>
-          <h3 class="mt-2 text-sm font-medium text-gray-900">No old tournaments</h3>
-          <p class="mt-1 text-sm text-gray-500">No completed tournaments found.</p>
+          <h3 class="mt-2 text-sm font-medium text-gray-900">Không có giải đấu cũ</h3>
+          <p class="mt-1 text-sm text-gray-500">Không tìm thấy giải đấu đã kết thúc.</p>
         </div>
         <div v-else class="space-y-4">
           <TournamentCard
@@ -102,8 +102,8 @@
         <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012-2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
         </svg>
-        <h3 class="mt-2 text-sm font-medium text-gray-900">No tournaments found</h3>
-        <p class="mt-1 text-sm text-gray-500">Get started by creating a new tournament.</p>
+        <h3 class="mt-2 text-sm font-medium text-gray-900">Không tìm thấy giải đấu</h3>
+        <p class="mt-1 text-sm text-gray-500">Hãy bắt đầu bằng cách tạo giải đấu mới.</p>
       </div>
       <div v-else class="space-y-4">
         <TournamentCard
@@ -209,7 +209,7 @@ const props = withDefaults(defineProps<Props>(), {
 })
 
 // Local state
-const activeFilter = ref('Ongoing')
+const activeFilter = ref('Đang diễn ra')
 const showAttendanceModal = ref(false)
 const showEndTournamentModal = ref(false)
 const showAdditionalCostsModal = ref(false)
@@ -223,7 +223,7 @@ const waterLoadingMap = ref(new Map<string, boolean>())
 const betLoadingMap = ref(new Map<string, boolean>())
 
 // Filter configuration
-const filters = ['Ongoing', 'Old Tournament']
+const filters = ['Đang diễn ra', 'Giải đấu cũ']
 
 // Computed properties
 const ongoingTournament = computed(() => {
@@ -241,18 +241,18 @@ const oldTournaments = computed(() => {
 const filteredTournaments = computed(() => {
   if (!props.showFilters) return props.tournaments
   
-  if (activeFilter.value === 'Ongoing') {
+  if (activeFilter.value === 'Đang diễn ra') {
     return ongoingTournament.value ? [ongoingTournament.value] : []
-  } else if (activeFilter.value === 'Old Tournament') {
+  } else if (activeFilter.value === 'Giải đấu cũ') {
     return oldTournaments.value
   }
   return props.tournaments
 })
 
 const getFilterCount = (filter: string) => {
-  if (filter === 'Ongoing') {
+  if (filter === 'Đang diễn ra') {
     return ongoingTournament.value ? 1 : 0
-  } else if (filter === 'Old Tournament') {
+  } else if (filter === 'Giải đấu cũ') {
     return oldTournaments.value.length
   }
   return 0

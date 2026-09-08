@@ -2,7 +2,7 @@
   <div class="space-y-4 sm:space-y-6">
     <!-- Header -->
     <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-3 sm:space-y-0">
-      <h1 class="text-2xl sm:text-3xl font-bold text-gray-900">Weekly Tournament</h1>
+      <h1 class="text-2xl sm:text-3xl font-bold text-gray-900">Đá hằng tuần</h1>
       <button 
         v-if="authStore.hasPermission('canEditTournaments') && canCreateNew"
         @click="createWeeklyTournament" 
@@ -87,19 +87,19 @@
                 <!-- Financial Information -->
                 <div v-if="systemStore.currentSettings" class="flex flex-wrap items-center gap-4 mt-2 text-sm">
                   <span class="text-green-600 font-medium">
-                    💰 Sponsor: ${{ systemStore.currentSettings.sponsorMoney.toLocaleString() }}
+                    💰 Sponsor: ${{ getTournamentSponsorMoney(ongoingTournament).toLocaleString() }}
                   </span>
                   <span class="text-red-600 font-medium">
-                    🏟️ Stadium: ${{ systemStore.currentSettings.stadiumCost.toLocaleString() }}
+                    🏟️ Sân: ${{ getTournamentStadiumCost(ongoingTournament).toLocaleString() }}
                   </span>
                   <span class="text-orange-600 font-medium">
-                    💸 Additional: ${{ getTournamentAdditionalCostsTotal(ongoingTournament.id).toLocaleString() }}
+                    💸 Nước: ${{ getTournamentAdditionalCostsTotal(ongoingTournament.id).toLocaleString() }}
                   </span>
                   <span class="text-blue-600 font-medium">
-                    📊 Net: -${{ calculateTournamentNet(ongoingTournament.id).toLocaleString() }}
+                    📊 Tổng: ${{ calculateTournamentNet(ongoingTournament.id).toLocaleString() }}
                   </span>
                   <span v-if="getAttendanceStats(ongoingTournament.id)?.attendingCount" class="text-purple-600 font-medium">
-                    👥 Est. Cost per Player: -${{ calculateCostPerPlayer(ongoingTournament.id).toLocaleString() }}
+                    👥 Est mỗi cháu: ${{ calculateCostPerPlayer(ongoingTournament.id).toLocaleString() }}
                   </span>
                 </div>
               </div>
@@ -407,19 +407,19 @@
                   <div v-if="getTournamentTeams(tournament).length > 0" class="mt-2">
                     <div v-if="systemStore.currentSettings" class="flex flex-wrap items-center gap-4 text-sm">
                       <span class="text-green-600 font-medium">
-                        💰 Sponsor: ${{ systemStore.currentSettings.sponsorMoney.toLocaleString() }}
+                        💰 Sponsor: ${{ getTournamentSponsorMoney(tournament).toLocaleString() }}
                       </span>
                       <span class="text-red-600 font-medium">
-                        🏟️ Stadium: ${{ systemStore.currentSettings.stadiumCost.toLocaleString() }}
+                        🏟️ Sân: ${{ getTournamentStadiumCost(tournament).toLocaleString() }}
                       </span>
                       <span class="text-orange-600 font-medium">
-                        💸 Additional: ${{ getTournamentAdditionalCostsTotal(tournament.id).toLocaleString() }}
+                        💸 Nước: ${{ getTournamentAdditionalCostsTotal(tournament.id).toLocaleString() }}
                       </span>
                       <span class="text-blue-600 font-medium">
-                        📊 Net: ${{ calculateTournamentNet(tournament.id).toLocaleString() }}
+                        📊 Tổng: ${{ calculateTournamentNet(tournament.id).toLocaleString() }}
                       </span>
                       <span v-if="getAttendanceStats(tournament.id)?.attendingCount" class="text-purple-600 font-medium">
-                        👥 Est. Cost per Player: ${{ calculateCostPerPlayer(tournament.id).toLocaleString() }}
+                        👥 Est mỗi cháu: ${{ calculateCostPerPlayer(tournament.id).toLocaleString() }}
                       </span>
                     </div>
                   </div>
@@ -493,11 +493,8 @@
                         <span class="text-white font-bold text-lg">{{ getTeamNumber(team.name) }}</span>
                       </div>
                       <div class="flex-1">
-                        <div class="flex items-center justify-between">
+                        <div class="flex items-center">
                           <h5 class="font-semibold text-gray-900">{{ team.name }}</h5>
-                          <span v-if="tournament.status === 'COMPLETED'" class="text-lg font-bold text-gray-600 flex items-center">
-                            ⚽: {{ team.score || 0 }}
-                          </span>
                         </div>
                         <p class="text-sm text-gray-600">{{ team.players?.length || 0 }} players</p>
                       </div>
@@ -529,6 +526,9 @@
                         <span>Total Tier: {{ team.players.reduce((sum: number, p: any) => sum + p.tier, 0) }}</span>
                         <span>Avg: {{ (team.players.reduce((sum: number, p: any) => sum + p.tier, 0) / team.players.length).toFixed(1) }}</span>
                       </div>
+                    </div>
+                    <div v-if="tournament.status === 'COMPLETED'" class="mt-3 pt-3 border-t border-gray-200 text-right">
+                      <span class="text-lg font-bold text-gray-600">⚽: {{ team.score || 0 }}</span>
                     </div>
                   </div>
                 </div>
@@ -1176,8 +1176,9 @@ const getTournamentAdditionalCostsTotal = (tournamentId: string) => {
 // Financial calculation functions
 const calculateTournamentNet = (tournamentId: string) => {
   if (!systemStore.currentSettings) return 0
-  const sponsor = systemStore.currentSettings.sponsorMoney
-  const stadium = systemStore.currentSettings.stadiumCost
+  const tournament = weeklyTournaments.value.find(item => item.id === tournamentId)
+  const sponsor = tournament ? getTournamentSponsorMoney(tournament) : systemStore.currentSettings.sponsorMoney
+  const stadium = tournament ? getTournamentStadiumCost(tournament) : systemStore.currentSettings.stadiumCost
   const additionalCosts = getTournamentAdditionalCostsTotal(tournamentId)
   return stadium - sponsor + additionalCosts
 }
@@ -1234,23 +1235,41 @@ const canCreateNew = computed(() => {
   // Don't allow creating if there's an ongoing tournament
   if (ongoingTournament.value) return false
   
-  // Don't allow creating if there's already an upcoming tournament for next Monday
+  // Only one weekly tournament may exist for a given calendar date.
   const targetDate = nextMonday.value
-  const targetDateStr = targetDate.toISOString().split('T')[0]
+  const targetDateStr = toLocalDateKey(targetDate)
   
-  const upcomingForNextMonday = weeklyTournaments.value.find(tournament => {
-    const tournamentDate = new Date(tournament.startDate)
-    const tournamentDateStr = tournamentDate.toISOString().split('T')[0]
-    return tournamentDateStr === targetDateStr && tournament.status === 'UPCOMING'
+  const tournamentForNextMonday = weeklyTournaments.value.find(tournament => {
+    const tournamentDateStr = toLocalDateKey(new Date(tournament.startDate))
+    return tournamentDateStr === targetDateStr
   })
   
-  return !upcomingForNextMonday
+  return !tournamentForNextMonday
 })
 
 // Get old tournaments (completed or past)
 const oldTournaments = ref<Tournament[]>([])
 
 // Helper functions
+const toLocalDateKey = (date: Date): string => {
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
+}
+
+const getTournamentSponsorMoney = (tournament: Tournament) => {
+  return tournament.status === 'COMPLETED' && tournament.sponsorMoney !== null && tournament.sponsorMoney !== undefined
+    ? tournament.sponsorMoney
+    : (systemStore.currentSettings?.sponsorMoney || 0)
+}
+
+const getTournamentStadiumCost = (tournament: Tournament) => {
+  return tournament.status === 'COMPLETED' && tournament.stadiumCost !== null && tournament.stadiumCost !== undefined
+    ? tournament.stadiumCost
+    : (systemStore.currentSettings?.stadiumCost || 0)
+}
+
 const formatDate = (date: string | Date): string => {
   if (!date) return 'N/A'
   try {

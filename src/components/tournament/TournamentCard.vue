@@ -23,7 +23,7 @@
             v-if="authStore.hasRole('admin')"
             @click="$emit('open-additional-costs', tournament.id)"
             class="text-green-600 hover:text-green-800"
-            title="Manage Additional Costs"
+            title="Quản lý chi phí phát sinh"
           >
             <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1" />
@@ -35,7 +35,7 @@
             v-if="authStore.hasPermission('canDeleteTournaments')"
             @click="$emit('delete-tournament', tournament.id)"
             class="text-red-600 hover:text-red-800"
-            title="Delete Tournament"
+            title="Xóa giải đấu"
           >
             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
@@ -47,16 +47,16 @@
       <!-- Financial Information -->
       <div v-if="systemSettings" class="flex flex-wrap items-center gap-4 mt-2 text-sm mb-4">
         <span class="text-green-600 font-medium">
-          💰 Sponsor: {{ systemSettings.sponsorMoney.toLocaleString() }} VND
+          💰 Tài trợ: {{ systemSettings.sponsorMoney.toLocaleString() }} VND
         </span>
         <span class="text-red-600 font-medium">
-          🏟️ Stadium: {{ systemSettings.stadiumCost.toLocaleString() }} VND
+          🏟️ Sân: {{ systemSettings.stadiumCost.toLocaleString() }} VND
         </span>
         <span class="text-orange-600 font-medium">
-          💸 Additional: {{ getTournamentAdditionalCostsTotal().toLocaleString() }} VND
+          💸 Phát sinh: {{ getTournamentAdditionalCostsTotal().toLocaleString() }} VND
         </span>
         <span class="text-blue-600 font-medium">
-          📊 Net: {{ calculateTournamentNet().toLocaleString() }} VND
+          📊 Ròng: {{ calculateTournamentNet().toLocaleString() }} VND
         </span>
         <span v-if="getAttendingCount() > 0" class="text-purple-600 font-medium">
           👥 Est. Cost per Player: {{ calculateCostPerPlayer().toLocaleString() }} VND
@@ -66,7 +66,7 @@
       <!-- Attendance Progress Bar -->
       <div class="mt-4 p-4 bg-gradient-to-r from-blue-50 to-green-50 rounded-lg border border-gray-200 mb-4">
         <div class="flex justify-between items-center mb-3">
-          <span class="text-sm font-semibold text-gray-800">Player Attendance</span>
+          <span class="text-sm font-semibold text-gray-800">Điểm danh cầu thủ</span>
           <span class="text-sm font-medium text-gray-700 bg-white px-2 py-1 rounded-full">
             {{ getAttendingCount() }} / {{ getTotalPlayersCount() }}
           </span>
@@ -127,7 +127,7 @@
             ]"
           >
             <div class="flex items-center space-x-1">
-              <span>{{ attendanceLoading ? 'Loading...' : getAttendanceButtonText() }}</span>
+              <span>{{ attendanceLoading ? 'Đang tải...' : getAttendanceButtonText() }}</span>
               <!-- Check icon (only shown when attended) -->
               <svg 
                 v-if="getAttendanceButtonText() === 'Attended'" 
@@ -156,7 +156,7 @@
             ]"
           >
             <div class="flex items-center space-x-1">
-              <span>{{ waterLoading === true ? 'Loading...' : (getUserWaterStatus() ? 'Water ✓' : 'Water') }}</span>
+              <span>{{ waterLoading === true ? 'Đang tải...' : (getUserWaterStatus() ? 'Nước ✓' : 'Nước') }}</span>
             </div>
           </button>
 
@@ -176,7 +176,7 @@
             ]"
           >
             <div class="flex items-center space-x-1">
-              <span>{{ betLoading === true ? 'Loading...' : (getUserBetStatus() ? 'Bet ✓' : 'Bet') }}</span>
+              <span>{{ betLoading === true ? 'Đang tải...' : (getUserBetStatus() ? 'Cược ✓' : 'Cược') }}</span>
             </div>
           </button>
         </div>
@@ -196,7 +196,7 @@
                 : 'bg-purple-600 text-white hover:bg-purple-700 hover:shadow-md'
             ]"
           >
-            {{ generateTeamsLoading ? 'Generating...' : 'Random Team' }}
+            {{ generateTeamsLoading ? 'Đang chia...' : 'Chia đội ngẫu nhiên' }}
           </button>
           <button
             v-if="authStore.hasPermission('canEditTournaments') && tournament.status === 'UPCOMING' && tournamentTeams.length > 0"
@@ -204,7 +204,7 @@
             :disabled="clearTeamsLoading"
             class="px-6 py-2 rounded-lg font-medium bg-red-600 text-white hover:bg-red-700 hover:shadow-md transition-colors duration-200"
           >
-            {{ clearTeamsLoading ? 'Clearing...' : 'Clear Teams' }}
+            {{ clearTeamsLoading ? 'Đang xóa...' : 'Xóa đội' }}
           </button>
           <button
             v-if="authStore.hasPermission('canEditTournaments') && tournament.status === 'UPCOMING' && tournamentTeams.length > 0"
@@ -218,7 +218,7 @@
             @click="$emit('open-scores', tournament.id)"
             class="px-6 py-2 rounded-lg font-medium bg-primary-600 text-white hover:bg-primary-700 hover:shadow-md transition-colors duration-200"
           >
-            Scores
+            Điểm số
           </button>
         </div>
         <div v-if="canGenerateTeams && tournamentTeams.length === 0" class="text-sm text-gray-500 mt-2">
@@ -258,11 +258,11 @@
                     type="number"
                     min="0"
                     class="w-16 px-2 py-1 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                    placeholder="Score"
+                    placeholder="Điểm"
                   />
                   <span v-else class="text-sm font-medium">{{ team.score || 0 }}</span>
                 </div>
-                <p class="text-sm text-gray-600">{{ getTeamPlayers(team.id).length }} players</p>
+                <p class="text-sm text-gray-600">{{ getTeamPlayers(team.id).length }} cầu thủ</p>
               </div>
             </div>
 
@@ -289,8 +289,8 @@
             <!-- Team Stats -->
             <div v-if="getTeamPlayers(team.id).length > 0" class="mt-3 pt-3 border-t border-gray-200">
               <div class="flex justify-between text-xs text-gray-600">
-                <span>Total Tier: {{ getTeamTotalTier(team.id) }}</span>
-                <span>Avg: {{ (getTeamTotalTier(team.id) / getTeamPlayers(team.id).length).toFixed(1) }}</span>
+                <span>Tổng tier: {{ getTeamTotalTier(team.id) }}</span>
+                <span>Trung bình: {{ (getTeamTotalTier(team.id) / getTeamPlayers(team.id).length).toFixed(1) }}</span>
               </div>
             </div>
           </div>
@@ -382,7 +382,7 @@ const canEndTournamentBasedOnScores = computed(() => {
 // Helper functions
 const formatDate = (dateString: string | Date) => {
   const date = typeof dateString === 'string' ? new Date(dateString) : dateString
-  return date.toLocaleDateString('en-US', {
+  return date.toLocaleDateString('vi-VN', {
     weekday: 'long',
     year: 'numeric',
     month: 'long',
@@ -392,7 +392,7 @@ const formatDate = (dateString: string | Date) => {
 
 const formatTime = (dateString: string | Date) => {
   const date = typeof dateString === 'string' ? new Date(dateString) : dateString
-  return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+  return date.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })
 }
 
 const getStatusBadgeClass = (status: string) => {

@@ -8,15 +8,15 @@
             <svg class="h-6 w-6 sm:h-8 sm:w-8 text-primary-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
             </svg>
-            <span class="text-lg sm:text-xl font-bold text-primary-900 hidden xs:block">Football Manager</span>
+            <span class="text-lg sm:text-xl font-bold text-primary-900 hidden xs:block">Cú Đêm</span>
             <span class="text-lg font-bold text-primary-900 xs:hidden">FM</span>
           </router-link>
           <!-- Club Money Display (Mobile) -->
-          <div v-if="systemStore.currentSettings && systemStore.currentSettings.clubFund !== undefined" class="flex items-center space-x-2 px-2 py-2 rounded-md bg-primary-50 text-primary-800 font-semibold text-sm">
+          <div v-if="systemStore.currentSettings && systemStore.currentSettings.clubFund !== undefined" class="flex md:hidden items-center space-x-2 px-2 py-2 rounded-md bg-primary-50 text-primary-800 font-semibold text-sm">
             <svg class="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4-1.79-4-4-4zm0 0V4m0 16v-4" />
             </svg>
-            <span>Club Money: </span>
+            <span>Tiền Quỹ: </span>
             <span class="ml-1">{{ systemStore.currentSettings.clubFund.toLocaleString() }}₫</span>
           </div>
         </div>
@@ -28,7 +28,7 @@
             <svg class="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4-1.79-4-4-4zm0 0V4m0 16v-4" />
             </svg>
-            <span>Club Money: </span>
+            <span>Tiền Quỹ: </span>
             <span class="ml-1">{{ systemStore.currentSettings.clubFund.toLocaleString() }}₫</span>
           </div>
           
@@ -72,15 +72,15 @@
                   @click="userMenuOpen = false"
                   class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
                 >
-                  My Player Profile
+                  Hồ sơ cầu thủ
                 </router-link>
                 <button
                   @click="handleLogout"
                   :disabled="isLoggingOut"
                   class="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 disabled:opacity-50"
                 >
-                  <span v-if="isLoggingOut">Signing out...</span>
-                  <span v-else>Sign out</span>
+                  <span v-if="isLoggingOut">Đang đăng xuất...</span>
+                  <span v-else>Đăng xuất</span>
                 </button>
               </div>
             </div>
@@ -134,15 +134,15 @@
             @click="mobileMenuOpen = false"
             class="text-gray-600 hover:text-primary-600 hover:bg-primary-50 block px-3 py-2 rounded-md text-base font-medium transition-colors"
           >
-            My Player Profile
+            Hồ sơ cầu thủ
           </router-link>
           <button
             @click="handleLogout"
             :disabled="isLoggingOut"
             class="w-full text-left text-gray-600 hover:text-primary-600 hover:bg-primary-50 block px-3 py-2 rounded-md text-base font-medium transition-colors disabled:opacity-50"
           >
-            <span v-if="isLoggingOut">Signing out...</span>
-            <span v-else>Sign out</span>
+            <span v-if="isLoggingOut">Đang đăng xuất...</span>
+            <span v-else>Đăng xuất</span>
           </button>
         </div>
       </div>
@@ -175,13 +175,13 @@ const mobileMenuOpen = ref(false)
 const userMenuOpen = ref(false)
 
 const navigationItems = [
-  { name: 'Weekly Tour', path: '/weekly-tournament', icon: TrophyIcon, permission: 'canViewTournaments' },
+  { name: 'Đá hằng tuần', path: '/weekly-tournament', icon: TrophyIcon, permission: 'canViewTournaments' },
   // { name: 'Tournaments', path: '/tournaments', icon: TrophyIcon, permission: 'canViewTournaments' },
   // { name: 'Matches', path: '/matches', icon: CalendarIcon, permission: 'canViewMatches' },
   //{ name: 'Teams', path: '/teams', icon: UserGroupIcon, permission: 'canViewTeams' },
-  { name: 'Players', path: '/players', icon: UsersIcon, permission: 'canViewPlayers' },
-  { name: 'Users', path: '/users', icon: CogIcon, permission: 'canManageUsers' },
-  { name: 'Settings', path: '/system-settings', icon: CogIcon, role: 'admin' },
+  { name: 'Cầu thủ', path: '/players', icon: UsersIcon, permission: 'canViewPlayers' },
+  { name: 'Người dùng', path: '/users', icon: CogIcon, permission: 'canManageUsers' },
+  { name: 'Cài đặt', path: '/system-settings', icon: CogIcon, role: 'admin' },
 ]
 
 const visibleNavigationItems = computed(() => {

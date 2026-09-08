@@ -2,7 +2,7 @@
     <div class="space-y-4 sm:space-y-6">
     <!-- Header -->
     <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-3 sm:space-y-0">
-      <h1 class="text-2xl sm:text-3xl font-bold text-gray-900">Weekly Tournament</h1>
+      <h1 class="text-2xl sm:text-3xl font-bold text-gray-900">Đá hằng tuần</h1>
       
       <button
         v-if="authStore.hasPermission('canEditTournaments') && canCreateNew"
@@ -11,7 +11,7 @@
         class="btn-primary w-full sm:w-auto"
         :class="{ 'opacity-50 cursor-not-allowed': loading }"
       >
-        {{ loading ? 'Creating...' : 'Create New' }}
+        {{ loading ? 'Đang tạo...' : 'Tạo mới' }}
       </button>
     </div>
 
@@ -52,23 +52,23 @@
       @click.self="showClearTeamsModal = false"
     >
       <div class="bg-white rounded-lg max-w-md w-full p-6">
-        <h3 class="text-lg font-semibold text-gray-900 mb-4">Clear Teams</h3>
+        <h3 class="text-lg font-semibold text-gray-900 mb-4">Xóa đội</h3>
         <p class="text-gray-600 mb-6">
-          Are you sure you want to clear all teams for this tournament? This action cannot be undone.
+          Bạn có chắc muốn xóa toàn bộ đội của giải đấu này? Thao tác này không thể hoàn tác.
         </p>
         <div class="flex justify-end space-x-3">
           <button
             @click="showClearTeamsModal = false"
             class="btn-secondary"
           >
-            Cancel
+            Hủy
           </button>
           <button
             @click="confirmClearTeams"
             :disabled="clearTeamsLoading.has(clearTeamsTournamentId)"
             class="btn-danger"
           >
-            {{ clearTeamsLoading.has(clearTeamsTournamentId) ? 'Clearing...' : 'Clear Teams' }}
+            {{ clearTeamsLoading.has(clearTeamsTournamentId) ? 'Đang xóa...' : 'Xóa đội' }}
           </button>
         </div>
       </div>
@@ -149,22 +149,28 @@ const canCreateNew = computed(() => {
   // Don't allow creating if there's an ongoing tournament
   if (ongoingTournament.value) return false
   
-  // Don't allow creating if there's already an upcoming tournament for next Monday
+  // Only one weekly tournament may exist for a given calendar date.
   const targetDate = nextMonday.value
-  const targetDateStr = targetDate.toISOString().split('T')[0]
+  const targetDateStr = toLocalDateKey(targetDate)
   
-  const upcomingForNextMonday = weeklyTournaments.value.find(tournament => {
-    const tournamentDate = new Date(tournament.startDate)
-    const tournamentDateStr = tournamentDate.toISOString().split('T')[0]
-    return tournamentDateStr === targetDateStr && tournament.status === 'UPCOMING'
+  const tournamentForNextMonday = weeklyTournaments.value.find(tournament => {
+    const tournamentDateStr = toLocalDateKey(new Date(tournament.startDate))
+    return tournamentDateStr === targetDateStr
   })
   
-  return !upcomingForNextMonday
+  return !tournamentForNextMonday
 })
 
 const hasActiveTournament = computed(() => {
   return weeklyTournaments.value.some(t => t.status === 'ONGOING' || t.status === 'UPCOMING')
 })
+
+const toLocalDateKey = (date: Date): string => {
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
+}
 
 // Lifecycle
 onMounted(async () => {
@@ -188,7 +194,7 @@ const fetchData = async () => {
     }
   } catch (error) {
     console.error('Failed to fetch data:', error)
-    toast.error('Failed to load tournament data')
+    toast.error('Không thể tải dữ liệu giải đấu')
   }
 }
 
@@ -236,7 +242,7 @@ const createWeeklyTournament = async () => {
     const endDateISO = endDate.toISOString()
     
     const tournamentData = {
-      name: `Weekly Tournament - ${formatDate(startDate)}`,
+      name: `Giải đấu hằng tuần - ${formatDate(startDate)}`,
       type: 'WEEKLY' as const,
       status: 'UPCOMING' as const,
       startDate: startDateISO,
@@ -245,17 +251,17 @@ const createWeeklyTournament = async () => {
     
     await tournamentsStore.addTournament(tournamentData)
     await fetchData()
-    toast.success('Weekly tournament created successfully!')
+    toast.success('Đã tạo giải đấu hằng tuần!')
   } catch (err: any) {
     console.error('Create weekly tournament error:', err)
-    toast.error(err.response?.data?.error || 'Failed to create weekly tournament')
+    toast.error(err.response?.data?.error || 'Không thể tạo giải đấu hằng tuần')
   } finally {
     loading.value = false
   }
 }
 
 const formatNextMonday = (date: Date) => {
-  return date.toLocaleDateString('en-US', {
+  return date.toLocaleDateString('vi-VN', {
     weekday: 'long',
     year: 'numeric',
     month: 'long',
@@ -265,17 +271,17 @@ const formatNextMonday = (date: Date) => {
 
 // Helper functions
 const formatDate = (date: string | Date): string => {
-  if (!date) return 'N/A'
+  if (!date) return 'Không có'
   try {
     const dateObj = typeof date === 'string' ? new Date(date) : date
-    return dateObj.toLocaleDateString('en-US', { 
+    return dateObj.toLocaleDateString('vi-VN', {
       weekday: 'long',
       year: 'numeric', 
       month: 'short', 
       day: 'numeric' 
     })
   } catch {
-    return 'Invalid Date'
+    return 'Ngày không hợp lệ'
   }
 }
 
@@ -284,14 +290,14 @@ const generateTeams = async (tournamentId: string) => {
   try {
     const response = await apiClient.post(`/tournaments/${tournamentId}/generate-teams`)
     if (response.success) {
-      toast.success('Teams generated successfully!')
+      toast.success('Đã chia đội thành công!')
       await fetchData()
     } else {
-      toast.error(response.error || 'Failed to generate teams')
+      toast.error(response.error || 'Không thể chia đội')
     }
   } catch (error: any) {
     console.error('Generate teams error:', error)
-    toast.error(error.response?.data?.error || 'Failed to generate teams')
+    toast.error(error.response?.data?.error || 'Không thể chia đội')
   } finally {
     generateTeamsLoading.value.delete(tournamentId)
   }
@@ -309,14 +315,14 @@ const confirmClearTeams = async () => {
   try {
     const response = await apiClient.put(`/tournaments/${tournamentId}/clear-teams`)
     if (response.success) {
-      toast.success('Teams cleared successfully!')
+      toast.success('Đã xóa đội thành công!')
       await fetchData()
     } else {
-      toast.error(response.error || 'Failed to clear teams')
+      toast.error(response.error || 'Không thể xóa đội')
     }
   } catch (error: any) {
     console.error('Clear teams error:', error)
-    toast.error(error.response?.data?.error || 'Failed to clear teams')
+    toast.error(error.response?.data?.error || 'Không thể xóa đội')
   } finally {
     clearTeamsLoading.value.delete(tournamentId)
     showClearTeamsModal.value = false
@@ -334,11 +340,11 @@ const updateTeamScore = async (tournamentId: string, teamId: string, score: numb
     if (response.success) {
       await fetchData()
     } else {
-      toast.error(response.error || 'Failed to update score')
+      toast.error(response.error || 'Không thể cập nhật điểm')
     }
   } catch (error: any) {
     console.error('Update score error:', error)
-    toast.error(error.response?.data?.error || 'Failed to update score')
+    toast.error(error.response?.data?.error || 'Không thể cập nhật điểm')
   }
 }
 
@@ -353,11 +359,11 @@ const updatePlayerAttendance = async (tournamentId: string, playerId: string, st
     if (response.success) {
       await fetchAttendanceDetails(tournamentId)
     } else {
-      toast.error(response.error || 'Failed to update attendance')
+      toast.error(response.error || 'Không thể cập nhật điểm danh')
     }
   } catch (error: any) {
     console.error('Update attendance error:', error)
-    toast.error(error.response?.data?.error || 'Failed to update attendance')
+    toast.error(error.response?.data?.error || 'Không thể cập nhật điểm danh')
   } finally {
     attendanceLoading.value.delete(playerId)
   }
@@ -374,11 +380,11 @@ const toggleWater = async (tournamentId: string, playerId: string) => {
     if (response.success) {
       await fetchAttendanceDetails(tournamentId)
     } else {
-      toast.error(response.error || 'Failed to toggle water')
+      toast.error(response.error || 'Không thể cập nhật nước')
     }
   } catch (error: any) {
     console.error('Toggle water error:', error)
-    toast.error(error.response?.data?.error || 'Failed to toggle water')
+    toast.error(error.response?.data?.error || 'Không thể cập nhật nước')
   } finally {
     attendanceLoading.value.delete(playerId)
   }
@@ -395,11 +401,11 @@ const toggleBet = async (tournamentId: string, playerId: string) => {
     if (response.success) {
       await fetchAttendanceDetails(tournamentId)
     } else {
-      toast.error(response.error || 'Failed to toggle bet')
+      toast.error(response.error || 'Không thể cập nhật cược')
     }
   } catch (error: any) {
     console.error('Toggle bet error:', error)
-    toast.error(error.response?.data?.error || 'Failed to toggle bet')
+    toast.error(error.response?.data?.error || 'Không thể cập nhật cược')
   } finally {
     attendanceLoading.value.delete(playerId)
   }
@@ -412,28 +418,28 @@ const confirmEndTournament = async (tournamentId: string) => {
     
     if (response.success) {
       const data = response.data as any
-      let message = 'Tournament ended successfully!'
+      let message = 'Đã kết thúc giải đấu!'
       
       if (data.winner) {
-        message += ` Winner: ${data.winner.name} (${data.winner.score} points).`
+        message += ` Đội thắng: ${data.winner.name} (${data.winner.score} điểm).`
       }
       
       if (data.loser) {
-        message += ` Loser: ${data.loser.name} (${data.loser.score} points).`
+        message += ` Đội thua: ${data.loser.name} (${data.loser.score} điểm).`
       }
       
       if (data.playersUpdated > 0) {
-        message += ` ${data.playersUpdated} players had money updated.`
+        message += ` Đã cập nhật tiền cho ${data.playersUpdated} cầu thủ.`
       }
       
       toast.success(message)
       await fetchData()
     } else {
-      toast.error(response.error || 'Failed to end tournament')
+      toast.error(response.error || 'Không thể kết thúc giải đấu')
     }
   } catch (error: any) {
     console.error('End tournament error:', error)
-    toast.error(error.response?.data?.error || 'Failed to end tournament')
+    toast.error(error.response?.data?.error || 'Không thể kết thúc giải đấu')
   } finally {
     endTournamentLoading.value = false
   }
@@ -449,16 +455,16 @@ const addAdditionalCost = async (cost: { tournamentId: string; description: stri
     })
     
     if (response.success) {
-      toast.success('Additional cost added successfully!')
+      toast.success('Đã thêm chi phí phát sinh!')
       // Refresh tournament data to get updated costs
       await tournamentsStore.fetchTournaments()
       fetchAdditionalCosts(cost.tournamentId)
     } else {
-      toast.error(response.error || 'Failed to add additional cost')
+      toast.error(response.error || 'Không thể thêm chi phí phát sinh')
     }
   } catch (error: any) {
     console.error('Add additional cost error:', error)
-    toast.error(error.response?.data?.error || 'Failed to add additional cost')
+    toast.error(error.response?.data?.error || 'Không thể thêm chi phí phát sinh')
   } finally {
     additionalCostsLoading.value = false
   }
@@ -470,14 +476,14 @@ const deleteAdditionalCost = async (costId: string) => {
     const response = await apiClient.delete(`/additional-costs/${costId}`)
     
     if (response.success) {
-      toast.success('Additional cost deleted successfully!')
+      toast.success('Đã xóa chi phí phát sinh!')
       await fetchData()
     } else {
-      toast.error(response.error || 'Failed to delete additional cost')
+      toast.error(response.error || 'Không thể xóa chi phí phát sinh')
     }
   } catch (error: any) {
     console.error('Delete additional cost error:', error)
-    toast.error(error.response?.data?.error || 'Failed to delete additional cost')
+    toast.error(error.response?.data?.error || 'Không thể xóa chi phí phát sinh')
   } finally {
     deleteAdditionalCostsLoading.value.delete(costId)
   }
@@ -488,7 +494,7 @@ const toggleAttendance = async (tournamentId: string) => {
   attendanceLoading.value.add(tournamentId)
   try {
     const playerId = authStore.currentUser?.player?.id
-    if (!playerId) throw new Error('No player ID')
+    if (!playerId) throw new Error('Không tìm thấy mã cầu thủ')
     const attendanceDetails = attendanceDetailsMap.value.get(tournamentId) || []
     const userAttendance = attendanceDetails.find((a: any) => a.player?.id === playerId)
     let newStatus = 'ATTEND'
@@ -506,36 +512,36 @@ const toggleAttendance = async (tournamentId: string) => {
     }
     const response = await apiClient.put(`/tournaments/${tournamentId}/attendance`, payload)
     if (response.success) {
-      toast.success('Attendance updated!')
+      toast.success('Đã cập nhật điểm danh!')
       // Force refresh and reactivity
       await fetchAttendanceDetails(tournamentId)
       // Reassign the map to trigger reactivity
       attendanceDetailsMap.value = new Map(attendanceDetailsMap.value)
     } else {
-      toast.error(response.error || 'Failed to update attendance')
+      toast.error(response.error || 'Không thể cập nhật điểm danh')
     }
   } catch (error: any) {
     console.error('Error toggling attendance:', error)
-    toast.error(error.response?.data?.error || 'Failed to update attendance')
+    toast.error(error.response?.data?.error || 'Không thể cập nhật điểm danh')
   } finally {
     attendanceLoading.value.delete(tournamentId)
   }
 }
 
 const deleteTournament = async (tournamentId: string) => {
-  if (confirm('Are you sure you want to delete this tournament? This action cannot be undone.')) {
+  if (confirm('Bạn có chắc muốn xóa giải đấu này? Thao tác này không thể hoàn tác.')) {
     try {
       const response = await apiClient.delete(`/tournaments/${tournamentId}`)
       
       if (response.success) {
-        toast.success('Tournament deleted successfully!')
+        toast.success('Đã xóa giải đấu!')
         await fetchData()
       } else {
-        toast.error(response.error || 'Failed to delete tournament')
+        toast.error(response.error || 'Không thể xóa giải đấu')
       }
     } catch (error: any) {
       console.error('Error deleting tournament:', error)
-      toast.error('Failed to delete tournament')
+      toast.error('Không thể xóa giải đấu')
     }
   }
 }
@@ -553,7 +559,7 @@ const getDetailedMoneyChange = (tournamentId: string, team: Team, player: Player
   changes.push({
     type: 'cost',
     amount: -costPerPlayer,
-    description: 'Tournament cost per player'
+    description: 'Chi phí giải đấu mỗi cầu thủ'
   })
   
   const total = changes.reduce((sum, change) => sum + change.amount, 0)

@@ -107,6 +107,9 @@
               </div>
             </div>
             <div class="flex space-x-2">
+              <button @click="openMoneyHistory(player)" class="text-green-600 hover:text-green-800 p-1" title="Xem lịch sử tiền">
+                ₫
+              </button>
               <button
                 v-if="authStore.hasPermission('canEditPlayers')"
                 @click="editPlayer(player)"
@@ -234,6 +237,9 @@
               </td>
               <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
                 <div class="flex space-x-2">
+                  <button @click="openMoneyHistory(player)" class="text-green-600 hover:text-green-900" title="Xem lịch sử tiền">
+                    Lịch sử tiền
+                  </button>
                   <button
                     v-if="authStore.hasPermission('canEditPlayers')"
                     @click="editPlayer(player)"
@@ -277,6 +283,17 @@
       </div>
       </div>
     </div>
+
+    <PlayerMoneyDetailModal
+      :is-open="showMoneyHistory"
+      :player="selectedMoneyPlayer"
+      :history="moneyHistory"
+      :pagination="moneyHistoryPagination"
+      :loading="moneyHistoryLoading"
+      :error="moneyHistoryError"
+      @close="showMoneyHistory = false"
+      @page-change="loadMoneyHistory"
+    />
 
     <!-- Add/Edit Player Modal -->
     <div v-if="showAddForm || editingPlayer" class="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center z-50">
@@ -367,7 +384,9 @@ import { ref, computed, onMounted, watch } from 'vue'
 import { usePlayersStore } from '../stores/players'
 import { useTeamsStore } from '../stores/teams'
 import { useAuthStore } from '../stores/auth'
-import type { Player } from '../types'
+import { apiClient } from '../api/client'
+import PlayerMoneyDetailModal from '../components/PlayerMoneyDetailModal.vue'
+import type { Player, PlayerMoneyHistory } from '../types'
 
 const playersStore = usePlayersStore()
 const teamsStore = useTeamsStore()
@@ -380,6 +399,12 @@ const showAddForm = ref(false)
 const editingPlayer = ref<Player | null>(null)
 const playerNameFilter = ref('')
 const selectedTierRange = ref<string | null>(null)
+const showMoneyHistory = ref(false)
+const selectedMoneyPlayer = ref<Player | null>(null)
+const moneyHistory = ref<PlayerMoneyHistory[]>([])
+const moneyHistoryLoading = ref(false)
+const moneyHistoryError = ref<string | null>(null)
+const moneyHistoryPagination = ref({ page: 1, pages: 0, total: 0 })
 
 // Tier ranges configuration
 const tierRanges = [
@@ -523,6 +548,30 @@ function deletePlayer(id: string) {
         playersStore.fetchPlayers()
       }
     })
+  }
+}
+
+async function openMoneyHistory(player: Player) {
+  selectedMoneyPlayer.value = player
+  showMoneyHistory.value = true
+  await loadMoneyHistory(1)
+}
+
+async function loadMoneyHistory(page: number) {
+  if (!selectedMoneyPlayer.value) return
+  moneyHistoryLoading.value = true
+  moneyHistoryError.value = null
+  try {
+    const response = await apiClient.getPlayerMoneyHistory(selectedMoneyPlayer.value.id, { page, limit: 10 })
+    if (!response.success || !response.data) throw new Error(response.error || 'Không thể tải lịch sử biến động tiền')
+    const data = response.data as { history: PlayerMoneyHistory[]; pagination: { page: number; pages: number; total: number } }
+    moneyHistory.value = data.history
+    moneyHistoryPagination.value = data.pagination
+  } catch (error) {
+    moneyHistory.value = []
+    moneyHistoryError.value = error instanceof Error ? error.message : 'Không thể tải lịch sử biến động tiền'
+  } finally {
+    moneyHistoryLoading.value = false
   }
 }
 </script>

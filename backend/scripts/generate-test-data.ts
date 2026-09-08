@@ -1,6 +1,7 @@
 import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
+const TOURNAMENT_ID = 'cmts7r3ca0000a5l7p8mlm9bc';
 
 async function generateTestData() {
   try {
@@ -8,11 +9,11 @@ async function generateTestData() {
 
     // Check if tournament exists
     const tournament = await prisma.tournament.findUnique({
-      where: { id: 'cmd4ndfqq000012ovde8mcxmw' }
+      where: { id: TOURNAMENT_ID }
     });
 
     if (!tournament) {
-      console.error('Tournament cmd4ndfqq000012ovde8mcxmw not found');
+      console.error(`Tournament ${TOURNAMENT_ID} not found`);
       return;
     }
 
@@ -74,7 +75,7 @@ async function generateTestData() {
       await prisma.tournamentPlayerAttendance.upsert({
         where: {
           tournamentId_playerId: {
-            tournamentId: 'cmd4ndfqq000012ovde8mcxmw',
+            tournamentId: TOURNAMENT_ID,
             playerId: playerId,
           },
         },
@@ -82,7 +83,7 @@ async function generateTestData() {
           status: status,
         },
         create: {
-          tournamentId: 'cmd4ndfqq000012ovde8mcxmw',
+          tournamentId: TOURNAMENT_ID,
           playerId: playerId,
           status: status,
         },
@@ -100,7 +101,7 @@ async function generateTestData() {
     const totalPlayers = await prisma.player.count();
     const totalUsers = await prisma.user.count();
     const attendanceStats = await prisma.tournamentPlayerAttendance.findMany({
-      where: { tournamentId: 'cmd4ndfqq000012ovde8mcxmw' },
+      where: { tournamentId: TOURNAMENT_ID },
       select: { status: true },
     });
 

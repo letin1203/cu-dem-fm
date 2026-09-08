@@ -7,7 +7,7 @@
     <div class="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-hidden">
       <div class="flex items-center justify-between p-6 border-b border-gray-200">
         <h3 class="text-lg font-semibold text-gray-900">
-          Additional Costs
+          Chi phí phát sinh
         </h3>
         <button
           @click="$emit('close')"
@@ -22,11 +22,11 @@
       <div class="p-6 overflow-y-auto max-h-[calc(90vh-180px)]">
         <!-- Add New Cost Form -->
         <div class="bg-gray-50 p-4 rounded-lg mb-6">
-          <h4 class="font-medium text-gray-900 mb-3">Add New Cost</h4>
+          <h4 class="font-medium text-gray-900 mb-3">Thêm chi phí mới</h4>
           <form @submit.prevent="handleSubmit" class="space-y-4">
             <div>
               <label for="description" class="block text-sm font-medium text-gray-700 mb-1">
-                Description
+                Mô tả
               </label>
               <input
                 id="description"
@@ -34,13 +34,13 @@
                 type="text"
                 required
                 class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                placeholder="e.g., Venue rental, Equipment, etc."
+                placeholder="Ví dụ: thuê sân, trang thiết bị..."
               />
             </div>
             
             <div>
               <label for="amount" class="block text-sm font-medium text-gray-700 mb-1">
-                Amount (VND)
+                Số tiền (VND)
               </label>
               <input
                 id="amount"
@@ -59,14 +59,14 @@
               :disabled="loading || !form.description.trim() || !form.amount"
               class="btn-primary w-full"
             >
-              {{ loading ? 'Adding...' : 'Add Cost' }}
+              {{ loading ? 'Đang thêm...' : 'Thêm chi phí' }}
             </button>
           </form>
         </div>
 
         <!-- Existing Costs -->
         <div v-if="additionalCosts.length > 0">
-          <h4 class="font-medium text-gray-900 mb-3">Current Additional Costs</h4>
+          <h4 class="font-medium text-gray-900 mb-3">Chi phí phát sinh hiện tại</h4>
           <div class="space-y-3">
             <div 
               v-for="cost in additionalCosts"
@@ -81,7 +81,7 @@
                 @click="$emit('delete-cost', cost.id)"
                 :disabled="deleteLoading.has(cost.id)"
                 class="text-red-600 hover:text-red-800 transition-colors p-1"
-                title="Delete cost"
+                title="Xóa chi phí"
               >
                 <svg v-if="deleteLoading.has(cost.id)" class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
                   <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
@@ -97,19 +97,19 @@
           <!-- Total -->
           <div class="mt-4 p-3 bg-primary-50 rounded-lg">
             <div class="flex justify-between items-center">
-              <span class="font-medium text-primary-900">Total Additional Costs:</span>
+              <span class="font-medium text-primary-900">Tổng chi phí phát sinh:</span>
               <span class="font-semibold text-primary-900">
                 {{ totalAdditionalCosts.toLocaleString() }} VND
               </span>
             </div>
             <div class="text-sm text-primary-700 mt-1">
-              Cost per attending player: {{ costPerPlayer.toLocaleString() }} VND
+              Chi phí mỗi cầu thủ tham gia: {{ costPerPlayer.toLocaleString() }} VND
             </div>
           </div>
         </div>
         
         <div v-else class="text-center py-8 text-gray-500">
-          No additional costs added yet.
+          Chưa có chi phí phát sinh.
         </div>
       </div>
 
@@ -118,7 +118,7 @@
           @click="$emit('close')"
           class="btn-secondary"
         >
-          Close
+          Đóng
         </button>
       </div>
     </div>

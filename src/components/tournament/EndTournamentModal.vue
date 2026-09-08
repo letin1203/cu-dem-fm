@@ -7,7 +7,7 @@
     <div class="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-hidden">
       <div class="flex items-center justify-between p-6 border-b border-gray-200">
         <h3 class="text-lg font-semibold text-gray-900">
-          End Tournament
+          Kết thúc giải đấu
         </h3>
         <button
           @click="$emit('close')"
@@ -23,22 +23,22 @@
         <div class="space-y-6">
           <!-- Winner/Loser Selection -->
           <div v-if="selectedWinningTeam && selectedLosingTeam" class="bg-gray-50 p-4 rounded-lg">
-            <h4 class="font-medium text-gray-900 mb-3">Tournament Result</h4>
+            <h4 class="font-medium text-gray-900 mb-3">Kết quả giải đấu</h4>
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div class="bg-green-50 p-3 rounded border border-green-200">
-                <div class="text-green-800 font-medium">Winner</div>
-                <div class="text-green-700">{{ selectedWinningTeam.name }} ({{ selectedWinningTeam.score }} points)</div>
+                <div class="text-green-800 font-medium">Đội thắng</div>
+                <div class="text-green-700">{{ selectedWinningTeam.name }} ({{ selectedWinningTeam.score }} điểm)</div>
               </div>
               <div class="bg-red-50 p-3 rounded border border-red-200">
-                <div class="text-red-800 font-medium">Loser</div>
-                <div class="text-red-700">{{ selectedLosingTeam.name }} ({{ selectedLosingTeam.score }} points)</div>
+                <div class="text-red-800 font-medium">Đội thua</div>
+                <div class="text-red-700">{{ selectedLosingTeam.name }} ({{ selectedLosingTeam.score }} điểm)</div>
               </div>
             </div>
           </div>
 
           <!-- Preview Money Changes -->
           <div v-if="teams.length > 0" class="space-y-4">
-            <h4 class="font-medium text-gray-900">Preview Money Changes</h4>
+            <h4 class="font-medium text-gray-900">Xem trước thay đổi số dư</h4>
             
             <div 
               v-for="team in teams" 
@@ -51,13 +51,13 @@
                   v-if="selectedWinningTeam && team.id === selectedWinningTeam.id"
                   class="ml-2 px-2 py-1 text-xs bg-green-100 text-green-800 rounded"
                 >
-                  Winner
+                  Đội thắng
                 </span>
                 <span 
                   v-else-if="selectedLosingTeam && team.id === selectedLosingTeam.id"
                   class="ml-2 px-2 py-1 text-xs bg-red-100 text-red-800 rounded"
                 >
-                  Loser
+                  Đội thua
                 </span>
               </h5>
               
@@ -70,7 +70,7 @@
                   <div class="flex justify-between items-start mb-2">
                     <div>
                       <div class="font-medium text-gray-900">{{ player.name }}</div>
-                      <div class="text-sm text-gray-600">Current: {{ player.money.toLocaleString() }} VND</div>
+                      <div class="text-sm text-gray-600">Hiện tại: {{ player.money.toLocaleString() }} VND</div>
                     </div>
                   </div>
                   
@@ -87,7 +87,7 @@
                   </div>
                   
                   <div class="flex justify-between items-center text-sm pt-2 border-t border-gray-200 mt-2">
-                    <span class="font-medium">Total Change:</span>
+                    <span class="font-medium">Tổng thay đổi:</span>
                     <span 
                       class="font-medium"
                       :class="getDetailedMoneyChange(tournamentId, team, player).total >= 0 ? 'text-green-600' : 'text-red-600'"
@@ -97,7 +97,7 @@
                   </div>
                   
                   <div class="flex justify-between items-center text-sm text-gray-600 mt-1">
-                    <span>New Balance:</span>
+                    <span>Số dư mới:</span>
                     <span>{{ (player.money + getDetailedMoneyChange(tournamentId, team, player).total).toLocaleString() }} VND</span>
                   </div>
                 </div>
@@ -112,14 +112,14 @@
           @click="$emit('close')"
           class="btn-secondary"
         >
-          Cancel
+          Hủy
         </button>
         <button
           @click="$emit('confirm')"
           :disabled="!canEndTournament || confirmLoading"
           class="btn-danger"
         >
-          {{ confirmLoading ? 'Ending...' : 'Confirm End Tournament' }}
+          {{ confirmLoading ? 'Đang kết thúc...' : 'Xác nhận kết thúc giải đấu' }}
         </button>
       </div>
     </div>

@@ -47,6 +47,7 @@ model Player {
   matchEvents             MatchEvent[]
   tournamentAttendances   TournamentPlayerAttendance[]
   tournamentTeamPlayers   TournamentTeamPlayer[]
+  moneyHistory            PlayerMoneyHistory[]
 
   @@map("players")
 }
@@ -115,6 +116,8 @@ model Tournament {
   endDate   DateTime?
   completedAt DateTime?
   costPerPlayer Int @default(0)
+  sponsorMoney Int?
+  stadiumCost Int?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -128,6 +131,7 @@ model Tournament {
   loserId            String?
   playerAttendances  TournamentPlayerAttendance[]
   additionalCosts    AdditionalCost[]
+  moneyHistory       PlayerMoneyHistory[]
 
   @@map("tournaments")
 }
@@ -237,6 +241,23 @@ model AdditionalCost {
   tournament Tournament @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
 
   @@map("additional_costs")
+}
+
+model PlayerMoneyHistory {
+  id            String      @id @default(cuid())
+  player        Player      @relation(fields: [playerId], references: [id], onDelete: Cascade)
+  playerId      String
+  tournament    Tournament? @relation(fields: [tournamentId], references: [id], onDelete: SetNull)
+  tournamentId  String?
+  amount        Int
+  balanceBefore Int
+  balanceAfter  Int
+  description   String
+  createdAt     DateTime    @default(now())
+
+  @@index([playerId, createdAt])
+  @@index([tournamentId])
+  @@map("player_money_history")
 }
 
 

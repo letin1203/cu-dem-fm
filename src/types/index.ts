@@ -43,6 +43,18 @@ export interface PlayerStats {
   minutesPlayed: number
 }
 
+export interface PlayerMoneyHistory {
+  id: string
+  playerId: string
+  tournamentId?: string | null
+  amount: number
+  balanceBefore: number
+  balanceAfter: number
+  description: string
+  createdAt: string | Date
+  tournament?: { id: string; name: string } | null
+}
+
 export interface Team {
   id: string
   name: string
@@ -72,6 +84,8 @@ export interface Tournament {
   status: 'UPCOMING' | 'ONGOING' | 'COMPLETED'
   startDate: string | Date
   endDate?: string | Date
+  sponsorMoney?: number | null
+  stadiumCost?: number | null
   teams: Team[]
   tournamentTeamPlayers?: TournamentTeamPlayer[]
   additionalCosts?: AdditionalCost[]

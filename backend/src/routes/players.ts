@@ -2,6 +2,7 @@ import { Router, Response } from 'express';
 import { prisma } from '../lib/prisma';
 import { createPlayerSchema, updatePlayerSchema, playerQuerySchema } from '../schemas/validation';
 import { authenticate, authorize, AuthenticatedRequest } from '../middleware/auth';
+import { AVATAR_PATHS, getRandomAvatar } from '../lib/avatars';
 
 const router = Router();
 
@@ -212,6 +213,7 @@ router.post('/', authenticate, authorize(['ADMIN', 'MOD']), async (req: Authenti
     const player = await prisma.player.create({
       data: {
         ...playerData,
+        avatar: playerData.avatar || getRandomAvatar(),
         stats: {
           create: {}, // Create empty stats
         },
@@ -237,6 +239,37 @@ router.post('/', authenticate, authorize(['ADMIN', 'MOD']), async (req: Authenti
       success: false,
       error: error instanceof Error ? error.message : 'Invalid player data',
     });
+  }
+});
+
+// Let a user update only the avatar of their own linked player.
+router.put('/:id/avatar', authenticate, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  try {
+    const { id } = req.params;
+    const { avatar } = req.body as { avatar?: unknown };
+    if (typeof avatar !== 'string' || !AVATAR_PATHS.includes(avatar as typeof AVATAR_PATHS[number])) {
+      res.status(400).json({ success: false, error: 'Avatar không hợp lệ' });
+      return;
+    }
+
+    const player = await prisma.player.findUnique({
+      where: { id },
+      select: { user: { select: { id: true } } },
+    });
+    if (!player) {
+      res.status(404).json({ success: false, error: 'Không tìm thấy cầu thủ' });
+      return;
+    }
+    if (player.user?.id !== req.user!.id && !['ADMIN', 'MOD'].includes(req.user!.role)) {
+      res.status(403).json({ success: false, error: 'Bạn không có quyền đổi avatar cầu thủ này' });
+      return;
+    }
+
+    const updatedPlayer = await prisma.player.update({ where: { id }, data: { avatar } });
+    res.json({ success: true, data: updatedPlayer });
+  } catch (error) {
+    console.error('Update player avatar error:', error);
+    res.status(500).json({ success: false, error: 'Không thể cập nhật avatar' });
   }
 });
 

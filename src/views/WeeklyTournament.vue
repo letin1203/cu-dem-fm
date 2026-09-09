@@ -197,8 +197,9 @@
                       :class="{ 'bg-yellow-100': ongoingTournament.status === 'ONGOING' && isPlayerBetting(ongoingTournament.id, player.id) }"
                     >
                       <div class="flex items-center">
-                        <div class="w-6 h-6 bg-gray-300 rounded-full flex items-center justify-center mr-2 text-xs font-medium">
-                          {{ player.name.charAt(0).toUpperCase() }}
+                        <div class="w-6 h-6 shrink-0 overflow-hidden bg-gray-300 rounded-full flex items-center justify-center mr-2 text-xs font-medium">
+                          <img v-if="player.avatar" :src="player.avatar" :alt="player.name" class="h-full w-full object-cover">
+                          <span v-else>{{ player.name.charAt(0).toUpperCase() }}</span>
                         </div>
                         <span class="font-medium text-gray-900">{{ player.name }}</span>
                       </div>
@@ -562,8 +563,9 @@
                         :class="{ 'bg-yellow-100': isPlayerBetting(tournament.id, player.id) }"
                       >
                         <div class="flex items-center">
-                          <div class="w-6 h-6 bg-gray-300 rounded-full flex items-center justify-center mr-2 text-xs font-medium">
-                            {{ player.name.charAt(0).toUpperCase() }}
+                          <div class="w-6 h-6 shrink-0 overflow-hidden bg-gray-300 rounded-full flex items-center justify-center mr-2 text-xs font-medium">
+                            <img v-if="player.avatar" :src="player.avatar" :alt="player.name" class="h-full w-full object-cover">
+                            <span v-else>{{ player.name.charAt(0).toUpperCase() }}</span>
                           </div>
                           <span class="font-medium text-gray-900">{{ player.name }}</span>
                         </div>

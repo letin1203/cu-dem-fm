@@ -55,7 +55,9 @@
             <div
               class="mx-auto h-20 w-20 rounded-full bg-gray-300 flex items-center justify-center mb-4"
             >
+              <img v-if="playerProfile.avatar" :src="playerProfile.avatar" :alt="playerProfile.name" class="h-20 w-20 rounded-full object-cover" />
               <svg
+                v-else
                 class="h-12 w-12 text-gray-400"
                 fill="none"
                 stroke="currentColor"
@@ -69,6 +71,7 @@
                 />
               </svg>
             </div>
+            <button type="button" class="mb-3 text-sm font-medium text-primary-600 hover:text-primary-700" @click="openAvatarModal">Đổi avatar</button>
             <h2 class="text-xl font-bold text-gray-900 mb-2">
               {{ playerProfile.name }}
             </h2>
@@ -423,6 +426,21 @@
       </div>
     </div>
 
+    <div v-if="showAvatarModal" class="fixed inset-0 z-[70] flex items-center justify-center bg-gray-900/50 p-4" @click.self="showAvatarModal = false">
+      <div class="flex max-h-[90vh] w-full max-w-lg flex-col rounded-lg bg-white shadow-xl">
+        <div class="flex items-center justify-between border-b p-5">
+          <div><h2 class="text-lg font-semibold text-gray-900">Chọn avatar</h2><p class="text-sm text-gray-500">Chọn một hình đại diện cho hồ sơ của bạn.</p></div>
+          <button type="button" class="text-2xl leading-none text-gray-400 hover:text-gray-700" @click="showAvatarModal = false">×</button>
+        </div>
+        <div class="grid grid-cols-4 gap-3 overflow-y-auto p-5 sm:grid-cols-6">
+          <button v-for="avatar in avatarOptions" :key="avatar" type="button" class="rounded-full border-2 p-0.5 transition-colors" :class="selectedAvatar === avatar ? 'border-primary-600' : 'border-transparent hover:border-primary-300'" @click="selectedAvatar = avatar">
+            <img :src="avatar" alt="Avatar" class="aspect-square w-full rounded-full object-cover">
+          </button>
+        </div>
+        <div class="flex justify-end gap-3 border-t p-4"><button type="button" class="btn-secondary" @click="showAvatarModal = false">Hủy</button><button type="button" class="btn-primary" :disabled="savingAvatar || !selectedAvatar" @click="saveAvatar">{{ savingAvatar ? 'Đang lưu...' : 'Lưu avatar' }}</button></div>
+      </div>
+    </div>
+
     <div
       v-if="selectedTournamentDetail"
       class="fixed inset-0 z-[70] flex items-center justify-center bg-black/50 p-4"
@@ -593,6 +611,17 @@ const showTopUpModal = ref(false);
 const submittingTopUp = ref(false);
 const selectedTopUpAmount = ref(100000);
 const topUpAmounts = [50000, 100000, 200000, 500000];
+const showAvatarModal = ref(false);
+const savingAvatar = ref(false);
+const selectedAvatar = ref('');
+const avatarOptions = [
+  '/avatars/01-side-eye.png', '/avatars/01-sleepy.png', '/avatars/02-excited.png', '/avatars/02-worried.png',
+  '/avatars/03-masked.png', '/avatars/03-unimpressed.png', '/avatars/04-laughing.png', '/avatars/04-shouting.png',
+  '/avatars/05-popcorn.png', '/avatars/05-smile.png', '/avatars/06-heart.png', '/avatars/06-thinking.png',
+  '/avatars/07-bandana.png', '/avatars/07-gesture.png', '/avatars/08-crying.png', '/avatars/08-smirk.png',
+  '/avatars/09-annoyed.png', '/avatars/09-laughing-tears.png', '/avatars/10-cool.png', '/avatars/10-sunglasses.png',
+  '/avatars/11-kiss.png', '/avatars/11-score-10.png', '/avatars/12-confused.png', '/avatars/12-loser.png',
+];
 const currentAge = computed(() =>
   playerProfile.value
     ? new Date().getFullYear() - playerProfile.value.yearOfBirth
@@ -744,6 +773,26 @@ const fetchPlayerProfile = async () => {
 const refreshPlayerProfile = async () => {
   await authStore.getCurrentUser();
   await fetchPlayerProfile();
+};
+const openAvatarModal = (): void => {
+  selectedAvatar.value = playerProfile.value?.avatar || avatarOptions[0];
+  showAvatarModal.value = true;
+};
+const saveAvatar = async () => {
+  if (!playerProfile.value || !selectedAvatar.value) return;
+  savingAvatar.value = true;
+  try {
+    const response = await apiClient.updateMyPlayerAvatar(playerProfile.value.id, selectedAvatar.value);
+    if (!response.success) throw new Error(response.error || 'Không thể cập nhật avatar');
+    playerProfile.value = { ...playerProfile.value, avatar: selectedAvatar.value };
+    if (authStore.currentUser?.player) authStore.currentUser.player.avatar = selectedAvatar.value;
+    showAvatarModal.value = false;
+    toast.success('Đã cập nhật avatar');
+  } catch (err) {
+    toast.error(err instanceof Error ? err.message : 'Không thể cập nhật avatar');
+  } finally {
+    savingAvatar.value = false;
+  }
 };
 const submitTopUp = async () => {
   submittingTopUp.value = true;

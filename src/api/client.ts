@@ -267,6 +267,10 @@ class ApiClient {
     return this.put(`/players/${id}`, data);
   }
 
+  async updateMyPlayerAvatar(id: string, avatar: string) {
+    return this.put(`/players/${id}/avatar`, { avatar });
+  }
+
   async deletePlayer(id: string) {
     return this.delete(`/players/${id}`);
   }

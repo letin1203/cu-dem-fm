@@ -952,6 +952,62 @@ router.put('/:id/attendance', authenticate, async (req: AuthenticatedRequest, re
   }
 });
 
+// Register multiple pending players at once (Admin/Mod only).
+// Keeping this as one HTTP request avoids rate-limit failures when staff register a group.
+router.put('/:id/attendance/batch', authenticate, authorize(['ADMIN', 'MOD']), async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  try {
+    const { id: tournamentId } = req.params;
+    const requestedPlayerIds: unknown[] = Array.isArray(req.body.playerIds) ? req.body.playerIds : [];
+    const playerIds: string[] = [...new Set(
+      requestedPlayerIds.filter((playerId): playerId is string => typeof playerId === 'string' && playerId.length > 0),
+    )];
+
+    if (playerIds.length === 0) {
+      res.status(400).json({ success: false, error: 'Vui lòng chọn ít nhất một cầu thủ' });
+      return;
+    }
+
+    const [tournament, players, existingAttendances] = await Promise.all([
+      prisma.tournament.findUnique({ where: { id: tournamentId }, select: { id: true } }),
+      prisma.player.findMany({ where: { id: { in: playerIds } }, select: { id: true } }),
+      prisma.tournamentPlayerAttendance.findMany({
+        where: { tournamentId, playerId: { in: playerIds } },
+        select: { playerId: true, status: true },
+      }),
+    ]);
+
+    if (!tournament) {
+      res.status(404).json({ success: false, error: 'Không tìm thấy giải đấu' });
+      return;
+    }
+
+    if (players.length !== playerIds.length) {
+      res.status(400).json({ success: false, error: 'Danh sách có cầu thủ không hợp lệ' });
+      return;
+    }
+
+    // Only pending players can be registered through this modal. Do not overwrite a response.
+    const attendanceByPlayerId = new Map(existingAttendances.map(attendance => [attendance.playerId, attendance.status]));
+    const pendingPlayerIds = playerIds.filter(playerId => {
+      const status = attendanceByPlayerId.get(playerId);
+      return status === undefined || status === 'NULL';
+    });
+
+    await prisma.$transaction(
+      pendingPlayerIds.map(playerId => prisma.tournamentPlayerAttendance.upsert({
+        where: { tournamentId_playerId: { tournamentId, playerId } },
+        update: { status: 'ATTEND' },
+        create: { tournamentId, playerId, status: 'ATTEND' },
+      })),
+    );
+
+    res.json({ success: true, data: { updatedCount: pendingPlayerIds.length, playerIds: pendingPlayerIds } });
+  } catch (error) {
+    console.error('Batch update player attendance error:', error);
+    res.status(500).json({ success: false, error: 'Không thể đăng ký cầu thủ' });
+  }
+});
+
 // Update any player's attendance for a tournament (Admin/Mod only)
 router.put('/:id/attendance/:playerId', authenticate, authorize(['ADMIN', 'MOD']), async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   try {

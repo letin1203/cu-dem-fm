@@ -648,6 +648,18 @@
           <label class="form-label">Tìm theo tên cầu thủ</label>
           <input v-model="attendancePlayerNameFilter" type="text" class="form-input mt-1" placeholder="Nhập tên cầu thủ...">
         </div>
+        <div v-if="attendanceModalType === 'pending' && authStore.hasAnyRole(['admin', 'mod']) && !attendanceModalLoading && getFilteredModalData().length" class="mb-4 flex items-center justify-between rounded-lg bg-blue-50 px-3 py-2 text-sm text-blue-900">
+          <button
+            type="button"
+            class="flex items-center gap-2 font-medium hover:text-blue-700"
+            :aria-pressed="areAllPendingPlayersSelected"
+            @click="toggleAllPendingPlayers"
+          >
+            <span class="flex h-5 w-5 items-center justify-center rounded border transition-colors" :class="areAllPendingPlayersSelected ? 'border-blue-600 bg-blue-600 text-white' : 'border-blue-300 bg-white'">{{ areAllPendingPlayersSelected ? '✓' : '' }}</span>
+            Chọn tất cả ({{ getFilteredModalData().length }})
+          </button>
+          <span>{{ selectedPendingPlayerIds.size }} đã chọn</span>
+        </div>
         <!-- Loading State -->
         <div v-if="attendanceModalLoading" class="text-center py-8">
           <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
@@ -666,6 +678,17 @@
             :key="attendance.id"
             class="flex items-center p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
           >
+            <button
+              v-if="attendanceModalType === 'pending' && authStore.hasAnyRole(['admin', 'mod'])"
+              type="button"
+              class="mr-3 flex h-7 w-7 shrink-0 items-center justify-center rounded-full border text-sm font-bold transition-colors"
+              :class="selectedPendingPlayerIds.has(attendance.player.id) ? 'border-blue-600 bg-blue-600 text-white' : 'border-gray-300 bg-white text-transparent hover:border-blue-400'"
+              :aria-label="`Chọn ${attendance.player.name}`"
+              :aria-pressed="selectedPendingPlayerIds.has(attendance.player.id)"
+              @click="togglePendingPlayer(attendance.player.id)"
+            >
+              ✓
+            </button>
             <!-- Player Avatar -->
             <div class="w-12 h-12 rounded-full bg-gray-300 flex items-center justify-center mr-4">
               <img 
@@ -705,14 +728,6 @@
                     </span>
                   </button>
                 </div>
-                <button
-                  v-if="attendanceModalType === 'pending' && authStore.hasAnyRole(['admin', 'mod'])"
-                  @click="markPlayerAttending(attendance)"
-                  :disabled="playerAttendanceLoading.has(attendance.player.id)"
-                  class="ml-3 px-3 py-1 text-xs font-medium text-white bg-green-600 rounded hover:bg-green-700 disabled:opacity-50"
-                >
-                  {{ playerAttendanceLoading.has(attendance.player.id) ? 'Đang cập nhật...' : 'Tham gia' }}
-                </button>
               </div>
               
               <!-- Player Details Row -->
@@ -734,12 +749,23 @@
         <p class="text-sm text-gray-600">
           {{ getFilteredModalData().length }} cầu thủ {{ attendanceModalType === 'pending' ? 'chưa phản hồi' : attendanceModalType === 'attending' ? 'tham gia' : attendanceModalType === 'not-attending' ? 'không tham gia' : 'cược' }}
         </p>
-        <button 
-          @click="closeAttendanceModal"
-          class="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
-        >
-          Đóng
-        </button>
+        <div class="flex items-center gap-3">
+          <button
+            v-if="attendanceModalType === 'pending' && authStore.hasAnyRole(['admin', 'mod'])"
+            @click="registerSelectedPlayers"
+            :disabled="selectedPendingPlayerIds.size === 0 || batchAttendanceSaving"
+            class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {{ batchAttendanceSaving ? 'Đang đăng ký...' : `Đăng ký (${selectedPendingPlayerIds.size})` }}
+          </button>
+          <button
+            @click="closeAttendanceModal"
+            :disabled="batchAttendanceSaving"
+            class="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors disabled:opacity-50"
+          >
+            Đóng
+          </button>
+        </div>
       </div>
     </div>
   </div>
@@ -1250,6 +1276,13 @@ const attendanceModalType = ref<'attending' | 'not-attending' | 'betting' | 'pen
 const attendanceModalLoading = ref(false)
 const playerAttendanceLoading = ref<Set<string>>(new Set())
 const attendancePlayerNameFilter = ref('')
+const attendanceModalTournamentId = ref<string | null>(null)
+const selectedPendingPlayerIds = ref<Set<string>>(new Set())
+const batchAttendanceSaving = ref(false)
+const areAllPendingPlayersSelected = computed(() => {
+  const pendingPlayers = getFilteredModalData()
+  return pendingPlayers.length > 0 && pendingPlayers.every(item => selectedPendingPlayerIds.value.has(item.player.id))
+})
 
 interface TournamentMoneyHistoryItem {
   id: string
@@ -1651,6 +1684,8 @@ const openAttendanceModal = async (tournamentId: string, type: 'attending' | 'no
   showAttendanceModal.value = true
   attendanceModalData.value = [] // Clear previous data
   attendancePlayerNameFilter.value = ''
+  attendanceModalTournamentId.value = tournamentId
+  selectedPendingPlayerIds.value = new Set()
   
   await fetchAttendanceDetails(tournamentId)
 }
@@ -1660,6 +1695,8 @@ const closeAttendanceModal = (): void => {
   attendanceModalData.value = []
   attendanceModalLoading.value = false
   attendancePlayerNameFilter.value = ''
+  attendanceModalTournamentId.value = null
+  selectedPendingPlayerIds.value = new Set()
 }
 
 const getFilteredModalData = (): TournamentAttendanceDetails[] => {
@@ -2192,6 +2229,50 @@ const openStadiumCostModal = (tournament: Tournament) => {
   stadiumCostTournament.value = tournament
   stadiumCostForm.value = getTournamentStadiumCost(tournament)
   showStadiumCostModal.value = true
+}
+
+const togglePendingPlayer = (playerId: string): void => {
+  const selected = new Set(selectedPendingPlayerIds.value)
+  if (selected.has(playerId)) selected.delete(playerId)
+  else selected.add(playerId)
+  selectedPendingPlayerIds.value = selected
+}
+
+const toggleAllPendingPlayers = (): void => {
+  const pendingPlayerIds = getFilteredModalData().map(item => item.player.id)
+  const allSelected = pendingPlayerIds.length > 0 && pendingPlayerIds.every(playerId => selectedPendingPlayerIds.value.has(playerId))
+  const selected = new Set(selectedPendingPlayerIds.value)
+  if (allSelected) pendingPlayerIds.forEach(playerId => selected.delete(playerId))
+  else pendingPlayerIds.forEach(playerId => selected.add(playerId))
+  selectedPendingPlayerIds.value = selected
+}
+
+const registerSelectedPlayers = async (): Promise<void> => {
+  const tournamentId = attendanceModalTournamentId.value
+  const playerIds = [...selectedPendingPlayerIds.value]
+  if (!tournamentId || playerIds.length === 0 || batchAttendanceSaving.value) return
+
+  try {
+    batchAttendanceSaving.value = true
+    const response = await apiClient.put<{ updatedCount: number; playerIds: string[] }>(
+      `/tournaments/${tournamentId}/attendance/batch`,
+      { playerIds },
+    )
+    if (!response.success) throw new Error(response.error || 'Không thể đăng ký cầu thủ')
+
+    const updatedPlayerIds = new Set(response.data?.playerIds || [])
+    attendanceModalData.value = attendanceModalData.value.map(item =>
+      updatedPlayerIds.has(item.player.id) ? { ...item, status: 'ATTEND' } : item,
+    )
+    attendanceDetailsMap.value.set(tournamentId, attendanceModalData.value)
+    selectedPendingPlayerIds.value = new Set()
+    await fetchAttendanceStats(tournamentId)
+    toast.success(`Đã đăng ký ${response.data?.updatedCount || 0} cầu thủ`)
+  } catch (error: any) {
+    toast.error(error.response?.data?.error || error.message || 'Không thể đăng ký cầu thủ')
+  } finally {
+    batchAttendanceSaving.value = false
+  }
 }
 
 const closeStadiumCostModal = () => {

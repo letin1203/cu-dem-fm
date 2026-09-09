@@ -111,7 +111,7 @@
               </div>
               <div>
                 <div class="text-sm font-medium text-gray-900">{{ player.name }}</div>
-                <div class="text-xs text-gray-500">{{ displayPosition(player.position) }} • Năm sinh {{ player.yearOfBirth }}</div>
+                <div class="text-xs text-gray-500">{{ displayPosition(player.position) }} • {{ player.yearOfBirth }}</div>
               </div>
             </div>
             <div class="flex space-x-2">
@@ -156,7 +156,7 @@
             </div>
             <div class="text-right">
               <span class="text-gray-500">Tiền:</span>
-              <span class="text-sm font-medium">{{ player.money.toLocaleString('vi-VN') }} ₫</span>
+              <span class="ml-1 text-sm font-medium" :class="player.money < 0 ? 'text-red-600' : 'text-gray-900'">{{ player.money.toLocaleString('vi-VN') }} ₫</span>
             </div>
           </div>
         </div>
@@ -191,7 +191,7 @@
                 Vị trí
               </th>
               <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Năm sinh
+                Năm
               </th>
               <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Tier
@@ -240,7 +240,7 @@
                   </div>
                 </div>
               </td>
-              <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+              <td class="px-6 py-4 whitespace-nowrap text-sm" :class="player.money < 0 ? 'text-red-600' : 'text-gray-900'">
                 {{ player.money.toLocaleString('vi-VN') }} ₫
               </td>
               <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
@@ -441,14 +441,14 @@ const tierRanges = [
 ]
 
 const positionLabels: Record<string, string> = {
-  GK: 'GK - Thủ môn',
-  DEF: 'DEF - Hậu vệ',
-  MID: 'MID - Tiền vệ',
-  FWD: 'FWD - Tiền đạo',
-  Goalkeeper: 'Thủ môn',
-  Defender: 'Hậu vệ',
-  Midfielder: 'Tiền vệ',
-  Forward: 'Tiền đạo'
+  GK: 'GK',
+  DEF: 'DEF',
+  MID: 'MID',
+  FWD: 'FWD',
+  Goalkeeper: 'GK',
+  Defender: 'DEF',
+  Midfielder: 'MID',
+  Forward: 'FWD'
 }
 
 function displayPosition(position: string) {

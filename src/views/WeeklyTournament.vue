@@ -243,7 +243,7 @@
                       : 'bg-red-600 text-white hover:bg-red-700'
                   ]"
                 >
-                  <div class="flex items-center space-x-1">
+                  <div class="flex items-center justify-center space-x-1">
                     <span>{{ attendanceLoading.has(ongoingTournament.id) ? 'Đang tải...' : getAttendanceButtonText(ongoingTournament.id) }}</span>
                     <!-- Check icon (only shown when attended) -->
                     <svg 
@@ -272,7 +272,7 @@
                       : 'bg-gray-300 text-gray-700 hover:bg-gray-400'
                   ]"
                 >
-                  <div class="flex items-center space-x-1">
+                  <div class="flex items-center justify-center space-x-1">
                     <span>{{ waterLoading.has(ongoingTournament.id) ? 'Đang tải...' : (getUserWaterStatus(ongoingTournament.id) ? 'Nước ✓' : 'Nước') }}</span>
                   </div>
                 </button>
@@ -285,7 +285,7 @@
               <button
                 @click="toggleBet(ongoingTournament.id)"
                 :disabled="betLoading.has(ongoingTournament.id)"
-                class="w-full px-4 py-2 rounded-lg font-medium transition-colors duration-200 sm:w-auto"
+                class="w-full px-4 py-2 text-center rounded-lg font-medium transition-colors duration-200 sm:w-auto"
                 :class="[betLoading.has(ongoingTournament.id) ? 'opacity-50 cursor-not-allowed' : 'hover:shadow-md', getUserBetStatus(ongoingTournament.id) ? 'bg-yellow-600 text-white hover:bg-yellow-700' : 'bg-gray-300 text-gray-700 hover:bg-gray-400']"
               >
                 {{ betLoading.has(ongoingTournament.id) ? 'Đang tải...' : (getUserBetStatus(ongoingTournament.id) ? 'Cược ✓' : 'Cược') }}

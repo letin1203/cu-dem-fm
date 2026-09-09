@@ -630,7 +630,7 @@ async function loadMoneyHistory(page: number) {
   moneyHistoryLoading.value = true
   moneyHistoryError.value = null
   try {
-    const response = await apiClient.getPlayerMoneyHistory(selectedMoneyPlayer.value.id, { page, limit: 10 })
+    const response = await apiClient.getPlayerMoneyHistory(selectedMoneyPlayer.value.id, { page, limit: 5 })
     if (!response.success || !response.data) throw new Error(response.error || 'Không thể tải lịch sử biến động tiền')
     const data = response.data as { history: PlayerMoneyHistory[]; pagination: { page: number; pages: number; total: number } }
     moneyHistory.value = data.history

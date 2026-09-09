@@ -342,6 +342,10 @@ class ApiClient {
     return this.put(`/tournaments/${tournamentId}/scores`, { scores });
   }
 
+  async getFundHistory() {
+    return this.get('/system-settings/fund-history');
+  }
+
   // Matches endpoints
   async getMatches(params?: any) {
     return this.get('/matches', { params });

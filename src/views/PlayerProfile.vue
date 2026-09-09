@@ -554,7 +554,6 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from "vue";
 import { useAuthStore } from "../stores/auth";
-import { usePlayersStore } from "../stores/players";
 import { apiClient } from "../api/client";
 import { useToast } from "vue-toastification";
 import type { Player, PlayerMoneyHistory } from "../types";
@@ -575,7 +574,6 @@ interface TournamentAttendanceHistory {
 }
 
 const authStore = useAuthStore();
-const playersStore = usePlayersStore();
 const toast = useToast();
 const loading = ref(false);
 const error = ref<string | null>(null);
@@ -715,21 +713,24 @@ const fetchPlayerProfile = async () => {
   loading.value = true;
   error.value = null;
   try {
+    // Refresh the user first so a newly linked player is available immediately.
+    await authStore.getCurrentUser();
     if (authStore.currentUser?.player)
       playerProfile.value = authStore.currentUser.player;
     else if (authStore.currentUser?.playerId) {
-      await playersStore.fetchPlayers();
-      playerProfile.value =
-        playersStore.players.find(
-          (player) => player.id === authStore.currentUser?.playerId,
-        ) || null;
+      const response = await apiClient.getPlayer(authStore.currentUser.playerId);
+      if (!response.success || !response.data)
+        throw new Error(response.error || "Không thể tải hồ sơ cầu thủ");
+      playerProfile.value = response.data as Player;
     } else playerProfile.value = null;
-    if (playerProfile.value)
-      await Promise.all([
+    if (playerProfile.value) {
+      // History widgets are supplementary and must never block the profile card.
+      void Promise.allSettled([
         loadTournamentHistory(playerProfile.value.id),
         loadPendingTopUps(),
         loadMoneyHistory(playerProfile.value.id),
-      ]);
+      ]).catch((loadError) => console.error("Error loading player history:", loadError));
+    }
   } catch (err) {
     console.error("Error fetching player profile:", err);
     error.value =

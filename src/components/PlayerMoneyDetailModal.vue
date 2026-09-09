@@ -39,15 +39,15 @@
         </div>
       </div>
 
-      <div class="flex items-center justify-between border-t p-4">
+      <div v-if="pagination.total > 5" class="flex items-center justify-between border-t p-4">
         <span class="text-sm text-gray-500">{{ pagination.total }} bản ghi</span>
         <div class="flex items-center gap-3">
           <button class="btn-secondary" :disabled="pagination.page <= 1 || loading" @click="emit('page-change', pagination.page - 1)">Trước</button>
           <span class="text-sm text-gray-600">Trang {{ pagination.page }} / {{ Math.max(pagination.pages, 1) }}</span>
           <button class="btn-secondary" :disabled="pagination.page >= pagination.pages || loading" @click="emit('page-change', pagination.page + 1)">Sau</button>
-          <button class="btn-primary" @click="emit('close')">Đóng</button>
         </div>
       </div>
+      <div class="flex justify-end border-t p-4"><button class="btn-primary" @click="emit('close')">Đóng</button></div>
     </div>
   </div>
 </template>

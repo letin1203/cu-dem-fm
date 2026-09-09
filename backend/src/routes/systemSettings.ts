@@ -4,6 +4,58 @@ import { authenticate, authorize, AuthenticatedRequest } from '../middleware/aut
 
 const router = Router();
 
+// Fund history calculated from completed tournaments.
+router.get('/fund-history', authenticate, async (_req: AuthenticatedRequest, res: Response): Promise<void> => {
+  try {
+    const settings = await prisma.systemSettings.findFirst();
+    const defaultStadiumCost = settings?.stadiumCost ?? 10000;
+    const defaultSponsorMoney = settings?.sponsorMoney ?? 50000;
+    const tournaments = await prisma.tournament.findMany({
+      where: { status: 'COMPLETED' },
+      orderBy: { startDate: 'asc' },
+      select: {
+        id: true,
+        name: true,
+        startDate: true,
+        stadiumCost: true,
+        sponsorMoney: true,
+        fundContribution: true,
+        additionalCosts: { select: { description: true, amount: true } },
+        moneyHistory: { select: { amount: true } },
+      },
+    });
+
+    let balanceAfter = 0;
+    const history = tournaments.map((tournament) => {
+      const playerMoneyChanges = tournament.moneyHistory.reduce((total, item) => total + item.amount, 0);
+      const playerFundImpact = -playerMoneyChanges;
+      const stadiumCost = tournament.stadiumCost ?? defaultStadiumCost;
+      const sponsorMoney = tournament.sponsorMoney ?? defaultSponsorMoney;
+      const additionalCosts = tournament.additionalCosts.filter((cost) => cost.amount > 0);
+      const totalAdditionalCosts = additionalCosts.reduce((total, cost) => total + cost.amount, 0);
+      const fundChange = playerFundImpact + sponsorMoney - stadiumCost - totalAdditionalCosts;
+      balanceAfter += fundChange;
+
+      return {
+        id: tournament.id,
+        name: tournament.name,
+        startDate: tournament.startDate,
+        playerFundImpact,
+        stadiumCost,
+        sponsorMoney,
+        additionalCosts,
+        fundContribution: tournament.fundContribution,
+        fundChange,
+        balanceAfter,
+      };
+    });
+
+    res.json({ success: true, data: { currentFund: balanceAfter, history: history.reverse() } });
+  } catch (error) {
+    res.status(500).json({ success: false, error: 'Không thể tải lịch sử quỹ' });
+  }
+});
+
 // Get system settings
 router.get('/', authenticate, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   try {

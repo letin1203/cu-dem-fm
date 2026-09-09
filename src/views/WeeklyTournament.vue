@@ -389,6 +389,23 @@
           <p class="text-gray-600">Không có giải hằng tuần đang diễn ra</p>
           <p class="text-sm text-gray-500 mt-1">Giải tiếp theo: {{ formatNextMonday(nextMonday) }}</p>
         </div>
+
+        <div class="card mt-4 sm:mt-6">
+          <div class="flex items-start gap-3">
+            <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-purple-100 text-purple-700">⚖️</div>
+            <div>
+              <h3 class="text-lg font-semibold text-gray-900">Logic chia đội</h3>
+              <p class="mt-1 text-sm text-gray-600">Hệ thống ưu tiên số lượng cầu thủ, vị trí thủ môn và sức mạnh đội hình để tạo các đội cân bằng nhất có thể.</p>
+            </div>
+          </div>
+          <div class="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <div class="rounded-lg border border-gray-200 bg-gray-50 p-4"><h4 class="font-semibold text-gray-900">1. Điều kiện và số đội</h4><p class="mt-1 text-sm text-gray-600">Cần ít nhất 10 cầu thủ đã tham gia. Admin/mod chọn 2, 3 hoặc 4 đội; số cầu thủ giữa các đội được phân bổ chênh lệch tối đa 1 người.</p></div>
+            <div class="rounded-lg border border-gray-200 bg-gray-50 p-4"><h4 class="font-semibold text-gray-900">2. Phân bổ thủ môn</h4><p class="mt-1 text-sm text-gray-600">Thủ môn được xếp trước, ưu tiên mỗi đội một GK. GK còn lại được đưa vào đội có ít GK nhất để giữ cân bằng vị trí.</p></div>
+            <div class="rounded-lg border border-gray-200 bg-gray-50 p-4"><h4 class="font-semibold text-gray-900">3. Ưu tiên Tier 1 và Tier 2</h4><p class="mt-1 text-sm text-gray-600">Tier 1 và Tier 2 là cầu thủ mạnh, được chia trước theo thứ tự Tier 1 rồi Tier 2. Khi chia Tier 2, đội có ít Tier 1 hơn sẽ được ưu tiên trước.</p></div>
+            <div class="rounded-lg border border-gray-200 bg-gray-50 p-4"><h4 class="font-semibold text-gray-900">4. Cân bằng cuối cùng</h4><p class="mt-1 text-sm text-gray-600">Các Tier 3–6 được xếp theo sức chứa và tổng Tier. Sau đó hệ thống đổi tối đa 100 cặp cầu thủ phù hợp để giảm chênh lệch Tier trung bình; Tier 1/2 và GK chính được giữ ổn định.</p></div>
+          </div>
+          <p class="mt-4 text-xs text-gray-500">Trong cùng một Tier, thứ tự cầu thủ được xáo trộn để kết quả mỗi lần chia đội không hoàn toàn giống nhau.</p>
+        </div>
       </div>
 
       <!-- Old Tournaments Tab -->

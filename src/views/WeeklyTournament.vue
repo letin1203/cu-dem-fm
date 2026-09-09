@@ -745,16 +745,17 @@
       </div>
 
       <!-- Modal Footer -->
-      <div class="flex justify-between items-center p-6 border-t border-gray-200 bg-gray-50">
-        <p class="text-sm text-gray-600">
-          {{ getFilteredModalData().length }} cầu thủ {{ attendanceModalType === 'pending' ? 'chưa phản hồi' : attendanceModalType === 'attending' ? 'tham gia' : attendanceModalType === 'not-attending' ? 'không tham gia' : 'cược' }}
+      <div class="flex items-center justify-between border-t border-gray-200 bg-gray-50 p-6" :class="attendanceModalType === 'pending' ? 'flex-col' : ''">
+        <p v-if="attendanceModalType !== 'pending'" class="text-sm text-gray-600">
+          {{ getFilteredModalData().length }} cầu thủ {{ attendanceModalType === 'attending' ? 'tham gia' : attendanceModalType === 'not-attending' ? 'không tham gia' : 'cược' }}
         </p>
-        <div class="flex items-center gap-3">
+        <div class="flex items-center gap-3" :class="attendanceModalType === 'pending' ? 'w-full flex-col sm:w-auto sm:flex-row' : ''">
           <button
             v-if="attendanceModalType === 'pending' && authStore.hasAnyRole(['admin', 'mod'])"
             @click="registerSelectedPlayers"
             :disabled="selectedPendingPlayerIds.size === 0 || batchAttendanceSaving"
             class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:cursor-not-allowed disabled:opacity-50"
+            :class="attendanceModalType === 'pending' ? 'w-full sm:w-auto' : ''"
           >
             {{ batchAttendanceSaving ? 'Đang đăng ký...' : `Đăng ký (${selectedPendingPlayerIds.size})` }}
           </button>
@@ -762,6 +763,7 @@
             @click="closeAttendanceModal"
             :disabled="batchAttendanceSaving"
             class="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors disabled:opacity-50"
+            :class="attendanceModalType === 'pending' ? 'w-full sm:w-auto' : ''"
           >
             Đóng
           </button>

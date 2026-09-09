@@ -109,7 +109,9 @@
             </div>
             <div class="flex justify-between">
               <span class="text-gray-600">Số dư:</span
-              ><span class="font-medium text-green-600"
+              ><span
+                class="font-medium"
+                :class="playerProfile.money < 0 ? 'text-red-600' : 'text-green-600'"
                 >{{ playerProfile.money.toLocaleString("vi-VN") }} ₫</span
               >
             </div>
@@ -133,7 +135,7 @@
               </div>
             </div>
             <button
-              @click="showTopUpModal = true"
+              @click="openTopUpModal"
               class="btn-primary w-full mt-1"
             >
               Nạp tiền
@@ -610,7 +612,17 @@ const pendingTopUps = ref<
 const showTopUpModal = ref(false);
 const submittingTopUp = ref(false);
 const selectedTopUpAmount = ref(100000);
-const topUpAmounts = [50000, 100000, 200000, 500000];
+const standardTopUpAmounts = [50000, 100000, 200000, 500000];
+const debtSettlementAmount = computed(() => {
+  const balance = playerProfile.value?.money || 0;
+  return balance < 0 ? Math.abs(balance) : null;
+});
+const topUpAmounts = computed(() => {
+  const debtAmount = debtSettlementAmount.value;
+  return debtAmount && !standardTopUpAmounts.includes(debtAmount)
+    ? [debtAmount, ...standardTopUpAmounts]
+    : standardTopUpAmounts;
+});
 const showAvatarModal = ref(false);
 const savingAvatar = ref(false);
 const selectedAvatar = ref('');
@@ -777,6 +789,10 @@ const refreshPlayerProfile = async () => {
 const openAvatarModal = (): void => {
   selectedAvatar.value = playerProfile.value?.avatar || avatarOptions[0];
   showAvatarModal.value = true;
+};
+const openTopUpModal = (): void => {
+  selectedTopUpAmount.value = debtSettlementAmount.value || 100000;
+  showTopUpModal.value = true;
 };
 const saveAvatar = async () => {
   if (!playerProfile.value || !selectedAvatar.value) return;

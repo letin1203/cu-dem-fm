@@ -205,7 +205,10 @@
                       v-for="player in team.players"
                       :key="player.id"
                       class="flex items-center justify-between p-2 bg-gray-50 rounded text-sm"
-                      :class="{ 'bg-yellow-100': isPlayerBetting(ongoingTournament.id, player.id) }"
+                      :class="{
+                        'bg-yellow-100': isPlayerBetting(ongoingTournament.id, player.id),
+                        'border-2 border-red-500': isCurrentUserPlayer(player.id),
+                      }"
                     >
                       <div class="flex items-center">
                         <div class="w-6 h-6 shrink-0 overflow-hidden bg-gray-300 rounded-full flex items-center justify-center mr-2 text-xs font-medium">
@@ -238,10 +241,10 @@
             </div>
             
             <!-- Attendance Toggle Button -->
-            <div v-if="(ongoingTournament.status === 'UPCOMING' && getAttendanceButtonText(ongoingTournament.id) !== 'Không có cầu thủ') || canUserToggleBet(ongoingTournament)" class="flex justify-center pt-2 border-t border-gray-200">
+            <div v-if="(ongoingTournament.status === 'UPCOMING' && getTournamentTeams(ongoingTournament).length === 0 && getAttendanceButtonText(ongoingTournament.id) !== 'Không có cầu thủ') || canUserToggleBet(ongoingTournament)" class="flex justify-center pt-2 border-t border-gray-200">
               <div class="flex w-full flex-col items-stretch gap-3 sm:w-auto sm:flex-row sm:flex-wrap sm:justify-center [&>button]:w-full sm:[&>button]:w-auto">
                 <button
-                  v-if="ongoingTournament.status === 'UPCOMING' && getAttendanceButtonText(ongoingTournament.id) !== 'Không có cầu thủ'"
+                  v-if="ongoingTournament.status === 'UPCOMING' && getTournamentTeams(ongoingTournament).length === 0 && getAttendanceButtonText(ongoingTournament.id) !== 'Không có cầu thủ'"
                   @click="toggleAttendance(ongoingTournament.id)"
                   :disabled="attendanceLoading.has(ongoingTournament.id)"
                   class="px-6 py-2 rounded-lg font-medium transition-colors duration-200"
@@ -289,7 +292,7 @@
                   class="px-4 py-2 text-center rounded-lg font-medium transition-colors duration-200"
                   :class="[betLoading.has(ongoingTournament.id) ? 'opacity-50 cursor-not-allowed' : 'hover:shadow-md', getUserBetStatus(ongoingTournament.id) ? 'bg-yellow-600 text-white hover:bg-yellow-700' : 'bg-gray-300 text-gray-700 hover:bg-gray-400']"
                 >
-                  {{ betLoading.has(ongoingTournament.id) ? 'Đang tải...' : (getUserBetStatus(ongoingTournament.id) ? 'Cược ✓' : 'Cược') }}
+                  {{ betLoading.has(ongoingTournament.id) ? 'Đang tải...' : (getUserBetStatus(ongoingTournament.id) ? 'Cược đội mình thắng ✓' : 'Cược đội mình thắng') }}
                 </button>
                 
               </div>
@@ -562,7 +565,10 @@
                         v-for="player in team.players"
                         :key="player.id"
                         class="flex items-center justify-between p-2 bg-gray-50 rounded text-sm"
-                        :class="{ 'bg-yellow-100': isPlayerBetting(tournament.id, player.id) }"
+                        :class="{
+                          'bg-yellow-100': isPlayerBetting(tournament.id, player.id),
+                          'border-2 border-red-500': isCurrentUserPlayer(player.id),
+                        }"
                       >
                         <div class="flex items-center">
                           <div class="w-6 h-6 shrink-0 overflow-hidden bg-gray-300 rounded-full flex items-center justify-center mr-2 text-xs font-medium">
@@ -707,8 +713,18 @@
   <div v-if="showTournamentMoneyHistoryModal" class="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4" @click.self="showTournamentMoneyHistoryModal = false">
     <div class="flex max-h-[90vh] w-full max-w-2xl flex-col overflow-hidden rounded-lg bg-white shadow-xl">
       <div class="flex items-center justify-between border-b p-5"><div><h3 class="text-lg font-semibold text-gray-900">Biến động tiền cầu thủ</h3><p class="text-sm text-gray-500">{{ selectedMoneyHistoryTournament?.name }}</p></div><button @click="showTournamentMoneyHistoryModal = false" class="text-2xl text-gray-400 hover:text-gray-700">×</button></div>
-      <div class="overflow-y-auto p-5"><div v-if="tournamentMoneyHistoryLoading" class="py-8 text-center text-gray-500">Đang tải...</div><div v-else-if="!tournamentMoneyHistory.length" class="py-8 text-center text-gray-500">Chưa có lịch sử biến động tiền.</div><div v-else class="space-y-3"><div v-for="item in tournamentMoneyHistory" :key="item.id" class="rounded-lg border border-gray-200 p-4"><div class="flex justify-between gap-3"><div class="min-w-0"><p class="font-medium text-gray-900">{{ item.player.name }}</p><p class="text-xs text-gray-500">{{ item.description }}</p></div><span class="shrink-0 whitespace-nowrap font-semibold" :class="item.amount >= 0 ? 'text-green-600' : 'text-red-600'">{{ item.amount >= 0 ? '+' : '' }}{{ item.amount.toLocaleString('vi-VN') }} ₫</span></div><div v-if="item.details?.length" class="mt-3 space-y-1 border-t pt-3 text-xs"><div v-for="detail in item.details" :key="`${detail.description}-${detail.amount}`" class="flex justify-between gap-3 text-gray-600"><span class="min-w-0">{{ detail.description }}</span><span class="shrink-0 whitespace-nowrap text-gray-900">{{ detail.amount >= 0 ? '+' : '' }}{{ detail.amount.toLocaleString('vi-VN') }} ₫</span></div></div><div class="mt-3 flex justify-between border-t pt-3 text-xs text-gray-500"><span>Trước: <strong>{{ item.balanceBefore.toLocaleString('vi-VN') }} ₫</strong></span><span>Sau: <strong>{{ item.balanceAfter.toLocaleString('vi-VN') }} ₫</strong></span></div></div></div></div>
+      <div class="overflow-y-auto p-5"><div v-if="tournamentMoneyHistoryLoading" class="py-8 text-center text-gray-500">Đang tải...</div><div v-else-if="!tournamentMoneyHistory.length" class="py-8 text-center text-gray-500">Chưa có lịch sử biến động tiền.</div><div v-else class="space-y-3"><div v-for="item in tournamentMoneyHistory" :key="item.id" class="rounded-lg border p-4" :class="isCurrentUserPlayer(item.player.id) ? 'border-red-500 bg-red-50' : 'border-gray-200'"><div class="flex justify-between gap-3"><div class="min-w-0"><p class="font-medium text-gray-900">{{ item.player.name }}</p><p class="text-xs text-gray-500">{{ item.description }}</p></div><span class="shrink-0 whitespace-nowrap font-semibold" :class="item.amount >= 0 ? 'text-green-600' : 'text-red-600'">{{ item.amount >= 0 ? '+' : '' }}{{ item.amount.toLocaleString('vi-VN') }} ₫</span></div><div v-if="item.details?.length" class="mt-3 space-y-1 border-t pt-3 text-xs"><div v-for="detail in item.details" :key="`${detail.description}-${detail.amount}`" class="flex justify-between gap-3 text-gray-600"><span class="min-w-0">{{ detail.description }}</span><span class="shrink-0 whitespace-nowrap text-gray-900">{{ detail.amount >= 0 ? '+' : '' }}{{ detail.amount.toLocaleString('vi-VN') }} ₫</span></div></div><div class="mt-3 flex flex-wrap items-center justify-between gap-3 border-t pt-3 text-xs text-gray-500"><span>Trước: <strong>{{ item.balanceBefore.toLocaleString('vi-VN') }} ₫</strong></span><div class="flex items-center gap-2"><span>Sau: <strong :class="item.balanceAfter < 0 ? 'text-red-600' : 'text-gray-900'">{{ item.balanceAfter.toLocaleString('vi-VN') }} ₫</strong></span><button v-if="isCurrentUserPlayer(item.player.id) && item.balanceAfter < 0" type="button" class="rounded bg-red-600 px-2 py-1 font-medium text-white hover:bg-red-700" @click="openTournamentDebtTopUp(item)">Thanh toán</button></div></div></div></div></div>
       <div class="flex justify-end border-t p-4"><button @click="showTournamentMoneyHistoryModal = false" class="btn-primary">Đóng</button></div>
+    </div>
+  </div>
+
+  <div v-if="showTournamentDebtTopUpModal" class="fixed inset-0 z-[70] flex items-center justify-center bg-gray-900/50 p-4" @click.self="showTournamentDebtTopUpModal = false">
+    <div class="w-full max-w-md rounded-lg bg-white p-6 shadow-xl">
+      <h2 class="text-lg font-semibold text-gray-900">Nạp tiền</h2>
+      <p class="mb-4 mt-1 text-sm text-gray-500">Quét mã MoMo để nạp quỹ, sau đó chọn số tiền đã nạp. Yêu cầu sẽ chờ quản trị viên duyệt.</p>
+      <img src="/quy-momo.jpg" alt="Mã QR MoMo nạp quỹ" class="mx-auto mb-5 w-full max-w-xs rounded-lg border border-gray-200">
+      <div class="grid grid-cols-2 gap-3"><button v-for="amount in tournamentDebtTopUpAmounts" :key="amount" type="button" class="rounded-lg border px-4 py-3 font-medium transition-colors" :class="selectedTournamentDebtTopUpAmount === amount ? 'border-primary-600 bg-primary-600 text-white' : 'border-gray-200 text-gray-700 hover:bg-gray-50'" @click="selectedTournamentDebtTopUpAmount = amount">{{ amount.toLocaleString('vi-VN') }} ₫</button></div>
+      <div class="mt-6 flex justify-end gap-3"><button type="button" class="btn-secondary" @click="showTournamentDebtTopUpModal = false">Hủy</button><button type="button" class="btn-primary" :disabled="tournamentDebtTopUpSubmitting" @click="submitTournamentDebtTopUp">{{ tournamentDebtTopUpSubmitting ? 'Đang gửi...' : 'Xác nhận' }}</button></div>
     </div>
   </div>
 
@@ -1397,6 +1413,17 @@ const showTournamentMoneyHistoryModal = ref(false)
 const selectedMoneyHistoryTournament = ref<Tournament | null>(null)
 const tournamentMoneyHistory = ref<TournamentMoneyHistoryItem[]>([])
 const tournamentMoneyHistoryLoading = ref(false)
+const showTournamentDebtTopUpModal = ref(false)
+const tournamentDebtAmount = ref<number | null>(null)
+const selectedTournamentDebtTopUpAmount = ref(100000)
+const tournamentDebtTopUpSubmitting = ref(false)
+const standardTopUpAmounts = [50000, 100000, 200000, 500000]
+const tournamentDebtTopUpAmounts = computed(() => {
+  const debtAmount = tournamentDebtAmount.value
+  return debtAmount && !standardTopUpAmounts.includes(debtAmount)
+    ? [debtAmount, ...standardTopUpAmounts]
+    : standardTopUpAmounts
+})
 
 // Team generation
 const teamGenerationLoading = ref(false)
@@ -2824,6 +2851,11 @@ const getUserAttendanceStatus = (tournamentId: string): string => {
   return attendance.status || 'NULL'
 }
 
+const isCurrentUserPlayer = (playerId: string): boolean => {
+  const currentPlayerId = authStore.currentUser?.player?.id || authStore.currentUser?.playerId
+  return Boolean(currentPlayerId && currentPlayerId === playerId)
+}
+
 const toggleWater = async (tournamentId: string): Promise<void> => {
   if (waterLoading.value.has(tournamentId)) return
   
@@ -3025,6 +3057,40 @@ const openTournamentMoneyHistory = async (tournament: Tournament): Promise<void>
     toast.error(error instanceof Error ? error.message : 'Không thể tải biến động tiền')
   } finally {
     tournamentMoneyHistoryLoading.value = false
+  }
+}
+
+const openTournamentDebtTopUp = async (item: TournamentMoneyHistoryItem): Promise<void> => {
+  let currentBalance = item.balanceAfter
+  try {
+    const response = await apiClient.getPlayer(item.player.id)
+    if (response.success && response.data) currentBalance = Number((response.data as any).money)
+  } catch (error) {
+    console.warn('Unable to refresh player balance before top-up:', error)
+  }
+
+  if (currentBalance >= 0) {
+    toast.info('Số dư hiện tại không còn âm')
+    return
+  }
+
+  tournamentDebtAmount.value = Math.abs(currentBalance)
+  selectedTournamentDebtTopUpAmount.value = tournamentDebtAmount.value
+  showTournamentDebtTopUpModal.value = true
+}
+
+const submitTournamentDebtTopUp = async (): Promise<void> => {
+  if (tournamentDebtTopUpSubmitting.value) return
+  tournamentDebtTopUpSubmitting.value = true
+  try {
+    const response = await apiClient.createMoneyTopUp(selectedTournamentDebtTopUpAmount.value)
+    if (!response.success) throw new Error(response.error || 'Không thể gửi yêu cầu nạp tiền')
+    showTournamentDebtTopUpModal.value = false
+    toast.success('Yêu cầu nạp tiền đã được gửi và đang chờ duyệt')
+  } catch (error) {
+    toast.error(error instanceof Error ? error.message : 'Không thể gửi yêu cầu nạp tiền')
+  } finally {
+    tournamentDebtTopUpSubmitting.value = false
   }
 }
 

@@ -9,7 +9,7 @@ const allowedAmounts = [50000, 100000, 200000, 500000];
 router.post('/', authenticate, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   try {
     const amount = Number(req.body?.amount);
-    if (!allowedAmounts.includes(amount)) {
+    if (!Number.isInteger(amount) || amount <= 0) {
       res.status(400).json({ success: false, error: 'Số tiền nạp không hợp lệ' });
       return;
     }
@@ -17,6 +17,13 @@ router.post('/', authenticate, async (req: AuthenticatedRequest, res: Response):
     const user = await prisma.user.findUnique({ where: { id: req.user!.id }, select: { playerId: true } });
     if (!user?.playerId) {
       res.status(400).json({ success: false, error: 'Tài khoản chưa được liên kết với cầu thủ' });
+      return;
+    }
+
+    const player = await prisma.player.findUnique({ where: { id: user.playerId }, select: { money: true } });
+    const isDebtSettlementAmount = Boolean(player && player.money < 0 && amount === Math.abs(player.money));
+    if (!allowedAmounts.includes(amount) && !isDebtSettlementAmount) {
+      res.status(400).json({ success: false, error: 'Số tiền nạp không hợp lệ' });
       return;
     }
 

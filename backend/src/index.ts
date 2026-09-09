@@ -26,10 +26,16 @@ dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 3001;
 
-// Rate limiting - more lenient in development
+const isProduction = process.env.NODE_ENV === 'production';
+const rateLimitEnabled = process.env.RATE_LIMIT_ENABLED === 'true' ||
+  (isProduction && process.env.RATE_LIMIT_ENABLED !== 'false');
+const rateLimitWindowMs = Number(process.env.RATE_LIMIT_WINDOW_MS) || 15 * 60 * 1000;
+const rateLimitMaxRequests = Number(process.env.RATE_LIMIT_MAX_REQUESTS) || (isProduction ? 100 : 1000);
+
+// Do not throttle local development. Production can be configured through env vars.
 const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: process.env.NODE_ENV === 'production' ? 100 : 1000, // 1000 requests in dev, 100 in production
+  windowMs: rateLimitWindowMs,
+  max: rateLimitMaxRequests,
   message: {
     success: false,
     error: 'Too many requests from this IP, please try again later.',
@@ -37,8 +43,8 @@ const limiter = rateLimit({
   standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
   legacyHeaders: false, // Disable the `X-RateLimit-*` headers
   skip: (req) => {
-    // Skip rate limiting for auth routes in development
-    return process.env.NODE_ENV !== 'production' && req.path.startsWith('/api/auth')
+    // Auth requests and all development traffic are excluded to prevent login loops.
+    return !rateLimitEnabled || req.path.startsWith('/api/auth');
   }
 });
 

@@ -37,7 +37,7 @@
         <button
           v-for="filter in filters"
           :key="filter"
-          @click="activeFilter = filter"
+          @click="handleFilterChange(filter)"
           :class="[
             'whitespace-nowrap py-2 px-1 border-b-2 font-medium text-sm flex-shrink-0',
             activeFilter === filter
@@ -1281,6 +1281,7 @@ const attendancePlayerNameFilter = ref('')
 const attendanceModalTournamentId = ref<string | null>(null)
 const selectedPendingPlayerIds = ref<Set<string>>(new Set())
 const batchAttendanceSaving = ref(false)
+const attendanceDetailsLoadingIds = ref<Set<string>>(new Set())
 const areAllPendingPlayersSelected = computed(() => {
   const pendingPlayers = getFilteredModalData()
   return pendingPlayers.length > 0 && pendingPlayers.every(item => selectedPendingPlayerIds.value.has(item.player.id))
@@ -1655,7 +1656,9 @@ const getAttendancePercentage = (tournamentId: string): number => {
 
 // Modal functions
 const fetchAttendanceDetails = async (tournamentId: string): Promise<void> => {
+  if (attendanceDetailsLoadingIds.value.has(tournamentId)) return
   try {
+    attendanceDetailsLoadingIds.value = new Set(attendanceDetailsLoadingIds.value).add(tournamentId)
     attendanceModalLoading.value = true
     const response = await apiClient.get<TournamentAttendanceDetails[]>(`/tournaments/${tournamentId}/attendance-details`)
     if (response.success && response.data) {
@@ -1669,6 +1672,9 @@ const fetchAttendanceDetails = async (tournamentId: string): Promise<void> => {
     attendanceModalData.value = []
   } finally {
     attendanceModalLoading.value = false
+    const loadingIds = new Set(attendanceDetailsLoadingIds.value)
+    loadingIds.delete(tournamentId)
+    attendanceDetailsLoadingIds.value = loadingIds
   }
 }
 
@@ -1941,6 +1947,7 @@ const loadMoreOldTournaments = async () => {
     loadingMore.value = true
     oldTournamentPage.value++
     await loadOldTournaments(oldTournamentPage.value, true)
+    await loadAttendanceData(oldTournaments.value.slice(-oldTournamentLimit))
   } finally {
     loadingMore.value = false
   }
@@ -2231,6 +2238,23 @@ const openStadiumCostModal = (tournament: Tournament) => {
   stadiumCostTournament.value = tournament
   stadiumCostForm.value = getTournamentStadiumCost(tournament)
   showStadiumCostModal.value = true
+}
+
+const loadAttendanceData = async (tournaments: Tournament[]): Promise<void> => {
+  const tournamentIds = [...new Set(tournaments.map(tournament => tournament.id))]
+  await Promise.all([
+    ...tournamentIds.map(id => fetchAttendance(id)),
+    ...tournamentIds.map(id => fetchAttendanceStats(id)),
+    ...tournamentIds.map(id => fetchAttendanceDetails(id)),
+    ...tournamentIds.map(id => systemStore.fetchAdditionalCosts(id)),
+  ])
+}
+
+const handleFilterChange = async (filter: string): Promise<void> => {
+  activeFilter.value = filter
+  if (filter === 'Giải đấu cũ') {
+    await loadAttendanceData(oldTournaments.value)
+  }
 }
 
 const togglePendingPlayer = (playerId: string): void => {
@@ -2615,14 +2639,9 @@ const fetchData = async () => {
     ])
     await loadOldTournaments(1)
     
-    // Fetch attendance and additional costs for all weekly tournaments
-    const weeklyTournamentIds = weeklyTournaments.value.map(t => t.id)
-    await Promise.all([
-      ...weeklyTournamentIds.map(id => fetchAttendance(id)),
-      ...weeklyTournamentIds.map(id => fetchAttendanceStats(id)),
-      ...weeklyTournamentIds.map(id => fetchAttendanceDetails(id)),
-      ...weeklyTournamentIds.map(id => systemStore.fetchAdditionalCosts(id))
-    ])
+    // Only load attendance for the currently displayed tournament on first render.
+    // Historical tournaments are loaded on demand when the user opens that tab.
+    await loadAttendanceData(weeklyTournaments.value.filter(tournament => tournament.status !== 'COMPLETED'))
   } catch (err: any) {
     console.error('Fetch data error:', err)
     toast.error(err.response?.data?.error || 'Không thể tải dữ liệu')

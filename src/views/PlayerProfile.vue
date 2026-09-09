@@ -428,7 +428,7 @@
       class="fixed inset-0 z-[70] flex items-center justify-center bg-black/50 p-4"
       @click.self="selectedTournamentDetail = null"
     >
-      <div class="w-full max-w-lg rounded-lg bg-white shadow-xl">
+      <div class="flex max-h-[90vh] w-full max-w-lg flex-col overflow-hidden rounded-lg bg-white shadow-xl">
         <div class="flex items-start justify-between border-b p-5">
           <div>
             <h2 class="text-lg font-semibold text-gray-900">
@@ -445,7 +445,7 @@
             ×
           </button>
         </div>
-        <div class="space-y-4 p-5">
+        <div class="min-h-0 space-y-4 overflow-y-auto p-5">
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
             <div>
               <span class="text-gray-500">Trạng thái: </span

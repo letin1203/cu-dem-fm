@@ -36,7 +36,7 @@ export const createPlayerSchema = z.object({
   name: z.string().min(1, 'Name is required'),
   position: z.string().min(1, 'Position is required'),
   yearOfBirth: z.number().int().min(1950).max(new Date().getFullYear()),
-  tier: z.number().int().min(1).max(10).default(1),
+  tier: z.number().int().min(1).max(6).default(6),
   money: z.number().int().min(0).default(0),
   avatar: z.string().url().optional(),
   teamId: z.string().optional(),
@@ -81,6 +81,7 @@ export const updateTournamentSchema = z.object({
   status: TournamentStatus.optional(),
   startDate: z.string().transform((str) => new Date(str)).optional(),
   endDate: z.string().transform((str) => new Date(str)).optional().nullable(),
+  stadiumCost: z.number().int().min(0).optional(),
   winnerId: z.string().optional(),
 });
 

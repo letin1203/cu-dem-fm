@@ -70,7 +70,7 @@
                   <div class="flex justify-between items-start mb-2">
                     <div>
                       <div class="font-medium text-gray-900">{{ player.name }}</div>
-                      <div class="text-sm text-gray-600">Hiện tại: {{ player.money.toLocaleString() }} VND</div>
+                      <div class="text-sm text-gray-600">Hiện tại: {{ player.money.toLocaleString('vi-VN') }} ₫</div>
                     </div>
                   </div>
                   
@@ -82,7 +82,7 @@
                       :class="change.amount >= 0 ? 'text-green-600' : 'text-red-600'"
                     >
                       <span>{{ change.description }}:</span>
-                      <span>{{ change.amount >= 0 ? '+' : '' }}{{ change.amount.toLocaleString() }} VND</span>
+                      <span>{{ change.amount >= 0 ? '+' : '' }}{{ change.amount.toLocaleString('vi-VN') }} ₫</span>
                     </div>
                   </div>
                   
@@ -92,13 +92,13 @@
                       class="font-medium"
                       :class="getDetailedMoneyChange(tournamentId, team, player).total >= 0 ? 'text-green-600' : 'text-red-600'"
                     >
-                      {{ getDetailedMoneyChange(tournamentId, team, player).total >= 0 ? '+' : '' }}{{ getDetailedMoneyChange(tournamentId, team, player).total.toLocaleString() }} VND
+                      {{ getDetailedMoneyChange(tournamentId, team, player).total >= 0 ? '+' : '' }}{{ getDetailedMoneyChange(tournamentId, team, player).total.toLocaleString('vi-VN') }} ₫
                     </span>
                   </div>
                   
                   <div class="flex justify-between items-center text-sm text-gray-600 mt-1">
                     <span>Số dư mới:</span>
-                    <span>{{ (player.money + getDetailedMoneyChange(tournamentId, team, player).total).toLocaleString() }} VND</span>
+                    <span>{{ (player.money + getDetailedMoneyChange(tournamentId, team, player).total).toLocaleString('vi-VN') }} ₫</span>
                   </div>
                 </div>
               </div>

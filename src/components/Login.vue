@@ -96,7 +96,7 @@
             </div>
             <div class="flex justify-between">
               <span class="font-medium">Người dùng:</span>
-              <span>player1 / user123</span>
+              <span>testuser20 / test123</span>
             </div>
           </div>
           <div class="mt-3 space-y-1">
@@ -116,7 +116,7 @@
             </button>
             <button
               type="button"
-              @click="setDemoCredentials('player1', 'user123')"
+              @click="setDemoCredentials('testuser20', 'test123')"
               class="text-xs text-primary-600 hover:text-primary-800"
             >
               Dùng tài khoản người dùng

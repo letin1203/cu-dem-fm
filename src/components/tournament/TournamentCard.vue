@@ -47,19 +47,19 @@
       <!-- Financial Information -->
       <div v-if="systemSettings" class="flex flex-wrap items-center gap-4 mt-2 text-sm mb-4">
         <span class="text-green-600 font-medium">
-          💰 Tài trợ: {{ systemSettings.sponsorMoney.toLocaleString() }} VND
+          💰 Tài trợ: {{ systemSettings.sponsorMoney.toLocaleString('vi-VN') }} ₫
         </span>
         <span class="text-red-600 font-medium">
-          🏟️ Sân: {{ systemSettings.stadiumCost.toLocaleString() }} VND
+          🏟️ Sân: {{ systemSettings.stadiumCost.toLocaleString('vi-VN') }} ₫
         </span>
         <span class="text-orange-600 font-medium">
-          💸 Phát sinh: {{ getTournamentAdditionalCostsTotal().toLocaleString() }} VND
+          💸 Phát sinh: {{ getTournamentAdditionalCostsTotal().toLocaleString('vi-VN') }} ₫
         </span>
         <span class="text-blue-600 font-medium">
-          📊 Ròng: {{ calculateTournamentNet().toLocaleString() }} VND
+          📊 Ròng: {{ calculateTournamentNet().toLocaleString('vi-VN') }} ₫
         </span>
         <span v-if="getAttendingCount() > 0" class="text-purple-600 font-medium">
-          👥 Est. Cost per Player: {{ calculateCostPerPlayer().toLocaleString() }} VND
+          👥 Chi phí ước tính mỗi cầu thủ: {{ calculateCostPerPlayer().toLocaleString('vi-VN') }} ₫
         </span>
       </div>
 
@@ -222,7 +222,7 @@
           </button>
         </div>
         <div v-if="canGenerateTeams && tournamentTeams.length === 0" class="text-sm text-gray-500 mt-2">
-          Will create {{ getExpectedTeamCount() }} balanced teams
+          Sẽ tạo {{ getExpectedTeamCount() }} đội cân bằng
         </div>
       </div>
 
@@ -440,7 +440,7 @@ const getTeamGoalkeeperCount = (teamId: string) => {
 }
 
 const getTeamTier9PlusCount = (teamId: string) => {
-  return getTeamPlayers(teamId).filter(player => player.tier >= 9).length
+  return getTeamPlayers(teamId).filter(player => player.tier <= 2).length
 }
 
 const getTeamTotalTier = (teamId: string) => {

@@ -96,6 +96,44 @@ router.get('/:id/money-history', async (req: AuthenticatedRequest, res: Response
   }
 });
 
+// Get the tournaments a player attended, newest first.
+router.get('/:id/tournament-history', async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  try {
+    const { id } = req.params;
+
+    const attendances = await prisma.tournamentPlayerAttendance.findMany({
+      where: {
+        playerId: id,
+        status: { in: ['ATTEND', 'ATTENDING'] },
+      },
+      include: {
+        tournament: {
+          select: {
+            id: true,
+            name: true,
+            type: true,
+            status: true,
+            startDate: true,
+            endDate: true,
+            completedAt: true,
+            winner: { select: { id: true, name: true } },
+            teams: { select: { team: { select: { id: true, name: true, score: true } } } },
+            tournamentTeamPlayers: {
+              where: { playerId: id },
+              select: { team: { select: { id: true, name: true } } },
+            },
+          },
+        },
+      },
+      orderBy: { tournament: { startDate: 'desc' } },
+    });
+
+    res.json({ success: true, data: attendances });
+  } catch (error) {
+    res.status(500).json({ success: false, error: 'Không thể tải lịch sử giải đấu của cầu thủ' });
+  }
+});
+
 // Get player by ID
 router.get('/:id', async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   try {

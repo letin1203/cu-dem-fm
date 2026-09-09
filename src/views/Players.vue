@@ -2,31 +2,31 @@
   <div class="space-y-4 sm:space-y-6">
     <!-- Header -->
     <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-3 sm:space-y-0">
-      <h1 class="text-2xl sm:text-3xl font-bold text-gray-900">Players</h1>
+      <h1 class="text-2xl sm:text-3xl font-bold text-gray-900">Cầu thủ</h1>
       <button 
         v-if="authStore.hasPermission('canEditPlayers')"
         @click="showAddForm = true" 
         class="btn-primary w-full sm:w-auto"
       >
-        Add New Player
+        Thêm cầu thủ
       </button>
     </div>
 
     <!-- Filter Section -->
     <div class="card p-4 space-y-4">
       <div class="max-w-md">
-        <label class="form-label">Filter by Player Name</label>
+        <label class="form-label">Tìm theo tên cầu thủ</label>
         <input
           v-model="playerNameFilter"
           type="text"
           class="form-input"
-          placeholder="Search player name..."
+          placeholder="Nhập tên cầu thủ..."
         >
       </div>
       
       <!-- Tier Filter -->
       <div>
-        <label class="form-label">Filter by Tier</label>
+        <label class="form-label">Lọc theo Tier</label>
         <div class="flex flex-wrap gap-2 mt-2">
           <button
             @click="selectedTierRange = null"
@@ -35,7 +35,7 @@
               : 'bg-gray-100 text-gray-700 hover:bg-gray-200'"
             class="px-3 py-2 rounded-lg text-sm font-medium transition-colors"
           >
-            All Tiers
+            Tất cả Tier
           </button>
           <button
             v-for="tierRange in tierRanges"
@@ -51,6 +51,14 @@
           </button>
         </div>
       </div>
+
+      <div class="max-w-md">
+        <label class="form-label">Sắp xếp</label>
+        <select v-model="sortBy" class="form-input mt-2">
+          <option value="tier">Tier (mạnh đến yếu)</option>
+          <option value="money-asc">Tiền (thấp đến cao)</option>
+        </select>
+      </div>
     </div>
 
     <!-- Players Table/Cards -->
@@ -64,24 +72,24 @@
       <div v-else-if="error" class="text-center py-8">
         <div class="text-red-600 mb-2">{{ error }}</div>
         <button @click="playersStore.fetchPlayers()" class="btn-secondary">
-          Try Again
+          Thử lại
         </button>
       </div>
 
       <!-- Empty State -->
       <div v-else-if="filteredPlayers.length === 0" class="text-center py-8">
         <div class="text-gray-500 mb-4" v-if="playerNameFilter || selectedTierRange">
-          No players match the current filters.
+          Không có cầu thủ nào phù hợp với bộ lọc hiện tại.
         </div>
         <div class="text-gray-500 mb-4" v-else>
-          No players found
+          Chưa có cầu thủ nào.
         </div>
         <button 
           v-if="authStore.hasPermission('canEditPlayers')"
           @click="showAddForm = true" 
           class="btn-primary"
         >
-          Add First Player
+          Thêm cầu thủ đầu tiên
         </button>
       </div>
 
@@ -103,7 +111,7 @@
               </div>
               <div>
                 <div class="text-sm font-medium text-gray-900">{{ player.name }}</div>
-                <div class="text-xs text-gray-500">{{ player.position }} • Born {{ player.yearOfBirth }}</div>
+                <div class="text-xs text-gray-500">{{ displayPosition(player.position) }} • Năm sinh {{ player.yearOfBirth }}</div>
               </div>
             </div>
             <div class="flex space-x-2">
@@ -136,9 +144,9 @@
               <div class="flex items-center mt-1">
                 <div class="flex">
                   <div 
-                    v-for="star in 10" 
+                    v-for="star in 6" 
                     :key="star"
-                    :class="star <= player.tier ? 'text-yellow-400' : 'text-gray-300'"
+                    :class="star <= 7 - player.tier ? 'text-yellow-400' : 'text-gray-300'"
                     class="w-3 h-3"
                   >
                     ★
@@ -147,8 +155,8 @@
               </div>
             </div>
             <div class="text-right">
-              <span class="text-gray-500">Money:</span>
-              <span class="text-sm font-medium">${{ player.money.toLocaleString() }}</span>
+              <span class="text-gray-500">Tiền:</span>
+              <span class="text-sm font-medium">{{ player.money.toLocaleString('vi-VN') }} ₫</span>
             </div>
           </div>
         </div>
@@ -163,10 +171,10 @@
           >
             <span v-if="playersStore.loadingAll" class="flex items-center justify-center">
               <div class="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-              Loading All Players...
+              Đang tải tất cả cầu thủ...
             </span>
             <span v-else>
-              Load All Players ({{ remainingPlayersCount }} more)
+              Tải tất cả cầu thủ (còn {{ remainingPlayersCount }})
             </span>        </button>
       </div>
       </div>
@@ -177,22 +185,22 @@
           <thead class="bg-gray-50">
             <tr>
               <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Name
+                Tên
               </th>
               <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Position
+                Vị trí
               </th>
               <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Born
+                Năm sinh
               </th>
               <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Tier
               </th>
               <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Money
+                Tiền
               </th>
               <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Actions
+                Thao tác
               </th>
             </tr>
           </thead>
@@ -213,7 +221,7 @@
                 </div>
               </td>
               <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                {{ player.position }}
+                {{ displayPosition(player.position) }}
               </td>
               <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                 {{ player.yearOfBirth }}
@@ -222,9 +230,9 @@
                 <div class="flex items-center">
                   <div class="flex">
                     <div 
-                      v-for="star in 10" 
+                      v-for="star in 6" 
                       :key="star"
-                      :class="star <= player.tier ? 'text-yellow-400' : 'text-gray-300'"
+                      :class="star <= 7 - player.tier ? 'text-yellow-400' : 'text-gray-300'"
                       class="w-3 h-3"
                     >
                       ★
@@ -233,7 +241,7 @@
                 </div>
               </td>
               <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                ${{ player.money.toLocaleString() }}
+                {{ player.money.toLocaleString('vi-VN') }} ₫
               </td>
               <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
                 <div class="flex space-x-2">
@@ -245,18 +253,15 @@
                     @click="editPlayer(player)"
                     class="text-primary-600 hover:text-primary-900"
                   >
-                    Edit
+                    Sửa
                   </button>
                   <button
                     v-if="authStore.hasPermission('canDeletePlayers')"
                     @click="deletePlayer(player.id)"
                     class="text-red-600 hover:text-red-900"
                   >
-                    Delete
+                    Xóa
                   </button>
-                  <span v-if="!authStore.hasPermission('canEditPlayers')" class="text-gray-400 text-sm">
-                    View Only
-                  </span>
                 </div>
               </td>
             </tr>
@@ -274,10 +279,10 @@
         >
           <span v-if="playersStore.loadingAll" class="flex items-center justify-center">
             <div class="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-            Loading All Players...
+            Đang tải tất cả cầu thủ...
           </span>
           <span v-else>
-            Load All Players ({{ remainingPlayersCount }} more)
+            Tải tất cả cầu thủ (còn {{ remainingPlayersCount }})
           </span>
         </button>
       </div>
@@ -299,34 +304,34 @@
     <div v-if="showAddForm || editingPlayer" class="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center z-50">
       <div class="bg-white rounded-lg p-6 w-full max-w-md">
         <h2 class="text-lg font-semibold mb-4">
-          {{ editingPlayer ? 'Edit Player' : 'Add New Player' }}
+          {{ editingPlayer ? 'Chỉnh sửa cầu thủ' : 'Thêm cầu thủ' }}
         </h2>
         
         <form @submit.prevent="submitForm" class="space-y-4">
           <div>
-            <label class="form-label">Player Name</label>
+            <label class="form-label">Tên cầu thủ</label>
             <input
               v-model="formData.name"
               type="text"
               required
               class="form-input"
-              placeholder="Enter player name"
+              placeholder="Nhập tên cầu thủ"
             >
           </div>
           
           <div>
-            <label class="form-label">Position</label>
+            <label class="form-label">Vị trí</label>
             <select v-model="formData.position" required class="form-input">
-              <option value="">Select position</option>
-              <option value="Goalkeeper">Goalkeeper</option>
-              <option value="Defender">Defender</option>
-              <option value="Midfielder">Midfielder</option>
-              <option value="Forward">Forward</option>
+              <option value="">Chọn vị trí</option>
+              <option value="GK">GK - Thủ môn</option>
+              <option value="DEF">DEF - Hậu vệ</option>
+              <option value="MID">MID - Tiền vệ</option>
+              <option value="FWD">FWD - Tiền đạo</option>
             </select>
           </div>
           
           <div>
-            <label class="form-label">Year of Birth</label>
+            <label class="form-label">Năm sinh</label>
             <input
               v-model="formData.yearOfBirth"
               type="number"
@@ -334,31 +339,34 @@
               min="1960"
               max="2010"
               class="form-input"
-              placeholder="e.g., 1987"
+              placeholder="VD: 1987"
             >
           </div>
           
           <div>
-            <label class="form-label">Tier (1-10)</label>
+            <label class="form-label">Tier (1-6, Tier 1 mạnh nhất)</label>
             <select v-model="formData.tier" required class="form-input">
-              <option value="">Select tier</option>
-              <option v-for="tier in 10" :key="tier" :value="tier">
-                {{ tier }} {{ '★'.repeat(tier) }}
+              <option value="">Chọn Tier</option>
+              <option v-for="tier in 6" :key="tier" :value="tier">
+                Tier {{ tier }} {{ '★'.repeat(7 - tier) }}
               </option>
             </select>
           </div>
           
           <div>
-            <label class="form-label">Money ($)</label>
+            <label class="form-label">Tiền (₫)</label>
             <input
               v-model="formData.money"
               type="number"
-              required
+              :readonly="!!editingPlayer"
+              :required="!editingPlayer"
               min="0"
               step="1000"
               class="form-input"
-              placeholder="e.g., 50000"
+              :class="{ 'bg-gray-100 cursor-not-allowed': editingPlayer }"
+              placeholder="VD: 50000"
             >
+            <button v-if="editingPlayer" type="button" @click="openAdminTopUp" class="btn-secondary w-full mt-2">Nạp tiền</button>
           </div>
           
           <div class="flex justify-end space-x-3 pt-4">
@@ -367,13 +375,24 @@
               @click="cancelForm"
               class="btn-secondary"
             >
-              Cancel
+              Hủy
             </button>
             <button type="submit" class="btn-primary">
-              {{ editingPlayer ? 'Update' : 'Create' }}
+              {{ editingPlayer ? 'Cập nhật' : 'Tạo cầu thủ' }}
             </button>
           </div>
         </form>
+      </div>
+    </div>
+
+    <div v-if="showAdminTopUpModal" class="fixed inset-0 z-[70] bg-gray-900/50 flex items-center justify-center p-4" @click.self="showAdminTopUpModal = false">
+      <div class="bg-white rounded-lg shadow-xl w-full max-w-md p-6">
+        <h2 class="text-lg font-semibold text-gray-900">Nạp tiền cho {{ editingPlayer?.name }}</h2>
+        <p class="text-sm text-gray-500 mt-1 mb-4">Khoản nạp của Admin/Mod được duyệt tự động.</p>
+        <img src="/quy-momo.jpg" alt="Mã QR MoMo nạp quỹ" class="w-full max-w-xs mx-auto rounded-lg border border-gray-200 mb-5">
+        <div class="grid grid-cols-2 gap-3"><button v-for="amount in topUpAmounts" :key="amount" type="button" @click="selectedTopUpAmount = amount" class="rounded-lg border px-4 py-3 font-medium transition-colors" :class="selectedTopUpAmount === amount ? 'border-primary-600 bg-primary-600 text-white' : 'border-gray-200 text-gray-700 hover:bg-gray-50'">{{ amount.toLocaleString('vi-VN') }} ₫</button></div>
+        <div class="mt-4"><label class="form-label">Lý do</label><textarea v-model="adminTopUpReason" rows="3" class="form-input" /></div>
+        <div class="flex justify-end gap-3 mt-6"><button type="button" @click="showAdminTopUpModal = false" class="btn-secondary">Hủy</button><button type="button" @click="submitAdminTopUp" :disabled="submittingAdminTopUp" class="btn-primary">{{ submittingAdminTopUp ? 'Đang nạp...' : 'Xác nhận' }}</button></div>
       </div>
     </div>
   </div>
@@ -385,12 +404,14 @@ import { usePlayersStore } from '../stores/players'
 import { useTeamsStore } from '../stores/teams'
 import { useAuthStore } from '../stores/auth'
 import { apiClient } from '../api/client'
+import { useToast } from 'vue-toastification'
 import PlayerMoneyDetailModal from '../components/PlayerMoneyDetailModal.vue'
 import type { Player, PlayerMoneyHistory } from '../types'
 
 const playersStore = usePlayersStore()
 const teamsStore = useTeamsStore()
 const authStore = useAuthStore()
+const toast = useToast()
 
 const players = computed(() => playersStore.players)
 const loading = computed(() => playersStore.loading)
@@ -399,21 +420,40 @@ const showAddForm = ref(false)
 const editingPlayer = ref<Player | null>(null)
 const playerNameFilter = ref('')
 const selectedTierRange = ref<string | null>(null)
+const sortBy = ref<'tier' | 'money-asc'>('tier')
 const showMoneyHistory = ref(false)
 const selectedMoneyPlayer = ref<Player | null>(null)
 const moneyHistory = ref<PlayerMoneyHistory[]>([])
 const moneyHistoryLoading = ref(false)
 const moneyHistoryError = ref<string | null>(null)
 const moneyHistoryPagination = ref({ page: 1, pages: 0, total: 0 })
+const showAdminTopUpModal = ref(false)
+const submittingAdminTopUp = ref(false)
+const selectedTopUpAmount = ref(100000)
+const adminTopUpReason = ref('')
+const topUpAmounts = [50000, 100000, 200000, 500000]
 
 // Tier ranges configuration
 const tierRanges = [
-  { key: '1-2', label: '(1-2)', stars: '⭐⭐', min: 1, max: 2 },
-  { key: '3-4', label: '(3-4)', stars: '⭐⭐⭐⭐', min: 3, max: 4 },
-  { key: '5-6', label: '(5-6)', stars: '⭐⭐⭐⭐⭐⭐', min: 5, max: 6 },
-  { key: '7-8', label: '(7-8)', stars: '⭐⭐⭐⭐⭐⭐⭐⭐', min: 7, max: 8 },
-  { key: '9-10', label: '(9-10)', stars: '⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐', min: 9, max: 10 }
+  { key: '1-2', label: 'Tier 1–2 (Mạnh)', stars: '★★★★★★–★★★★★', min: 1, max: 2 },
+  { key: '3-4', label: 'Tier 3–4', stars: '★★★★–★★★', min: 3, max: 4 },
+  { key: '5-6', label: 'Tier 5–6', stars: '★★–★', min: 5, max: 6 }
 ]
+
+const positionLabels: Record<string, string> = {
+  GK: 'GK - Thủ môn',
+  DEF: 'DEF - Hậu vệ',
+  MID: 'MID - Tiền vệ',
+  FWD: 'FWD - Tiền đạo',
+  Goalkeeper: 'Thủ môn',
+  Defender: 'Hậu vệ',
+  Midfielder: 'Tiền vệ',
+  Forward: 'Tiền đạo'
+}
+
+function displayPosition(position: string) {
+  return positionLabels[position] || position
+}
 
 // Computed properties for pagination and filtering
 const filteredPlayers = computed(() => {
@@ -436,8 +476,11 @@ const filteredPlayers = computed(() => {
     }
   }
   
-  // Sort by tier descending (highest tier first)
-  return result.sort((a, b) => b.tier - a.tier)
+  // Tier 1 is the strongest. Copy before sorting so the store state is not mutated.
+  return [...result].sort((a, b) => {
+    if (sortBy.value === 'money-asc') return a.money - b.money || a.tier - b.tier
+    return a.tier - b.tier || a.name.localeCompare(b.name, 'vi')
+  })
 })
 
 const remainingPlayersCount = computed(() => {
@@ -540,7 +583,7 @@ function cancelForm() {
 }
 
 function deletePlayer(id: string) {
-  if (confirm('Are you sure you want to delete this player?')) {
+  if (confirm('Bạn có chắc chắn muốn xóa cầu thủ này không?')) {
     playersStore.deletePlayer(id).then(() => {
       // If we're on a page beyond the first and have no more players on current page,
       // we might need to reload to adjust pagination
@@ -548,6 +591,31 @@ function deletePlayer(id: string) {
         playersStore.fetchPlayers()
       }
     })
+  }
+}
+
+function openAdminTopUp() {
+  if (!editingPlayer.value) return
+  selectedTopUpAmount.value = 100000
+  adminTopUpReason.value = `${authStore.currentUser?.username || 'Admin/Mod'} nạp tiền dùm ${editingPlayer.value.name}`
+  showAdminTopUpModal.value = true
+}
+
+async function submitAdminTopUp() {
+  if (!editingPlayer.value) return
+  submittingAdminTopUp.value = true
+  try {
+    const response = await apiClient.createAdminMoneyTopUp(editingPlayer.value.id, selectedTopUpAmount.value, adminTopUpReason.value)
+    if (!response.success) throw new Error(response.error || 'Không thể nạp tiền')
+    editingPlayer.value.money += selectedTopUpAmount.value
+    formData.value.money = editingPlayer.value.money.toString()
+    showAdminTopUpModal.value = false
+    await playersStore.fetchPlayers()
+    toast.success('Đã nạp tiền và duyệt tự động')
+  } catch (error) {
+    toast.error(error instanceof Error ? error.message : 'Không thể nạp tiền')
+  } finally {
+    submittingAdminTopUp.value = false
   }
 }
 

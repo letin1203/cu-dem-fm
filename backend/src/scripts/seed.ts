@@ -96,7 +96,7 @@ async function main() {
         name: 'Karim Benzema',
         position: 'Forward',
         yearOfBirth: 1987,
-        tier: 9,
+        tier: 2,
         money: 50000,
         teamId: teams[0].id,
         stats: {
@@ -116,7 +116,7 @@ async function main() {
         name: 'Luka Modric',
         position: 'Midfielder',
         yearOfBirth: 1985,
-        tier: 8,
+        tier: 3,
         money: 40000,
         teamId: teams[0].id,
         stats: {
@@ -138,7 +138,7 @@ async function main() {
         name: 'Robert Lewandowski',
         position: 'Forward',
         yearOfBirth: 1988,
-        tier: 9,
+        tier: 2,
         money: 55000,
         teamId: teams[1].id,
         stats: {
@@ -158,7 +158,7 @@ async function main() {
         name: 'Pedri',
         position: 'Midfielder',
         yearOfBirth: 2002,
-        tier: 7,
+        tier: 3,
         money: 25000,
         teamId: teams[1].id,
         stats: {
@@ -180,7 +180,7 @@ async function main() {
         name: 'Marcus Rashford',
         position: 'Forward',
         yearOfBirth: 1997,
-        tier: 8,
+        tier: 3,
         money: 35000,
         teamId: teams[2].id,
         stats: {
@@ -200,7 +200,7 @@ async function main() {
         name: 'Bruno Fernandes',
         position: 'Midfielder',
         yearOfBirth: 1994,
-        tier: 8,
+        tier: 3,
         money: 40000,
         teamId: teams[2].id,
         stats: {
@@ -222,7 +222,7 @@ async function main() {
         name: 'Mohamed Salah',
         position: 'Forward',
         yearOfBirth: 1992,
-        tier: 9,
+        tier: 2,
         money: 50000,
         teamId: teams[3].id,
         stats: {
@@ -242,7 +242,7 @@ async function main() {
         name: 'Virgil van Dijk',
         position: 'Defender',
         yearOfBirth: 1991,
-        tier: 8,
+        tier: 3,
         money: 35000,
         teamId: teams[3].id,
         stats: {

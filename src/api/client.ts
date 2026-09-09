@@ -235,6 +235,30 @@ class ApiClient {
     return this.get(`/players/${id}/money-history`, { params });
   }
 
+  async getPlayerTournamentHistory(id: string) {
+    return this.get(`/players/${id}/tournament-history`);
+  }
+
+  async createMoneyTopUp(amount: number) {
+    return this.post('/money-top-ups', { amount });
+  }
+
+  async getMyPendingMoneyTopUps() {
+    return this.get('/money-top-ups/mine');
+  }
+
+  async createAdminMoneyTopUp(playerId: string, amount: number, reason: string) {
+    return this.post('/money-top-ups/admin', { playerId, amount, reason });
+  }
+
+  async getPendingMoneyTopUps() {
+    return this.get('/money-top-ups/pending');
+  }
+
+  async approveMoneyTopUp(id: string) {
+    return this.put(`/money-top-ups/${id}/approve`);
+  }
+
   async createPlayer(data: any) {
     return this.post('/players', data);
   }
@@ -287,6 +311,10 @@ class ApiClient {
 
   async getTournament(id: string) {
     return this.get(`/tournaments/${id}`);
+  }
+
+  async getTournamentMoneyHistory(id: string) {
+    return this.get(`/tournaments/${id}/money-history`);
   }
 
   async createTournament(data: any) {

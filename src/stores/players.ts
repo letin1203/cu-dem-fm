@@ -22,7 +22,7 @@ export const usePlayersStore = defineStore('players', () => {
   )
   const topTierPlayers = computed(() =>
     players.value
-      .filter(p => p.tier >= 8)
+      .filter(p => p.tier <= 2)
       .sort((a, b) => b.tier - a.tier)
   )
 

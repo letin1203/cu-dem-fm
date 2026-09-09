@@ -3,7 +3,7 @@ export interface Player {
   name: string
   position: string
   yearOfBirth: number
-  tier: number // Tier rating from 1-10
+  tier: number // Tier rating from 1-6; Tier 1 is strongest
   money: number // Player's money/value
   teamId?: string
   team?: {
@@ -51,6 +51,7 @@ export interface PlayerMoneyHistory {
   balanceBefore: number
   balanceAfter: number
   description: string
+  details?: Array<{ description: string; amount: number }> | null
   createdAt: string | Date
   tournament?: { id: string; name: string } | null
 }

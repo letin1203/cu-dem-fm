@@ -4,7 +4,7 @@
       <div class="flex items-center justify-between border-b p-5">
         <div>
           <h2 class="text-lg font-semibold text-gray-900">Chi tiết biến động tiền</h2>
-          <p class="text-sm text-gray-500">{{ player?.name }} · Số dư hiện tại: {{ formatMoney(player?.money || 0) }}</p>
+          <p class="text-sm text-gray-500"><span class="font-semibold text-gray-800">{{ player?.name }}</span> · Số dư hiện tại: <span class="font-semibold text-gray-800">{{ formatMoney(player?.money || 0) }}</span></p>
         </div>
         <button class="text-2xl leading-none text-gray-400 hover:text-gray-700" aria-label="Đóng" @click="emit('close')">×</button>
       </div>
@@ -29,6 +29,12 @@
               <span>Trước: {{ formatMoney(item.balanceBefore) }}</span>
               <span>Sau: {{ formatMoney(item.balanceAfter) }}</span>
             </div>
+            <div v-if="item.details?.length" class="mt-3 space-y-1 border-t pt-3 text-xs">
+              <div v-for="detail in item.details" :key="`${detail.description}-${detail.amount}`" class="flex justify-between gap-3 text-gray-600">
+                <span>{{ detail.description }}</span>
+                <span class="text-gray-900">{{ detail.amount >= 0 ? '+' : '' }}{{ formatMoney(detail.amount) }}</span>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -39,6 +45,7 @@
           <button class="btn-secondary" :disabled="pagination.page <= 1 || loading" @click="emit('page-change', pagination.page - 1)">Trước</button>
           <span class="text-sm text-gray-600">Trang {{ pagination.page }} / {{ Math.max(pagination.pages, 1) }}</span>
           <button class="btn-secondary" :disabled="pagination.page >= pagination.pages || loading" @click="emit('page-change', pagination.page + 1)">Sau</button>
+          <button class="btn-primary" @click="emit('close')">Đóng</button>
         </div>
       </div>
     </div>

@@ -40,7 +40,7 @@
             
             <div>
               <label for="amount" class="block text-sm font-medium text-gray-700 mb-1">
-                Số tiền (VND)
+                Số tiền (₫)
               </label>
               <input
                 id="amount"
@@ -75,7 +75,7 @@
             >
               <div>
                 <div class="font-medium text-gray-900">{{ cost.description }}</div>
-                <div class="text-sm text-gray-600">{{ cost.amount.toLocaleString() }} VND</div>
+                <div class="text-sm text-gray-600">{{ cost.amount.toLocaleString('vi-VN') }} ₫</div>
               </div>
               <button
                 @click="$emit('delete-cost', cost.id)"
@@ -99,11 +99,11 @@
             <div class="flex justify-between items-center">
               <span class="font-medium text-primary-900">Tổng chi phí phát sinh:</span>
               <span class="font-semibold text-primary-900">
-                {{ totalAdditionalCosts.toLocaleString() }} VND
+                {{ totalAdditionalCosts.toLocaleString('vi-VN') }} ₫
               </span>
             </div>
             <div class="text-sm text-primary-700 mt-1">
-              Chi phí mỗi cầu thủ tham gia: {{ costPerPlayer.toLocaleString() }} VND
+              Chi phí mỗi cầu thủ tham gia: {{ costPerPlayer.toLocaleString('vi-VN') }} ₫
             </div>
           </div>
         </div>

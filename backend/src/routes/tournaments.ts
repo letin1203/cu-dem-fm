@@ -117,6 +117,20 @@ router.get('/', async (req: AuthenticatedRequest, res: Response): Promise<void> 
   }
 });
 
+// Get every player's saved money changes for a completed tournament.
+router.get('/:id/money-history', async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  try {
+    const history = await prisma.playerMoneyHistory.findMany({
+      where: { tournamentId: req.params.id },
+      include: { player: { select: { id: true, name: true, position: true, tier: true } } },
+      orderBy: { player: { name: 'asc' } },
+    });
+    res.json({ success: true, data: history });
+  } catch (error) {
+    res.status(500).json({ success: false, error: 'Không thể tải biến động tiền của giải đấu' });
+  }
+});
+
 // Get tournament by ID
 router.get('/:id', async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   try {
@@ -317,6 +331,14 @@ router.put('/:id', authenticate, authorize(['ADMIN', 'MOD']), async (req: Authen
       res.status(404).json({
         success: false,
         error: 'Tournament not found',
+      });
+      return;
+    }
+
+    if (existingTournament.status === 'COMPLETED' && updateData.stadiumCost !== undefined) {
+      res.status(400).json({
+        success: false,
+        error: 'Không thể chỉnh sửa chi phí sân của giải đã hoàn thành',
       });
       return;
     }
@@ -848,6 +870,13 @@ router.put('/:id/attendance', authenticate, async (req: AuthenticatedRequest, re
 
     // Handle toggle bet request
     if (toggleBet) {
+      if (tournament.status !== 'ONGOING' || tournament.startDate.getTime() <= Date.now()) {
+        res.status(400).json({
+          success: false,
+          error: 'Chỉ được thay đổi cược khi giải đang diễn ra nhưng chưa tới thời gian đã hẹn',
+        });
+        return;
+      }
       const currentAttendance = await prisma.tournamentPlayerAttendance.findUnique({
         where: {
           tournamentId_playerId: {
@@ -1024,7 +1053,8 @@ router.get('/:id/attendance-stats', async (req: AuthenticatedRequest, res: Respo
 
     const attendingCount = attendanceStats.filter((a: any) => a.status === 'ATTEND').length;
     const notAttendingCount = attendanceStats.filter((a: any) => a.status === 'NOT_ATTEND').length;
-    const nullCount = attendanceStats.filter((a: any) => a.status === 'NULL').length;
+    // Players without a record are also awaiting a response.
+    const nullCount = totalPlayers - attendingCount - notAttendingCount;
     const bettingCount = attendanceStats.filter((a: any) => a.bet === true).length;
 
     res.json({
@@ -1066,24 +1096,32 @@ router.get('/:id/attendance-details', async (req: AuthenticatedRequest, res: Res
       return;
     }
 
-    // Get all attendance records with player details
-    const attendanceDetails = await prisma.tournamentPlayerAttendance.findMany({
-      where: { tournamentId },
-      include: {
-        player: {
-          select: {
-            id: true,
-            name: true,
-            position: true,
-            tier: true,
-            avatar: true,
-          },
-        },
-      },
-      orderBy: [
-        { status: 'asc' }, // ATTEND first, then NOT_ATTEND, then NULL
-        { player: { name: 'asc' } }, // Then by name
-      ],
+    // Return every player, including those without an attendance record yet.
+    // Missing records are represented as NULL so staff can mark them as ATTEND.
+    const [players, attendanceRecords] = await Promise.all([
+      prisma.player.findMany({
+        select: { id: true, name: true, position: true, tier: true, avatar: true },
+        orderBy: { name: 'asc' },
+      }),
+      prisma.tournamentPlayerAttendance.findMany({ where: { tournamentId } }),
+    ]);
+    const attendanceByPlayerId = new Map(attendanceRecords.map(record => [record.playerId, record]));
+    const attendanceDetails = players.map((player) => {
+      const attendance = attendanceByPlayerId.get(player.id);
+      return attendance || {
+        id: `pending-${player.id}`,
+        tournamentId,
+        playerId: player.id,
+        status: 'NULL',
+        withWater: false,
+        bet: false,
+        createdAt: tournament.createdAt,
+        updatedAt: tournament.updatedAt,
+        player,
+      };
+    }).map((attendance: any) => attendance.player ? attendance : {
+      ...attendance,
+      player: players.find(player => player.id === attendance.playerId),
     });
 
     res.json({
@@ -1206,6 +1244,12 @@ router.put('/:id/scores', authenticate, authorize(['ADMIN', 'MOD']), async (req:
 router.post('/:id/generate-teams', authenticate, authorize(['ADMIN', 'MOD']), async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   try {
     const { id: tournamentId } = req.params;
+    const requestedTeamCount = req.body?.teamCount;
+
+    if (requestedTeamCount !== undefined && ![2, 3, 4].includes(requestedTeamCount)) {
+      res.status(400).json({ success: false, error: 'Team count must be 2, 3, or 4' });
+      return;
+    }
 
     // Verify tournament exists
     const tournament = await prisma.tournament.findUnique({
@@ -1249,27 +1293,25 @@ router.post('/:id/generate-teams', authenticate, authorize(['ADMIN', 'MOD']), as
       return;
     }
 
-    // Determine number of teams based on player count
-    let teamCount: number;
-    if (playerCount < 15) {
-      teamCount = 2;
-    } else if (playerCount < 20) {
-      teamCount = 3;
-    } else {
-      teamCount = 4;
+    // Use the team count selected in the UI, otherwise keep the automatic default.
+    let teamCount: number = requestedTeamCount;
+    if (!teamCount) {
+      if (playerCount < 15) teamCount = 2;
+      else if (playerCount < 20) teamCount = 3;
+      else teamCount = 4;
     }
 
-    // Sort players by tier (highest to lowest)
+    // Tier 1 is strongest, so sort strongest to weakest.
     const sortedPlayers = attendingPlayers
       .map(attendance => attendance.player)
-      .sort((a, b) => b.tier - a.tier);
+      .sort((a, b) => a.tier - b.tier);
 
     // Initialize teams
     const teams: Array<{
       name: string;
       players: typeof sortedPlayers;
       totalTier: number;
-      tier9Plus: number; // Count of tier 9+ players
+      tier9Plus: number; // Count of strongest players (tier 1-2)
       lockedPlayers: Set<string>; // GK players that can't be moved
     }> = [];
 
@@ -1308,7 +1350,7 @@ router.post('/:id/generate-teams', authenticate, authorize(['ADMIN', 'MOD']), as
       teams[teamIndex].players.push(gkPlayer);
       teams[teamIndex].totalTier += gkPlayer.tier;
       teams[teamIndex].lockedPlayers.add(gkPlayer.id); // Lock the first (highest tier) GK per team
-      if (gkPlayer.tier >= 9) {
+      if (gkPlayer.tier <= 2) {
         teams[teamIndex].tier9Plus++;
         // T9/T10 GK players are automatically locked above, so no additional locking needed
       }
@@ -1332,8 +1374,8 @@ router.post('/:id/generate-teams', authenticate, authorize(['ADMIN', 'MOD']), as
       
       teams[bestTeamIndex].players.push(gkPlayer);
       teams[bestTeamIndex].totalTier += gkPlayer.tier;
-      // Lock T9/T10 GK players even if they're additional GKs
-      if (gkPlayer.tier >= 9) {
+      // Lock Tier 1/2 GKs even if they're additional GKs
+      if (gkPlayer.tier <= 2) {
         teams[bestTeamIndex].tier9Plus++;
         teams[bestTeamIndex].lockedPlayers.add(gkPlayer.id);
       }
@@ -1361,8 +1403,8 @@ router.post('/:id/generate-teams', authenticate, authorize(['ADMIN', 'MOD']), as
       tierGroups.get(tier)!.push(player);
     });
 
-    // Distribute non-GK players tier by tier (10 to 1)
-    for (let tier = 10; tier >= 1; tier--) {
+    // Distribute non-GK players tier by tier (1 to 6, strongest first)
+    for (let tier = 1; tier <= 6; tier++) {
       const playersInTier = tierGroups.get(tier) || [];
       
       // Shuffle players in this tier for randomness
@@ -1378,34 +1420,43 @@ router.post('/:id/generate-teams', authenticate, authorize(['ADMIN', 'MOD']), as
         // Find the best team to assign this player to
         let bestTeamIndex = 0;
         
-        if (tier >= 9) {
-          // For high-tier players (9-10), prioritize teams with fewer high-tier players
-          // but also consider team capacity
-          let bestScore = Infinity;
+        if (tier <= 2) {
+          // Apply a strict hierarchy for strong players. Tier 1 is balanced
+          // first; when assigning Tier 2, teams with fewer Tier 1 players
+          // always win before Tier 2 count or capacity are considered.
+          let bestTierPriority: number[] | null = null;
+          let bestCapacityRatio = Infinity;
           
           for (let j = 0; j < teams.length; j++) {
-            // Skip teams that are already at capacity
             if (teams[j].players.length >= teamTargets[j].target) {
               continue;
             }
-            
-            // Score based on tier 9+ count and remaining capacity
-            const tier9PlusScore = teams[j].tier9Plus * 10;
-            const capacityScore = (teams[j].players.length / teamTargets[j].target) * 5;
-            const totalScore = tier9PlusScore + capacityScore;
-            
-            if (totalScore < bestScore) {
-              bestScore = totalScore;
+
+            const tierPriority = Array.from({ length: tier }, (_, index) =>
+              teams[j].players.filter((assignedPlayer: any) => assignedPlayer.tier === index + 1).length
+            );
+            const capacityRatio = teams[j].players.length / teamTargets[j].target;
+            const hasBetterTierPriority = !bestTierPriority || tierPriority.some((count, index) =>
+              count !== bestTierPriority![index] &&
+              tierPriority.slice(0, index).every((previous, previousIndex) => previous === bestTierPriority![previousIndex]) &&
+              count < bestTierPriority![index]
+            );
+            const hasSameTierPriority = bestTierPriority !== null && tierPriority.every((count, index) => count === bestTierPriority![index]);
+
+            if (hasBetterTierPriority || (hasSameTierPriority && capacityRatio < bestCapacityRatio)) {
+              bestTierPriority = tierPriority;
+              bestCapacityRatio = capacityRatio;
               bestTeamIndex = j;
             }
           }
           
-          // If all teams are at capacity, fall back to team with lowest tier 9+ count
-          if (bestScore === Infinity) {
-            let minTier9Plus = teams[0].tier9Plus;
+          // Capacity should normally prevent this; retain a safe fallback.
+          if (!bestTierPriority) {
+            let minTierCount = teams[0].players.filter((assignedPlayer: any) => assignedPlayer.tier === tier).length;
             for (let j = 1; j < teams.length; j++) {
-              if (teams[j].tier9Plus < minTier9Plus) {
-                minTier9Plus = teams[j].tier9Plus;
+              const tierCount = teams[j].players.filter((assignedPlayer: any) => assignedPlayer.tier === tier).length;
+              if (tierCount < minTierCount) {
+                minTierCount = tierCount;
                 bestTeamIndex = j;
               }
             }
@@ -1445,12 +1496,64 @@ router.post('/:id/generate-teams', authenticate, authorize(['ADMIN', 'MOD']), as
         // Assign player to the best team
         teams[bestTeamIndex].players.push(player);
         teams[bestTeamIndex].totalTier += tier;
-        if (tier >= 9) {
+        if (tier <= 2) {
           teams[bestTeamIndex].tier9Plus++;
-          // Lock T9/T10 players so they can't be moved during balancing
+          // Mark strong players for the initial distribution.
           teams[bestTeamIndex].lockedPlayers.add(player.id);
         }
       }
+    }
+
+    // Final balancing pass: use average Tier, rather than total Tier. This
+    // keeps teams comparable even when the number of players is uneven (for
+    // example, 33 players split into teams of 9, 8, 8, and 8). Tier 1/2 and
+    // primary GK assignments stay locked; remaining goalkeepers may only swap
+    // with other goalkeepers, so each team keeps its GK allocation.
+    const getAverageTierSpread = (totals: number[]) => {
+      const averages = totals.map((total, index) => total / teams[index].players.length);
+      return Math.max(...averages) - Math.min(...averages);
+    };
+    for (let iteration = 0; iteration < 100; iteration++) {
+      const currentTotals = teams.map(team => team.totalTier);
+      const currentSpread = getAverageTierSpread(currentTotals);
+      let bestSwap: { firstTeam: number; secondTeam: number; firstPlayer: number; secondPlayer: number; spread: number } | null = null;
+
+      for (let firstTeam = 0; firstTeam < teams.length; firstTeam++) {
+        for (let secondTeam = firstTeam + 1; secondTeam < teams.length; secondTeam++) {
+          for (let firstPlayer = 0; firstPlayer < teams[firstTeam].players.length; firstPlayer++) {
+            const playerA = teams[firstTeam].players[firstPlayer];
+            if (teams[firstTeam].lockedPlayers.has(playerA.id)) continue;
+
+            for (let secondPlayer = 0; secondPlayer < teams[secondTeam].players.length; secondPlayer++) {
+              const playerB = teams[secondTeam].players[secondPlayer];
+              if (teams[secondTeam].lockedPlayers.has(playerB.id)) continue;
+              const playerAIsGoalkeeper = playerA.position === 'GK' || playerA.position === 'Goalkeeper';
+              const playerBIsGoalkeeper = playerB.position === 'GK' || playerB.position === 'Goalkeeper';
+              if (playerAIsGoalkeeper !== playerBIsGoalkeeper) continue;
+
+              const candidateTotals = [...currentTotals];
+              candidateTotals[firstTeam] += playerB.tier - playerA.tier;
+              candidateTotals[secondTeam] += playerA.tier - playerB.tier;
+              const candidateSpread = getAverageTierSpread(candidateTotals);
+
+              if (candidateSpread < currentSpread && (!bestSwap || candidateSpread < bestSwap.spread)) {
+                bestSwap = { firstTeam, secondTeam, firstPlayer, secondPlayer, spread: candidateSpread };
+              }
+            }
+          }
+        }
+      }
+
+      if (!bestSwap) break;
+
+      const teamA = teams[bestSwap.firstTeam];
+      const teamB = teams[bestSwap.secondTeam];
+      const playerA = teamA.players[bestSwap.firstPlayer];
+      const playerB = teamB.players[bestSwap.secondPlayer];
+      teamA.players[bestSwap.firstPlayer] = playerB;
+      teamB.players[bestSwap.secondPlayer] = playerA;
+      teamA.totalTier += playerB.tier - playerA.tier;
+      teamB.totalTier += playerA.tier - playerB.tier;
     }
 
     // Create teams in database
@@ -1518,6 +1621,11 @@ router.post('/:id/generate-teams', authenticate, authorize(['ADMIN', 'MOD']), as
 router.put('/:id/end', authenticate, authorize(['ADMIN', 'MOD']), async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   try {
     const { id } = req.params;
+    const cancelledGkDiscountPlayerIds = new Set(
+      Array.isArray(req.body?.cancelledGkDiscountPlayerIds)
+        ? req.body.cancelledGkDiscountPlayerIds.filter((playerId: unknown): playerId is string => typeof playerId === 'string')
+        : []
+    );
 
     // Fetch tournament with all related data
     const tournament = await prisma.tournament.findUnique({
@@ -1595,19 +1703,17 @@ router.put('/:id/end', authenticate, authorize(['ADMIN', 'MOD']), async (req: Au
 
     // Get tournament settings
     const loserPenalty = 50000; // Default loser penalty
-    const waterCostPerPlayer = 5000; // Default water cost
-    const bettingWinAmount = 10000; // Base betting win amount
+    const waterCostPerPlayer = 10000; // Water cost
+    const bettingWinAmount = 10000; // Fixed betting win amount
     const bettingLossAmount = 10000; // Betting loss penalty
-    const teamLoserPenalty = 5000; // Team loser penalty
+    const teamLoserPenalty = 10000; // Team loser penalty
 
-    // Calculate betting win amount based on number of teams
-    const teamCount = teams.length;
-    const bettingWinBonus = teamCount >= 3 ? bettingWinAmount * (teamCount - 2) : bettingWinAmount;
+    const bettingWinBonus = bettingWinAmount;
 
     // Calculate additional costs total
     const totalAdditionalCosts = tournament.additionalCosts.reduce((sum, cost) => sum + cost.amount, 0);
     const sponsorMoney = systemSettings?.sponsorMoney ?? 0;
-    const stadiumCost = systemSettings?.stadiumCost ?? 0;
+    const stadiumCost = tournament.stadiumCost ?? systemSettings?.stadiumCost ?? 0;
     const netTournamentCost = stadiumCost - sponsorMoney + totalAdditionalCosts;
     const tournamentCostPerPlayer = attendingPlayers.length > 0
       ? Math.ceil((netTournamentCost / attendingPlayers.length) / 5000) * 5000 + 5000
@@ -1620,34 +1726,44 @@ router.put('/:id/end', authenticate, authorize(['ADMIN', 'MOD']), async (req: Au
 
       const playerTeamAssignment = tournament.tournamentTeamPlayers.find(ttp => ttp.playerId === player.id);
       const playerTeam = playerTeamAssignment?.team;
-      
-      let moneyChange = 0;
+      const moneyChangeDetails: Array<{ description: string; amount: number }> = [];
 
-      // Tournament cost per player (applies to all)
+      // Goalkeepers receive a 50% tournament-cost discount unless staff
+      // cancelled it from the end-tournament confirmation modal.
       if (tournamentCostPerPlayer > 0) {
-        moneyChange -= tournamentCostPerPlayer;
+        const isGoalkeeper = player.position === 'GK' || player.position === 'Goalkeeper';
+        const hasGkDiscount = isGoalkeeper && !cancelledGkDiscountPlayerIds.has(player.id);
+        const tournamentCost = hasGkDiscount
+          ? Math.round(tournamentCostPerPlayer / 2)
+          : tournamentCostPerPlayer;
+        moneyChangeDetails.push({
+          description: hasGkDiscount ? 'Chi phí giải đấu mỗi cầu thủ (GK giảm 50%)' : 'Chi phí giải đấu mỗi cầu thủ',
+          amount: -tournamentCost,
+        });
       }
 
       // Betting calculations
       if (attendance.bet) {
         if (playerTeam && playerTeam.id === winnerTeam.id) {
           // Betting winner gets bonus
-          moneyChange += bettingWinBonus;
+          moneyChangeDetails.push({ description: 'Cược thắng', amount: bettingWinBonus });
         } else {
           // Betting loser pays penalty
-          moneyChange -= bettingLossAmount;
+          moneyChangeDetails.push({ description: 'Cược thua', amount: -bettingLossAmount });
         }
       }
 
       // Team loser penalty (in addition to betting penalty if applicable)
       if (playerTeam && playerTeam.id === loserTeam.id) {
-        moneyChange -= teamLoserPenalty;
+        moneyChangeDetails.push({ description: 'Cầu thủ đội thua', amount: -teamLoserPenalty });
       }
 
       // Water cost (winner team gets free water)
       if (attendance.withWater && playerTeam && playerTeam.id !== winnerTeam.id) {
-        moneyChange -= waterCostPerPlayer;
+        moneyChangeDetails.push({ description: 'Chi phí nước', amount: -waterCostPerPlayer });
       }
+
+      const moneyChange = moneyChangeDetails.reduce((total, item) => total + item.amount, 0);
 
       // Update player money
       const newMoney = player.money + moneyChange;
@@ -1664,6 +1780,7 @@ router.put('/:id/end', authenticate, authorize(['ADMIN', 'MOD']), async (req: Au
           balanceBefore: player.money,
           balanceAfter: newMoney,
           description: `Tổng kết giải đấu: ${tournament.name}`,
+          details: moneyChangeDetails,
         },
       });
 

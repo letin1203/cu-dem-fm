@@ -1,5 +1,5 @@
 <template>
-  <nav v-if="authStore.currentUser" class="bg-white/80 backdrop-blur-md shadow-lg border-b border-primary-200">
+  <nav v-if="authStore.currentUser" class="relative z-50 bg-white/80 backdrop-blur-md shadow-lg border-b border-primary-200">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
       <div class="flex justify-between h-16">
         <!-- Logo -->
@@ -9,7 +9,7 @@
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
             </svg>
             <span class="text-lg sm:text-xl font-bold text-primary-900 hidden xs:block">Cú Đêm</span>
-            <span class="text-lg font-bold text-primary-900 xs:hidden">FM</span>
+            <span class="text-lg font-bold text-primary-900 xs:hidden">Cú Đêm</span>
           </router-link>
           <!-- Club Money Display (Mobile) -->
           <div v-if="systemStore.currentSettings && systemStore.currentSettings.clubFund !== undefined" class="flex md:hidden items-center space-x-2 px-2 py-2 rounded-md bg-primary-50 text-primary-800 font-semibold text-sm">
@@ -17,7 +17,7 @@
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4-1.79-4-4-4zm0 0V4m0 16v-4" />
             </svg>
             <span>Tiền Quỹ: </span>
-            <span class="ml-1">{{ systemStore.currentSettings.clubFund.toLocaleString() }}₫</span>
+            <span class="ml-1">{{ systemStore.currentSettings.clubFund.toLocaleString('vi-VN') }} ₫</span>
           </div>
         </div>
         
@@ -29,7 +29,7 @@
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4-1.79-4-4-4zm0 0V4m0 16v-4" />
             </svg>
             <span>Tiền Quỹ: </span>
-            <span class="ml-1">{{ systemStore.currentSettings.clubFund.toLocaleString() }}₫</span>
+            <span class="ml-1">{{ systemStore.currentSettings.clubFund.toLocaleString('vi-VN') }} ₫</span>
           </div>
           
           <router-link
@@ -61,11 +61,10 @@
             </button>
             
             <!-- User Dropdown -->
-            <div v-if="userMenuOpen" class="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg ring-1 ring-black ring-opacity-5 z-50">
+            <div v-if="userMenuOpen" class="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg ring-1 ring-black ring-opacity-5 z-[60]">
               <div class="py-1">
                 <div class="px-4 py-2 text-sm text-gray-700 border-b">
                   <div class="font-medium">{{ authStore.currentUser?.username }}</div>
-                  <div class="text-xs text-gray-500">{{ authStore.currentUser?.email }}</div>
                 </div>
                 <router-link 
                   to="/my-profile" 
@@ -123,9 +122,8 @@
         <!-- Mobile User Info -->
         <div class="border-t pt-3 mt-3">
           <div class="px-3 py-2 text-sm">
-            <div class="font-medium text-gray-900">{{ authStore.currentUser?.username }}</div>
-            <div class="text-xs text-gray-500">{{ authStore.currentUser?.email }}</div>
-            <span class="inline-block mt-1 px-2 py-1 text-xs rounded-full" :class="getRoleClasses(authStore.currentUser?.role || 'user')">
+            <span class="font-medium text-gray-900">{{ authStore.currentUser?.username }}</span>
+            <span class="ml-2 inline-block mt-1 px-2 py-1 text-xs rounded-full" :class="getRoleClasses(authStore.currentUser?.role || 'user')">
               {{ authStore.currentUser?.role.toUpperCase() }}
             </span>
           </div>
@@ -181,6 +179,7 @@ const navigationItems = [
   //{ name: 'Teams', path: '/teams', icon: UserGroupIcon, permission: 'canViewTeams' },
   { name: 'Cầu thủ', path: '/players', icon: UsersIcon, permission: 'canViewPlayers' },
   { name: 'Người dùng', path: '/users', icon: CogIcon, permission: 'canManageUsers' },
+  { name: 'Duyệt', path: '/duyet-nap-tien', icon: CircleStackIcon, roles: ['admin', 'mod'] },
   { name: 'Cài đặt', path: '/system-settings', icon: CogIcon, role: 'admin' },
 ]
 
@@ -193,6 +192,9 @@ const visibleNavigationItems = computed(() => {
     // Check for role-based access
     if (item.role) {
       return authStore.hasRole(item.role as any)
+    }
+    if (item.roles) {
+      return item.roles.includes(authStore.currentUser?.role || '')
     }
     return true
   })

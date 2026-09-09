@@ -10,6 +10,7 @@ import Users from '../views/Users.vue'
 import PlayerProfile from '../views/PlayerProfile.vue'
 import SystemSettings from '../views/SystemSettings.vue'
 import DatabaseAdmin from '../views/DatabaseAdmin.vue'
+import MoneyTopUpApprovals from '../views/MoneyTopUpApprovals.vue'
 import Login from '../components/Login.vue'
 
 const router = createRouter({
@@ -78,6 +79,12 @@ const router = createRouter({
       name: 'databaseAdmin',
       component: DatabaseAdmin,
       meta: { requiresAuth: true, role: 'admin' }
+    },
+    {
+      path: '/duyet-nap-tien',
+      name: 'moneyTopUpApprovals',
+      component: MoneyTopUpApprovals,
+      meta: { requiresAuth: true, roles: ['admin', 'mod'] }
     }
   ]
 })
@@ -91,6 +98,8 @@ router.beforeEach((to, from, next) => {
   if (requiresAuth && !authStore.isAuthenticated) {
     next('/login')
   } else if (requiresGuest && authStore.isAuthenticated) {
+    next('/')
+  } else if (to.meta.roles && !(to.meta.roles as string[]).includes(authStore.currentUser?.role || '')) {
     next('/')
   } else {
     next()

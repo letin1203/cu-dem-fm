@@ -48,6 +48,7 @@ model Player {
   tournamentAttendances   TournamentPlayerAttendance[]
   tournamentTeamPlayers   TournamentTeamPlayer[]
   moneyHistory            PlayerMoneyHistory[]
+  moneyTopUps             PlayerMoneyTopUp[]
 
   @@map("players")
 }
@@ -243,6 +244,20 @@ model AdditionalCost {
   @@map("additional_costs")
 }
 
+model PlayerMoneyTopUp {
+  id           String   @id @default(cuid())
+  player       Player   @relation(fields: [playerId], references: [id], onDelete: Cascade)
+  playerId     String
+  amount       Int
+  status       String   @default("PENDING") // "PENDING", "APPROVED"
+  requestedAt  DateTime @default(now())
+  approvedAt   DateTime?
+  approvedById String?
+
+  @@index([status, requestedAt])
+  @@map("player_money_top_ups")
+}
+
 model PlayerMoneyHistory {
   id            String      @id @default(cuid())
   player        Player      @relation(fields: [playerId], references: [id], onDelete: Cascade)
@@ -253,6 +268,7 @@ model PlayerMoneyHistory {
   balanceBefore Int
   balanceAfter  Int
   description   String
+  details       Json?
   createdAt     DateTime    @default(now())
 
   @@index([playerId, createdAt])

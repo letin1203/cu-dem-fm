@@ -11,6 +11,7 @@ import { notFoundHandler } from './middleware/notFoundHandler';
 import { authRoutes } from './routes/auth';
 import { userRoutes } from './routes/users';
 import { playerRoutes } from './routes/players';
+import { moneyTopUpRoutes } from './routes/moneyTopUps';
 import { teamRoutes } from './routes/teams';
 import { tournamentRoutes } from './routes/tournaments';
 import { matchRoutes } from './routes/matches';
@@ -93,6 +94,7 @@ app.get('/health', (req, res) => {
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/players', playerRoutes);
+app.use('/api/money-top-ups', moneyTopUpRoutes);
 app.use('/api/teams', teamRoutes);
 app.use('/api/tournaments', tournamentRoutes);
 app.use('/api/matches', matchRoutes);

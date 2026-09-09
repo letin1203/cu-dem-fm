@@ -1,7 +1,10 @@
 import { PrismaClient } from '@prisma/client';
+import bcrypt from 'bcryptjs';
 
 const prisma = new PrismaClient();
-const TOURNAMENT_ID = 'cmts7r3ca0000a5l7p8mlm9bc';
+const TOURNAMENT_ID = 'cmtsbq4vd0002p1kfm62hxhz8';
+const TOTAL_PLAYERS = 20;
+const GK_COUNT = 3; // Change this value to generate a different number of goalkeepers.
 
 async function generateTestData() {
   try {
@@ -18,12 +21,13 @@ async function generateTestData() {
     }
 
     console.log(`Found tournament: ${tournament.name}`);
+    const testUserPasswordHash = await bcrypt.hash('test123', 10);
 
-    // Generate 20 users with linked players
+    // Generate users with linked players. GK players are deliberately Tier 3-6.
     const usersData = [];
     const playersData = [];
 
-    for (let i = 1; i <= 20; i++) {
+    for (let i = 1; i <= TOTAL_PLAYERS; i++) {
       const userId = `test-user-${i.toString().padStart(2, '0')}`;
       const playerId = `test-player-${i.toString().padStart(2, '0')}`;
       
@@ -31,23 +35,24 @@ async function generateTestData() {
         id: userId,
         email: `testuser${i}@example.com`,
         username: `testuser${i}`,
-        password: '$2a$10$example.hash.for.testing.purposes.only', // placeholder hash
+        password: testUserPasswordHash,
         role: 'USER',
         playerId: playerId,
       });
 
+      const isGoalkeeper = i <= GK_COUNT;
       playersData.push({
         id: playerId,
         name: `Test Player ${i}`,
-        position: ['GK', 'DEF', 'MID', 'FWD'][Math.floor(Math.random() * 4)],
+        position: isGoalkeeper ? 'GK' : ['DEF', 'MID', 'FWD'][Math.floor(Math.random() * 3)],
         yearOfBirth: 1990 + Math.floor(Math.random() * 15), // 1990-2004
-        tier: Math.floor(Math.random() * 10) + 1, // 1-10
+        tier: isGoalkeeper ? Math.floor(Math.random() * 4) + 3 : Math.floor(Math.random() * 6) + 1,
         money: Math.floor(Math.random() * 100000) + 10000, // 10k-110k
       });
     }
 
     // Create players first
-    console.log('Creating 20 players...');
+    console.log(`Creating ${TOTAL_PLAYERS} players (${GK_COUNT} GK)...`);
     for (const playerData of playersData) {
       await prisma.player.upsert({
         where: { id: playerData.id },
@@ -57,7 +62,7 @@ async function generateTestData() {
     }
 
     // Create users
-    console.log('Creating 20 users...');
+    console.log(`Creating ${TOTAL_PLAYERS} users...`);
     for (const userData of usersData) {
       await prisma.user.upsert({
         where: { id: userData.id },
@@ -68,7 +73,7 @@ async function generateTestData() {
 
     // Create attendance records for 15 players (attending)
     console.log('Creating attendance records...');
-    for (let i = 1; i <= 20; i++) {
+    for (let i = 1; i <= TOTAL_PLAYERS; i++) {
       const playerId = `test-player-${i.toString().padStart(2, '0')}`;
       const status = i <= 15 ? 'ATTEND' : 'NOT_ATTEND'; // First 15 attend, last 5 don't attend
 
@@ -92,8 +97,8 @@ async function generateTestData() {
 
     console.log('✅ Test data generation completed!');
     console.log('📊 Summary:');
-    console.log('   - 20 users created');
-    console.log('   - 20 players created and linked to users');
+    console.log(`   - ${TOTAL_PLAYERS} users created`);
+    console.log(`   - ${TOTAL_PLAYERS} players created and linked to users (${GK_COUNT} GK, Tier 3-6)`);
     console.log('   - 15 players set to ATTEND the tournament');
     console.log('   - 5 players set to NOT_ATTEND the tournament');
 

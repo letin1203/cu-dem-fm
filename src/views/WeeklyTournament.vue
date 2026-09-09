@@ -294,7 +294,7 @@
             
             <!-- Random Team Button (Admin/Mod only) -->
             <div class="flex flex-col items-center pt-2 border-t border-gray-200">
-              <div class="flex space-x-3">
+              <div class="flex w-full flex-col gap-3 sm:w-auto sm:flex-row sm:[&>button]:w-auto [&>button]:w-full">
                 <button
                   v-if="authStore.hasPermission('canEditTournaments') && getTournamentTeams(ongoingTournament).length === 0" 
                   @click="openTeamCountModal(ongoingTournament.id)"

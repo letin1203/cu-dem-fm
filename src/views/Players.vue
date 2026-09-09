@@ -59,6 +59,17 @@
           <option value="money-asc">Tiền (thấp đến cao)</option>
         </select>
       </div>
+
+      <div>
+        <button
+          type="button"
+          class="rounded-lg px-4 py-2 text-sm font-medium transition-colors"
+          :class="showDebtOnly ? 'bg-red-600 text-white hover:bg-red-700' : 'bg-red-50 text-red-700 hover:bg-red-100'"
+          @click="showDebtOnly = !showDebtOnly"
+        >
+          {{ showDebtOnly ? 'Đang lọc danh sách nợ' : 'Lọc danh sách nợ' }}
+        </button>
+      </div>
     </div>
 
     <!-- Players Table/Cards -->
@@ -98,19 +109,20 @@
         <!-- Mobile Cards View -->
       <div class="block sm:hidden">
         <div
-          v-for="player in filteredPlayers"
+          v-for="(player, index) in filteredPlayers"
           :key="player.id"
           class="border-b border-gray-200 p-4 last:border-b-0"
         >
           <div class="flex items-start justify-between mb-3">
             <div class="flex items-center space-x-3">
-              <div class="h-10 w-10 rounded-full bg-primary-100 flex items-center justify-center">
-                <span class="text-primary-600 font-medium text-sm">
+              <div class="h-10 w-10 overflow-hidden rounded-full bg-primary-100 flex items-center justify-center">
+                <img v-if="player.avatar" :src="player.avatar" :alt="player.name" class="h-full w-full object-cover">
+                <span v-else class="text-primary-600 font-medium text-sm">
                   {{ player.name.split(' ').map(n => n[0]).join('') }}
                 </span>
               </div>
               <div>
-                <div class="text-sm font-medium text-gray-900">{{ player.name }}</div>
+                <div class="text-sm font-medium text-gray-900">{{ index + 1 }}. {{ player.name }}</div>
                 <div class="text-xs text-gray-500">{{ displayPosition(player.position) }} • {{ player.yearOfBirth }}</div>
               </div>
             </div>
@@ -142,16 +154,7 @@
           <div class="grid grid-cols-2 gap-3 text-xs justify-between">
             <div>
               <div class="flex items-center mt-1">
-                <div class="flex">
-                  <div 
-                    v-for="star in 6" 
-                    :key="star"
-                    :class="star <= 7 - player.tier ? 'text-yellow-400' : 'text-gray-300'"
-                    class="w-3 h-3"
-                  >
-                    ★
-                  </div>
-                </div>
+                <span class="font-medium text-gray-700">Tier {{ player.tier }}</span>
               </div>
             </div>
             <div class="text-right">
@@ -184,6 +187,7 @@
         <table class="min-w-full divide-y divide-gray-200">
           <thead class="bg-gray-50">
             <tr>
+              <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">STT</th>
               <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Tên
               </th>
@@ -191,7 +195,7 @@
                 Vị trí
               </th>
               <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Năm
+                Năm sinh
               </th>
               <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Tier
@@ -205,12 +209,14 @@
             </tr>
           </thead>
           <tbody class="bg-white divide-y divide-gray-200">
-            <tr v-for="player in filteredPlayers" :key="player.id" class="hover:bg-gray-50">
+            <tr v-for="(player, index) in filteredPlayers" :key="player.id" class="hover:bg-gray-50">
+              <td class="px-4 py-4 whitespace-nowrap text-sm text-gray-500">{{ index + 1 }}</td>
               <td class="px-6 py-4 whitespace-nowrap">
                 <div class="flex items-center">
                   <div class="flex-shrink-0 h-10 w-10">
-                    <div class="h-10 w-10 rounded-full bg-primary-100 flex items-center justify-center">
-                      <span class="text-primary-600 font-medium">
+                    <div class="h-10 w-10 overflow-hidden rounded-full bg-primary-100 flex items-center justify-center">
+                      <img v-if="player.avatar" :src="player.avatar" :alt="player.name" class="h-full w-full object-cover">
+                      <span v-else class="text-primary-600 font-medium">
                         {{ player.name.split(' ').map(n => n[0]).join('') }}
                       </span>
                     </div>
@@ -227,18 +233,7 @@
                 {{ player.yearOfBirth }}
               </td>
               <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                <div class="flex items-center">
-                  <div class="flex">
-                    <div 
-                      v-for="star in 6" 
-                      :key="star"
-                      :class="star <= 7 - player.tier ? 'text-yellow-400' : 'text-gray-300'"
-                      class="w-3 h-3"
-                    >
-                      ★
-                    </div>
-                  </div>
-                </div>
+                <span class="font-medium text-gray-700">{{ player.tier }}</span>
               </td>
               <td class="px-6 py-4 whitespace-nowrap text-sm" :class="player.money < 0 ? 'text-red-600' : 'text-gray-900'">
                 {{ player.money.toLocaleString('vi-VN') }} ₫
@@ -421,6 +416,7 @@ const editingPlayer = ref<Player | null>(null)
 const playerNameFilter = ref('')
 const selectedTierRange = ref<string | null>(null)
 const sortBy = ref<'tier' | 'money-asc'>('tier')
+const showDebtOnly = ref(false)
 const showMoneyHistory = ref(false)
 const selectedMoneyPlayer = ref<Player | null>(null)
 const moneyHistory = ref<PlayerMoneyHistory[]>([])
@@ -475,9 +471,12 @@ const filteredPlayers = computed(() => {
       )
     }
   }
+
+  if (showDebtOnly.value) result = result.filter(player => player.money < 0)
   
   // Tier 1 is the strongest. Copy before sorting so the store state is not mutated.
   return [...result].sort((a, b) => {
+    if (showDebtOnly.value) return a.money - b.money || a.tier - b.tier
     if (sortBy.value === 'money-asc') return a.money - b.money || a.tier - b.tier
     return a.tier - b.tier || a.name.localeCompare(b.name, 'vi')
   })
@@ -539,7 +538,6 @@ function submitForm() {
     position: formData.value.position,
     yearOfBirth: parseInt(formData.value.yearOfBirth),
     tier: parseInt(formData.value.tier),
-    money: parseInt(formData.value.money),
     teamId: undefined, // Remove team assignment from player creation
     stats: {
       gamesPlayed: 0,
@@ -558,7 +556,7 @@ function submitForm() {
         // Error is handled by the store
       })
   } else {
-    playersStore.addPlayer(playerData)
+    playersStore.addPlayer({ ...playerData, money: parseInt(formData.value.money) })
       .then(() => {
         cancelForm()
         // Refresh the players list to include the new player
@@ -617,6 +615,7 @@ async function submitAdminTopUp() {
   } finally {
     submittingAdminTopUp.value = false
   }
+
 }
 
 async function openMoneyHistory(player: Player) {

@@ -902,10 +902,10 @@ router.put('/:id/attendance', authenticate, async (req: AuthenticatedRequest, re
 
     // Handle toggle bet request
     if (toggleBet) {
-      if (tournament.status !== 'ONGOING' || tournament.startDate.getTime() <= Date.now()) {
+      if (!['UPCOMING', 'ONGOING'].includes(tournament.status) || tournament.startDate.getTime() <= Date.now()) {
         res.status(400).json({
           success: false,
-          error: 'Chỉ được thay đổi cược khi giải đang diễn ra nhưng chưa tới thời gian đã hẹn',
+          error: 'Chỉ được thay đổi cược trước thời gian diễn ra giải đấu',
         });
         return;
       }
@@ -1508,10 +1508,32 @@ router.post('/:id/generate-teams', authenticate, authorize(['ADMIN', 'MOD']), as
         // Find the best team to assign this player to
         let bestTeamIndex = 0;
         
-        if (tier <= 2) {
-          // Apply a strict hierarchy for strong players. Tier 1 is balanced
-          // first; when assigning Tier 2, teams with fewer Tier 1 players
-          // always win before Tier 2 count or capacity are considered.
+        if (tier === 2) {
+          // Tier 2 prefers the team with fewer Tier 1 players, but only among
+          // teams with the lowest current Tier 2 count. This hard constraint
+          // keeps Tier 2 distribution within one player between any two teams.
+          const eligibleTeams = teams
+            .map((team, index) => ({ team, index }))
+            .filter(({ team, index }) => team.players.length < teamTargets[index].target);
+          const minTierTwoCount = Math.min(...eligibleTeams.map(({ team }) =>
+            team.players.filter((assignedPlayer: any) => assignedPlayer.tier === 2).length
+          ));
+          let bestTierOneCount = Infinity;
+          let bestCapacityRatio = Infinity;
+
+          for (const { team, index } of eligibleTeams) {
+            const tierTwoCount = team.players.filter((assignedPlayer: any) => assignedPlayer.tier === 2).length;
+            if (tierTwoCount !== minTierTwoCount) continue;
+            const tierOneCount = team.players.filter((assignedPlayer: any) => assignedPlayer.tier === 1).length;
+            const capacityRatio = team.players.length / teamTargets[index].target;
+            if (tierOneCount < bestTierOneCount || (tierOneCount === bestTierOneCount && capacityRatio < bestCapacityRatio)) {
+              bestTeamIndex = index;
+              bestTierOneCount = tierOneCount;
+              bestCapacityRatio = capacityRatio;
+            }
+          }
+        } else if (tier === 1) {
+          // Tier 1 is balanced first across teams, then capacity breaks ties.
           let bestTierPriority: number[] | null = null;
           let bestCapacityRatio = Infinity;
           

@@ -68,7 +68,18 @@
             <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between space-y-3 sm:space-y-0">
               <div class="flex-1">
                 <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between">
-                  <h3 class="text-lg font-semibold text-gray-900">{{ ongoingTournament.name }}</h3>
+                  <div class="flex items-center gap-2">
+                    <h3 class="text-lg font-semibold text-gray-900">{{ ongoingTournament.name }}</h3>
+                    <button
+                      type="button"
+                      class="inline-flex h-6 w-6 items-center justify-center rounded-full text-primary-600 transition-colors hover:bg-primary-50 hover:text-primary-800"
+                      title="Thông tin cách tính tiền"
+                      aria-label="Thông tin cách tính tiền"
+                      @click="showTournamentCalculationInfoModal = true"
+                    >
+                      <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9" stroke-width="2"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0-9h.01"/></svg>
+                    </button>
+                  </div>
                 </div>
                 <!-- Badge and Date/Time moved below title -->
                 <div class="flex flex-wrap items-center gap-2 mt-2 text-sm text-gray-600">
@@ -194,7 +205,7 @@
                       v-for="player in team.players"
                       :key="player.id"
                       class="flex items-center justify-between p-2 bg-gray-50 rounded text-sm"
-                      :class="{ 'bg-yellow-100': ongoingTournament.status === 'ONGOING' && isPlayerBetting(ongoingTournament.id, player.id) }"
+                      :class="{ 'bg-yellow-100': isPlayerBetting(ongoingTournament.id, player.id) }"
                     >
                       <div class="flex items-center">
                         <div class="w-6 h-6 shrink-0 overflow-hidden bg-gray-300 rounded-full flex items-center justify-center mr-2 text-xs font-medium">
@@ -227,9 +238,10 @@
             </div>
             
             <!-- Attendance Toggle Button -->
-            <div v-if="ongoingTournament.status === 'UPCOMING' && getAttendanceButtonText(ongoingTournament.id) !== 'Không có cầu thủ'" class="flex justify-center pt-2 border-t border-gray-200">
+            <div v-if="(ongoingTournament.status === 'UPCOMING' && getAttendanceButtonText(ongoingTournament.id) !== 'Không có cầu thủ') || canUserToggleBet(ongoingTournament)" class="flex justify-center pt-2 border-t border-gray-200">
               <div class="flex w-full flex-col items-stretch gap-3 sm:w-auto sm:flex-row sm:flex-wrap sm:justify-center [&>button]:w-full sm:[&>button]:w-auto">
                 <button
+                  v-if="ongoingTournament.status === 'UPCOMING' && getAttendanceButtonText(ongoingTournament.id) !== 'Không có cầu thủ'"
                   @click="toggleAttendance(ongoingTournament.id)"
                   :disabled="attendanceLoading.has(ongoingTournament.id)"
                   class="px-6 py-2 rounded-lg font-medium transition-colors duration-200"
@@ -245,16 +257,7 @@
                   ]"
                 >
                   <div class="flex items-center justify-center space-x-1">
-                    <span>{{ attendanceLoading.has(ongoingTournament.id) ? 'Đang tải...' : getAttendanceButtonText(ongoingTournament.id) }}</span>
-                    <!-- Check icon (only shown when attended) -->
-                    <svg 
-                      v-if="getAttendanceButtonText(ongoingTournament.id) === 'Đã tham gia'" 
-                      class="w-4 h-4" 
-                      fill="currentColor" 
-                      viewBox="0 0 20 20"
-                    >
-                      <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
-                    </svg>
+                    <span>{{ attendanceLoading.has(ongoingTournament.id) ? 'Đang tải...' : `${getAttendanceButtonText(ongoingTournament.id)}${getAttendanceButtonText(ongoingTournament.id) === 'Đã tham gia' ? ' ✓' : ''}` }}</span>
                   </div>
                 </button>
                 
@@ -277,22 +280,21 @@
                     <span>{{ waterLoading.has(ongoingTournament.id) ? 'Đang tải...' : (getUserWaterStatus(ongoingTournament.id) ? 'Nước ✓' : 'Nước') }}</span>
                   </div>
                 </button>
+
+                <!-- Bet Button: available before the scheduled start time -->
+                <button
+                  v-if="canUserToggleBet(ongoingTournament)"
+                  @click="toggleBet(ongoingTournament.id)"
+                  :disabled="betLoading.has(ongoingTournament.id)"
+                  class="px-4 py-2 text-center rounded-lg font-medium transition-colors duration-200"
+                  :class="[betLoading.has(ongoingTournament.id) ? 'opacity-50 cursor-not-allowed' : 'hover:shadow-md', getUserBetStatus(ongoingTournament.id) ? 'bg-yellow-600 text-white hover:bg-yellow-700' : 'bg-gray-300 text-gray-700 hover:bg-gray-400']"
+                >
+                  {{ betLoading.has(ongoingTournament.id) ? 'Đang tải...' : (getUserBetStatus(ongoingTournament.id) ? 'Cược ✓' : 'Cược') }}
+                </button>
                 
               </div>
             </div>
 
-            <!-- Bet Button: enabled only while the ONGOING tournament has not reached its scheduled time -->
-            <div v-if="canUserToggleBet(ongoingTournament)" class="flex justify-center pt-2 border-t border-gray-200">
-              <button
-                @click="toggleBet(ongoingTournament.id)"
-                :disabled="betLoading.has(ongoingTournament.id)"
-                class="w-full px-4 py-2 text-center rounded-lg font-medium transition-colors duration-200 sm:w-auto"
-                :class="[betLoading.has(ongoingTournament.id) ? 'opacity-50 cursor-not-allowed' : 'hover:shadow-md', getUserBetStatus(ongoingTournament.id) ? 'bg-yellow-600 text-white hover:bg-yellow-700' : 'bg-gray-300 text-gray-700 hover:bg-gray-400']"
-              >
-                {{ betLoading.has(ongoingTournament.id) ? 'Đang tải...' : (getUserBetStatus(ongoingTournament.id) ? 'Cược ✓' : 'Cược') }}
-              </button>
-            </div>
-            
             <!-- Random Team Button (Admin/Mod only) -->
             <div class="flex flex-col items-center pt-2 border-t border-gray-200">
               <div class="flex w-full flex-col gap-3 sm:w-auto sm:flex-row sm:[&>button]:w-auto [&>button]:w-full">
@@ -663,6 +665,45 @@
     </div>
   </div>
 
+  <div v-if="showTournamentCalculationInfoModal && ongoingTournament" class="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4" @click.self="showTournamentCalculationInfoModal = false">
+    <div class="flex max-h-[90vh] w-full max-w-lg flex-col overflow-hidden rounded-lg bg-white shadow-xl" role="dialog" aria-modal="true" aria-labelledby="tournament-calculation-title">
+      <div class="flex items-center justify-between border-b p-5">
+        <div>
+          <h3 id="tournament-calculation-title" class="text-lg font-semibold text-gray-900">Cách tính tiền giải đấu</h3>
+          <p class="text-sm text-gray-500">{{ ongoingTournament.name }}</p>
+        </div>
+        <button type="button" class="text-2xl text-gray-400 hover:text-gray-700" aria-label="Đóng" @click="showTournamentCalculationInfoModal = false">×</button>
+      </div>
+      <div class="overflow-y-auto p-5 space-y-5 text-sm text-gray-700">
+        <section>
+          <h4 class="font-semibold text-gray-900">1. Chi phí cơ bản</h4>
+          <div class="mt-2 space-y-1 rounded-lg bg-gray-50 p-3">
+            <div class="flex justify-between gap-3"><span>Chi phí sân</span><strong>{{ getTournamentStadiumCost(ongoingTournament).toLocaleString('vi-VN') }} ₫</strong></div>
+            <div class="flex justify-between gap-3"><span>Chi phí phát sinh</span><strong>{{ getTournamentAdditionalCostsTotal(ongoingTournament.id).toLocaleString('vi-VN') }} ₫</strong></div>
+            <div class="flex justify-between gap-3 text-green-700"><span>Trừ tiền tài trợ</span><strong>-{{ getTournamentSponsorMoney(ongoingTournament).toLocaleString('vi-VN') }} ₫</strong></div>
+            <div v-if="getTournamentFundContribution(ongoingTournament) > 0" class="flex justify-between gap-3 text-indigo-700"><span>Trừ phần trích quỹ</span><strong>-{{ getTournamentFundContribution(ongoingTournament).toLocaleString('vi-VN') }} ₫</strong></div>
+            <div class="flex justify-between gap-3 border-t pt-2 font-semibold text-gray-900"><span>Tổng cần chia</span><span>{{ calculateTournamentNet(ongoingTournament.id).toLocaleString('vi-VN') }} ₫</span></div>
+          </div>
+        </section>
+        <section>
+          <h4 class="font-semibold text-gray-900">2. Số tiền mỗi cầu thủ</h4>
+          <p class="mt-1 leading-6">Tổng cần chia được chia cho số cầu thủ tham gia, làm tròn lên bội số 5.000 ₫ rồi cộng thêm 5.000 ₫.</p>
+          <p v-if="getAttendanceStats(ongoingTournament.id)?.attendingCount" class="mt-2 rounded-lg bg-primary-50 p-3 font-medium text-primary-800">Tạm tính {{ getAttendanceStats(ongoingTournament.id)?.attendingCount }} cầu thủ: {{ calculateCostPerPlayer(ongoingTournament.id).toLocaleString('vi-VN') }} ₫/người.</p>
+          <p class="mt-2">Thủ môn (GK) được giảm 50% chi phí cơ bản, trừ khi admin/mod hủy ưu đãi này lúc kết thúc giải.</p>
+        </section>
+        <section>
+          <h4 class="font-semibold text-gray-900">3. Điều chỉnh khi kết thúc giải</h4>
+          <ul class="mt-2 space-y-1 leading-6">
+            <li>• Cược thắng: +10.000 ₫; cược thua: -10.000 ₫.</li>
+            <li>• Cầu thủ đội thua: -10.000 ₫.</li>
+            <li>• Người chọn nước: -10.000 ₫; đội thắng được miễn phí nước.</li>
+          </ul>
+        </section>
+      </div>
+      <div class="flex justify-end border-t p-4"><button type="button" class="btn-primary" @click="showTournamentCalculationInfoModal = false">Đóng</button></div>
+    </div>
+  </div>
+
   <div v-if="showTournamentMoneyHistoryModal" class="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4" @click.self="showTournamentMoneyHistoryModal = false">
     <div class="flex max-h-[90vh] w-full max-w-2xl flex-col overflow-hidden rounded-lg bg-white shadow-xl">
       <div class="flex items-center justify-between border-b p-5"><div><h3 class="text-lg font-semibold text-gray-900">Biến động tiền cầu thủ</h3><p class="text-sm text-gray-500">{{ selectedMoneyHistoryTournament?.name }}</p></div><button @click="showTournamentMoneyHistoryModal = false" class="text-2xl text-gray-400 hover:text-gray-700">×</button></div>
@@ -692,6 +733,13 @@
         <div class="mb-4">
           <label class="form-label">Tìm theo tên cầu thủ</label>
           <input v-model="attendancePlayerNameFilter" type="text" class="form-input mt-1" placeholder="Nhập tên cầu thủ...">
+        </div>
+        <div v-if="attendanceModalType === 'pending'" class="mb-4">
+          <p class="form-label">Lọc theo Tier</p>
+          <div class="mt-2 flex flex-wrap gap-2">
+            <button type="button" class="rounded-lg px-3 py-1.5 text-sm font-medium transition-colors" :class="attendancePlayerTierFilter === null ? 'bg-primary-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'" @click="attendancePlayerTierFilter = null">Tất cả</button>
+            <button v-for="tier in 6" :key="tier" type="button" class="rounded-lg px-3 py-1.5 text-sm font-medium transition-colors" :class="attendancePlayerTierFilter === tier ? 'bg-primary-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'" @click="attendancePlayerTierFilter = tier">Tier {{ tier }}</button>
+          </div>
         </div>
         <div v-if="attendanceModalType === 'pending' && authStore.hasAnyRole(['admin', 'mod']) && !attendanceModalLoading && getFilteredModalData().length" class="mb-4 flex items-center justify-between rounded-lg bg-blue-50 px-3 py-2 text-sm text-blue-900">
           <button
@@ -723,17 +771,6 @@
             :key="attendance.id"
             class="flex items-center p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
           >
-            <button
-              v-if="attendanceModalType === 'pending' && authStore.hasAnyRole(['admin', 'mod'])"
-              type="button"
-              class="mr-3 flex h-7 w-7 shrink-0 items-center justify-center rounded-full border text-sm font-bold transition-colors"
-              :class="selectedPendingPlayerIds.has(attendance.player.id) ? 'border-blue-600 bg-blue-600 text-white' : 'border-gray-300 bg-white text-transparent hover:border-blue-400'"
-              :aria-label="`Chọn ${attendance.player.name}`"
-              :aria-pressed="selectedPendingPlayerIds.has(attendance.player.id)"
-              @click="togglePendingPlayer(attendance.player.id)"
-            >
-              ✓
-            </button>
             <!-- Player Avatar -->
             <div class="w-12 h-12 rounded-full bg-gray-300 flex items-center justify-center mr-4">
               <img 
@@ -772,19 +809,32 @@
                       {{ attendance.withWater ? '💧 Có nước' : '🚫 Không nước' }}
                     </span>
                   </button>
+                  <button
+                    @click="cancelPlayerAttendance(attendance)"
+                    :disabled="playerAttendanceLoading.has(attendance.player.id)"
+                    class="ml-2 rounded px-2 py-1 text-xs font-medium text-red-700 hover:bg-red-100 disabled:opacity-50"
+                  >
+                    {{ playerAttendanceLoading.has(attendance.player.id) ? 'Đang cập nhật...' : 'Hủy tham gia' }}
+                  </button>
                 </div>
               </div>
               
               <!-- Player Details Row -->
-              <div class="flex items-center justify-between mt-1">
-                <span class="text-sm text-gray-600">{{ attendance.player.position }}</span>
-                <span class="flex items-center text-sm text-gray-600">
-                  <span class="ml-1">
-                    {{ '⭐'.repeat(attendance.player.tier) }}
-                  </span>
-                </span>
+              <div class="mt-1">
+                <span class="text-sm text-gray-600">{{ attendance.player.position }} - Tier {{ attendance.player.tier }}</span>
               </div>
             </div>
+            <button
+              v-if="attendanceModalType === 'pending' && authStore.hasAnyRole(['admin', 'mod'])"
+              type="button"
+              class="ml-3 flex h-7 w-7 shrink-0 items-center justify-center self-center rounded-full border text-sm font-bold transition-colors"
+              :class="selectedPendingPlayerIds.has(attendance.player.id) ? 'border-blue-600 bg-blue-600 text-white' : 'border-gray-300 bg-white text-transparent hover:border-blue-400'"
+              :aria-label="`Chọn ${attendance.player.name}`"
+              :aria-pressed="selectedPendingPlayerIds.has(attendance.player.id)"
+              @click="togglePendingPlayer(attendance.player.id)"
+            >
+              ✓
+            </button>
           </div>
         </div>
       </div>
@@ -1298,6 +1348,7 @@ const systemStore = useSystemStore()
 const loading = ref(false)
 const loadingMore = ref(false)
 const showCreateTournamentModal = ref(false)
+const showTournamentCalculationInfoModal = ref(false)
 const newTournamentDate = ref('')
 const activeFilter = ref('Đang diễn ra')
 const filters = ['Đang diễn ra', 'Giải đấu cũ']
@@ -1323,6 +1374,7 @@ const attendanceModalType = ref<'attending' | 'not-attending' | 'betting' | 'pen
 const attendanceModalLoading = ref(false)
 const playerAttendanceLoading = ref<Set<string>>(new Set())
 const attendancePlayerNameFilter = ref('')
+const attendancePlayerTierFilter = ref<number | null>(null)
 const attendanceModalTournamentId = ref<string | null>(null)
 const selectedPendingPlayerIds = ref<Set<string>>(new Set())
 const batchAttendanceSaving = ref(false)
@@ -1792,6 +1844,7 @@ const openAttendanceModal = async (tournamentId: string, type: 'attending' | 'no
   showAttendanceModal.value = true
   attendanceModalData.value = [] // Clear previous data
   attendancePlayerNameFilter.value = ''
+  attendancePlayerTierFilter.value = null
   attendanceModalTournamentId.value = tournamentId
   selectedPendingPlayerIds.value = new Set()
   
@@ -1803,6 +1856,7 @@ const closeAttendanceModal = (): void => {
   attendanceModalData.value = []
   attendanceModalLoading.value = false
   attendancePlayerNameFilter.value = ''
+  attendancePlayerTierFilter.value = null
   attendanceModalTournamentId.value = null
   selectedPendingPlayerIds.value = new Set()
 }
@@ -1814,6 +1868,7 @@ const getFilteredModalData = (): TournamentAttendanceDetails[] => {
     return attendanceModalData.value
       .filter(item => item.status !== 'ATTEND' && item.status !== 'NOT_ATTEND')
       .filter(matchesName)
+      .filter(item => attendancePlayerTierFilter.value === null || item.player.tier === attendancePlayerTierFilter.value)
       .sort((a, b) => a.player.tier - b.player.tier || a.player.name.localeCompare(b.player.name, 'vi'))
   }
   if (attendanceModalType.value === 'betting') {
@@ -2888,7 +2943,7 @@ const togglePlayerWater = async (attendance: TournamentAttendanceDetails): Promi
 }
 
 const canUserToggleBet = (tournament: Tournament): boolean => {
-  return tournament.status === 'ONGOING'
+  return ['UPCOMING', 'ONGOING'].includes(tournament.status)
     && new Date(tournament.startDate).getTime() > Date.now()
     && getUserAttendanceStatus(tournament.id) === 'ATTEND'
 }
@@ -2916,6 +2971,31 @@ const markPlayerAttending = async (attendance: TournamentAttendanceDetails): Pro
     toast.error(error.response?.data?.error || error.message || 'Không thể cập nhật điểm danh')
   } finally {
     playerAttendanceLoading.value.delete(attendance.player.id)
+  }
+}
+
+const cancelPlayerAttendance = async (attendance: TournamentAttendanceDetails): Promise<void> => {
+  if (playerAttendanceLoading.value.has(attendance.player.id)) return
+  try {
+    const loadingIds = new Set(playerAttendanceLoading.value)
+    loadingIds.add(attendance.player.id)
+    playerAttendanceLoading.value = loadingIds
+    const response = await apiClient.put<TournamentPlayerAttendance>(
+      `/tournaments/${attendance.tournamentId}/attendance/${attendance.player.id}`,
+      { status: 'NULL', withWater: false, bet: false },
+    )
+    if (!response.success) throw new Error(response.error || 'Không thể hủy tham gia')
+    const index = attendanceModalData.value.findIndex(item => item.id === attendance.id)
+    if (index !== -1) attendanceModalData.value[index] = { ...attendanceModalData.value[index], status: 'NULL', withWater: false, bet: false }
+    attendanceDetailsMap.value.set(attendance.tournamentId, attendanceModalData.value)
+    await fetchAttendanceStats(attendance.tournamentId)
+    toast.success(`Đã hủy tham gia của ${attendance.player.name}`)
+  } catch (error: any) {
+    toast.error(error.response?.data?.error || error.message || 'Không thể hủy tham gia')
+  } finally {
+    const loadingIds = new Set(playerAttendanceLoading.value)
+    loadingIds.delete(attendance.player.id)
+    playerAttendanceLoading.value = loadingIds
   }
 }
 

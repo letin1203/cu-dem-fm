@@ -42,7 +42,11 @@ export const createPlayerSchema = z.object({
   teamId: z.string().optional(),
 });
 
-export const updatePlayerSchema = createPlayerSchema.partial();
+// A player can legitimately have a negative balance after tournament costs.
+// Keep creation non-negative, but allow existing balances to be preserved/adjusted.
+export const updatePlayerSchema = createPlayerSchema.partial().extend({
+  money: z.number().int().optional(),
+});
 
 // Team schemas
 export const createTeamSchema = z.object({

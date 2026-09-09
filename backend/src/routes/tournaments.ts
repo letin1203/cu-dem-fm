@@ -131,6 +131,38 @@ router.get('/:id/money-history', async (req: AuthenticatedRequest, res: Response
   }
 });
 
+// Get dates that contain completed weekly tournaments for a calendar month.
+router.get('/completed-dates', async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  try {
+    const year = Number(req.query.year);
+    const month = Number(req.query.month);
+    if (!Number.isInteger(year) || !Number.isInteger(month) || month < 1 || month > 12) {
+      res.status(400).json({ success: false, error: 'Năm hoặc tháng không hợp lệ' });
+      return;
+    }
+
+    const monthStart = new Date(Date.UTC(year, month - 1, 1));
+    const nextMonthStart = new Date(Date.UTC(year, month, 1));
+    const tournaments = await prisma.tournament.findMany({
+      where: {
+        type: 'WEEKLY',
+        status: 'COMPLETED',
+        startDate: { gte: monthStart, lt: nextMonthStart },
+      },
+      select: { startDate: true },
+      orderBy: { startDate: 'desc' },
+    });
+
+    res.json({
+      success: true,
+      data: [...new Set(tournaments.map(tournament => tournament.startDate.toISOString().slice(0, 10)))],
+    });
+  } catch (error) {
+    console.error('Get completed tournament dates error:', error);
+    res.status(500).json({ success: false, error: 'Không thể tải ngày có giải đấu' });
+  }
+});
+
 // Get tournament by ID
 router.get('/:id', async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   try {

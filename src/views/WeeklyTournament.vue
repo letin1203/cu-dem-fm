@@ -410,9 +410,14 @@
 
       <!-- Old Tournaments Tab -->
       <div v-else-if="activeFilter === 'Giải đấu cũ'">
+        <div class="mb-4 flex justify-end">
+          <button type="button" class="btn-secondary" @click="openOldTournamentDateModal">
+            {{ oldTournamentDateFilter ? `Ngày: ${formatOldTournamentFilterDate(oldTournamentDateFilter)}` : 'Lọc theo ngày' }}
+          </button>
+        </div>
         <div class="space-y-3 sm:space-y-4">
           <div
-            v-for="tournament in oldTournaments"
+            v-for="tournament in selectedOldTournament ? [selectedOldTournament] : []"
             :key="tournament.id"
             class="card transition-colors duration-200"
             :class="getCardBackgroundClass(tournament.id)"
@@ -598,22 +603,60 @@
           </div>
         </div>
 
-        <!-- Load More Button -->
-        <div v-if="hasMoreOldTournaments" class="text-center mt-6">
-          <button
-            @click="loadMoreOldTournaments"
-            :disabled="loadingMore"
-            class="btn-secondary"
-            :class="{ 'opacity-50 cursor-not-allowed': loadingMore }"
-          >
-            {{ loadingMore ? 'Đang tải...' : 'Tải thêm' }}
-          </button>
+        <div v-if="filteredOldTournaments.length > 0" class="mt-6 flex items-center justify-center gap-3">
+          <button type="button" class="btn-secondary" :disabled="oldTournamentIndex === 0" @click="navigateOldTournament(-1)">Trước</button>
+          <span class="text-sm text-gray-600">{{ oldTournamentIndex + 1 }} / {{ filteredOldTournaments.length }}</span>
+          <button type="button" class="btn-secondary" :disabled="oldTournamentIndex >= filteredOldTournaments.length - 1" @click="navigateOldTournament(1)">Sau</button>
         </div>
 
         <!-- No tournaments message -->
-        <div v-if="oldTournaments.length === 0 && !tournamentsStore.loading" class="text-center py-8">
-          <p class="text-gray-600">Không có giải hằng tuần cũ</p>
+        <div v-if="filteredOldTournaments.length === 0 && !tournamentsStore.loading" class="text-center py-8">
+          <p class="text-gray-600">Không có giải hằng tuần hoàn thành trong ngày đã chọn</p>
         </div>
+      </div>
+    </div>
+  </div>
+
+  <div v-if="showOldTournamentDateModal" class="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4" @click.self="showOldTournamentDateModal = false">
+    <div class="w-full max-w-md rounded-lg bg-white p-6 shadow-xl">
+      <div class="flex items-center justify-between border-b pb-4">
+        <h3 class="text-lg font-semibold text-gray-900">Lọc giải đấu theo ngày</h3>
+        <button type="button" class="text-2xl leading-none text-gray-400 hover:text-gray-700" @click="showOldTournamentDateModal = false">×</button>
+      </div>
+      <div class="py-5">
+        <div class="mb-4 flex items-center justify-between">
+          <button type="button" class="rounded p-2 text-lg hover:bg-gray-100" aria-label="Tháng trước" @click="changeOldTournamentCalendarMonth(-1)">‹</button>
+          <div class="text-center">
+            <p class="font-semibold capitalize text-gray-900">{{ oldTournamentCalendarLabel }}</p>
+            <p v-if="oldTournamentCalendarLoading" class="text-xs text-gray-500">Đang tải lịch giải...</p>
+          </div>
+          <button type="button" class="rounded p-2 text-lg hover:bg-gray-100" aria-label="Tháng sau" @click="changeOldTournamentCalendarMonth(1)">›</button>
+        </div>
+        <div class="grid grid-cols-7 gap-1 text-center text-xs font-medium text-gray-500">
+          <span v-for="weekday in oldTournamentWeekdays" :key="weekday" class="py-1">{{ weekday }}</span>
+        </div>
+        <div class="mt-1 grid grid-cols-7 gap-1">
+          <div v-for="(day, index) in oldTournamentCalendarDays" :key="day ? toLocalDateKey(day) : `empty-${index}`" class="aspect-square">
+            <button
+              v-if="day"
+              type="button"
+              class="h-full w-full rounded-md text-sm transition-colors"
+              :class="[
+                oldTournamentDateDraft === toLocalDateKey(day) ? 'bg-primary-600 font-bold text-white' : 'hover:bg-primary-50',
+                completedTournamentDates.has(toLocalDateKey(day)) && oldTournamentDateDraft !== toLocalDateKey(day) ? 'font-bold text-primary-700' : 'text-gray-700'
+              ]"
+              :title="completedTournamentDates.has(toLocalDateKey(day)) ? 'Có giải đấu đã hoàn thành' : undefined"
+              @click="oldTournamentDateDraft = toLocalDateKey(day)"
+            >
+              {{ day.getDate() }}
+            </button>
+          </div>
+        </div>
+        <p class="mt-3 text-xs text-gray-500"><strong class="text-primary-700">Ngày in đậm</strong> có giải đấu đã hoàn thành.</p>
+      </div>
+      <div class="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+        <button type="button" class="btn-secondary" @click="clearOldTournamentDateFilter">Xóa lọc</button>
+        <button type="button" class="btn-primary" @click="applyOldTournamentDateFilter">Áp dụng</button>
       </div>
     </div>
   </div>
@@ -1235,7 +1278,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useToast } from 'vue-toastification'
 import { useTournamentsStore } from '../stores/tournaments'
 import { useAuthStore } from '../stores/auth'
@@ -1414,11 +1457,6 @@ const calculateCostPerPlayer = (tournamentId: string) => {
   return roundedUp + 5000
 }
 
-// Pagination for old tournaments
-const oldTournamentPage = ref(1)
-const oldTournamentLimit = 5
-const hasMoreOldTournaments = ref(true)
-
 // Get next Monday (or today if today is Monday)
 const nextMonday = computed(() => {
   const today = new Date()
@@ -1483,6 +1521,22 @@ const minimumSelectableDate = computed(() => toLocalDateKey(new Date()))
 
 // Get old tournaments (completed or past)
 const oldTournaments = ref<Tournament[]>([])
+const oldTournamentIndex = ref(0)
+const oldTournamentDateFilter = ref('')
+const oldTournamentDateDraft = ref('')
+const showOldTournamentDateModal = ref(false)
+const oldTournamentCalendarMonth = ref(new Date(new Date().getFullYear(), new Date().getMonth(), 1))
+const completedTournamentDates = ref<Set<string>>(new Set())
+const oldTournamentCalendarLoading = ref(false)
+const oldTournamentWeekdays = ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7']
+const filteredOldTournaments = computed(() => {
+  const filterDate = oldTournamentDateFilter.value
+  return weeklyTournaments.value
+    .filter(tournament => tournament.status === 'COMPLETED')
+    .filter(tournament => !filterDate || toLocalDateKey(new Date(tournament.startDate)) === filterDate)
+    .sort((first, second) => new Date(second.startDate).getTime() - new Date(first.startDate).getTime())
+})
+const selectedOldTournament = computed(() => filteredOldTournaments.value[oldTournamentIndex.value] || null)
 
 // Helper functions
 const toLocalDateKey = (date: Date): string => {
@@ -1490,6 +1544,50 @@ const toLocalDateKey = (date: Date): string => {
   const month = String(date.getMonth() + 1).padStart(2, '0')
   const day = String(date.getDate()).padStart(2, '0')
   return `${year}-${month}-${day}`
+}
+
+const oldTournamentCalendarLabel = computed(() => oldTournamentCalendarMonth.value.toLocaleDateString('vi-VN', {
+  month: 'long',
+  year: 'numeric',
+}))
+
+const oldTournamentCalendarDays = computed(() => {
+  const month = oldTournamentCalendarMonth.value
+  const firstDay = new Date(month.getFullYear(), month.getMonth(), 1)
+  const dayCount = new Date(month.getFullYear(), month.getMonth() + 1, 0).getDate()
+  const days: Array<Date | null> = Array.from({ length: firstDay.getDay() }, () => null)
+  for (let day = 1; day <= dayCount; day++) days.push(new Date(month.getFullYear(), month.getMonth(), day))
+  while (days.length % 7 !== 0) days.push(null)
+  return days
+})
+
+const fetchCompletedTournamentDates = async (): Promise<void> => {
+  try {
+    oldTournamentCalendarLoading.value = true
+    const month = oldTournamentCalendarMonth.value
+    const response = await apiClient.get<string[]>(`/tournaments/completed-dates?year=${month.getFullYear()}&month=${month.getMonth() + 1}`)
+    if (!response.success) throw new Error(response.error || 'Không thể tải lịch giải đấu')
+    completedTournamentDates.value = new Set(response.data || [])
+  } catch (error) {
+    completedTournamentDates.value = new Set()
+    toast.error(error instanceof Error ? error.message : 'Không thể tải lịch giải đấu')
+  } finally {
+    oldTournamentCalendarLoading.value = false
+  }
+}
+
+const openOldTournamentDateModal = async (): Promise<void> => {
+  oldTournamentDateDraft.value = oldTournamentDateFilter.value
+  const sourceDate = oldTournamentDateDraft.value ? new Date(`${oldTournamentDateDraft.value}T00:00:00`) : new Date()
+  oldTournamentCalendarMonth.value = new Date(sourceDate.getFullYear(), sourceDate.getMonth(), 1)
+  showOldTournamentDateModal.value = true
+  await fetchCompletedTournamentDates()
+}
+
+const changeOldTournamentCalendarMonth = async (offset: number): Promise<void> => {
+  const current = oldTournamentCalendarMonth.value
+  oldTournamentCalendarMonth.value = new Date(current.getFullYear(), current.getMonth() + offset, 1)
+  await fetchCompletedTournamentDates()
 }
 
 const getTournamentSponsorMoney = (tournament: Tournament) => {
@@ -1912,45 +2010,43 @@ const createWeeklyTournament = async (tournamentDay: Date) => {
 }
 
 // Load old tournaments with pagination
-const loadOldTournaments = async (page: number = 1, append: boolean = false) => {
+const loadOldTournaments = async () => {
   try {
-    if (page === 1) {
-      oldTournaments.value = []
-    }
-    
-    // Old tournaments are only tournaments that have actually been completed.
-    const allWeeklyTournaments = weeklyTournaments.value
+    oldTournaments.value = weeklyTournaments.value
       .filter(t => t.status === 'COMPLETED')
       .sort((a, b) => new Date(b.startDate).getTime() - new Date(a.startDate).getTime())
-    
-    const startIndex = (page - 1) * oldTournamentLimit
-    const endIndex = startIndex + oldTournamentLimit
-    const pageData = allWeeklyTournaments.slice(startIndex, endIndex)
-    
-    if (append) {
-      oldTournaments.value.push(...pageData)
-    } else {
-      oldTournaments.value = pageData
-    }
-    
-    hasMoreOldTournaments.value = endIndex < allWeeklyTournaments.length
+    oldTournamentIndex.value = 0
   } catch (err: any) {
     console.error('Load old tournaments error:', err)
     toast.error('Không thể tải giải đấu cũ')
   }
 }
 
-const loadMoreOldTournaments = async () => {
-  if (loadingMore.value || !hasMoreOldTournaments.value) return
-  
-  try {
-    loadingMore.value = true
-    oldTournamentPage.value++
-    await loadOldTournaments(oldTournamentPage.value, true)
-    await loadAttendanceData(oldTournaments.value.slice(-oldTournamentLimit))
-  } finally {
-    loadingMore.value = false
-  }
+const navigateOldTournament = async (direction: -1 | 1): Promise<void> => {
+  const nextIndex = oldTournamentIndex.value + direction
+  if (nextIndex < 0 || nextIndex >= filteredOldTournaments.value.length) return
+  oldTournamentIndex.value = nextIndex
+  if (selectedOldTournament.value) await loadAttendanceData([selectedOldTournament.value])
+}
+
+const applyOldTournamentDateFilter = async (): Promise<void> => {
+  oldTournamentDateFilter.value = oldTournamentDateDraft.value
+  oldTournamentIndex.value = 0
+  showOldTournamentDateModal.value = false
+  if (selectedOldTournament.value) await loadAttendanceData([selectedOldTournament.value])
+}
+
+const clearOldTournamentDateFilter = async (): Promise<void> => {
+  oldTournamentDateDraft.value = ''
+  oldTournamentDateFilter.value = ''
+  oldTournamentIndex.value = 0
+  showOldTournamentDateModal.value = false
+  if (selectedOldTournament.value) await loadAttendanceData([selectedOldTournament.value])
+}
+
+const formatOldTournamentFilterDate = (value: string): string => {
+  const [year, month, day] = value.split('-')
+  return `${day}/${month}/${year}`
 }
 
 // Tournament actions
@@ -2252,8 +2348,8 @@ const loadAttendanceData = async (tournaments: Tournament[]): Promise<void> => {
 
 const handleFilterChange = async (filter: string): Promise<void> => {
   activeFilter.value = filter
-  if (filter === 'Giải đấu cũ') {
-    await loadAttendanceData(oldTournaments.value)
+  if (filter === 'Giải đấu cũ' && selectedOldTournament.value) {
+    await loadAttendanceData([selectedOldTournament.value])
   }
 }
 
@@ -2637,7 +2733,7 @@ const fetchData = async () => {
       teamsStore.fetchTeams(),
       systemStore.fetchSystemSettings()
     ])
-    await loadOldTournaments(1)
+    await loadOldTournaments()
     
     // Only load attendance for the currently displayed tournament on first render.
     // Historical tournaments are loaded on demand when the user opens that tab.
@@ -2651,27 +2747,6 @@ const fetchData = async () => {
 // Initialize
 onMounted(async () => {
   await fetchData()
-})
-
-// Scroll listener for infinite scroll on old tournaments
-const handleScroll = () => {
-  if (activeFilter.value !== 'Old Tournament') return
-  
-  const scrollHeight = document.documentElement.scrollHeight
-  const scrollTop = document.documentElement.scrollTop
-  const clientHeight = document.documentElement.clientHeight
-  
-  if (scrollTop + clientHeight >= scrollHeight - 100 && hasMoreOldTournaments.value && !loadingMore.value) {
-    loadMoreOldTournaments()
-  }
-}
-
-onMounted(() => {
-  window.addEventListener('scroll', handleScroll)
-})
-
-onUnmounted(() => {
-  window.removeEventListener('scroll', handleScroll)
 })
 
 // Water-related functions

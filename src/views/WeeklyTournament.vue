@@ -106,6 +106,9 @@
                   <span class="text-orange-600 font-medium">
                     💸 Nước: {{ getTournamentAdditionalCostsTotal(ongoingTournament.id).toLocaleString('vi-VN') }} ₫
                   </span>
+                  <span v-if="getTournamentFundContribution(ongoingTournament) > 0" class="text-indigo-600 font-medium">
+                    🏦 Trích quỹ: {{ getTournamentFundContribution(ongoingTournament).toLocaleString('vi-VN') }} ₫
+                  </span>
                   <span class="text-blue-600 font-medium">
                     📊 Tổng: {{ calculateTournamentNet(ongoingTournament.id).toLocaleString('vi-VN') }} ₫
                   </span>
@@ -361,10 +364,17 @@
             </div>
 
             <div
-              v-if="(authStore.hasRole('admin') && getTournamentTeams(ongoingTournament).length > 0) || (authStore.hasPermission('canDeleteTournaments') && ongoingTournament.status !== 'COMPLETED')"
+              v-if="(authStore.hasRole('admin') && getTournamentTeams(ongoingTournament).length > 0) || (authStore.hasAnyRole(['admin', 'mod']) && ongoingTournament.status !== 'COMPLETED') || (authStore.hasPermission('canDeleteTournaments') && ongoingTournament.status !== 'COMPLETED')"
               class="flex flex-col items-stretch gap-3 pt-2 border-t border-gray-200 sm:flex-row sm:flex-wrap sm:justify-end sm:[&>button]:w-auto [&>button]:w-full"
             >
               <button v-if="authStore.hasRole('admin') && getTournamentTeams(ongoingTournament).length > 0" @click="openAdditionalCostModal(ongoingTournament)" class="btn-secondary">Chi phí phát sinh</button>
+              <button
+                v-if="authStore.hasAnyRole(['admin', 'mod']) && ongoingTournament.status !== 'COMPLETED'"
+                @click="openFundContributionModal(ongoingTournament)"
+                class="btn-secondary"
+              >
+                Trích quỹ
+              </button>
               <button
                 v-if="authStore.hasPermission('canDeleteTournaments') && ongoingTournament.status !== 'COMPLETED'"
                 @click="deleteTournament(ongoingTournament.id)"
@@ -432,6 +442,9 @@
                       </span>
                       <span class="text-orange-600 font-medium">
                         💸 Nước: {{ getTournamentAdditionalCostsTotal(tournament.id).toLocaleString('vi-VN') }} ₫
+                      </span>
+                      <span v-if="getTournamentFundContribution(tournament) > 0" class="text-indigo-600 font-medium">
+                        🏦 Trích quỹ: {{ getTournamentFundContribution(tournament).toLocaleString('vi-VN') }} ₫
                       </span>
                       <span class="text-blue-600 font-medium">
                         📊 Tổng: {{ calculateTournamentNet(tournament.id).toLocaleString('vi-VN') }} ₫
@@ -739,6 +752,14 @@
     </div>
   </div>
 
+  <div v-if="showFundContributionModal" class="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4" @click.self="closeFundContributionModal">
+    <form class="w-full max-w-md rounded-lg bg-white p-6 shadow-xl" @submit.prevent="saveFundContribution">
+      <div class="flex items-center justify-between border-b pb-4"><div><h3 class="text-lg font-semibold text-gray-900">Trích quỹ</h3><p class="text-sm text-gray-500">{{ fundContributionTournament?.name }}</p></div><button type="button" @click="closeFundContributionModal" class="text-2xl text-gray-400 hover:text-gray-700">×</button></div>
+      <div class="py-5"><p class="form-label mb-3">Chọn số tiền trích quỹ</p><div class="grid grid-cols-2 gap-3"><button v-for="amount in fundContributionOptions" :key="amount" type="button" @click="fundContributionForm = amount" class="rounded-lg border px-4 py-3 font-medium transition-colors" :class="fundContributionForm === amount ? 'border-primary-600 bg-primary-600 text-white' : 'border-gray-200 text-gray-700 hover:bg-gray-50'">{{ amount.toLocaleString('vi-VN') }} ₫</button></div><label for="fund-contribution" class="form-label mt-5 block">Hoặc nhập số tiền khác</label><div class="relative mt-1"><span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">₫</span><input id="fund-contribution" v-model.number="fundContributionForm" type="number" min="0" required class="form-input pl-8" placeholder="Nhập số tiền trích quỹ"></div></div>
+      <div class="flex justify-end gap-3 border-t pt-4"><button type="button" @click="closeFundContributionModal" class="btn-secondary">Hủy</button><button type="submit" :disabled="fundContributionSaving" class="btn-primary disabled:opacity-50">{{ fundContributionSaving ? 'Đang lưu...' : 'Lưu' }}</button></div>
+    </form>
+  </div>
+
   <!-- Additional Cost Modal -->
   <div v-if="showAdditionalCostModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center z-50">
     <div class="bg-white rounded-lg p-6 w-full max-w-md">
@@ -1015,23 +1036,20 @@
                 <div 
                   v-for="change in getDetailedMoneyChange(endTournamentId, team, player).changes" 
                   :key="change.type"
-                  class="flex justify-between items-center text-xs"
+                  class="flex justify-between items-center gap-3 text-xs"
                 >
-                  <span class="text-gray-600">{{ change.description }}:</span>
-                  <span 
-                    :class="change.amount >= 0 ? 'text-green-600' : 'text-red-600'"
-                    class="font-medium"
-                  >
+                  <span class="min-w-0 text-gray-600">{{ change.description }}:</span>
+                  <span class="shrink-0 whitespace-nowrap font-medium text-gray-900">
                     {{ change.amount >= 0 ? '+' : '' }}{{ change.amount.toLocaleString('vi-VN') }} ₫
                   </span>
                 </div>
-                <div class="flex justify-between items-center text-xs" :class="endTournamentId && getDetailedMoneyChange(endTournamentId, team, player).total >= 0 ? 'text-green-600' : 'text-red-600'">
+                <div class="flex justify-between items-center gap-3 text-xs">
                   <span>Tổng thay đổi: </span>
-                  <span>{{ endTournamentId && getDetailedMoneyChange(endTournamentId, team, player).total >= 0 ? '+' : '' }}{{ endTournamentId ? getDetailedMoneyChange(endTournamentId, team, player).total.toLocaleString('vi-VN') : '0' }} ₫</span>
+                  <span class="shrink-0 whitespace-nowrap" :class="endTournamentId && getDetailedMoneyChange(endTournamentId, team, player).total >= 0 ? 'text-green-600' : 'text-red-600'">{{ endTournamentId && getDetailedMoneyChange(endTournamentId, team, player).total >= 0 ? '+' : '' }}{{ endTournamentId ? getDetailedMoneyChange(endTournamentId, team, player).total.toLocaleString('vi-VN') : '0' }} ₫</span>
                 </div>
-                <div class="flex justify-between items-center text-xs">
+                <div class="flex justify-between items-center gap-3 text-xs">
                   <span>Hiện tại: </span>
-                  <span>{{ (player.money || 0).toLocaleString('vi-VN') }} ₫</span>
+                  <span class="shrink-0 whitespace-nowrap">{{ (player.money || 0).toLocaleString('vi-VN') }} ₫</span>
                 </div>
               </div>
             </div>
@@ -1254,6 +1272,12 @@ const selectedTournamentTime = ref('19:00')
 const tournamentTimeSaving = ref(false)
 const tournamentTimeOptions = ['19:00', '19:30', '20:00']
 
+const showFundContributionModal = ref(false)
+const fundContributionTournament = ref<Tournament | null>(null)
+const fundContributionForm = ref<number | null>(null)
+const fundContributionSaving = ref(false)
+const fundContributionOptions = [100000, 200000, 300000, 400000, 500000]
+
 // Confirmation Modal variables
 const showEndTournamentModal = ref(false)
 const endTournamentId = ref<string | null>(null)
@@ -1323,7 +1347,7 @@ const calculateTournamentNet = (tournamentId: string) => {
   const sponsor = tournament ? getTournamentSponsorMoney(tournament) : systemStore.currentSettings.sponsorMoney
   const stadium = tournament ? getTournamentStadiumCost(tournament) : systemStore.currentSettings.stadiumCost
   const additionalCosts = getTournamentAdditionalCostsTotal(tournamentId)
-  return stadium - sponsor + additionalCosts
+  return stadium - sponsor + additionalCosts - (tournament ? getTournamentFundContribution(tournament) : 0)
 }
 
 const calculateCostPerPlayer = (tournamentId: string) => {
@@ -1426,6 +1450,8 @@ const getTournamentStadiumCost = (tournament: Tournament) => {
     ? tournament.stadiumCost
     : (systemStore.currentSettings?.stadiumCost || 0)
 }
+
+const getTournamentFundContribution = (tournament: Tournament) => tournament.fundContribution || 0
 
 const formatDate = (date: string | Date): string => {
   if (!date) return 'Không có'
@@ -2209,6 +2235,39 @@ const saveTournamentTime = async () => {
     toast.error(error.response?.data?.error || error.message || 'Không thể lưu giờ thi đấu')
   } finally {
     tournamentTimeSaving.value = false
+  }
+}
+
+const openFundContributionModal = (tournament: Tournament) => {
+  fundContributionTournament.value = tournament
+  fundContributionForm.value = getTournamentFundContribution(tournament)
+  showFundContributionModal.value = true
+}
+
+const closeFundContributionModal = () => {
+  showFundContributionModal.value = false
+  fundContributionTournament.value = null
+  fundContributionForm.value = null
+}
+
+const saveFundContribution = async () => {
+  if (!fundContributionTournament.value || fundContributionForm.value === null || fundContributionForm.value < 0 || fundContributionSaving.value) return
+
+  try {
+    fundContributionSaving.value = true
+    const response = await apiClient.updateTournament(fundContributionTournament.value.id, {
+      fundContribution: Math.round(fundContributionForm.value),
+    })
+    if (!response.success || !response.data) throw new Error(response.error || 'Không thể lưu số tiền trích quỹ')
+
+    const tournament = weeklyTournaments.value.find(item => item.id === fundContributionTournament.value?.id)
+    if (tournament) tournament.fundContribution = (response.data as Tournament).fundContribution || 0
+    toast.success('Đã cập nhật số tiền trích quỹ')
+    closeFundContributionModal()
+  } catch (error: any) {
+    toast.error(error.response?.data?.error || error.message || 'Không thể lưu số tiền trích quỹ')
+  } finally {
+    fundContributionSaving.value = false
   }
 }
 

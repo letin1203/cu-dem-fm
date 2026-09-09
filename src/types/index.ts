@@ -87,6 +87,7 @@ export interface Tournament {
   endDate?: string | Date
   sponsorMoney?: number | null
   stadiumCost?: number | null
+  fundContribution?: number
   teams: Team[]
   tournamentTeamPlayers?: TournamentTeamPlayer[]
   additionalCosts?: AdditionalCost[]

@@ -8,11 +8,8 @@
           </svg>
         </div>
         <h2 class="mt-6 text-center text-3xl font-extrabold text-primary-900">
-          Đăng nhập Quản lý bóng đá
+          Đăng nhập
         </h2>
-        <p class="mt-2 text-center text-sm text-primary-700">
-          Nhập thông tin đăng nhập để truy cập ứng dụng
-        </p>
       </div>
       
       <form class="mt-8 space-y-6 bg-white/80 backdrop-blur-sm rounded-lg p-6 shadow-lg border border-primary-200" @submit.prevent="handleLogin">

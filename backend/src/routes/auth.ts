@@ -181,7 +181,7 @@ router.post('/password-reset-requests/:id/link', authenticate, authorize(['ADMIN
   if (!user) { res.status(404).json({ success: false, error: 'Yêu cầu đổi mật khẩu không tồn tại.' }); return; }
   const token = randomBytes(32).toString('hex');
   await prisma.user.update({ where: { id: user.id }, data: { passwordResetTokenHash: hashResetToken(token), passwordResetExpiresAt: new Date(Date.now() + PASSWORD_RESET_TOKEN_TTL_MS) } });
-  const frontendUrl = (process.env.FRONTEND_URL || 'http://localhost:5173').replace(/\/$/, '');
+  const frontendUrl = (process.env.FRONTEND_URL || process.env.CORS_ORIGIN || 'http://localhost:5173').replace(/\/$/, '');
   const link = `${frontendUrl}/reset-password?token=${encodeURIComponent(token)}&username=${encodeURIComponent(user.username)}`;
   res.json({ success: true, data: { link } });
 });

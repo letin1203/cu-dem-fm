@@ -23,7 +23,7 @@
               type="text"
               required
               class="appearance-none rounded-none relative block w-full px-3 py-2 border border-primary-300 placeholder-primary-400 text-primary-900 rounded-t-md focus:outline-none focus:ring-primary-500 focus:border-primary-500 focus:z-10 sm:text-sm"
-              placeholder="Tên đăng nhập"
+              placeholder="Tên đăng nhập hoặc email"
             >
           </div>
           <div>
@@ -166,13 +166,14 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
 import { apiClient } from '../api/client'
 import type { LoginCredentials } from '../types'
 import axios from 'axios' // Import axios for API calls
 
 const router = useRouter()
+const route = useRoute()
 const authStore = useAuthStore()
 
 const credentials = ref<LoginCredentials>({
@@ -276,9 +277,12 @@ async function submitForgotPassword() {
 }
 
 onMounted(() => {
+  if (typeof route.query.username === 'string') {
+    credentials.value.username = route.query.username
+  }
   if (localStorage.getItem('fm_rememberMe') === 'true') {
     rememberMe.value = true
-    credentials.value.username = localStorage.getItem('fm_username') || ''
+    credentials.value.username = credentials.value.username || localStorage.getItem('fm_username') || ''
   }
 })
 </script>

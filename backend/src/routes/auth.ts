@@ -17,8 +17,13 @@ router.post('/login', async (req: Request, res: Response): Promise<void> => {
   try {
     const { username, password } = loginSchema.parse(req.body);
 
-    const user = await prisma.user.findUnique({
-      where: { username },
+    const user = await prisma.user.findFirst({
+      where: {
+        OR: [
+          { username },
+          { email: { equals: username, mode: 'insensitive' } },
+        ],
+      },
       include: {
         player: {
           include: {

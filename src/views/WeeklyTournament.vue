@@ -435,9 +435,9 @@
               <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between space-y-3 sm:space-y-0">
                 <div class="flex-1">
                   <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between">
-                    <div class="flex items-center gap-2">
+                    <div class="flex min-w-0 flex-wrap items-center gap-2">
                       <h3 class="text-lg font-semibold text-gray-900">{{ tournament.name }}</h3>
-                      <span class="rounded-full bg-primary-100 px-2 py-0.5 text-xs font-medium text-primary-700">{{ tournament.pitchType === 'FIELD_5' ? 'Sân 5' : 'Sân 7' }}</span>
+                      <span class="inline-flex shrink-0 whitespace-nowrap rounded-full bg-primary-100 px-2 py-0.5 text-xs font-medium text-primary-700">{{ tournament.pitchType === 'FIELD_5' ? 'Sân 5' : 'Sân 7' }}</span>
                     </div>
                     <!-- Action buttons moved to top right - hide money icon if no teams -->
                     <div class="flex items-center space-x-2 mt-2 sm:mt-0">

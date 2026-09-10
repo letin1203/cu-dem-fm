@@ -2,27 +2,38 @@
   <div class="space-y-4 sm:space-y-6">
     <!-- Header -->
     <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-3 sm:space-y-0">
-      <h1 class="text-2xl sm:text-3xl font-bold text-gray-900">User Management</h1>
+      <h1 class="text-2xl sm:text-3xl font-bold text-gray-900">Quản lý người dùng</h1>
       <div class="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2">
         <button @click="createBulkUserPlayer" class="btn-secondary w-full sm:w-auto">
-          Add Bulk User/Player
+          Tạo nhanh tài khoản/cầu thủ
         </button>
         <button @click="showAddForm = true" class="btn-primary w-full sm:w-auto">
-          Add New User
+          Thêm người dùng
         </button>
       </div>
     </div>
 
     <!-- Filter Section -->
     <div class="card p-4">
-      <div class="max-w-md">
-        <label class="form-label">Filter by Username</label>
+      <div class="grid max-w-2xl gap-4 sm:grid-cols-2">
+        <div>
+        <label class="form-label">Lọc theo tên đăng nhập</label>
         <input
           v-model="usernameFilter"
           type="text"
           class="form-input"
-          placeholder="Search username..."
+          placeholder="Nhập tên đăng nhập..."
         >
+        </div>
+        <div>
+          <label class="form-label">Lọc theo tên cầu thủ</label>
+          <input
+            v-model="playerNameFilter"
+            type="text"
+            class="form-input"
+            placeholder="Nhập tên cầu thủ..."
+          >
+        </div>
       </div>
     </div>
 
@@ -31,26 +42,26 @@
       <!-- Loading State -->
       <div v-if="isLoading" class="p-8 text-center">
         <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600 mx-auto"></div>
-        <p class="mt-2 text-gray-600">Loading users...</p>
+        <p class="mt-2 text-gray-600">Đang tải người dùng...</p>
       </div>
       
       <!-- Error State -->
       <div v-else-if="error" class="p-8 text-center">
-        <div class="text-red-600 mb-2">⚠️ Error</div>
+        <div class="text-red-600 mb-2">⚠️ Lỗi</div>
         <p class="text-gray-600">{{ error }}</p>
-        <button @click="onMounted" class="mt-2 btn-primary">Retry</button>
+        <button @click="onMounted" class="mt-2 btn-primary">Thử lại</button>
       </div>
       
       <!-- Empty State -->
       <div v-else-if="filteredUsers.length === 0" class="p-8 text-center">
-        <div class="text-gray-400 mb-2">👥 No users found</div>
-        <p class="text-gray-600" v-if="usernameFilter">
-          No users match the filter "{{ usernameFilter }}".
+        <div class="text-gray-400 mb-2">👥 Không tìm thấy người dùng</div>
+        <p class="text-gray-600" v-if="usernameFilter || playerNameFilter">
+          Không có người dùng nào khớp với bộ lọc.
         </p>
         <p class="text-gray-600" v-else>
-          No users are currently registered in the system.
+          Chưa có người dùng nào trong hệ thống.
         </p>
-        <button @click="showAddForm = true" class="mt-2 btn-primary">Add First User</button>
+        <button @click="showAddForm = true" class="mt-2 btn-primary">Thêm người dùng đầu tiên</button>
       </div>
       
       <!-- Users Grid -->
@@ -79,7 +90,7 @@
                 :class="user.isActive ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'" 
                 class="px-2 py-1 text-xs font-medium rounded-full"
               >
-                {{ user.isActive ? 'Active' : 'Inactive' }}
+                {{ user.isActive ? 'Đang hoạt động' : 'Đã khóa' }}
               </span>
             </div>
             
@@ -87,28 +98,39 @@
             <div class="space-y-3">
               <!-- Role -->
               <div class="flex items-center justify-between">
-                <span class="text-sm text-gray-500">Role:</span>
+                <span class="text-sm text-gray-500">Vai trò:</span>
                 <span :class="getRoleClasses(user.role)" class="px-2 py-1 text-xs font-medium rounded-full">
-                  {{ user.role.toUpperCase() }}
+                  {{ getRoleLabel(user.role) }}
                 </span>
               </div>
               
               <!-- Linked Player -->
               <div class="flex items-center justify-between">
-                <span class="text-sm text-gray-500">Player:</span>
-                <div class="text-right">
-                  <div class="text-sm font-medium text-gray-900">
-                    {{ getLinkedPlayerDisplay(user) }}
+                <span class="text-sm text-gray-500">Cầu thủ:</span>
+                <div class="flex items-center justify-end gap-1 text-right">
+                  <button
+                    type="button"
+                    class="rounded p-1 text-gray-400 transition-colors hover:bg-primary-50 hover:text-primary-600"
+                    title="Chỉnh sửa liên kết cầu thủ"
+                    aria-label="Chỉnh sửa liên kết cầu thủ"
+                    @click="openPlayerLinkModal(user)"
+                  >
+                    <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487a2.1 2.1 0 113 2.97L8.25 19.07 4 20l.93-4.25L16.862 4.487z"/></svg>
+                  </button>
+                  <div>
+                    <div class="text-sm font-medium text-gray-900">
+                      {{ getLinkedPlayerDisplay(user) }}
                   </div>
                   <div v-if="user.player" class="text-xs text-gray-500">
                     {{ getLinkedPlayerPosition(user) }}
+                  </div>
                   </div>
                 </div>
               </div>
               
               <!-- Last Login -->
               <div class="flex items-center justify-between">
-                <span class="text-sm text-gray-500">Last Login:</span>
+                <span class="text-sm text-gray-500">Đăng nhập gần nhất:</span>
                 <span class="text-sm text-gray-900">{{ formatDate(user.lastLogin) }}</span>
               </div>
             </div>
@@ -119,17 +141,64 @@
                 @click="editUser(user)"
                 class="flex-1 bg-primary-50 text-primary-600 hover:bg-primary-100 px-3 py-2 rounded-md text-sm font-medium transition-colors"
               >
-                Edit
+                Chỉnh sửa
               </button>
               <button
                 v-if="user.id !== authStore.currentUser?.id"
                 @click="deleteUser(user.id)"
                 class="flex-1 bg-red-50 text-red-600 hover:bg-red-100 px-3 py-2 rounded-md text-sm font-medium transition-colors"
               >
-                Delete
+                Xóa
               </button>
             </div>
           </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Player Link Modal -->
+    <div v-if="linkingUser" class="fixed inset-0 z-50 flex items-center justify-center bg-gray-600 bg-opacity-50 p-4" @click.self="closePlayerLinkModal">
+      <div class="flex max-h-[90vh] w-full max-w-md flex-col overflow-hidden rounded-lg bg-white shadow-xl" role="dialog" aria-modal="true" aria-labelledby="player-link-modal-title">
+        <div class="flex items-center justify-between border-b px-5 py-4">
+          <div>
+            <h2 id="player-link-modal-title" class="text-lg font-semibold text-gray-900">Liên kết cầu thủ</h2>
+            <p class="mt-1 text-sm text-gray-500">Chọn cầu thủ cho tài khoản {{ linkingUser.username }}</p>
+          </div>
+          <button type="button" class="text-2xl leading-none text-gray-400 hover:text-gray-700" aria-label="Đóng" @click="closePlayerLinkModal">×</button>
+        </div>
+
+        <div class="min-h-0 flex-1 overflow-y-auto p-5">
+          <p v-if="linkingUser.player || linkingUser.playerId" class="mb-4 rounded-lg bg-primary-50 p-3 text-sm text-primary-800">
+            Đang liên kết: <strong>{{ getLinkedPlayerName(linkingUser) }}</strong>
+          </p>
+          <p class="mb-3 text-sm text-gray-600">Cầu thủ chưa liên kết với tài khoản nào:</p>
+          <div v-if="paginatedLinkablePlayers.length" class="space-y-2">
+            <button
+              v-for="player in paginatedLinkablePlayers"
+              :key="player.id"
+              type="button"
+              class="flex w-full items-center justify-between rounded-lg border-2 px-4 py-3 text-left transition-colors"
+              :class="selectedLinkedPlayerId === player.id ? 'border-primary-600 bg-primary-50 text-primary-800' : 'border-gray-200 text-gray-800 hover:border-primary-300'"
+              :aria-pressed="selectedLinkedPlayerId === player.id"
+              @click="selectedLinkedPlayerId = selectedLinkedPlayerId === player.id ? '' : player.id"
+            >
+              <span class="font-medium">{{ player.name }}</span>
+              <span class="flex items-center gap-2 text-sm"><span>{{ player.position }} · Tier {{ player.tier }}</span><span class="flex h-5 w-5 items-center justify-center rounded border" :class="selectedLinkedPlayerId === player.id ? 'border-primary-600 bg-primary-600 text-white' : 'border-gray-300 bg-white'">{{ selectedLinkedPlayerId === player.id ? '✓' : '' }}</span></span>
+            </button>
+          </div>
+          <p v-else class="rounded-lg bg-gray-50 p-4 text-center text-sm text-gray-500">Không còn cầu thủ nào chưa được liên kết.</p>
+
+          <div v-if="linkablePlayerPageCount > 1" class="mt-5 flex items-center justify-center gap-3">
+            <button type="button" class="btn-secondary px-3 py-1.5 text-sm" :disabled="linkablePlayerPage === 1" @click="linkablePlayerPage--">Trước</button>
+            <span class="text-sm text-gray-600">Trang {{ linkablePlayerPage }} / {{ linkablePlayerPageCount }}</span>
+            <button type="button" class="btn-secondary px-3 py-1.5 text-sm" :disabled="linkablePlayerPage === linkablePlayerPageCount" @click="linkablePlayerPage++">Sau</button>
+          </div>
+        </div>
+
+        <div class="flex flex-wrap justify-end gap-3 border-t p-4">
+          <button type="button" class="btn-secondary" @click="closePlayerLinkModal">Đóng</button>
+          <button type="button" class="rounded-md bg-red-50 px-4 py-2 font-medium text-red-600 transition-colors hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-50" :disabled="!(linkingUser.player || linkingUser.playerId) || playerLinkSaving" @click="unlinkLinkedPlayer">Hủy liên kết</button>
+          <button type="button" class="btn-primary" :disabled="!selectedLinkedPlayerId || playerLinkSaving" @click="linkSelectedPlayer">{{ playerLinkSaving ? 'Đang lưu...' : 'Liên kết' }}</button>
         </div>
       </div>
     </div>
@@ -138,46 +207,46 @@
     <div v-if="showAddForm || editingUser" class="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center z-50">
       <div class="bg-white rounded-lg p-6 w-full max-w-md">
         <h2 class="text-lg font-semibold mb-4">
-          {{ editingUser ? 'Edit User' : 'Add New User' }}
+          {{ editingUser ? 'Chỉnh sửa người dùng' : 'Thêm người dùng' }}
         </h2>
         
         <form @submit.prevent="submitForm" class="space-y-4">
           <div>
-            <label class="form-label">Username</label>
+            <label class="form-label">Tên đăng nhập</label>
             <input
               v-model="formData.username"
               type="text"
               required
               class="form-input"
-              placeholder="Enter username"
+              placeholder="Nhập tên đăng nhập"
             >
           </div>
           
           <div v-if="!editingUser">
-            <label class="form-label">Password</label>
+            <label class="form-label">Mật khẩu</label>
             <input
               v-model="formData.password"
               type="password"
               required
               class="form-input"
-              placeholder="Enter password"
+              placeholder="Nhập mật khẩu"
             >
           </div>
           
           <div>
-            <label class="form-label">Role</label>
+            <label class="form-label">Vai trò</label>
             <select v-model="formData.role" required class="form-input">
-              <option value="">Select role</option>
-              <option value="admin">Admin</option>
-              <option value="mod">Moderator</option>
-              <option value="user">User</option>
+              <option value="">Chọn vai trò</option>
+              <option value="admin">Quản trị viên</option>
+              <option value="mod">Điều hành viên</option>
+              <option value="user">Người dùng</option>
             </select>
           </div>
           
           <div>
-            <label class="form-label">Linked Player (Optional)</label>
+            <label class="form-label">Cầu thủ liên kết (không bắt buộc)</label>
             <select v-model="formData.playerId" class="form-input">
-              <option value="">Select player</option>
+              <option value="">Chọn cầu thủ</option>
               <option v-for="player in availablePlayers" :key="player.id" :value="player.id">
                 {{ player.name }} ({{ player.position }})
               </option>
@@ -186,11 +255,11 @@
                 v-if="(editingUser?.playerId || editingUser?.player?.id) && !availablePlayers.find(p => p.id === (editingUser?.playerId || editingUser?.player?.id))"
                 :value="editingUser.playerId || editingUser.player?.id"
               >
-                {{ editingUser.player?.name || 'Unknown Player' }} (Current)
+                {{ editingUser.player?.name || 'Không xác định' }} (hiện tại)
               </option>
             </select>
             <div v-if="formData.playerId" class="text-xs text-gray-500 mt-1">
-              Selected: {{ getPlayerNameById(formData.playerId) }}
+              Đã chọn: {{ getPlayerNameById(formData.playerId) }}
             </div>
           </div>
           
@@ -202,7 +271,7 @@
               class="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
             >
             <label for="isActive" class="ml-2 block text-sm text-gray-900">
-              Active User
+              Người dùng đang hoạt động
             </label>
           </div>
           
@@ -212,10 +281,10 @@
               @click="cancelForm"
               class="btn-secondary"
             >
-              Cancel
+              Hủy
             </button>
             <button type="submit" class="btn-primary">
-              {{ editingUser ? 'Update' : 'Create' }}
+              {{ editingUser ? 'Cập nhật' : 'Tạo mới' }}
             </button>
           </div>
         </form>
@@ -240,13 +309,30 @@ const editingUser = ref<User | null>(null)
 const isLoading = ref(false)
 const error = ref<string | null>(null)
 const usernameFilter = ref('')
+const playerNameFilter = ref('')
+const linkingUser = ref<User | null>(null)
+const selectedLinkedPlayerId = ref('')
+const linkablePlayerPage = ref(1)
+const playerLinkSaving = ref(false)
+const PLAYERS_PER_LINK_PAGE = 5
 
-// Filtered users based on username search
+const normalizeSearchText = (value: string) => value
+  .toLocaleLowerCase('vi')
+  .normalize('NFD')
+  .replace(/[\u0300-\u036f]/g, '')
+  .replace(/đ/g, 'd')
+  .trim()
+
 const filteredUsers = computed(() => {
-  if (!usernameFilter.value) return users.value
-  return users.value.filter(user => 
-    user.username.toLowerCase().includes(usernameFilter.value.toLowerCase())
-  )
+  const usernameQuery = normalizeSearchText(usernameFilter.value)
+  const playerQuery = normalizeSearchText(playerNameFilter.value)
+
+  return users.value.filter(user => {
+    const usernameMatches = !usernameQuery || normalizeSearchText(user.username).includes(usernameQuery)
+    const playerName = normalizeSearchText(getLinkedPlayerName(user))
+    const playerMatches = !playerQuery || playerName.includes(playerQuery)
+    return usernameMatches && playerMatches
+  })
 })
 
 // Fetch data when component mounts
@@ -262,7 +348,7 @@ onMounted(async () => {
     playersStore.fetchPlayers().catch(err => console.warn('Failed to fetch players:', err))
   } catch (err) {
     console.error('Error fetching users:', err)
-    error.value = err instanceof Error ? err.message : 'Failed to load users'
+    error.value = err instanceof Error ? err.message : 'Không thể tải danh sách người dùng'
   } finally {
     isLoading.value = false
   }
@@ -270,12 +356,12 @@ onMounted(async () => {
 
 // Helper function to safely format dates
 const formatDate = (date: string | Date | null | undefined): string => {
-  if (!date) return 'Never'
+  if (!date) return 'Chưa từng đăng nhập'
   try {
     const dateObj = typeof date === 'string' ? new Date(date) : date
     return dateObj.toLocaleDateString()
   } catch {
-    return 'Invalid Date'
+    return 'Ngày không hợp lệ'
   }
 }
 
@@ -307,6 +393,25 @@ const availablePlayers = computed(() => {
   })
 })
 
+const linkablePlayers = computed(() => {
+  const linkedPlayerIds = new Set(
+    users.value
+      .map(user => user.playerId || user.player?.id)
+      .filter((playerId): playerId is string => Boolean(playerId))
+  )
+
+  return players.value
+    .filter(player => !linkedPlayerIds.has(player.id))
+    .sort((a, b) => a.name.localeCompare(b.name, 'vi'))
+})
+
+const linkablePlayerPageCount = computed(() => Math.max(1, Math.ceil(linkablePlayers.value.length / PLAYERS_PER_LINK_PAGE)))
+
+const paginatedLinkablePlayers = computed(() => {
+  const start = (linkablePlayerPage.value - 1) * PLAYERS_PER_LINK_PAGE
+  return linkablePlayers.value.slice(start, start + PLAYERS_PER_LINK_PAGE)
+})
+
 function getRoleClasses(role: UserRole) {
   const classes = {
     admin: 'bg-red-100 text-red-800',
@@ -316,14 +421,23 @@ function getRoleClasses(role: UserRole) {
   return classes[role] || classes.user
 }
 
+function getRoleLabel(role: UserRole) {
+  const labels: Record<UserRole, string> = {
+    admin: 'Quản trị viên',
+    mod: 'Điều hành viên',
+    user: 'Người dùng'
+  }
+  return labels[role]
+}
+
 function getLinkedPlayerName(user: User): string {
   if (user.player) return user.player.name
   if (user.playerId) {
     // Fallback to finding player by ID if player object not populated
     const player = players.value.find(p => p.id === user.playerId)
-    return player ? player.name : 'Unknown Player'
+    return player ? player.name : 'Không xác định'
   }
-  return 'None'
+  return 'Chưa liên kết'
 }
 
 function getLinkedPlayerDisplay(user: User): string {
@@ -344,7 +458,7 @@ function getLinkedPlayerPosition(user: User): string {
 
 function getPlayerNameById(playerId: string): string {
   const player = players.value.find(p => p.id === playerId)
-  return player ? player.name : 'Unknown Player'
+  return player ? player.name : 'Không xác định'
 }
 
 function editUser(user: User) {
@@ -360,6 +474,54 @@ function editUser(user: User) {
       isActive: user.isActive
     }
   })
+}
+
+function openPlayerLinkModal(user: User) {
+  linkingUser.value = user
+  selectedLinkedPlayerId.value = ''
+  linkablePlayerPage.value = 1
+}
+
+function closePlayerLinkModal() {
+  if (playerLinkSaving.value) return
+  linkingUser.value = null
+  selectedLinkedPlayerId.value = ''
+}
+
+async function unlinkLinkedPlayer() {
+  if (!linkingUser.value) return
+  const playerName = getLinkedPlayerName(linkingUser.value)
+  if (!confirm(`Hủy liên kết cầu thủ ${playerName} khỏi tài khoản ${linkingUser.value.username}?`)) return
+
+  playerLinkSaving.value = true
+  try {
+    const success = await authStore.updateUser(linkingUser.value.id, { playerId: null } as any)
+    if (!success) {
+      alert('Không thể hủy liên kết cầu thủ. Vui lòng thử lại.')
+      return
+    }
+    playerLinkSaving.value = false
+    closePlayerLinkModal()
+  } finally {
+    playerLinkSaving.value = false
+  }
+}
+
+async function linkSelectedPlayer() {
+  if (!linkingUser.value || !selectedLinkedPlayerId.value) return
+
+  playerLinkSaving.value = true
+  try {
+    const success = await authStore.updateUser(linkingUser.value.id, { playerId: selectedLinkedPlayerId.value })
+    if (!success) {
+      alert('Không thể liên kết cầu thủ. Vui lòng thử lại.')
+      return
+    }
+    playerLinkSaving.value = false
+    closePlayerLinkModal()
+  } finally {
+    playerLinkSaving.value = false
+  }
 }
 
 function submitForm() {
@@ -400,7 +562,7 @@ function cancelForm() {
 }
 
 function deleteUser(id: string) {
-  if (confirm('Are you sure you want to delete this user?')) {
+  if (confirm('Bạn có chắc muốn xóa người dùng này?')) {
     authStore.deleteUser(id)
   }
 }
@@ -411,7 +573,7 @@ async function createBulkUserPlayer() {
     // Optionally show success message or refresh players list
     playersStore.fetchPlayers().catch(err => console.warn('Failed to refresh players:', err))
   } else {
-    alert('Failed to create user and player. Please try again.')
+    alert('Không thể tạo tài khoản và cầu thủ. Vui lòng thử lại.')
   }
 }
 </script>

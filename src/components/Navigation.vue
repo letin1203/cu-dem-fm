@@ -297,6 +297,10 @@
               Quỹ thay đổi = Thu/chi ròng của cầu thủ + Tiền tài trợ − Chi phí
               sân − Chi phí phát sinh.
             </p>
+            <p class="mt-2">
+              Tiền quỹ hiện tại = Tiền quỹ dự tính − Tổng số dư âm của các cầu
+              thủ.
+            </p>
             <p class="mt-2 text-xs text-primary-700">
               Khoản “Trích quỹ” giảm phần tiền thu từ cầu thủ trước khi chia
               phí, nên đã được phản ánh trong mục Thu/chi ròng của cầu thủ.

@@ -50,7 +50,13 @@ router.get('/fund-history', authenticate, async (_req: AuthenticatedRequest, res
       };
     });
 
-    res.json({ success: true, data: { currentFund: balanceAfter, history: history.reverse() } });
+    const playerDebt = await prisma.player.aggregate({
+      where: { money: { lt: 0 } },
+      _sum: { money: true },
+    });
+    const totalPlayerDebt = Math.abs(playerDebt._sum.money ?? 0);
+
+    res.json({ success: true, data: { currentFund: balanceAfter, estimatedFund: balanceAfter, totalPlayerDebt, history: history.reverse() } });
   } catch (error) {
     res.status(500).json({ success: false, error: 'Không thể tải lịch sử quỹ' });
   }

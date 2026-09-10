@@ -21,6 +21,9 @@ export interface TournamentAttendanceDetails {
   status: 'NULL' | 'NOT_ATTEND' | 'ATTEND'
   withWater?: boolean
   bet?: boolean
+  field5?: boolean
+  field7?: boolean
+  registeredAt?: string | Date | null
   tournamentId: string
   playerId: string
   createdAt: string | Date
@@ -88,6 +91,7 @@ export interface Tournament {
   sponsorMoney?: number | null
   stadiumCost?: number | null
   fundContribution?: number
+  pitchType?: 'FIELD_5' | 'FIELD_7' | null
   teams: Team[]
   tournamentTeamPlayers?: TournamentTeamPlayer[]
   additionalCosts?: AdditionalCost[]
@@ -232,6 +236,8 @@ export interface Permission {
 export interface TournamentAttendanceStats {
   totalPlayers: number
   attendingCount: number
+  field5Count: number
+  field7Count: number
   notAttendingCount: number
   bettingCount: number
   nullCount: number
@@ -244,6 +250,9 @@ export interface TournamentAttendanceDetails {
   status: 'NULL' | 'NOT_ATTEND' | 'ATTEND'
   withWater?: boolean
   bet?: boolean
+  field5?: boolean
+  field7?: boolean
+  registeredAt?: string | Date | null
   tournamentId: string
   playerId: string
   createdAt: string | Date

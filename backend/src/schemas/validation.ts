@@ -142,6 +142,8 @@ export const updateAttendanceSchema = z.object({
   status: AttendanceStatus,
   withWater: z.boolean().optional(),
   bet: z.boolean().optional(),
+  field5: z.boolean().optional(),
+  field7: z.boolean().optional(),
 });
 
 // Team Score Management schemas

@@ -73,8 +73,8 @@
                     <button
                       type="button"
                       class="inline-flex h-6 w-6 items-center justify-center rounded-full text-primary-600 transition-colors hover:bg-primary-50 hover:text-primary-800"
-                      title="Thông tin cách tính tiền"
-                      aria-label="Thông tin cách tính tiền"
+                      title="Luật chơi"
+                      aria-label="Luật chơi"
                       @click="showTournamentCalculationInfoModal = true"
                     >
                       <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9" stroke-width="2"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0-9h.01"/></svg>
@@ -114,8 +114,8 @@
                   <span v-else class="text-red-600 font-medium">
                     🏟️ Sân: {{ getTournamentStadiumCost(ongoingTournament).toLocaleString('vi-VN') }} ₫
                   </span>
-                  <span class="text-orange-600 font-medium">
-                    💸 Nước: {{ getTournamentAdditionalCostsTotal(ongoingTournament.id).toLocaleString('vi-VN') }} ₫
+                  <span v-for="cost in getTournamentAdditionalCosts(ongoingTournament.id)" :key="cost.id" class="text-orange-600 font-medium">
+                    💸 {{ cost.description }}: {{ cost.amount.toLocaleString('vi-VN') }} ₫
                   </span>
                   <span v-if="getTournamentFundContribution(ongoingTournament) > 0" class="text-indigo-600 font-medium">
                     🏦 Trích quỹ: {{ getTournamentFundContribution(ongoingTournament).toLocaleString('vi-VN') }} ₫
@@ -135,7 +135,7 @@
               <div class="flex justify-between items-center mb-3">
                 <span class="text-sm font-semibold text-gray-800">Điểm danh cầu thủ</span>
                 <span class="text-sm font-medium text-gray-700 bg-white px-2 py-1 rounded-full">
-                  {{ getAttendanceStats(ongoingTournament.id)?.attendingCount || 0 }} / {{ getAttendanceStats(ongoingTournament.id)?.totalPlayers || 0 }}
+                  {{ getHighestFieldAttendanceCount(ongoingTournament.id) }} / {{ getAttendanceStats(ongoingTournament.id)?.totalPlayers || 0 }} · S5: {{ getAttendanceStats(ongoingTournament.id)?.field5Count || 0 }} / S7: {{ getAttendanceStats(ongoingTournament.id)?.field7Count || 0 }}
                 </span>
               </div>
               <div class="w-full bg-gray-200 rounded-full h-4 mb-3 shadow-inner">
@@ -151,15 +151,15 @@
                   @click="openAttendanceModal(ongoingTournament.id, 'attending')"
                   class="text-center p-2 bg-green-100 rounded-lg hover:bg-green-200 transition-colors cursor-pointer"
                 >
-                  <div class="font-semibold text-green-800">{{ getAttendanceStats(ongoingTournament.id)?.attendingCount || 0 }}</div>
+                  <div class="font-semibold text-green-800">S5: {{ getAttendanceStats(ongoingTournament.id)?.field5Count || 0 }} / S7: {{ getAttendanceStats(ongoingTournament.id)?.field7Count || 0 }}</div>
                   <div class="text-green-600">Tham gia</div>
                 </button>
-                <button 
-                  @click="openAttendanceModal(ongoingTournament.id, 'not-attending')"
-                  class="text-center p-2 bg-red-100 rounded-lg hover:bg-red-200 transition-colors cursor-pointer"
+                <button
+                  @click="openAttendanceModal(ongoingTournament.id, 'water')"
+                  class="text-center p-2 bg-blue-100 rounded-lg hover:bg-blue-200 transition-colors cursor-pointer"
                 >
-                  <div class="font-semibold text-red-800">{{ getAttendanceStats(ongoingTournament.id)?.notAttendingCount || 0 }}</div>
-                  <div class="text-red-600">Không tham gia</div>
+                  <div class="font-semibold text-blue-800">{{ getWaterCount(ongoingTournament.id) }}</div>
+                  <div class="text-blue-600">Uống nước</div>
                 </button>
                 <button 
                   @click="openAttendanceModal(ongoingTournament.id, 'betting')"
@@ -216,6 +216,7 @@
                           <span v-else>{{ player.name.charAt(0).toUpperCase() }}</span>
                         </div>
                         <span class="font-medium text-gray-900">{{ player.name }}</span>
+                        <span v-if="isPlayerWithWater(ongoingTournament.id, player.id)" class="ml-1" title="Đã đăng ký uống nước">💧</span>
                       </div>
                       <div class="flex items-center text-gray-600">
                         <span class="text-xs mr-1 px-1.5 py-0.5 rounded" :class="isGoalkeeper(player.position) ? 'bg-green-100 text-green-700 font-semibold' : ''">{{ getPositionLabel(player.position) }}</span>
@@ -246,10 +247,11 @@
                 <button
                   v-if="ongoingTournament.status === 'UPCOMING' && getTournamentTeams(ongoingTournament).length === 0 && getAttendanceButtonText(ongoingTournament.id) !== 'Không có cầu thủ'"
                   @click="toggleAttendance(ongoingTournament.id)"
-                  :disabled="attendanceLoading.has(ongoingTournament.id)"
+                  :disabled="attendanceLoading.has(ongoingTournament.id) || (getAttendanceButtonText(ongoingTournament.id) === 'Tham gia' && cannotSelfRegisterDueToDebt)"
+                  :title="cannotSelfRegisterDueToDebt ? 'Vui lòng thanh toán số dư âm trước khi đăng ký' : undefined"
                   class="px-6 py-2 rounded-lg font-medium transition-colors duration-200"
                   :class="[
-                    attendanceLoading.has(ongoingTournament.id)
+                    attendanceLoading.has(ongoingTournament.id) || (getAttendanceButtonText(ongoingTournament.id) === 'Tham gia' && cannotSelfRegisterDueToDebt)
                       ? 'opacity-50 cursor-not-allowed' 
                       : 'hover:shadow-md',
                       getAttendanceButtonText(ongoingTournament.id) === 'Tham gia'
@@ -364,7 +366,7 @@
                   Chọn số đội để chia cân bằng
                 </span>
                 <span v-if="authStore.hasRole('admin') && ongoingTournament.status === 'ONGOING' && !canEndTournament(ongoingTournament.id)" class="text-orange-600">
-                  {{ getTournamentEndStatusMessage(ongoingTournament.id) }}
+                  Không thể kết thúc giải đấu vì đang có {{ getTournamentEndStatusMessage(ongoingTournament.id) }}
                 </span>
               </div>
             </div>
@@ -433,7 +435,10 @@
               <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between space-y-3 sm:space-y-0">
                 <div class="flex-1">
                   <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between">
-                    <h3 class="text-lg font-semibold text-gray-900">{{ tournament.name }}</h3>
+                    <div class="flex items-center gap-2">
+                      <h3 class="text-lg font-semibold text-gray-900">{{ tournament.name }}</h3>
+                      <span class="rounded-full bg-primary-100 px-2 py-0.5 text-xs font-medium text-primary-700">{{ tournament.pitchType === 'FIELD_5' ? 'Sân 5' : 'Sân 7' }}</span>
+                    </div>
                     <!-- Action buttons moved to top right - hide money icon if no teams -->
                     <div class="flex items-center space-x-2 mt-2 sm:mt-0">
                       <button
@@ -468,9 +473,9 @@
                       <span class="text-red-600 font-medium">
                         🏟️ Sân: {{ getTournamentStadiumCost(tournament).toLocaleString('vi-VN') }} ₫
                       </span>
-                      <span class="text-orange-600 font-medium">
-                        💸 Nước: {{ getTournamentAdditionalCostsTotal(tournament.id).toLocaleString('vi-VN') }} ₫
-                      </span>
+                    <span v-for="cost in getTournamentAdditionalCosts(tournament.id)" :key="cost.id" class="text-orange-600 font-medium">
+                      💸 {{ cost.description }}: {{ cost.amount.toLocaleString('vi-VN') }} ₫
+                    </span>
                       <span v-if="getTournamentFundContribution(tournament) > 0" class="text-indigo-600 font-medium">
                         🏦 Trích quỹ: {{ getTournamentFundContribution(tournament).toLocaleString('vi-VN') }} ₫
                       </span>
@@ -495,7 +500,7 @@
                 <div class="flex justify-between items-center mb-3">
                   <span class="text-sm font-semibold text-gray-800">Điểm danh cầu thủ</span>
                   <span class="text-sm font-medium text-gray-700 bg-white px-2 py-1 rounded-full">
-                    {{ getAttendanceStats(tournament.id)?.attendingCount || 0 }} / {{ getAttendanceStats(tournament.id)?.totalPlayers || 0 }}
+                    {{ getHighestFieldAttendanceCount(tournament.id) }} / {{ getAttendanceStats(tournament.id)?.totalPlayers || 0 }}
                   </span>
                 </div>
                 <div class="w-full bg-gray-200 rounded-full h-4 mb-3 shadow-inner">
@@ -511,16 +516,16 @@
                     @click="openAttendanceModal(tournament.id, 'attending')"
                     class="text-center p-2 bg-green-100 rounded-lg hover:bg-green-200 transition-colors cursor-pointer"
                   >
-                    <div class="font-semibold text-green-800">{{ getAttendanceStats(tournament.id)?.attendingCount || 0 }}</div>
+                    <div class="font-semibold text-green-800">{{ getHighestFieldAttendanceCount(tournament.id) }}</div>
                     <div class="text-green-600">Tham gia</div>
                   </button>
-                  <button 
-                    @click="openAttendanceModal(tournament.id, 'not-attending')"
-                    class="text-center p-2 bg-red-100 rounded-lg hover:bg-red-200 transition-colors cursor-pointer"
-                  >
-                    <div class="font-semibold text-red-800">{{ getAttendanceStats(tournament.id)?.notAttendingCount || 0 }}</div>
-                    <div class="text-red-600">Không tham gia</div>
-                  </button>
+                <button
+                  @click="openAttendanceModal(tournament.id, 'water')"
+                  class="text-center p-2 bg-blue-100 rounded-lg hover:bg-blue-200 transition-colors cursor-pointer"
+                >
+                  <div class="font-semibold text-blue-800">{{ getWaterCount(tournament.id) }}</div>
+                  <div class="text-blue-600">Uống nước</div>
+                </button>
                   <button 
                     @click="openAttendanceModal(tournament.id, 'betting')"
                     class="text-center p-2 bg-yellow-100 rounded-lg hover:bg-yellow-200 transition-colors cursor-pointer"
@@ -576,6 +581,7 @@
                             <span v-else>{{ player.name.charAt(0).toUpperCase() }}</span>
                           </div>
                           <span class="font-medium text-gray-900">{{ player.name }}</span>
+                          <span v-if="isPlayerWithWater(tournament.id, player.id)" class="ml-1" title="Đã đăng ký uống nước">💧</span>
                         </div>
                         <div class="flex items-center text-gray-600">
                           <span class="text-xs mr-1 px-1.5 py-0.5 rounded" :class="isGoalkeeper(player.position) ? 'bg-green-100 text-green-700 font-semibold' : ''">{{ getPositionLabel(player.position) }}</span>
@@ -675,14 +681,38 @@
     <div class="flex max-h-[90vh] w-full max-w-lg flex-col overflow-hidden rounded-lg bg-white shadow-xl" role="dialog" aria-modal="true" aria-labelledby="tournament-calculation-title">
       <div class="flex items-center justify-between border-b p-5">
         <div>
-          <h3 id="tournament-calculation-title" class="text-lg font-semibold text-gray-900">Cách tính tiền giải đấu</h3>
+          <h3 id="tournament-calculation-title" class="text-lg font-semibold text-gray-900">Luật chơi</h3>
           <p class="text-sm text-gray-500">{{ ongoingTournament.name }}</p>
         </div>
         <button type="button" class="text-2xl text-gray-400 hover:text-gray-700" aria-label="Đóng" @click="showTournamentCalculationInfoModal = false">×</button>
       </div>
       <div class="overflow-y-auto p-5 space-y-5 text-sm text-gray-700">
         <section>
-          <h4 class="font-semibold text-gray-900">1. Chi phí cơ bản</h4>
+          <h4 class="font-semibold text-gray-900">1. Đăng ký tham gia</h4>
+          <ul class="mt-2 space-y-1 leading-6">
+            <li>• Chọn <strong>Tham gia</strong> khi giải đang mở đăng ký; hệ thống sẽ lưu thời điểm đăng ký.</li>
+            <li>• Cầu thủ có số dư âm cần thanh toán trước khi tự đăng ký tham gia.</li>
+            <li>• Khi đã chia đội, không thể tự thay đổi trạng thái tham gia. Admin/mod có thể đăng ký giúp trước khi chia đội.</li>
+          </ul>
+        </section>
+        <section>
+          <h4 class="font-semibold text-gray-900">2. Cược đội mình thắng</h4>
+          <ul class="mt-2 space-y-1 leading-6">
+            <li>• Chỉ cầu thủ đã tham gia mới có thể chọn cược trước giờ bắt đầu giải đấu.</li>
+            <li>• Khi đã chọn, nút hiển thị dấu ✓ và dòng cầu thủ trong danh sách đội được tô vàng nhạt.</li>
+            <li>• Cược thắng: +10.000 ₫; cược thua: -10.000 ₫.</li>
+          </ul>
+        </section>
+        <section>
+          <h4 class="font-semibold text-gray-900">3. Uống nước</h4>
+          <ul class="mt-2 space-y-1 leading-6">
+            <li>• Cầu thủ đã tham gia có thể bật hoặc tắt lựa chọn <strong>Nước</strong> trước giờ thi đấu.</li>
+            <li>• Lựa chọn đã bật hiển thị dấu ✓ ở nút Nước và icon 💧 cạnh tên cầu thủ trong danh sách đội.</li>
+            <li>• Chi phí nước là -10.000 ₫; cầu thủ thuộc đội thắng được miễn phí nước.</li>
+          </ul>
+        </section>
+        <section>
+          <h4 class="font-semibold text-gray-900">4. Chi phí cơ bản</h4>
           <div class="mt-2 space-y-1 rounded-lg bg-gray-50 p-3">
             <div class="flex justify-between gap-3"><span>Chi phí sân</span><strong>{{ getTournamentStadiumCost(ongoingTournament).toLocaleString('vi-VN') }} ₫</strong></div>
             <div class="flex justify-between gap-3"><span>Chi phí phát sinh</span><strong>{{ getTournamentAdditionalCostsTotal(ongoingTournament.id).toLocaleString('vi-VN') }} ₫</strong></div>
@@ -692,17 +722,20 @@
           </div>
         </section>
         <section>
-          <h4 class="font-semibold text-gray-900">2. Số tiền mỗi cầu thủ</h4>
+          <h4 class="font-semibold text-gray-900">5. Số tiền mỗi cầu thủ</h4>
           <p class="mt-1 leading-6">Tổng cần chia được chia cho số cầu thủ tham gia, làm tròn lên bội số 5.000 ₫ rồi cộng thêm 5.000 ₫.</p>
           <p v-if="getAttendanceStats(ongoingTournament.id)?.attendingCount" class="mt-2 rounded-lg bg-primary-50 p-3 font-medium text-primary-800">Tạm tính {{ getAttendanceStats(ongoingTournament.id)?.attendingCount }} cầu thủ: {{ calculateCostPerPlayer(ongoingTournament.id).toLocaleString('vi-VN') }} ₫/người.</p>
           <p class="mt-2">Thủ môn (GK) được giảm 50% chi phí cơ bản, trừ khi admin/mod hủy ưu đãi này lúc kết thúc giải.</p>
         </section>
         <section>
-          <h4 class="font-semibold text-gray-900">3. Điều chỉnh khi kết thúc giải</h4>
+          <h4 class="font-semibold text-gray-900">6. Điều chỉnh khi kết thúc giải</h4>
           <ul class="mt-2 space-y-1 leading-6">
             <li>• Cược thắng: +10.000 ₫; cược thua: -10.000 ₫.</li>
             <li>• Cầu thủ đội thua: -10.000 ₫.</li>
             <li>• Người chọn nước: -10.000 ₫; đội thắng được miễn phí nước.</li>
+            <li>• Giải chỉ có thể kết thúc khi xác định được đúng một đội thắng và đúng một đội thua; không thể có hai đội thắng hoặc hai đội thua.</li>
+            <li>• Nếu hai đội đồng điểm sau trận, hai đội phải đá Penalty 3 quả để phân định thắng thua.</li>
+            <li>• Nếu vẫn hòa sau 3 quả Penalty, hai đội oẳn tù tì để phân định thắng thua.</li>
           </ul>
         </section>
       </div>
@@ -728,6 +761,19 @@
     </div>
   </div>
 
+  <div v-if="showFieldRegistrationModal" class="fixed inset-0 z-[70] flex items-center justify-center bg-black/50 p-4" @click.self="closeFieldRegistrationModal">
+    <div class="w-full max-w-md rounded-lg bg-white p-6 shadow-xl">
+      <h3 class="text-lg font-semibold text-gray-900">Chọn sân đăng ký</h3>
+      <p class="mt-1 text-sm text-gray-600">Bạn có thể đăng ký một hoặc cả hai sân.</p>
+      <div class="mt-5 grid grid-cols-2 gap-3">
+        <button type="button" class="rounded-lg border-2 px-4 py-4 font-semibold transition-colors" :class="registrationField5 ? 'border-primary-600 bg-primary-600 text-white' : 'border-gray-200 text-gray-700 hover:border-primary-400'" @click="registrationField5 = !registrationField5">Sân 5 {{ registrationField5 ? '✓' : '' }}</button>
+        <button type="button" class="rounded-lg border-2 px-4 py-4 font-semibold transition-colors" :class="registrationField7 ? 'border-primary-600 bg-primary-600 text-white' : 'border-gray-200 text-gray-700 hover:border-primary-400'" @click="registrationField7 = !registrationField7">Sân 7 {{ registrationField7 ? '✓' : '' }}</button>
+      </div>
+      <p v-if="!registrationField5 && !registrationField7" class="mt-3 text-sm text-red-600">Vui lòng chọn ít nhất một sân.</p>
+      <div class="mt-6 flex justify-end gap-3"><button type="button" class="btn-secondary" @click="closeFieldRegistrationModal">Hủy</button><button type="button" class="btn-primary" :disabled="!registrationField5 && !registrationField7" @click="confirmFieldRegistration">Xác nhận</button></div>
+    </div>
+  </div>
+
   <!-- Attendance Details Modal -->
   <div v-if="showAttendanceModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" @click="closeAttendanceModal">
     <div class="bg-white rounded-lg shadow-xl max-w-2xl w-full mx-4 max-h-[80vh] overflow-hidden" @click.stop>
@@ -749,6 +795,10 @@
         <div class="mb-4">
           <label class="form-label">Tìm theo tên cầu thủ</label>
           <input v-model="attendancePlayerNameFilter" type="text" class="form-input mt-1" placeholder="Nhập tên cầu thủ...">
+        </div>
+        <div v-if="attendanceModalType === 'attending'" class="mb-4 flex gap-2">
+          <button type="button" class="rounded-lg px-4 py-2 text-sm font-medium" :class="attendanceFieldTab === 'FIELD_5' ? 'bg-primary-600 text-white' : 'bg-gray-100 text-gray-700'" @click="attendanceFieldTab = 'FIELD_5'">Sân 5</button>
+          <button type="button" class="rounded-lg px-4 py-2 text-sm font-medium" :class="attendanceFieldTab === 'FIELD_7' ? 'bg-primary-600 text-white' : 'bg-gray-100 text-gray-700'" @click="attendanceFieldTab = 'FIELD_7'">Sân 7</button>
         </div>
         <div v-if="attendanceModalType === 'pending'" class="mb-4">
           <p class="form-label">Lọc theo Tier</p>
@@ -777,7 +827,7 @@
         
         <!-- No Data State -->
         <div v-else-if="getFilteredModalData().length === 0" class="text-center py-8">
-          <p class="text-gray-600">Không có cầu thủ {{ attendanceModalType === 'pending' ? 'chưa phản hồi' : attendanceModalType === 'attending' ? 'tham gia' : attendanceModalType === 'not-attending' ? 'không tham gia' : 'cược' }} giải đấu này.</p>
+          <p class="text-gray-600">Không có cầu thủ {{ attendanceModalType === 'pending' ? 'chưa phản hồi' : attendanceModalType === 'attending' ? 'tham gia' : attendanceModalType === 'not-attending' ? 'không tham gia' : attendanceModalType === 'water' ? 'uống nước' : 'cược' }} giải đấu này.</p>
         </div>
         
         <!-- Player List -->
@@ -822,22 +872,26 @@
                       <span>Đang tải...</span>
                     </div>
                     <span v-else>
-                      {{ attendance.withWater ? '💧 Có nước' : '🚫 Không nước' }}
+                      <span class="sm:hidden">{{ attendance.withWater ? '💧' : '🚫' }}</span>
+                      <span class="hidden sm:inline">{{ attendance.withWater ? '💧 Có uống nước' : '🚫 Không uống nước' }}</span>
                     </span>
                   </button>
                   <button
                     @click="cancelPlayerAttendance(attendance)"
                     :disabled="playerAttendanceLoading.has(attendance.player.id)"
+                    :title="`Hủy ${attendanceFieldTab === 'FIELD_5' ? 'Sân 5' : 'Sân 7'}`"
                     class="ml-2 rounded px-2 py-1 text-xs font-medium text-red-700 hover:bg-red-100 disabled:opacity-50"
                   >
-                    {{ playerAttendanceLoading.has(attendance.player.id) ? 'Đang cập nhật...' : 'Hủy tham gia' }}
+                    <span v-if="playerAttendanceLoading.has(attendance.player.id)">Đang cập nhật...</span>
+                    <template v-else><span class="sm:hidden">✕</span><span class="hidden sm:inline">Hủy {{ attendanceFieldTab === 'FIELD_5' ? 'Sân 5' : 'Sân 7' }}</span></template>
                   </button>
                 </div>
               </div>
               
               <!-- Player Details Row -->
-              <div class="mt-1">
+              <div class="mt-1 flex items-center justify-between gap-3">
                 <span class="text-sm text-gray-600">{{ attendance.player.position }} - Tier {{ attendance.player.tier }}</span>
+                <span v-if="attendanceModalType === 'attending' && attendance.registeredAt" class="shrink-0 text-xs text-gray-500">{{ formatRegistrationTime(attendance.registeredAt) }}</span>
               </div>
             </div>
             <button
@@ -858,7 +912,7 @@
       <!-- Modal Footer -->
       <div class="flex items-center justify-between border-t border-gray-200 bg-gray-50 p-6" :class="attendanceModalType === 'pending' ? 'flex-col' : ''">
         <p v-if="attendanceModalType !== 'pending'" class="text-sm text-gray-600">
-          {{ getFilteredModalData().length }} cầu thủ {{ attendanceModalType === 'attending' ? 'tham gia' : attendanceModalType === 'not-attending' ? 'không tham gia' : 'cược' }}
+          {{ getFilteredModalData().length }} cầu thủ {{ attendanceModalType === 'attending' ? 'tham gia' : attendanceModalType === 'not-attending' ? 'không tham gia' : attendanceModalType === 'water' ? 'uống nước' : 'cược' }}
         </p>
         <div class="flex items-center gap-3" :class="attendanceModalType === 'pending' ? 'w-full flex-col sm:w-auto sm:flex-row' : ''">
           <button
@@ -1036,7 +1090,7 @@
       
       <!-- Team scores -->
       <div v-if="scoresTournamentId && getTournamentTeams(weeklyTournaments.find(t => t.id === scoresTournamentId) || {} as Tournament).length > 0" class="mb-6">
-        <p class="text-gray-600 mb-4">
+        <p class="hidden sm:block text-gray-600 mb-4">
           Cập nhật điểm số của các đội trong giải đấu đang diễn ra.
         </p>
         
@@ -1123,7 +1177,7 @@
       <!-- Tournament teams showing auto-selected winner and loser -->
       <div v-if="endTournamentId && getTournamentTeams(weeklyTournaments.find(t => t.id === endTournamentId) || {} as Tournament).length > 0" class="mb-6">
         <p class="text-gray-600 mb-4">
-          The tournament will be ended with the following results based on team scores:
+          Giải đấu sẽ được kết thúc với kết quả sau, dựa trên điểm số của các đội:
         </p>
         
         <div class="space-y-4 mb-6">
@@ -1175,8 +1229,9 @@
               <!-- Player Header -->
               <div class="flex items-center justify-between mb-2">
                 <div class="flex items-center">
-                  <div class="w-6 h-6 bg-gray-300 rounded-full flex items-center justify-center mr-2 text-xs font-medium">
-                    {{ player.name.charAt(0).toUpperCase() }}
+                  <div class="w-6 h-6 shrink-0 overflow-hidden bg-gray-300 rounded-full flex items-center justify-center mr-2 text-xs font-medium">
+                    <img v-if="player.avatar" :src="player.avatar" :alt="player.name" class="h-full w-full object-cover">
+                    <span v-else>{{ player.name.charAt(0).toUpperCase() }}</span>
                   </div>
                   <span class="font-medium text-gray-900">{{ player.name }}</span>
                   <span class="ml-2 text-xs text-gray-500">{{ player.position }}</span>
@@ -1284,6 +1339,10 @@
           {{ count }} đội
         </button>
       </div>
+      <p class="mt-5 text-sm font-medium text-gray-700">Chọn sân</p>
+      <div class="mt-2 grid grid-cols-2 gap-3">
+        <button v-for="field in [{ value: 'FIELD_5', label: 'Sân 5' }, { value: 'FIELD_7', label: 'Sân 7' }]" :key="field.value" type="button" @click="selectedTeamField = field.value as 'FIELD_5' | 'FIELD_7'" class="rounded-lg border-2 px-3 py-3 font-semibold transition-colors" :class="selectedTeamField === field.value ? 'border-primary-600 bg-primary-600 text-white' : 'border-gray-200 text-gray-700 hover:border-primary-400'">{{ field.label }}</button>
+      </div>
       <div class="flex justify-end gap-3 mt-6">
         <button type="button" class="btn-secondary" @click="closeTeamCountModal">Hủy</button>
         <button type="button" class="btn-primary" :disabled="teamGenerationLoading" @click="confirmGenerateRandomTeams">
@@ -1373,6 +1432,7 @@ const filters = ['Đang diễn ra', 'Giải đấu cũ']
 const attendanceMap = ref<Map<string, TournamentPlayerAttendance>>(new Map())
 const attendanceLoading = ref<Set<string>>(new Set())
 const attendanceStats = ref<Map<string, TournamentAttendanceStats>>(new Map())
+const cannotSelfRegisterDueToDebt = computed(() => (authStore.currentUser?.player?.money ?? 0) < 0)
 
 // Water tracking
 const waterLoading = ref<Set<string>>(new Set())
@@ -1386,13 +1446,18 @@ const showAttendanceModal = ref(false)
 const attendanceModalData = ref<TournamentAttendanceDetails[]>([])
 const attendanceDetailsMap = ref<Map<string, TournamentAttendanceDetails[]>>(new Map())
 const attendanceModalTitle = ref('')
-const attendanceModalType = ref<'attending' | 'not-attending' | 'betting' | 'pending'>('attending')
+const attendanceModalType = ref<'attending' | 'not-attending' | 'betting' | 'water' | 'pending'>('attending')
 const attendanceModalLoading = ref(false)
 const playerAttendanceLoading = ref<Set<string>>(new Set())
 const attendancePlayerNameFilter = ref('')
 const attendancePlayerTierFilter = ref<number | null>(null)
+const attendanceFieldTab = ref<'FIELD_5' | 'FIELD_7'>('FIELD_5')
 const attendanceModalTournamentId = ref<string | null>(null)
 const selectedPendingPlayerIds = ref<Set<string>>(new Set())
+const showFieldRegistrationModal = ref(false)
+const fieldRegistrationTournamentId = ref<string | null>(null)
+const registrationField5 = ref(true)
+const registrationField7 = ref(true)
 const batchAttendanceSaving = ref(false)
 const attendanceDetailsLoadingIds = ref<Set<string>>(new Set())
 const areAllPendingPlayersSelected = computed(() => {
@@ -1482,6 +1547,7 @@ const showTeamCountModal = ref(false)
 const teamCountModalTournamentId = ref<string | null>(null)
 const selectedTeamCount = ref<2 | 3 | 4>(2)
 const teamCountOptions: Array<2 | 3 | 4> = [2, 3, 4]
+const selectedTeamField = ref<'FIELD_5' | 'FIELD_7'>('FIELD_5')
 
 const showDeleteCostModal = ref(false)
 const deleteCostId = ref<string | null>(null)
@@ -1710,6 +1776,15 @@ const formatTime = (date: string | Date): string => {
   }
 }
 
+const formatRegistrationTime = (date: string | Date): string => {
+  try {
+    const dateObj = typeof date === 'string' ? new Date(date) : date
+    return dateObj.toLocaleString('vi-VN', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit' })
+  } catch {
+    return ''
+  }
+}
+
 const formatNextMonday = (date: Date): string => {
   return date.toLocaleDateString('vi-VN', {
     weekday: 'long',
@@ -1771,17 +1846,20 @@ const toggleAttendance = async (tournamentId: string): Promise<void> => {
     return
   }
   
+  const currentStatus = currentAttendance.status || 'NULL'
+  if (currentStatus !== 'ATTEND') {
+    fieldRegistrationTournamentId.value = tournamentId
+    registrationField5.value = true
+    registrationField7.value = true
+    showFieldRegistrationModal.value = true
+    return
+  }
+
   try {
     attendanceLoading.value.add(tournamentId)
-    
-    const currentStatus = currentAttendance.status || 'NULL'
-    
-    // Toggle between ATTEND and NOT_ATTEND
-    const newStatus = currentStatus === 'ATTEND' ? 'NOT_ATTEND' : 'ATTEND'
-    
     const response = await apiClient.put<TournamentPlayerAttendance>(
       `/tournaments/${tournamentId}/attendance`,
-      { status: newStatus }
+      { status: 'NOT_ATTEND' }
     )
     
     if (response.success && response.data) {
@@ -1830,7 +1908,13 @@ const getAttendanceStats = (tournamentId: string): TournamentAttendanceStats | u
 const getAttendancePercentage = (tournamentId: string): number => {
   const stats = attendanceStats.value.get(tournamentId)
   if (!stats || stats.totalPlayers === 0) return 0
-  return Math.round((stats.attendingCount / stats.totalPlayers) * 100)
+  return Math.round((getHighestFieldAttendanceCount(tournamentId) / stats.totalPlayers) * 100)
+}
+
+const getHighestFieldAttendanceCount = (tournamentId: string): number => {
+  const stats = attendanceStats.value.get(tournamentId)
+  if (!stats) return 0
+  return Math.max(stats.field5Count ?? stats.attendingCount, stats.field7Count ?? stats.attendingCount)
 }
 
 // Modal functions
@@ -1857,7 +1941,32 @@ const fetchAttendanceDetails = async (tournamentId: string): Promise<void> => {
   }
 }
 
-const openAttendanceModal = async (tournamentId: string, type: 'attending' | 'not-attending' | 'betting' | 'pending'): Promise<void> => {
+const closeFieldRegistrationModal = (): void => {
+  showFieldRegistrationModal.value = false
+  fieldRegistrationTournamentId.value = null
+}
+
+const confirmFieldRegistration = async (): Promise<void> => {
+  const tournamentId = fieldRegistrationTournamentId.value
+  if (!tournamentId || (!registrationField5.value && !registrationField7.value) || attendanceLoading.value.has(tournamentId)) return
+  try {
+    attendanceLoading.value.add(tournamentId)
+    const response = await apiClient.put<TournamentPlayerAttendance>(`/tournaments/${tournamentId}/attendance`, {
+      status: 'ATTEND', field5: registrationField5.value, field7: registrationField7.value,
+    })
+    if (!response.success || !response.data) throw new Error(response.error || 'Không thể đăng ký tham gia')
+    attendanceMap.value.set(tournamentId, response.data)
+    await fetchAttendanceStats(tournamentId)
+    closeFieldRegistrationModal()
+    toast.success('Đã đăng ký tham gia')
+  } catch (err: any) {
+    toast.error(err.response?.data?.error || err.message || 'Không thể đăng ký tham gia')
+  } finally {
+    attendanceLoading.value.delete(tournamentId)
+  }
+}
+
+const openAttendanceModal = async (tournamentId: string, type: 'attending' | 'not-attending' | 'betting' | 'water' | 'pending'): Promise<void> => {
   attendanceModalType.value = type
   if (type === 'pending') {
     attendanceModalTitle.value = 'Điểm danh cầu thủ'
@@ -1867,11 +1976,14 @@ const openAttendanceModal = async (tournamentId: string, type: 'attending' | 'no
     attendanceModalTitle.value = 'Cầu thủ không tham gia'
   } else if (type === 'betting') {
     attendanceModalTitle.value = 'Cầu thủ cược'
+  } else if (type === 'water') {
+    attendanceModalTitle.value = 'Cầu thủ uống nước'
   }
   showAttendanceModal.value = true
   attendanceModalData.value = [] // Clear previous data
   attendancePlayerNameFilter.value = ''
   attendancePlayerTierFilter.value = null
+  attendanceFieldTab.value = 'FIELD_5'
   attendanceModalTournamentId.value = tournamentId
   selectedPendingPlayerIds.value = new Set()
   
@@ -1904,6 +2016,11 @@ const getFilteredModalData = (): TournamentAttendanceDetails[] => {
       .filter(item => item.bet === true)
       .filter(matchesName)
       .sort((a, b) => b.player.tier - a.player.tier) // Sort by tier descending (highest tier first)
+  } else if (attendanceModalType.value === 'water') {
+    return attendanceModalData.value
+      .filter(item => item.status === 'ATTEND' && item.withWater === true)
+      .filter(matchesName)
+      .sort((a, b) => b.player.tier - a.player.tier)
   } else {
     // Filter by status for attending/not-attending players
     let targetStatus: string
@@ -1915,8 +2032,12 @@ const getFilteredModalData = (): TournamentAttendanceDetails[] => {
     
     return attendanceModalData.value
       .filter(item => item.status === targetStatus)
+      .filter(item => attendanceModalType.value !== 'attending' || (attendanceFieldTab.value === 'FIELD_5' ? item.field5 !== false : item.field7 !== false))
       .filter(matchesName)
-      .sort((a, b) => b.player.tier - a.player.tier) // Sort by tier descending (highest tier first)
+      .sort((a, b) => attendanceModalType.value === 'attending'
+        ? new Date(b.registeredAt || b.createdAt).getTime() - new Date(a.registeredAt || a.createdAt).getTime()
+          || a.player.name.localeCompare(b.player.name, 'vi')
+        : b.player.tier - a.player.tier) // Attending players are listed by latest registration; other lists keep tier order.
   }
 }
 
@@ -1988,6 +2109,7 @@ const isGoalkeeper = (position: string): boolean => position === 'GK' || positio
 const openTeamCountModal = (tournamentId: string): void => {
   if (!canGenerateTeams(tournamentId) || teamGenerationLoading.value) return
   selectedTeamCount.value = getTeamCount(tournamentId) as 2 | 3 | 4
+  selectedTeamField.value = 'FIELD_5'
   teamCountModalTournamentId.value = tournamentId
   showTeamCountModal.value = true
 }
@@ -1999,10 +2121,10 @@ const closeTeamCountModal = (): void => {
 
 const confirmGenerateRandomTeams = async (): Promise<void> => {
   if (!teamCountModalTournamentId.value) return
-  await generateRandomTeams(teamCountModalTournamentId.value, selectedTeamCount.value)
+  await generateRandomTeams(teamCountModalTournamentId.value, selectedTeamCount.value, selectedTeamField.value)
 }
 
-const generateRandomTeams = async (tournamentId: string, teamCount: 2 | 3 | 4): Promise<void> => {
+const generateRandomTeams = async (tournamentId: string, teamCount: 2 | 3 | 4, field: 'FIELD_5' | 'FIELD_7'): Promise<void> => {
   if (!canGenerateTeams(tournamentId) || teamGenerationLoading.value) return
   
   const stats = attendanceStats.value.get(tournamentId)
@@ -2011,12 +2133,12 @@ const generateRandomTeams = async (tournamentId: string, teamCount: 2 | 3 | 4): 
   try {
     teamGenerationLoading.value = true
     
-    const response = await apiClient.post(`/tournaments/${tournamentId}/generate-teams`, { teamCount })
+    const response = await apiClient.post(`/tournaments/${tournamentId}/generate-teams`, { teamCount, field })
     
     if (response.success) {
       // Show success message with team details
       const data = response.data as any
-      toast.success(`Đã chia ${data.playerCount} cầu thủ thành ${data.teamCount} đội!`)
+      toast.success(`Đã chia ${data.playerCount} cầu thủ Sân ${field === 'FIELD_5' ? '5' : '7'} thành ${data.teamCount} đội!`)
       
       // Refresh tournament data
       await fetchData()
@@ -2586,6 +2708,9 @@ const openAdditionalCostModal = async (tournament: Tournament) => {
   }
   // Fetch additional costs for this tournament
   await systemStore.fetchAdditionalCosts(tournament.id)
+  if (currentAdditionalCosts.value.length === 0) {
+    additionalCostForm.value.description = 'Tiền Nước'
+  }
 }
 
 const closeAdditionalCostModal = () => {
@@ -2741,6 +2866,13 @@ const getBettingCount = (tournamentId: string): number => {
   return details.filter((detail: any) => detail.bet === true).length
 }
 
+const getWaterCount = (tournamentId: string): number => {
+  const details = attendanceDetailsMap.value.get(tournamentId)
+  return Array.isArray(details)
+    ? details.filter((detail: any) => detail.status === 'ATTEND' && detail.withWater === true).length
+    : 0
+}
+
 // Helper function to calculate betting win amount based on number of teams
 const getBettingWinAmount = (): number => 10000
 
@@ -2799,11 +2931,11 @@ const getTournamentEndStatusMessage = (tournamentId: string): string => {
   const teamsWithLowestScore = teams.filter(team => (team.score || 0) === lowestScore)
   
   if (teamsWithHighestScore.length > 1) {
-    return `${teamsWithHighestScore.length} teams tied for highest score (${highestScore})`
+    return `${teamsWithHighestScore.length} đội đồng điểm cao nhất (${highestScore})`
   }
   
   if (teamsWithLowestScore.length > 1) {
-    return `${teamsWithLowestScore.length} teams tied for lowest score (${lowestScore})`
+    return `${teamsWithLowestScore.length} đội đồng điểm thấp nhất (${lowestScore})`
   }
   
   return '' // Can end tournament
@@ -2985,6 +3117,11 @@ const isPlayerBetting = (tournamentId: string, playerId: string): boolean => {
   return Array.isArray(details) && details.some((detail: any) => detail.playerId === playerId && detail.bet === true)
 }
 
+const isPlayerWithWater = (tournamentId: string, playerId: string): boolean => {
+  const details = attendanceDetailsMap.value.get(tournamentId)
+  return Array.isArray(details) && details.some((detail: any) => detail.playerId === playerId && detail.withWater === true)
+}
+
 const markPlayerAttending = async (attendance: TournamentAttendanceDetails): Promise<void> => {
   if (playerAttendanceLoading.value.has(attendance.player.id)) return
   try {
@@ -3012,16 +3149,19 @@ const cancelPlayerAttendance = async (attendance: TournamentAttendanceDetails): 
     const loadingIds = new Set(playerAttendanceLoading.value)
     loadingIds.add(attendance.player.id)
     playerAttendanceLoading.value = loadingIds
+    const field5 = attendanceFieldTab.value === 'FIELD_5' ? false : attendance.field5 !== false
+    const field7 = attendanceFieldTab.value === 'FIELD_7' ? false : attendance.field7 !== false
+    const remainsRegistered = field5 || field7
     const response = await apiClient.put<TournamentPlayerAttendance>(
       `/tournaments/${attendance.tournamentId}/attendance/${attendance.player.id}`,
-      { status: 'NULL', withWater: false, bet: false },
+      { status: remainsRegistered ? 'ATTEND' : 'NULL', field5, field7, withWater: remainsRegistered ? attendance.withWater : false, bet: remainsRegistered ? attendance.bet : false },
     )
     if (!response.success) throw new Error(response.error || 'Không thể hủy tham gia')
     const index = attendanceModalData.value.findIndex(item => item.id === attendance.id)
-    if (index !== -1) attendanceModalData.value[index] = { ...attendanceModalData.value[index], status: 'NULL', withWater: false, bet: false }
+    if (index !== -1) attendanceModalData.value[index] = { ...attendanceModalData.value[index], status: remainsRegistered ? 'ATTEND' : 'NULL', field5, field7, withWater: remainsRegistered ? attendance.withWater : false, bet: remainsRegistered ? attendance.bet : false }
     attendanceDetailsMap.value.set(attendance.tournamentId, attendanceModalData.value)
     await fetchAttendanceStats(attendance.tournamentId)
-    toast.success(`Đã hủy tham gia của ${attendance.player.name}`)
+    toast.success(`Đã hủy ${attendanceFieldTab.value === 'FIELD_5' ? 'Sân 5' : 'Sân 7'} của ${attendance.player.name}`)
   } catch (error: any) {
     toast.error(error.response?.data?.error || error.message || 'Không thể hủy tham gia')
   } finally {

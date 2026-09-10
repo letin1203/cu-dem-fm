@@ -814,7 +814,7 @@ router.put('/:id/attendance', authenticate, async (req: AuthenticatedRequest, re
   try {
     const { id: tournamentId } = req.params;
     const userId = req.user!.id;
-    const { status, withWater, bet, playerId, toggleWater, toggleBet } = req.body;
+    const { status, withWater, bet, field5, field7, playerId, toggleWater, toggleBet } = req.body;
 
     // If playerId is provided and user is admin/mod, use that player instead
     let targetPlayerId = userId;
@@ -890,6 +890,7 @@ router.put('/:id/attendance', authenticate, async (req: AuthenticatedRequest, re
           status: currentAttendance?.status || 'ATTEND',
           withWater: newWaterStatus,
           bet: currentAttendance?.bet ?? false,
+          registeredAt: currentAttendance?.status === 'ATTEND' ? currentAttendance.registeredAt : new Date(),
         },
       });
 
@@ -934,6 +935,7 @@ router.put('/:id/attendance', authenticate, async (req: AuthenticatedRequest, re
           status: currentAttendance?.status || 'ATTEND',
           withWater: currentAttendance?.withWater ?? false,
           bet: newBetStatus,
+          registeredAt: currentAttendance?.status === 'ATTEND' ? currentAttendance.registeredAt : new Date(),
         },
       });
 
@@ -944,14 +946,37 @@ router.put('/:id/attendance', authenticate, async (req: AuthenticatedRequest, re
       return;
     }
 
+    if (status === 'ATTEND' && req.user!.role === 'USER' && targetPlayerId === userId && player.money < 0) {
+      res.status(400).json({
+        success: false,
+        error: 'Cầu thủ đang có số dư âm, vui lòng thanh toán trước khi đăng ký tham gia',
+      });
+      return;
+    }
+
+    if (status === 'ATTEND' && field5 === false && field7 === false) {
+      res.status(400).json({ success: false, error: 'Vui lòng chọn ít nhất một sân' });
+      return;
+    }
+
+    const existingAttendance = await prisma.tournamentPlayerAttendance.findUnique({
+      where: { tournamentId_playerId: { tournamentId, playerId: player.id } },
+      select: { status: true },
+    });
+
     // Prepare update data for regular attendance update
     const updateData: any = { status };
+    if (status === 'ATTEND' && existingAttendance?.status !== 'ATTEND') {
+      updateData.registeredAt = new Date();
+    }
     if (withWater !== undefined) {
       updateData.withWater = withWater;
     }
     if (bet !== undefined) {
       updateData.bet = bet;
     }
+    if (field5 !== undefined) updateData.field5 = field5;
+    if (field7 !== undefined) updateData.field7 = field7;
 
     // Update or create attendance
     const attendance = await prisma.tournamentPlayerAttendance.upsert({
@@ -968,6 +993,9 @@ router.put('/:id/attendance', authenticate, async (req: AuthenticatedRequest, re
         status,
         withWater: withWater ?? false,
         bet: bet ?? false,
+        field5: field5 ?? true,
+        field7: field7 ?? true,
+        registeredAt: status === 'ATTEND' ? new Date() : null,
       },
     });
 
@@ -1028,8 +1056,8 @@ router.put('/:id/attendance/batch', authenticate, authorize(['ADMIN', 'MOD']), a
     await prisma.$transaction(
       pendingPlayerIds.map(playerId => prisma.tournamentPlayerAttendance.upsert({
         where: { tournamentId_playerId: { tournamentId, playerId } },
-        update: { status: 'ATTEND' },
-        create: { tournamentId, playerId, status: 'ATTEND' },
+        update: { status: 'ATTEND', registeredAt: new Date() },
+        create: { tournamentId, playerId, status: 'ATTEND', registeredAt: new Date() },
       })),
     );
 
@@ -1044,7 +1072,7 @@ router.put('/:id/attendance/batch', authenticate, authorize(['ADMIN', 'MOD']), a
 router.put('/:id/attendance/:playerId', authenticate, authorize(['ADMIN', 'MOD']), async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   try {
     const { id: tournamentId, playerId } = req.params;
-    const { status, withWater, bet } = updateAttendanceSchema.parse(req.body);
+    const { status, withWater, bet, field5, field7 } = updateAttendanceSchema.parse(req.body);
 
     // Verify tournament exists
     const tournament = await prisma.tournament.findUnique({
@@ -1072,14 +1100,24 @@ router.put('/:id/attendance/:playerId', authenticate, authorize(['ADMIN', 'MOD']
       return;
     }
 
+    const existingAttendance = await prisma.tournamentPlayerAttendance.findUnique({
+      where: { tournamentId_playerId: { tournamentId, playerId } },
+      select: { status: true },
+    });
+
     // Prepare update data
     const updateData: any = { status };
+    if (status === 'ATTEND' && existingAttendance?.status !== 'ATTEND') {
+      updateData.registeredAt = new Date();
+    }
     if (withWater !== undefined) {
       updateData.withWater = withWater;
     }
     if (bet !== undefined) {
       updateData.bet = bet;
     }
+    if (field5 !== undefined) updateData.field5 = field5;
+    if (field7 !== undefined) updateData.field7 = field7;
 
     // Update or create attendance
     const attendance = await prisma.tournamentPlayerAttendance.upsert({
@@ -1096,6 +1134,9 @@ router.put('/:id/attendance/:playerId', authenticate, authorize(['ADMIN', 'MOD']
         status,
         withWater: withWater ?? false,
         bet: bet ?? false,
+        field5: field5 ?? true,
+        field7: field7 ?? true,
+        registeredAt: status === 'ATTEND' ? new Date() : null,
       },
     });
 
@@ -1136,10 +1177,12 @@ router.get('/:id/attendance-stats', async (req: AuthenticatedRequest, res: Respo
     // Get attendance statistics
     const attendanceStats = await prisma.tournamentPlayerAttendance.findMany({
       where: { tournamentId },
-      select: { status: true, bet: true },
+      select: { status: true, bet: true, field5: true, field7: true },
     });
 
     const attendingCount = attendanceStats.filter((a: any) => a.status === 'ATTEND').length;
+    const field5Count = attendanceStats.filter((a: any) => a.status === 'ATTEND' && a.field5).length;
+    const field7Count = attendanceStats.filter((a: any) => a.status === 'ATTEND' && a.field7).length;
     const notAttendingCount = attendanceStats.filter((a: any) => a.status === 'NOT_ATTEND').length;
     // Players without a record are also awaiting a response.
     const nullCount = totalPlayers - attendingCount - notAttendingCount;
@@ -1150,6 +1193,8 @@ router.get('/:id/attendance-stats', async (req: AuthenticatedRequest, res: Respo
       data: {
         totalPlayers,
         attendingCount,
+        field5Count,
+        field7Count,
         notAttendingCount,
         bettingCount,
         nullCount,
@@ -1333,9 +1378,14 @@ router.post('/:id/generate-teams', authenticate, authorize(['ADMIN', 'MOD']), as
   try {
     const { id: tournamentId } = req.params;
     const requestedTeamCount = req.body?.teamCount;
+    const selectedField = req.body?.field;
 
     if (requestedTeamCount !== undefined && ![2, 3, 4].includes(requestedTeamCount)) {
       res.status(400).json({ success: false, error: 'Team count must be 2, 3, or 4' });
+      return;
+    }
+    if (!['FIELD_5', 'FIELD_7'].includes(selectedField)) {
+      res.status(400).json({ success: false, error: 'Vui lòng chọn sân 5 hoặc sân 7' });
       return;
     }
 
@@ -1356,7 +1406,8 @@ router.post('/:id/generate-teams', authenticate, authorize(['ADMIN', 'MOD']), as
     const attendingPlayers = await prisma.tournamentPlayerAttendance.findMany({
       where: { 
         tournamentId,
-        status: 'ATTEND'
+        status: 'ATTEND',
+        ...(selectedField === 'FIELD_5' ? { field5: true } : { field7: true }),
       },
       include: {
         player: {
@@ -1709,6 +1760,11 @@ router.post('/:id/generate-teams', authenticate, authorize(['ADMIN', 'MOD']), as
     }
 
     console.log(`Team generation completed: Created ${createdTeams.length} teams`);
+
+    await prisma.tournament.update({
+      where: { id: tournamentId },
+      data: { pitchType: selectedField },
+    });
 
     res.json({
       success: true,

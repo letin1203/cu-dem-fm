@@ -305,14 +305,18 @@
           <div
             class="mt-4 flex items-center justify-between rounded-lg bg-gray-50 p-4"
           >
-            <span class="font-medium text-gray-700">Tiền quỹ hiện tại</span
+            <span class="font-medium text-gray-700">Tiền quỹ dự tính</span
             ><strong
               class="whitespace-nowrap text-lg"
               :class="
-                fundHistoryCurrentFund >= 0 ? 'text-green-600' : 'text-red-600'
+                fundHistoryEstimatedFund >= 0 ? 'text-green-600' : 'text-red-600'
               "
-              >{{ formatMoney(fundHistoryCurrentFund) }} ₫</strong
+              >{{ formatMoney(fundHistoryEstimatedFund) }} ₫</strong
             >
+          </div>
+          <div class="mt-3 flex items-center justify-between rounded-lg bg-amber-50 p-4">
+            <div><span class="font-medium text-gray-700">Tiền quỹ hiện tại</span><p class="mt-1 text-xs text-amber-800">Đã trừ tổng số dư âm: {{ formatMoney(fundHistoryTotalPlayerDebt) }} ₫</p></div>
+            <strong class="whitespace-nowrap text-lg" :class="fundHistoryActualFund >= 0 ? 'text-green-600' : 'text-red-600'">{{ formatMoney(fundHistoryActualFund) }} ₫</strong>
           </div>
           <div
             v-if="fundHistoryLoading"
@@ -453,7 +457,9 @@ const mobileMenuOpen = ref(false);
 const userMenuOpen = ref(false);
 const showFundHistoryModal = ref(false);
 const fundHistoryLoading = ref(false);
-const fundHistoryCurrentFund = ref(0);
+const fundHistoryEstimatedFund = ref(0);
+const fundHistoryTotalPlayerDebt = ref(0);
+const fundHistoryActualFund = computed(() => fundHistoryEstimatedFund.value - fundHistoryTotalPlayerDebt.value);
 const fundHistory = ref<
   Array<{
     id: string;
@@ -545,7 +551,8 @@ async function openFundHistoryModal() {
     if (!response.success || !response.data)
       throw new Error(response.error || "Không thể tải lịch sử quỹ");
     const data = response.data as any;
-    fundHistoryCurrentFund.value = toMoneyNumber(data.currentFund);
+    fundHistoryEstimatedFund.value = toMoneyNumber(data.estimatedFund ?? data.currentFund);
+    fundHistoryTotalPlayerDebt.value = toMoneyNumber(data.totalPlayerDebt);
     fundHistory.value = Array.isArray(data.history)
       ? data.history.map((entry: any) => ({
           ...entry,

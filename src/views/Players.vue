@@ -29,8 +29,8 @@
         <label class="form-label">Lọc theo Tier</label>
         <div class="flex flex-wrap gap-2 mt-2">
           <button
-            @click="selectedTierRange = null"
-            :class="selectedTierRange === null 
+            @click="selectedTier = null"
+            :class="selectedTier === null 
               ? 'bg-blue-600 text-white' 
               : 'bg-gray-100 text-gray-700 hover:bg-gray-200'"
             class="px-3 py-2 rounded-lg text-sm font-medium transition-colors"
@@ -38,26 +38,17 @@
             Tất cả Tier
           </button>
           <button
-            v-for="tierRange in tierRanges"
-            :key="tierRange.key"
-            @click="selectedTierRange = tierRange.key"
-            :class="selectedTierRange === tierRange.key 
+            v-for="tier in tierOptions"
+            :key="tier"
+            @click="selectedTier = tier"
+            :class="selectedTier === tier 
               ? 'bg-blue-600 text-white' 
               : 'bg-gray-100 text-gray-700 hover:bg-gray-200'"
-            class="px-3 py-2 rounded-lg text-sm font-medium transition-colors flex items-center space-x-1"
+            class="px-3 py-2 rounded-lg text-sm font-medium transition-colors"
           >
-            <span>{{ tierRange.stars }}</span>
-            <span>{{ tierRange.label }}</span>
+            Tier {{ tier }}
           </button>
         </div>
-      </div>
-
-      <div class="max-w-md">
-        <label class="form-label">Sắp xếp</label>
-        <select v-model="sortBy" class="form-input mt-2">
-          <option value="tier">Tier (mạnh đến yếu)</option>
-          <option value="money-asc">Tiền (thấp đến cao)</option>
-        </select>
       </div>
 
       <div>
@@ -89,7 +80,7 @@
 
       <!-- Empty State -->
       <div v-else-if="filteredPlayers.length === 0" class="text-center py-8">
-        <div class="text-gray-500 mb-4" v-if="playerNameFilter || selectedTierRange">
+        <div class="text-gray-500 mb-4" v-if="playerNameFilter || selectedTier">
           Không có cầu thủ nào phù hợp với bộ lọc hiện tại.
         </div>
         <div class="text-gray-500 mb-4" v-else>
@@ -342,9 +333,7 @@
             <label class="form-label">Tier (1-6, Tier 1 mạnh nhất)</label>
             <select v-model="formData.tier" required class="form-input">
               <option value="">Chọn Tier</option>
-              <option v-for="tier in 6" :key="tier" :value="tier">
-                Tier {{ tier }} {{ '★'.repeat(7 - tier) }}
-              </option>
+              <option v-for="tier in 6" :key="tier" :value="tier">Tier {{ tier }}</option>
             </select>
           </div>
           
@@ -414,8 +403,7 @@ const error = computed(() => playersStore.error)
 const showAddForm = ref(false)
 const editingPlayer = ref<Player | null>(null)
 const playerNameFilter = ref('')
-const selectedTierRange = ref<string | null>(null)
-const sortBy = ref<'tier' | 'money-asc'>('tier')
+const selectedTier = ref<number | null>(null)
 const showDebtOnly = ref(false)
 const showMoneyHistory = ref(false)
 const selectedMoneyPlayer = ref<Player | null>(null)
@@ -429,12 +417,7 @@ const selectedTopUpAmount = ref(100000)
 const adminTopUpReason = ref('')
 const topUpAmounts = [50000, 100000, 200000, 500000]
 
-// Tier ranges configuration
-const tierRanges = [
-  { key: '1-2', label: 'Tier 1–2 (Mạnh)', stars: '★★★★★★–★★★★★', min: 1, max: 2 },
-  { key: '3-4', label: 'Tier 3–4', stars: '★★★★–★★★', min: 3, max: 4 },
-  { key: '5-6', label: 'Tier 5–6', stars: '★★–★', min: 5, max: 6 }
-]
+const tierOptions = [1, 2, 3, 4, 5, 6]
 
 const positionLabels: Record<string, string> = {
   GK: 'GK',
@@ -463,23 +446,12 @@ const filteredPlayers = computed(() => {
   }
   
   // Apply tier filter if provided
-  if (selectedTierRange.value) {
-    const tierRange = tierRanges.find(range => range.key === selectedTierRange.value)
-    if (tierRange) {
-      result = result.filter(player => 
-        player.tier >= tierRange.min && player.tier <= tierRange.max
-      )
-    }
-  }
+  if (selectedTier.value !== null) result = result.filter(player => player.tier === selectedTier.value)
 
   if (showDebtOnly.value) result = result.filter(player => player.money < 0)
   
-  // Tier 1 is the strongest. Copy before sorting so the store state is not mutated.
-  return [...result].sort((a, b) => {
-    if (showDebtOnly.value) return a.money - b.money || a.tier - b.tier
-    if (sortBy.value === 'money-asc') return a.money - b.money || a.tier - b.tier
-    return a.tier - b.tier || a.name.localeCompare(b.name, 'vi')
-  })
+  // Keep debtors ordered from the largest debt to the smallest debt.
+  return showDebtOnly.value ? [...result].sort((a, b) => a.money - b.money || a.tier - b.tier) : result
 })
 
 const remainingPlayersCount = computed(() => {
@@ -506,7 +478,7 @@ watch(playerNameFilter, (newValue, oldValue) => {
   }
 })
 
-watch(selectedTierRange, (newValue, oldValue) => {
+watch(selectedTier, (newValue, oldValue) => {
   // If tier filter is cleared (from something to null), reload all players
   if (oldValue && !newValue) {
     playersStore.fetchPlayers()

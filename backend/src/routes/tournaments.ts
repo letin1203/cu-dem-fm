@@ -367,7 +367,7 @@ router.put('/:id', authenticate, authorize(['ADMIN', 'MOD']), async (req: Authen
       return;
     }
 
-    if (existingTournament.status === 'COMPLETED' && (updateData.stadiumCost !== undefined || updateData.sponsorMoney !== undefined || updateData.fundContribution !== undefined)) {
+    if (existingTournament.status === 'COMPLETED' && (updateData.stadiumCost !== undefined || updateData.sponsorMoney !== undefined || updateData.fundContribution !== undefined || updateData.selfFunded !== undefined)) {
       res.status(400).json({
         success: false,
         error: 'Không thể chỉnh sửa tài chính của giải đã hoàn thành',
@@ -393,29 +393,27 @@ router.put('/:id', authenticate, authorize(['ADMIN', 'MOD']), async (req: Authen
       }
     }
 
-    const tournament = await prisma.tournament.update({
-      where: { id },
-      data: updateData,
-      include: {
-        teams: {
-          include: {
-            team: {
-              select: {
-                id: true,
-                name: true,
-                logo: true,
-              },
+    const tournament = await prisma.$transaction(async (tx) => {
+      if (updateData.selfFunded === true) {
+        await tx.additionalCost.deleteMany({ where: { tournamentId: id } });
+        await tx.tournamentPlayerAttendance.updateMany({
+          where: { tournamentId: id },
+          data: { withWater: false, bet: false },
+        });
+      }
+
+      return tx.tournament.update({
+        where: { id },
+        data: { ...updateData, ...(updateData.selfFunded === true ? { sponsorMoney: 0, fundContribution: 0 } : {}) },
+        include: {
+          teams: {
+            include: {
+              team: { select: { id: true, name: true, logo: true } },
             },
           },
+          winner: { select: { id: true, name: true, logo: true } },
         },
-        winner: {
-          select: {
-            id: true,
-            name: true,
-            logo: true,
-          },
-        },
-      },
+      });
     });
 
     res.json({
@@ -863,6 +861,11 @@ router.put('/:id/attendance', authenticate, async (req: AuthenticatedRequest, re
       return;
     }
 
+    if (tournament.selfFunded && (toggleWater || toggleBet || withWater !== undefined || bet !== undefined)) {
+      res.status(400).json({ success: false, error: 'Giải tự túc không hỗ trợ Uống nước hoặc Cược' });
+      return;
+    }
+
     // Handle toggle water request
     if (toggleWater) {
       const currentAttendance = await prisma.tournamentPlayerAttendance.findUnique({
@@ -946,7 +949,7 @@ router.put('/:id/attendance', authenticate, async (req: AuthenticatedRequest, re
       return;
     }
 
-    if (status === 'ATTEND' && req.user!.role === 'USER' && targetPlayerId === userId && player.money < 0) {
+    if (status === 'ATTEND' && !tournament.selfFunded && req.user!.role === 'USER' && targetPlayerId === userId && player.money < 0) {
       res.status(400).json({
         success: false,
         error: 'Cầu thủ đang có số dư âm, vui lòng thanh toán trước khi đăng ký tham gia',
@@ -1084,6 +1087,11 @@ router.put('/:id/attendance/:playerId', authenticate, authorize(['ADMIN', 'MOD']
         success: false,
         error: 'Tournament not found',
       });
+      return;
+    }
+
+    if (tournament.selfFunded && (withWater !== undefined || bet !== undefined)) {
+      res.status(400).json({ success: false, error: 'Giải tự túc không hỗ trợ Uống nước hoặc Cược' });
       return;
     }
 
@@ -1384,6 +1392,7 @@ router.post('/:id/generate-teams', authenticate, authorize(['ADMIN', 'MOD']), as
       res.status(400).json({ success: false, error: 'Team count must be 2, 3, or 4' });
       return;
     }
+
     if (!['FIELD_5', 'FIELD_7'].includes(selectedField)) {
       res.status(400).json({ success: false, error: 'Vui lòng chọn sân 5 hoặc sân 7' });
       return;
@@ -1878,17 +1887,20 @@ router.put('/:id/end', authenticate, authorize(['ADMIN', 'MOD']), async (req: Au
     const bettingWinBonus = bettingWinAmount;
 
     // Calculate additional costs total
-    const totalAdditionalCosts = tournament.additionalCosts.reduce((sum, cost) => sum + cost.amount, 0);
-    const sponsorMoney = tournament.sponsorMoney ?? systemSettings?.sponsorMoney ?? 0;
+    const totalAdditionalCosts = tournament.selfFunded ? 0 : tournament.additionalCosts.reduce((sum, cost) => sum + cost.amount, 0);
+    const sponsorMoney = tournament.selfFunded ? 0 : (tournament.sponsorMoney ?? systemSettings?.sponsorMoney ?? 0);
     const stadiumCost = tournament.stadiumCost ?? systemSettings?.stadiumCost ?? 0;
     const fundContribution = tournament.fundContribution ?? 0;
     const netTournamentCost = stadiumCost - sponsorMoney + totalAdditionalCosts - fundContribution;
     const tournamentCostPerPlayer = attendingPlayers.length > 0
-      ? Math.ceil((netTournamentCost / attendingPlayers.length) / 5000) * 5000 + 5000
+      ? (tournament.selfFunded
+        ? 0
+        : Math.ceil((netTournamentCost / attendingPlayers.length) / 5000) * 5000 + 5000)
       : 0;
 
     // Process each attending player
-    for (const player of attendingPlayers) {
+    // A self-funded tournament does not create player-money changes at all.
+    for (const player of (tournament.selfFunded ? [] : attendingPlayers)) {
       const attendance = tournament.playerAttendances.find(att => att.playerId === player.id);
       if (!attendance) continue;
 
@@ -1911,7 +1923,7 @@ router.put('/:id/end', authenticate, authorize(['ADMIN', 'MOD']), async (req: Au
       }
 
       // Betting calculations
-      if (attendance.bet) {
+      if (!tournament.selfFunded && attendance.bet) {
         if (playerTeam && playerTeam.id === winnerTeam.id) {
           // Betting winner gets bonus
           moneyChangeDetails.push({ description: 'Cược thắng', amount: bettingWinBonus });
@@ -1927,7 +1939,7 @@ router.put('/:id/end', authenticate, authorize(['ADMIN', 'MOD']), async (req: Au
       }
 
       // Water cost (winner team gets free water)
-      if (attendance.withWater && playerTeam && playerTeam.id !== winnerTeam.id) {
+      if (!tournament.selfFunded && attendance.withWater && playerTeam && playerTeam.id !== winnerTeam.id) {
         moneyChangeDetails.push({ description: 'Chi phí nước', amount: -waterCostPerPlayer });
       }
 

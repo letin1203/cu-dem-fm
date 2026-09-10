@@ -89,7 +89,7 @@
                   </span>
                   <span>{{ formatDate(ongoingTournament.startDate) }}</span>
                   <button
-                    v-if="authStore.hasAnyRole(['admin', 'mod'])"
+                  v-if="authStore.hasAnyRole(['admin', 'mod'])"
                     @click="openTournamentTimeModal(ongoingTournament)"
                     class="hover:underline"
                     title="Chỉnh sửa giờ thi đấu"
@@ -101,14 +101,27 @@
                 <!-- Financial Information -->
                 <div v-if="systemStore.currentSettings" class="flex flex-wrap items-center gap-4 mt-2 text-sm">
                   <button
-                    v-if="authStore.hasAnyRole(['admin', 'mod'])"
+                    v-if="authStore.hasAnyRole(['admin', 'mod']) && !ongoingTournament.selfFunded"
                     @click="openSponsorMoneyModal(ongoingTournament)"
                     class="text-green-600 font-medium hover:underline"
                     title="Chỉnh sửa tiền tài trợ"
                   >
                     💰 Sponsor: {{ getTournamentSponsorMoney(ongoingTournament).toLocaleString('vi-VN') }} ₫
                   </button>
-                  <span v-else class="text-green-600 font-medium">💰 Sponsor: {{ getTournamentSponsorMoney(ongoingTournament).toLocaleString('vi-VN') }} ₫</span>
+                  <span v-else-if="!ongoingTournament.selfFunded" class="text-green-600 font-medium">💰 Sponsor: {{ getTournamentSponsorMoney(ongoingTournament).toLocaleString('vi-VN') }} ₫</span>
+                  <button
+                    v-if="authStore.hasAnyRole(['admin', 'mod'])"
+                    type="button"
+                    :aria-pressed="Boolean(ongoingTournament.selfFunded)"
+                    :disabled="selfFundedSaving"
+                    @click="toggleSelfFunded(ongoingTournament)"
+                    class="inline-flex items-center gap-2 rounded-full px-3 py-1 font-semibold transition-colors"
+                    :class="ongoingTournament.selfFunded ? 'bg-violet-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'"
+                  >
+                    <span class="h-3 w-3 rounded-full" :class="ongoingTournament.selfFunded ? 'bg-white' : 'bg-gray-400'"></span>
+                    Tự túc
+                  </button>
+                  <span v-else-if="ongoingTournament.selfFunded" class="font-semibold text-violet-700">🤝 Tự túc</span>
                   <button
                     v-if="authStore.hasAnyRole(['admin', 'mod'])"
                     @click="openStadiumCostModal(ongoingTournament)"
@@ -152,7 +165,7 @@
                   <div class="absolute inset-0 bg-white/20 animate-pulse"></div>
                 </div>
               </div>
-              <div class="grid grid-cols-3 gap-2 text-xs">
+              <div class="grid gap-2 text-xs" :class="ongoingTournament.selfFunded ? 'grid-cols-1' : 'grid-cols-3'">
                 <button 
                   @click="openAttendanceModal(ongoingTournament.id, 'attending')"
                   class="text-center p-2 bg-green-100 rounded-lg hover:bg-green-200 transition-colors cursor-pointer"
@@ -160,14 +173,14 @@
                   <div class="font-semibold text-green-800">S5: {{ getAttendanceStats(ongoingTournament.id)?.field5Count || 0 }} / S7: {{ getAttendanceStats(ongoingTournament.id)?.field7Count || 0 }}</div>
                   <div class="text-green-600">Tham gia</div>
                 </button>
-                <button
+                <button v-if="!ongoingTournament.selfFunded"
                   @click="openAttendanceModal(ongoingTournament.id, 'water')"
                   class="text-center p-2 bg-blue-100 rounded-lg hover:bg-blue-200 transition-colors cursor-pointer"
                 >
                   <div class="font-semibold text-blue-800">{{ getWaterCount(ongoingTournament.id) }}</div>
                   <div class="text-blue-600">Uống nước</div>
                 </button>
-                <button 
+                <button v-if="!ongoingTournament.selfFunded"
                   @click="openAttendanceModal(ongoingTournament.id, 'betting')"
                   class="text-center p-2 bg-yellow-100 rounded-lg hover:bg-yellow-200 transition-colors cursor-pointer"
                 >
@@ -253,12 +266,12 @@
                 <div v-if="ongoingTournament.status === 'UPCOMING' && getTournamentTeams(ongoingTournament).length === 0 && getAttendanceButtonText(ongoingTournament.id) !== 'Không có cầu thủ'" class="flex flex-col items-center" :class="getUserAttendanceStatus(ongoingTournament.id) === 'ATTEND' ? 'w-full sm:w-auto' : 'w-auto self-center'">
                   <button
                     @click="toggleAttendance(ongoingTournament.id)"
-                    :disabled="attendanceLoading.has(ongoingTournament.id) || (getAttendanceButtonText(ongoingTournament.id) === 'Tham gia' && cannotSelfRegisterDueToDebt)"
-                    :title="cannotSelfRegisterDueToDebt ? 'Vui lòng thanh toán số dư âm trước khi đăng ký' : undefined"
+                    :disabled="attendanceLoading.has(ongoingTournament.id) || (getAttendanceButtonText(ongoingTournament.id) === 'Tham gia' && cannotSelfRegisterDueToDebt && !ongoingTournament.selfFunded)"
+                    :title="cannotSelfRegisterDueToDebt && !ongoingTournament.selfFunded ? 'Vui lòng thanh toán số dư âm trước khi đăng ký' : undefined"
                     class="px-6 py-2 rounded-lg font-medium transition-colors duration-200"
                     :class="[
                       getUserAttendanceStatus(ongoingTournament.id) === 'ATTEND' ? 'w-full sm:w-auto' : 'w-auto',
-                      attendanceLoading.has(ongoingTournament.id) || (getAttendanceButtonText(ongoingTournament.id) === 'Tham gia' && cannotSelfRegisterDueToDebt)
+                      attendanceLoading.has(ongoingTournament.id) || (getAttendanceButtonText(ongoingTournament.id) === 'Tham gia' && cannotSelfRegisterDueToDebt && !ongoingTournament.selfFunded)
                         ? 'opacity-50 cursor-not-allowed' 
                         : 'hover:shadow-md',
                         getAttendanceButtonText(ongoingTournament.id) === 'Tham gia'
@@ -272,7 +285,7 @@
                       <span>{{ attendanceLoading.has(ongoingTournament.id) ? 'Đang tải...' : `${getAttendanceButtonText(ongoingTournament.id)}${getAttendanceButtonText(ongoingTournament.id) === 'Đã tham gia' ? ' ✓' : ''}` }}</span>
                     </div>
                   </button>
-                  <div v-if="getAttendanceButtonText(ongoingTournament.id) === 'Tham gia' && cannotSelfRegisterDueToDebt" class="mt-2 text-center text-xs font-medium text-red-600">
+                  <div v-if="getAttendanceButtonText(ongoingTournament.id) === 'Tham gia' && cannotSelfRegisterDueToDebt && !ongoingTournament.selfFunded" class="mt-2 text-center text-xs font-medium text-red-600">
                     <p>Bạn không thể tham gia vì số dư: <strong>{{ (authStore.currentUser?.player?.money || 0).toLocaleString('vi-VN') }} ₫</strong>.</p>
                     <button type="button" class="mt-2 rounded bg-red-600 px-3 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-red-700" @click="openCurrentUserDebtTopUp">Thanh toán</button>
                   </div>
@@ -280,7 +293,7 @@
                 
                 <!-- Water Button -->
                 <button
-                  v-if="getUserAttendanceStatus(ongoingTournament.id) === 'ATTEND'"
+                  v-if="!ongoingTournament.selfFunded && getUserAttendanceStatus(ongoingTournament.id) === 'ATTEND'"
                   @click="toggleWater(ongoingTournament.id)"
                   :disabled="waterLoading.has(ongoingTournament.id)"
                   class="px-4 py-2 rounded-lg font-medium transition-colors duration-200"
@@ -300,7 +313,7 @@
 
                 <!-- Bet Button: available before the scheduled start time -->
                 <button
-                  v-if="canUserToggleBet(ongoingTournament)"
+                  v-if="!ongoingTournament.selfFunded && canUserToggleBet(ongoingTournament)"
                   @click="toggleBet(ongoingTournament.id)"
                   :disabled="betLoading.has(ongoingTournament.id)"
                   class="px-4 py-2 text-center rounded-lg font-medium transition-colors duration-200"
@@ -382,14 +395,17 @@
                 </span>
               </div>
             </div>
+            <p v-if="ongoingTournament.selfFunded" class="mt-3 border-t border-violet-100 pt-3 text-center text-sm font-medium text-violet-700">
+              Giải này không ảnh hưởng đến Tiền Quỹ và không trừ tiền của user.
+            </p>
 
             <div
               v-if="(authStore.hasRole('admin') && getTournamentTeams(ongoingTournament).length > 0) || (authStore.hasAnyRole(['admin', 'mod']) && ongoingTournament.status !== 'COMPLETED') || (authStore.hasPermission('canDeleteTournaments') && ongoingTournament.status !== 'COMPLETED')"
               class="flex flex-col items-stretch gap-3 pt-2 border-t border-gray-200 sm:flex-row sm:flex-wrap sm:justify-end sm:[&>button]:w-auto [&>button]:w-full"
             >
-              <button v-if="authStore.hasRole('admin') && getTournamentTeams(ongoingTournament).length > 0" @click="openAdditionalCostModal(ongoingTournament)" class="btn-secondary">Chi phí phát sinh</button>
+              <button v-if="authStore.hasRole('admin') && !ongoingTournament.selfFunded && getTournamentTeams(ongoingTournament).length > 0" @click="openAdditionalCostModal(ongoingTournament)" class="btn-secondary">Chi phí phát sinh</button>
               <button
-                v-if="authStore.hasAnyRole(['admin', 'mod']) && ongoingTournament.status !== 'COMPLETED'"
+                v-if="authStore.hasAnyRole(['admin', 'mod']) && ongoingTournament.status !== 'COMPLETED' && !ongoingTournament.selfFunded"
                 @click="openFundContributionModal(ongoingTournament)"
                 class="btn-secondary"
               >
@@ -479,7 +495,7 @@
                   <!-- Financial Information or Postponed Status -->
                   <div v-if="getTournamentTeams(tournament).length > 0" class="mt-2">
                     <div v-if="systemStore.currentSettings" class="flex flex-wrap items-center gap-4 text-sm">
-                      <span class="text-green-600 font-medium">
+                      <span v-if="!tournament.selfFunded" class="text-green-600 font-medium">
                         💰 Sponsor: {{ getTournamentSponsorMoney(tournament).toLocaleString('vi-VN') }} ₫
                       </span>
                       <span class="text-red-600 font-medium">
@@ -523,7 +539,7 @@
                     <div class="absolute inset-0 bg-white/20 animate-pulse"></div>
                   </div>
                 </div>
-                <div class="grid grid-cols-3 gap-2 text-xs">
+                <div class="grid gap-2 text-xs" :class="tournament.selfFunded ? 'grid-cols-1' : 'grid-cols-3'">
                   <button 
                     @click="openAttendanceModal(tournament.id, 'attending')"
                     class="text-center p-2 bg-green-100 rounded-lg hover:bg-green-200 transition-colors cursor-pointer"
@@ -531,14 +547,14 @@
                     <div class="font-semibold text-green-800">{{ getHighestFieldAttendanceCount(tournament.id) }}</div>
                     <div class="text-green-600">Tham gia</div>
                   </button>
-                <button
+                <button v-if="!tournament.selfFunded"
                   @click="openAttendanceModal(tournament.id, 'water')"
                   class="text-center p-2 bg-blue-100 rounded-lg hover:bg-blue-200 transition-colors cursor-pointer"
                 >
                   <div class="font-semibold text-blue-800">{{ getWaterCount(tournament.id) }}</div>
                   <div class="text-blue-600">Uống nước</div>
                 </button>
-                  <button 
+                  <button v-if="!tournament.selfFunded"
                     @click="openAttendanceModal(tournament.id, 'betting')"
                     class="text-center p-2 bg-yellow-100 rounded-lg hover:bg-yellow-200 transition-colors cursor-pointer"
                   >
@@ -703,11 +719,19 @@
           <h4 class="font-semibold text-gray-900">1. Đăng ký tham gia</h4>
           <ul class="mt-2 space-y-1 leading-6">
             <li>• Chọn <strong>Tham gia</strong> khi giải đang mở đăng ký; hệ thống sẽ lưu thời điểm đăng ký.</li>
-            <li>• Cầu thủ có số dư âm cần thanh toán trước khi tự đăng ký tham gia.</li>
+            <li v-if="!ongoingTournament.selfFunded">• Cầu thủ có số dư âm cần thanh toán trước khi tự đăng ký tham gia.</li>
             <li>• Khi đã chia đội, không thể tự thay đổi trạng thái tham gia. Admin/mod có thể đăng ký giúp trước khi chia đội.</li>
           </ul>
         </section>
-        <section>
+        <section v-if="ongoingTournament.selfFunded" class="rounded-lg border border-violet-200 bg-violet-50 p-4">
+          <h4 class="font-semibold text-violet-900">2. Giải tự túc</h4>
+          <ul class="mt-2 space-y-1 leading-6 text-violet-900">
+            <li>• Giải tự túc không dùng tiền tài trợ, không có chi phí phát sinh và không trích quỹ.</li>
+            <li>• Cầu thủ không bị trừ tiền, không có thưởng/phạt cược và không tính chi phí nước.</li>
+            <li>• Kết quả giải không ảnh hưởng đến Tiền Quỹ.</li>
+          </ul>
+        </section>
+        <section v-if="!ongoingTournament.selfFunded">
           <h4 class="font-semibold text-gray-900">2. Cược đội mình thắng</h4>
           <ul class="mt-2 space-y-1 leading-6">
             <li>• Chỉ cầu thủ đã tham gia mới có thể chọn cược trước giờ bắt đầu giải đấu.</li>
@@ -715,7 +739,7 @@
             <li>• Cược thắng: +10.000 ₫; cược thua: -10.000 ₫.</li>
           </ul>
         </section>
-        <section>
+        <section v-if="!ongoingTournament.selfFunded">
           <h4 class="font-semibold text-gray-900">3. Uống nước</h4>
           <ul class="mt-2 space-y-1 leading-6">
             <li>• Cầu thủ đã tham gia có thể bật hoặc tắt lựa chọn <strong>Nước</strong> trước giờ thi đấu.</li>
@@ -723,7 +747,7 @@
             <li>• Chi phí nước là -10.000 ₫; cầu thủ thuộc đội thắng được miễn phí nước.</li>
           </ul>
         </section>
-        <section>
+        <section v-if="!ongoingTournament.selfFunded">
           <h4 class="font-semibold text-gray-900">4. Chi phí cơ bản</h4>
           <div class="mt-2 space-y-1 rounded-lg bg-gray-50 p-3">
             <div class="flex justify-between gap-3"><span>Chi phí sân</span><strong>{{ getTournamentStadiumCost(ongoingTournament).toLocaleString('vi-VN') }} ₫</strong></div>
@@ -733,13 +757,13 @@
             <div class="flex justify-between gap-3 border-t pt-2 font-semibold text-gray-900"><span>Tổng cần chia</span><span>{{ calculateTournamentNet(ongoingTournament.id).toLocaleString('vi-VN') }} ₫</span></div>
           </div>
         </section>
-        <section>
+        <section v-if="!ongoingTournament.selfFunded">
           <h4 class="font-semibold text-gray-900">5. Số tiền mỗi cầu thủ</h4>
           <p class="mt-1 leading-6">Tổng cần chia được chia cho số cầu thủ tham gia, làm tròn lên bội số 5.000 ₫ rồi cộng thêm 5.000 ₫.</p>
           <p v-if="getAttendanceStats(ongoingTournament.id)?.attendingCount" class="mt-2 rounded-lg bg-primary-50 p-3 font-medium text-primary-800">Tạm tính {{ getAttendanceStats(ongoingTournament.id)?.attendingCount }} cầu thủ: {{ calculateCostPerPlayer(ongoingTournament.id).toLocaleString('vi-VN') }} ₫/người.</p>
           <p class="mt-2">Thủ môn (GK) được giảm 50% chi phí cơ bản, trừ khi admin/mod hủy ưu đãi này lúc kết thúc giải.</p>
         </section>
-        <section>
+        <section v-if="!ongoingTournament.selfFunded">
           <h4 class="font-semibold text-gray-900">6. Điều chỉnh khi kết thúc giải</h4>
           <ul class="mt-2 space-y-1 leading-6">
             <li>• Cược thắng: +10.000 ₫; cược thua: -10.000 ₫.</li>
@@ -872,7 +896,7 @@
                 <h4 class="font-semibold text-gray-900">{{ attendance.player.name }}</h4>
                 
                 <!-- Water Toggle Button (Admin/Mod only) - Shows same as water status -->
-                <div v-if="attendanceModalType === 'attending' && authStore.hasAnyRole(['admin', 'mod'])" class="flex items-center">
+                <div v-if="attendanceModalType === 'attending' && authStore.hasAnyRole(['admin', 'mod']) && !isSelfFundedTournament(attendanceModalTournamentId)" class="flex items-center">
                   <button
                     @click="togglePlayerWater(attendance)"
                     :disabled="playerWaterLoading.has(attendance.player.id)"
@@ -1233,13 +1257,14 @@
         <div class="bg-primary-50 border border-primary-200 rounded-lg p-4 mb-4">
           <h5 class="font-semibold text-primary-800 mb-2">💰 Cách tính tiền:</h5>
           <ul class="text-xs text-primary-700 space-y-1">
-            <li>• Chi phí giải đấu mỗi cầu thủ: -{{ calculateCostPerPlayer(endTournamentId).toLocaleString('vi-VN') }} ₫</li>
-            <li>• GK được giảm 50% chi phí giải đấu</li>
-            <li>• Cược thắng: +10.000 ₫</li>
-            <li>• Cược thua: -10.000 ₫</li>
-            <li>• Cầu thủ đội thua: -10.000 ₫</li>
-            <li>• Chi phí nước: -10.000 ₫</li>
-            <li>• Đội thắng được miễn phí nước</li>
+            <li v-if="getTournamentById(endTournamentId)?.selfFunded">• Giải tự túc: không có biến động tiền cầu thủ.</li>
+            <li v-if="!getTournamentById(endTournamentId)?.selfFunded">• Chi phí giải đấu mỗi cầu thủ: -{{ calculateCostPerPlayer(endTournamentId).toLocaleString('vi-VN') }} ₫</li>
+            <li v-if="!getTournamentById(endTournamentId)?.selfFunded">• GK được giảm 50% chi phí giải đấu</li>
+            <li v-if="!getTournamentById(endTournamentId)?.selfFunded">• Cược thắng: +10.000 ₫</li>
+            <li v-if="!getTournamentById(endTournamentId)?.selfFunded">• Cược thua: -10.000 ₫</li>
+            <li v-if="!getTournamentById(endTournamentId)?.selfFunded">• Cầu thủ đội thua: -10.000 ₫</li>
+            <li v-if="!getTournamentById(endTournamentId)?.selfFunded">• Chi phí nước: -10.000 ₫</li>
+            <li v-if="!getTournamentById(endTournamentId)?.selfFunded">• Đội thắng được miễn phí nước</li>
           </ul>
         </div>
 
@@ -1538,6 +1563,7 @@ const sponsorMoneyTournament = ref<Tournament | null>(null)
 const selectedSponsorMoney = ref(400000)
 const sponsorMoneySaving = ref(false)
 const sponsorMoneyOptions = [0, 400000]
+const selfFundedSaving = ref(false)
 
 const showTournamentTimeModal = ref(false)
 const timeTournament = ref<Tournament | null>(null)
@@ -1607,8 +1633,17 @@ const isFormValid = computed(() => {
 
 // Helper functions for tournament-specific additional costs
 const getTournamentAdditionalCosts = (tournamentId: string) => {
+  const tournament = getTournamentById(tournamentId)
+  if (tournament?.selfFunded) return []
   return systemStore.additionalCosts.filter(cost => cost.tournamentId === tournamentId)
 }
+
+const getTournamentById = (tournamentId: string | null): Tournament | undefined => {
+  if (!tournamentId) return undefined
+  return weeklyTournaments.value.find(item => item.id === tournamentId) || oldTournaments.value.find(item => item.id === tournamentId)
+}
+
+const isSelfFundedTournament = (tournamentId: string | null): boolean => Boolean(getTournamentById(tournamentId)?.selfFunded)
 
 const getTournamentAdditionalCostsTotal = (tournamentId: string) => {
   return getTournamentAdditionalCosts(tournamentId).reduce((total, cost) => total + cost.amount, 0)
@@ -1630,6 +1665,8 @@ const calculateCostPerPlayer = (tournamentId: string) => {
   if (attendingCount === 0) return 0
   
   const baseCost = net / attendingCount
+  const tournament = getTournamentById(tournamentId)
+  if (tournament?.selfFunded) return Math.round(baseCost)
   // Round up to nearest 5000 and add 5000
   const roundedUp = Math.ceil(baseCost / 5000) * 5000
   return roundedUp + 5000
@@ -1769,6 +1806,7 @@ const changeOldTournamentCalendarMonth = async (offset: number): Promise<void> =
 }
 
 const getTournamentSponsorMoney = (tournament: Tournament) => {
+  if (tournament.selfFunded) return 0
   return tournament.sponsorMoney !== null && tournament.sponsorMoney !== undefined
     ? tournament.sponsorMoney
     : (systemStore.currentSettings?.sponsorMoney || 0)
@@ -2769,6 +2807,10 @@ const saveFundContribution = async () => {
 
 // Additional Cost functions
 const openAdditionalCostModal = async (tournament: Tournament) => {
+  if (tournament.selfFunded) {
+    toast.error('Giải tự túc không hỗ trợ chi phí phát sinh')
+    return
+  }
   selectedTournamentForCosts.value = tournament
   showAdditionalCostModal.value = true
   editingCostId.value = null
@@ -2780,6 +2822,32 @@ const openAdditionalCostModal = async (tournament: Tournament) => {
   await systemStore.fetchAdditionalCosts(tournament.id)
   if (currentAdditionalCosts.value.length === 0) {
     additionalCostForm.value.description = 'Tiền Nước'
+  }
+}
+
+const toggleSelfFunded = async (tournament: Tournament) => {
+  if (selfFundedSaving.value) return
+
+  try {
+    selfFundedSaving.value = true
+    const response = await apiClient.updateTournament(tournament.id, { selfFunded: !tournament.selfFunded })
+    if (!response.success || !response.data) throw new Error(response.error || 'Không thể cập nhật chế độ tự túc')
+
+    const updatedTournament = response.data as Tournament
+    Object.assign(tournament, updatedTournament)
+    await Promise.all([
+      systemStore.fetchAdditionalCosts(tournament.id),
+      fetchAttendance(tournament.id),
+      fetchAttendanceDetails(tournament.id),
+      fetchAttendanceStats(tournament.id),
+    ])
+    toast.success(updatedTournament.selfFunded
+      ? 'Đã bật Tự túc: Sponsor, nước, cược và chi phí phát sinh đã được tắt'
+      : 'Đã tắt chế độ Tự túc')
+  } catch (error: any) {
+    toast.error(error.response?.data?.error || error.message || 'Không thể cập nhật chế độ tự túc')
+  } finally {
+    selfFundedSaving.value = false
   }
 }
 
@@ -3339,6 +3407,7 @@ const getDetailedMoneyChange = (tournamentId: string, team: any, player: any): {
   
   const tournament = weeklyTournaments.value.find(t => t.id === tournamentId)
   if (!tournament) return { changes: [], total: 0 }
+  if (tournament.selfFunded) return { changes: [], total: 0 }
   
   const changes: Array<{type: string, amount: number, description: string}> = []
   

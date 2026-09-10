@@ -52,6 +52,11 @@ router.post('/', authenticate, authorize(['ADMIN']), async (req: AuthenticatedRe
       return;
     }
 
+    if (tournament.selfFunded) {
+      res.status(400).json({ success: false, error: 'Giải tự túc không hỗ trợ chi phí phát sinh' });
+      return;
+    }
+
     const additionalCost = await prisma.additionalCost.create({
       data: {
         tournamentId,
@@ -78,6 +83,19 @@ router.put('/:id', authenticate, authorize(['ADMIN']), async (req: Authenticated
   try {
     const { id } = req.params;
     const { description, amount } = req.body;
+
+    const existingCost = await prisma.additionalCost.findUnique({
+      where: { id },
+      include: { tournament: true },
+    });
+    if (!existingCost) {
+      res.status(404).json({ success: false, error: 'Không tìm thấy chi phí phát sinh' });
+      return;
+    }
+    if (existingCost.tournament.selfFunded) {
+      res.status(400).json({ success: false, error: 'Giải tự túc không hỗ trợ chi phí phát sinh' });
+      return;
+    }
 
     const additionalCost = await prisma.additionalCost.update({
       where: { id },

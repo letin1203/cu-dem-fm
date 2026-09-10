@@ -124,6 +124,7 @@ model Tournament {
   stadiumCost Int?
   fundContribution Int @default(0)
   pitchType String?
+  selfFunded Boolean @default(false)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 

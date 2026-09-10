@@ -92,6 +92,7 @@ export interface Tournament {
   stadiumCost?: number | null
   fundContribution?: number
   pitchType?: 'FIELD_5' | 'FIELD_7' | null
+  selfFunded?: boolean
   teams: Team[]
   tournamentTeamPlayers?: TournamentTeamPlayer[]
   additionalCosts?: AdditionalCost[]

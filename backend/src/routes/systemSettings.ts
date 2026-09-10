@@ -11,7 +11,8 @@ router.get('/fund-history', authenticate, async (_req: AuthenticatedRequest, res
     const defaultStadiumCost = settings?.stadiumCost ?? 10000;
     const defaultSponsorMoney = settings?.sponsorMoney ?? 50000;
     const tournaments = await prisma.tournament.findMany({
-      where: { status: 'COMPLETED' },
+      // Self-funded tournaments are fully separate from the club fund.
+      where: { status: 'COMPLETED', selfFunded: false },
       orderBy: { startDate: 'asc' },
       select: {
         id: true,
@@ -82,13 +83,13 @@ router.get('/', authenticate, async (req: AuthenticatedRequest, res: Response): 
       prisma.playerMoneyHistory.aggregate({
         where: {
           tournament: {
-            is: { status: 'COMPLETED' },
+            is: { status: 'COMPLETED', selfFunded: false },
           },
         },
         _sum: { amount: true },
       }),
       prisma.tournament.findMany({
-        where: { status: 'COMPLETED' },
+        where: { status: 'COMPLETED', selfFunded: false },
         select: {
           stadiumCost: true,
           sponsorMoney: true,

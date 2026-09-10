@@ -244,27 +244,29 @@
             <!-- Attendance Toggle Button -->
             <div v-if="(ongoingTournament.status === 'UPCOMING' && getTournamentTeams(ongoingTournament).length === 0 && getAttendanceButtonText(ongoingTournament.id) !== 'Không có cầu thủ') || canUserToggleBet(ongoingTournament)" class="flex justify-center pt-2 border-t border-gray-200">
               <div class="flex w-full flex-col items-stretch gap-3 sm:w-auto sm:flex-row sm:flex-wrap sm:justify-center [&>button]:w-full sm:[&>button]:w-auto">
-                <button
-                  v-if="ongoingTournament.status === 'UPCOMING' && getTournamentTeams(ongoingTournament).length === 0 && getAttendanceButtonText(ongoingTournament.id) !== 'Không có cầu thủ'"
-                  @click="toggleAttendance(ongoingTournament.id)"
-                  :disabled="attendanceLoading.has(ongoingTournament.id) || (getAttendanceButtonText(ongoingTournament.id) === 'Tham gia' && cannotSelfRegisterDueToDebt)"
-                  :title="cannotSelfRegisterDueToDebt ? 'Vui lòng thanh toán số dư âm trước khi đăng ký' : undefined"
-                  class="px-6 py-2 rounded-lg font-medium transition-colors duration-200"
-                  :class="[
-                    attendanceLoading.has(ongoingTournament.id) || (getAttendanceButtonText(ongoingTournament.id) === 'Tham gia' && cannotSelfRegisterDueToDebt)
-                      ? 'opacity-50 cursor-not-allowed' 
-                      : 'hover:shadow-md',
-                      getAttendanceButtonText(ongoingTournament.id) === 'Tham gia'
-                      ? 'bg-green-600 text-white hover:bg-green-700'
-                      : getAttendanceButtonText(ongoingTournament.id) === 'Đã tham gia'
-                      ? 'bg-green-600 text-white hover:bg-green-700'
-                      : 'bg-red-600 text-white hover:bg-red-700'
-                  ]"
-                >
-                  <div class="flex items-center justify-center space-x-1">
-                    <span>{{ attendanceLoading.has(ongoingTournament.id) ? 'Đang tải...' : `${getAttendanceButtonText(ongoingTournament.id)}${getAttendanceButtonText(ongoingTournament.id) === 'Đã tham gia' ? ' ✓' : ''}` }}</span>
-                  </div>
-                </button>
+                <div v-if="ongoingTournament.status === 'UPCOMING' && getTournamentTeams(ongoingTournament).length === 0 && getAttendanceButtonText(ongoingTournament.id) !== 'Không có cầu thủ'" class="w-full sm:w-auto">
+                  <button
+                    @click="toggleAttendance(ongoingTournament.id)"
+                    :disabled="attendanceLoading.has(ongoingTournament.id) || (getAttendanceButtonText(ongoingTournament.id) === 'Tham gia' && cannotSelfRegisterDueToDebt)"
+                    :title="cannotSelfRegisterDueToDebt ? 'Vui lòng thanh toán số dư âm trước khi đăng ký' : undefined"
+                    class="w-full px-6 py-2 rounded-lg font-medium transition-colors duration-200 sm:w-auto"
+                    :class="[
+                      attendanceLoading.has(ongoingTournament.id) || (getAttendanceButtonText(ongoingTournament.id) === 'Tham gia' && cannotSelfRegisterDueToDebt)
+                        ? 'opacity-50 cursor-not-allowed' 
+                        : 'hover:shadow-md',
+                        getAttendanceButtonText(ongoingTournament.id) === 'Tham gia'
+                        ? 'bg-green-600 text-white hover:bg-green-700'
+                        : getAttendanceButtonText(ongoingTournament.id) === 'Đã tham gia'
+                        ? 'bg-green-600 text-white hover:bg-green-700'
+                        : 'bg-red-600 text-white hover:bg-red-700'
+                    ]"
+                  >
+                    <div class="flex items-center justify-center space-x-1">
+                      <span>{{ attendanceLoading.has(ongoingTournament.id) ? 'Đang tải...' : `${getAttendanceButtonText(ongoingTournament.id)}${getAttendanceButtonText(ongoingTournament.id) === 'Đã tham gia' ? ' ✓' : ''}` }}</span>
+                    </div>
+                  </button>
+                  <p v-if="getAttendanceButtonText(ongoingTournament.id) === 'Tham gia' && cannotSelfRegisterDueToDebt" class="mt-2 text-center text-xs font-medium text-red-600">Bạn đang có số dư âm. Vui lòng thanh toán trước khi đăng ký tham gia.</p>
+                </div>
                 
                 <!-- Water Button -->
                 <button

@@ -80,6 +80,8 @@
           </button>
         </div>
 
+        <button type="button" class="w-full text-center text-sm font-medium text-primary-600 hover:text-primary-800" :disabled="isLoading" @click="handleGuestLogin">Đăng nhập để xem</button>
+
         <!-- Version Information -->
         <div class="mt-6 pt-4 border-t border-gray-200">
           <div class="text-center">
@@ -208,6 +210,13 @@ function openForgotPasswordModal() {
   forgotPasswordError.value = ''
   forgotPasswordMessage.value = ''
   showForgotPasswordModal.value = true
+}
+
+async function handleGuestLogin() {
+  error.value = ''
+  const success = await authStore.loginAsGuest()
+  if (success) router.push('/weekly-tournament')
+  else error.value = 'Không thể đăng nhập để xem. Vui lòng thử lại.'
 }
 
 function closeForgotPasswordModal() {

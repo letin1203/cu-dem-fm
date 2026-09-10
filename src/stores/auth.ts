@@ -59,6 +59,37 @@ export const useAuthStore = defineStore('auth', () => {
           canManageUsers: false
         }
       case 'user':
+        return {
+          canViewPlayers: true,
+          canEditPlayers: false,
+          canDeletePlayers: false,
+          canViewTeams: true,
+          canEditTeams: false,
+          canDeleteTeams: false,
+          canViewTournaments: true,
+          canEditTournaments: false,
+          canDeleteTournaments: false,
+          canViewMatches: true,
+          canEditMatches: false,
+          canDeleteMatches: false,
+          canManageUsers: false
+        }
+      case 'guest':
+        return {
+          canViewPlayers: false,
+          canEditPlayers: false,
+          canDeletePlayers: false,
+          canViewTeams: false,
+          canEditTeams: false,
+          canDeleteTeams: false,
+          canViewTournaments: true,
+          canEditTournaments: false,
+          canDeleteTournaments: false,
+          canViewMatches: false,
+          canEditMatches: false,
+          canDeleteMatches: false,
+          canManageUsers: false
+        }
       default:
         return {
           canViewPlayers: true,
@@ -96,6 +127,24 @@ export const useAuthStore = defineStore('auth', () => {
       return false
     } catch (error) {
       console.error('Login failed:', error)
+      return false
+    } finally {
+      isLoading.value = false
+    }
+  }
+
+  async function loginAsGuest(): Promise<boolean> {
+    isLoading.value = true
+    try {
+      const response = await apiClient.guestLogin()
+      if (response?.success && response.data) {
+        const data = response.data as any
+        currentUser.value = { ...data.user, role: data.user.role.toLowerCase() as UserRole }
+        token.value = data.token
+        localStorage.setItem('auth_token', data.token)
+        localStorage.setItem('current_user', JSON.stringify(currentUser.value))
+        return true
+      }
       return false
     } finally {
       isLoading.value = false
@@ -360,6 +409,7 @@ export const useAuthStore = defineStore('auth', () => {
 
     // Actions
     login,
+    loginAsGuest,
     logout,
     forceLogout,
     getCurrentUser,

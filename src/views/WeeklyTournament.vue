@@ -35,7 +35,7 @@
     <div class="border-b border-gray-200">
       <nav class="-mb-px flex space-x-4 sm:space-x-8 overflow-x-auto">
         <button
-          v-for="filter in filters"
+          v-for="filter in visibleFilters"
           :key="filter"
           @click="handleFilterChange(filter)"
           :class="[
@@ -1451,6 +1451,7 @@ const showTournamentCalculationInfoModal = ref(false)
 const newTournamentDate = ref('')
 const activeFilter = ref('Đang diễn ra')
 const filters = ['Đang diễn ra', 'Giải đấu cũ']
+const visibleFilters = computed(() => authStore.currentUser?.role === 'guest' ? ['Đang diễn ra'] : filters)
 
 // Attendance tracking
 const attendanceMap = ref<Map<string, TournamentPlayerAttendance>>(new Map())

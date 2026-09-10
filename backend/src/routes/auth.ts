@@ -12,6 +12,20 @@ const PASSWORD_RESET_TOKEN_TTL_MS = 60 * 60 * 1000;
 
 const hashResetToken = (token: string) => createHash('sha256').update(token).digest('hex');
 
+router.post('/guest-login', async (_req: Request, res: Response): Promise<void> => {
+  try {
+    const user = await prisma.user.upsert({
+      where: { username: 'guest' },
+      update: { isActive: true, role: 'GUEST' },
+      create: { username: 'guest', email: 'guest@cu-dem.local', password: await bcrypt.hash(randomBytes(24).toString('hex'), 12), role: 'GUEST', isActive: true },
+    });
+    const token = jwt.sign({ userId: user.id }, process.env.JWT_SECRET!, { expiresIn: '7d' });
+    res.json({ success: true, data: { user: { id: user.id, username: user.username, email: user.email, role: user.role, player: null }, token } });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error instanceof Error ? error.message : 'Không thể đăng nhập khách' });
+  }
+});
+
 // Login
 router.post('/login', async (req: Request, res: Response): Promise<void> => {
   try {

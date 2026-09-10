@@ -204,7 +204,7 @@ export interface User {
   updatedAt: string | Date
 }
 
-export type UserRole = 'admin' | 'mod' | 'user'
+export type UserRole = 'admin' | 'mod' | 'user' | 'guest'
 
 export interface LoginCredentials {
   username: string

@@ -184,6 +184,10 @@ class ApiClient {
     return this.post('/auth/register', this.prepareUserDataForBackend(userData));
   }
 
+  async guestLogin() {
+    return this.post('/auth/guest-login');
+  }
+
   async forgotPassword(email: string) {
     return this.post('/auth/forgot-password', { email });
   }

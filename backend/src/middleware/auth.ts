@@ -7,7 +7,7 @@ export interface AuthenticatedRequest extends Request {
     id: string;
     username: string;
     email: string;
-    role: 'ADMIN' | 'MOD' | 'USER';
+    role: 'ADMIN' | 'MOD' | 'USER' | 'GUEST';
   };
 }
 
@@ -52,7 +52,7 @@ export const authenticate = async (
       id: user.id,
       username: user.username,
       email: user.email,
-      role: user.role as 'ADMIN' | 'MOD' | 'USER',
+      role: user.role as 'ADMIN' | 'MOD' | 'USER' | 'GUEST',
     };
     next();
   } catch (error) {
@@ -63,7 +63,7 @@ export const authenticate = async (
   }
 };
 
-export const authorize = (roles: ('ADMIN' | 'MOD' | 'USER')[]) => {
+export const authorize = (roles: ('ADMIN' | 'MOD' | 'USER' | 'GUEST')[]) => {
   return (req: AuthenticatedRequest, res: Response, next: NextFunction): void => {
     if (!req.user) {
       res.status(401).json({

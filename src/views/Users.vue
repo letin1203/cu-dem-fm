@@ -433,7 +433,8 @@ function getRoleClasses(role: UserRole) {
   const classes = {
     admin: 'bg-red-100 text-red-800',
     mod: 'bg-yellow-100 text-yellow-800',
-    user: 'bg-blue-100 text-blue-800'
+    user: 'bg-blue-100 text-blue-800',
+    guest: 'bg-gray-100 text-gray-700'
   }
   return classes[role] || classes.user
 }
@@ -442,7 +443,8 @@ function getRoleLabel(role: UserRole) {
   const labels: Record<UserRole, string> = {
     admin: 'Quản trị viên',
     mod: 'Điều hành viên',
-    user: 'Người dùng'
+    user: 'Người dùng',
+    guest: 'Khách'
   }
   return labels[role]
 }

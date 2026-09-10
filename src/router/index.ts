@@ -104,6 +104,8 @@ router.beforeEach((to, from, next) => {
 
   if (requiresAuth && !authStore.isAuthenticated) {
     next('/login')
+  } else if (authStore.currentUser?.role === 'guest' && to.path !== '/weekly-tournament') {
+    next('/weekly-tournament')
   } else if (requiresGuest && authStore.isAuthenticated) {
     next('/')
   } else if (to.meta.roles && !(to.meta.roles as string[]).includes(authStore.currentUser?.role || '')) {

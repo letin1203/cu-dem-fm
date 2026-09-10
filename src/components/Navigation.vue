@@ -153,6 +153,7 @@
                   </div>
                 </div>
                 <router-link
+                  v-if="authStore.currentUser?.role !== 'guest'"
                   to="/my-profile"
                   @click="userMenuOpen = false"
                   class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
@@ -245,6 +246,7 @@
             </span>
           </div>
           <router-link
+            v-if="authStore.currentUser?.role !== 'guest'"
             to="/my-profile"
             @click="mobileMenuOpen = false"
             class="text-gray-600 hover:text-primary-600 hover:bg-primary-50 block px-3 py-2 rounded-md text-base font-medium transition-colors"
@@ -585,6 +587,7 @@ function getRoleClasses(role: UserRole) {
     admin: "bg-red-100 text-red-800",
     mod: "bg-yellow-100 text-yellow-800",
     user: "bg-blue-100 text-blue-800",
+    guest: "bg-gray-100 text-gray-700",
   };
   return classes[role] || classes.user;
 }

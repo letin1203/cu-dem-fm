@@ -80,7 +80,7 @@
           </button>
         </div>
 
-        <button type="button" class="w-full text-center text-sm font-medium text-primary-600 hover:text-primary-800" :disabled="isLoading" @click="handleGuestLogin">Đăng nhập để xem</button>
+        <button type="button" class="w-full rounded-lg border border-primary-300 bg-primary-50 px-4 py-2 text-sm font-medium text-primary-700 transition-colors hover:bg-primary-100 disabled:cursor-not-allowed disabled:opacity-50" :disabled="isLoading" @click="handleGuestLogin">Tài khoản khách</button>
 
         <!-- Version Information -->
         <div class="mt-6 pt-4 border-t border-gray-200">

@@ -12,20 +12,31 @@
       <div v-if="loading" class="flex justify-center py-10"><div class="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div></div>
       <div v-else-if="error" class="text-center text-red-600 py-10">{{ error }}</div>
       <div v-else-if="activeTab === 'top-up' && !requests.length" class="text-center text-gray-500 py-10">Không có yêu cầu nạp tiền đang chờ duyệt.</div>
-      <div v-else-if="activeTab === 'password' && !passwordRequests.length" class="text-center text-gray-500 py-10">Không có yêu cầu đổi mật khẩu đang chờ xử lý.</div>
+      <div v-else-if="activeTab === 'password'" class="p-6 text-center">
+        <p class="text-gray-600">Tạo link đặt lại mật khẩu cho người dùng trong hệ thống.</p>
+        <button type="button" class="btn-primary mt-4" @click="openPasswordLinkModal">Lấy link quên mật khẩu</button>
+      </div>
       <div v-else class="divide-y divide-gray-200">
         <template v-if="activeTab === 'top-up'"><div v-for="request in requests" :key="request.id" class="p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <div><p class="font-semibold text-gray-900">{{ request.player.name }}</p><p class="text-sm text-gray-500">{{ request.player.position }} · Số dư hiện tại: {{ request.player.money.toLocaleString('vi-VN') }} ₫</p><p class="text-xs text-gray-400 mt-1">Yêu cầu lúc {{ formatDate(request.requestedAt) }}</p></div>
           <div class="flex items-center gap-4"><span class="font-bold text-green-600">+{{ request.amount.toLocaleString('vi-VN') }} ₫</span><button @click="approve(request.id)" :disabled="approvingId === request.id" class="btn-primary">{{ approvingId === request.id ? 'Đang duyệt...' : 'Duyệt' }}</button></div>
         </div></template>
-        <template v-else><div v-for="user in passwordRequests" :key="user.id" class="p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3"><div><p class="font-semibold text-gray-900">{{ user.username }}</p><p class="text-sm text-gray-500">{{ user.player?.name || 'Chưa liên kết cầu thủ' }}</p><p class="text-xs text-gray-400 mt-1">{{ user.email }}</p></div><button @click="copyPasswordResetLink(user.id)" :disabled="linkLoadingId === user.id" class="btn-primary">{{ linkLoadingId === user.id ? 'Đang tạo...' : 'Lấy link' }}</button></div></template>
+        <template v-else></template>
+      </div>
+    </div>
+
+    <div v-if="showPasswordLinkModal" class="fixed inset-0 z-[70] flex items-center justify-center bg-black/50 p-4" @click.self="showPasswordLinkModal = false">
+      <div class="flex max-h-[90vh] w-full max-w-3xl flex-col overflow-hidden rounded-lg bg-white shadow-xl">
+        <div class="flex items-center justify-between border-b p-5"><div><h2 class="text-lg font-semibold text-gray-900">Lấy link quên mật khẩu</h2><p class="mt-1 text-sm text-gray-500">Chọn user để copy link đặt lại mật khẩu.</p></div><button type="button" class="text-2xl text-gray-400 hover:text-gray-700" @click="showPasswordLinkModal = false">×</button></div>
+        <div class="min-h-0 overflow-y-auto p-5"><input v-model="passwordRequestNameFilter" type="search" class="form-input mb-4" placeholder="Lọc theo tên user hoặc cầu thủ..."><div v-if="loading" class="py-8 text-center text-gray-500">Đang tải...</div><div v-else-if="!filteredPasswordRequests.length" class="py-8 text-center text-gray-500">Không có người dùng nào.</div><div v-else class="grid grid-cols-1 gap-3 md:grid-cols-2"><div v-for="user in filteredPasswordRequests" :key="user.id" class="rounded-lg border border-gray-200 p-4"><p class="font-semibold text-gray-900">{{ user.username }}</p><p class="mt-1 text-sm text-gray-500">{{ user.player?.name || 'Chưa liên kết cầu thủ' }}</p><p class="mt-1 truncate text-xs text-gray-400">{{ user.email }}</p><button type="button" class="btn-primary mt-4 w-full" :disabled="linkLoadingId === user.id" @click="copyPasswordResetLink(user.id)">{{ linkLoadingId === user.id ? 'Đang tạo...' : 'Lấy link' }}</button></div></div></div>
+        <div class="flex justify-end border-t p-4"><button type="button" class="btn-secondary" @click="showPasswordLinkModal = false">Đóng</button></div>
       </div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { computed, ref, onMounted } from 'vue'
 import { useToast } from 'vue-toastification'
 import { apiClient } from '../api/client'
 import { useAuthStore } from '../stores/auth'
@@ -40,6 +51,8 @@ const error = ref<string | null>(null)
 const approvingId = ref<string | null>(null)
 const passwordRequests = ref<{ id: string; username: string; email: string; player?: { name: string } | null }[]>([])
 const linkLoadingId = ref<string | null>(null)
+const showPasswordLinkModal = ref(false)
+const passwordRequestNameFilter = ref('')
 const formatDate = (date: string | Date) => new Date(date).toLocaleString('vi-VN')
 
 const loadPending = async () => {
@@ -68,6 +81,16 @@ const loadPasswordRequests = async () => {
   finally { loading.value = false }
 }
 const loadActiveTab = () => activeTab.value === 'top-up' ? loadPending() : loadPasswordRequests()
+const filteredPasswordRequests = computed(() => {
+  const query = passwordRequestNameFilter.value.trim().toLocaleLowerCase('vi')
+  if (!query) return passwordRequests.value
+  return passwordRequests.value.filter(user => `${user.username} ${user.player?.name || ''}`.toLocaleLowerCase('vi').includes(query))
+})
+const openPasswordLinkModal = async () => {
+  passwordRequestNameFilter.value = ''
+  showPasswordLinkModal.value = true
+  await loadPasswordRequests()
+}
 const copyPasswordResetLink = async (userId: string) => {
   linkLoadingId.value = userId
   try { const response = await apiClient.getPasswordResetLink(userId); const link = response.data?.link; if (!response.success || !link) throw new Error(response.error || 'Không thể tạo link'); await navigator.clipboard.writeText(link); toast.success('Đã copy link đặt lại mật khẩu') }

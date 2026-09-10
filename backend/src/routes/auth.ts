@@ -188,18 +188,17 @@ router.post('/forgot-password', async (req: Request, res: Response): Promise<voi
 
 router.get('/password-reset-requests', authenticate, authorize(['ADMIN']), async (_req: AuthenticatedRequest, res: Response): Promise<void> => {
   const users = await prisma.user.findMany({
-    where: { passwordResetStatus: 'CHANGE_PASSWORD' },
     select: { id: true, username: true, email: true, player: { select: { name: true } } },
-    orderBy: { updatedAt: 'desc' },
+    orderBy: { username: 'asc' },
   });
   res.json({ success: true, data: users });
 });
 
 router.post('/password-reset-requests/:id/link', authenticate, authorize(['ADMIN']), async (req: AuthenticatedRequest, res: Response): Promise<void> => {
-  const user = await prisma.user.findFirst({ where: { id: req.params.id, passwordResetStatus: 'CHANGE_PASSWORD' } });
-  if (!user) { res.status(404).json({ success: false, error: 'Yêu cầu đổi mật khẩu không tồn tại.' }); return; }
+  const user = await prisma.user.findUnique({ where: { id: req.params.id } });
+  if (!user) { res.status(404).json({ success: false, error: 'Người dùng không tồn tại.' }); return; }
   const token = randomBytes(32).toString('hex');
-  await prisma.user.update({ where: { id: user.id }, data: { passwordResetTokenHash: hashResetToken(token), passwordResetExpiresAt: new Date(Date.now() + PASSWORD_RESET_TOKEN_TTL_MS) } });
+  await prisma.user.update({ where: { id: user.id }, data: { passwordResetStatus: 'CHANGE_PASSWORD', passwordResetTokenHash: hashResetToken(token), passwordResetExpiresAt: new Date(Date.now() + PASSWORD_RESET_TOKEN_TTL_MS) } });
   const frontendUrl = (process.env.FRONTEND_URL || process.env.CORS_ORIGIN || 'http://localhost:5173').replace(/\/$/, '');
   const link = `${frontendUrl}/reset-password?token=${encodeURIComponent(token)}&username=${encodeURIComponent(user.username)}`;
   res.json({ success: true, data: { link } });

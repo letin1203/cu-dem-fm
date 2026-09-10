@@ -193,7 +193,7 @@ export interface ChartData {
 export interface User {
   id: string
   username: string
-  email?: string // Made optional since we're removing email support
+  email?: string
   password: string
   role: UserRole
   playerId?: string // Links to a player for their personal stats

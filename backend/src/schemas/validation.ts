@@ -48,6 +48,15 @@ export const updatePlayerSchema = createPlayerSchema.partial().extend({
   money: z.number().int().optional(),
 });
 
+export const forgotPasswordSchema = z.object({
+  email: z.string().email('Email không hợp lệ'),
+});
+
+export const resetPasswordSchema = z.object({
+  token: z.string().min(1, 'Token không hợp lệ'),
+  password: z.string().min(6, 'Mật khẩu phải có ít nhất 6 ký tự'),
+});
+
 // Team schemas
 export const createTeamSchema = z.object({
   name: z.string().min(1, 'Name is required'),

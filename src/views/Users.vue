@@ -103,6 +103,11 @@
                   {{ getRoleLabel(user.role) }}
                 </span>
               </div>
+
+              <div class="flex items-center justify-between gap-3">
+                <span class="text-sm text-gray-500">Email:</span>
+                <span class="truncate text-right text-sm text-gray-900" :title="user.email">{{ user.email || 'Chưa có email' }}</span>
+              </div>
               
               <!-- Linked Player -->
               <div class="flex items-center justify-between">
@@ -219,6 +224,17 @@
               required
               class="form-input"
               placeholder="Nhập tên đăng nhập"
+            >
+          </div>
+
+          <div>
+            <label class="form-label">Email</label>
+            <input
+              v-model="formData.email"
+              type="email"
+              required
+              class="form-input"
+              placeholder="Nhập địa chỉ email"
             >
           </div>
           
@@ -367,6 +383,7 @@ const formatDate = (date: string | Date | null | undefined): string => {
 
 const formData = ref({
   username: '',
+  email: '',
   password: '',
   role: '' as UserRole | '',
   playerId: '',
@@ -468,6 +485,7 @@ function editUser(user: User) {
   nextTick(() => {
     formData.value = {
       username: user.username,
+      email: user.email || '',
       password: '',
       role: user.role,
       playerId: user.playerId || user.player?.id || '',
@@ -490,8 +508,6 @@ function closePlayerLinkModal() {
 
 async function unlinkLinkedPlayer() {
   if (!linkingUser.value) return
-  const playerName = getLinkedPlayerName(linkingUser.value)
-  if (!confirm(`Hủy liên kết cầu thủ ${playerName} khỏi tài khoản ${linkingUser.value.username}?`)) return
 
   playerLinkSaving.value = true
   try {
@@ -527,6 +543,7 @@ async function linkSelectedPlayer() {
 function submitForm() {
   const userData = {
     username: formData.value.username,
+    email: formData.value.email,
     password: formData.value.password,
     role: formData.value.role as UserRole,
     playerId: formData.value.playerId || undefined,
@@ -554,6 +571,7 @@ function cancelForm() {
   editingUser.value = null
   formData.value = {
     username: '',
+    email: '',
     password: '',
     role: '',
     playerId: '',

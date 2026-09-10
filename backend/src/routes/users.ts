@@ -281,6 +281,8 @@ router.put('/:id', authenticate, async (req: AuthenticatedRequest, res: Response
     if (req.user!.role !== 'ADMIN') {
       delete updateData.role;
       delete updateData.isActive;
+      delete updateData.email;
+      delete updateData.playerId;
     }
 
     const existingUser = await prisma.user.findUnique({

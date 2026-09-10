@@ -12,6 +12,7 @@ import SystemSettings from '../views/SystemSettings.vue'
 import DatabaseAdmin from '../views/DatabaseAdmin.vue'
 import MoneyTopUpApprovals from '../views/MoneyTopUpApprovals.vue'
 import Login from '../components/Login.vue'
+import ResetPassword from '../components/ResetPassword.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -24,6 +25,12 @@ const router = createRouter({
       path: '/login',
       name: 'login',
       component: Login,
+      meta: { requiresGuest: true }
+    },
+    {
+      path: '/reset-password',
+      name: 'resetPassword',
+      component: ResetPassword,
       meta: { requiresGuest: true }
     },
     {

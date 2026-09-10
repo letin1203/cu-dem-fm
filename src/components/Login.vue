@@ -45,6 +45,7 @@
             <input type="checkbox" v-model="rememberMe" class="form-checkbox h-4 w-4 text-primary-600 rounded" />
             <span class="ml-2">Ghi nhớ đăng nhập</span>
           </label>
+          <button type="button" class="text-sm font-medium text-primary-600 hover:text-primary-800" @click="openForgotPasswordModal">Quên mật khẩu?</button>
         </div>
 
         <div v-if="error" class="rounded-md bg-red-50 p-4">
@@ -143,6 +144,22 @@
           </div>
         </div>
       </form>
+
+      <div v-if="showForgotPasswordModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" @click.self="closeForgotPasswordModal">
+        <div class="w-full max-w-md rounded-lg bg-white p-6 shadow-xl" role="dialog" aria-modal="true" aria-labelledby="forgot-password-title">
+          <div class="flex items-start justify-between gap-4">
+            <div><h3 id="forgot-password-title" class="text-lg font-semibold text-gray-900">Quên mật khẩu</h3><p class="mt-1 text-sm text-gray-600">Nhập email để nhận liên kết đặt lại mật khẩu.</p></div>
+            <button type="button" class="text-2xl leading-none text-gray-400 hover:text-gray-700" aria-label="Đóng" @click="closeForgotPasswordModal">×</button>
+          </div>
+          <form class="mt-5" @submit.prevent="submitForgotPassword">
+            <label for="forgot-password-email" class="form-label">Email</label>
+            <input id="forgot-password-email" v-model="forgotPasswordEmail" type="email" required class="form-input mt-1" placeholder="Nhập địa chỉ email">
+            <p v-if="forgotPasswordError" class="mt-3 text-sm text-red-600">{{ forgotPasswordError }}</p>
+            <p v-if="forgotPasswordMessage" class="mt-3 text-sm text-green-600">{{ forgotPasswordMessage }}</p>
+            <div class="mt-6 flex justify-end gap-3"><button type="button" class="btn-secondary" :disabled="forgotPasswordLoading" @click="closeForgotPasswordModal">Đóng</button><button type="submit" class="btn-primary" :disabled="forgotPasswordLoading">{{ forgotPasswordLoading ? 'Đang gửi...' : 'Gửi liên kết' }}</button></div>
+          </form>
+        </div>
+      </div>
     </div>
   </div>
 </template>
@@ -167,6 +184,11 @@ const rememberMe = ref(false)
 const error = ref('')
 const isLoading = ref(false)
 const versionInfo = ref<any>(null)
+const showForgotPasswordModal = ref(false)
+const forgotPasswordEmail = ref('')
+const forgotPasswordLoading = ref(false)
+const forgotPasswordError = ref('')
+const forgotPasswordMessage = ref('')
 
 // The interceptor logic has been moved to a global location
 
@@ -225,6 +247,32 @@ async function handleLogin() {
 function setDemoCredentials(username: string, password: string) {
   credentials.value.username = username
   credentials.value.password = password
+}
+
+function openForgotPasswordModal() {
+  forgotPasswordEmail.value = ''
+  forgotPasswordError.value = ''
+  forgotPasswordMessage.value = ''
+  showForgotPasswordModal.value = true
+}
+
+function closeForgotPasswordModal() {
+  if (!forgotPasswordLoading.value) showForgotPasswordModal.value = false
+}
+
+async function submitForgotPassword() {
+  forgotPasswordLoading.value = true
+  forgotPasswordError.value = ''
+  forgotPasswordMessage.value = ''
+  try {
+    const response = await apiClient.forgotPassword(forgotPasswordEmail.value)
+    if (!response.success) throw new Error(response.error || 'Không thể gửi liên kết đặt lại mật khẩu.')
+    forgotPasswordMessage.value = response.message || 'Nếu email tồn tại, liên kết đặt lại mật khẩu đã được gửi.'
+  } catch (err: any) {
+    forgotPasswordError.value = err.response?.data?.error || err.message || 'Không thể gửi liên kết đặt lại mật khẩu.'
+  } finally {
+    forgotPasswordLoading.value = false
+  }
 }
 
 onMounted(() => {

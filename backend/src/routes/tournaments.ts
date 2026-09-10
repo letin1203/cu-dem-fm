@@ -1424,10 +1424,11 @@ router.post('/:id/generate-teams', authenticate, authorize(['ADMIN', 'MOD']), as
     const playerCount = attendingPlayers.length;
     console.log(`Team generation: Found ${playerCount} attending players`);
 
-    if (playerCount < 10) {
+    const minimumPlayers = selectedField === 'FIELD_5' ? 12 : 16;
+    if (playerCount < minimumPlayers) {
       res.status(400).json({
         success: false,
-        error: 'Need at least 10 attending players to generate teams',
+        error: `Cần ít nhất ${minimumPlayers} cầu thủ đăng ký Sân ${selectedField === 'FIELD_5' ? '5' : '7'} để chia đội`,
       });
       return;
     }

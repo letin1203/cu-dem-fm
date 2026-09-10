@@ -366,7 +366,7 @@
               </div>
               <div class="text-xs text-gray-500 mt-1 text-center">
                 <span v-if="!canGenerateTeams(ongoingTournament.id)">
-                  Cần thêm {{ 10 - (getAttendanceStats(ongoingTournament.id)?.attendingCount || 0) }} cầu thủ tham gia
+                  Cần tối thiểu 12 cầu thủ Sân 5 hoặc 16 cầu thủ Sân 7 để chia đội
                 </span>
                 <span v-if="authStore.hasPermission('canEditTournaments') && getTournamentTeams(ongoingTournament).length === 0">
                   Chọn số đội để chia cân bằng
@@ -413,7 +413,7 @@
             </div>
           </div>
           <div class="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <div class="rounded-lg border border-gray-200 bg-gray-50 p-4"><h4 class="font-semibold text-gray-900">1. Điều kiện và số đội</h4><p class="mt-1 text-sm text-gray-600">Cần ít nhất 10 cầu thủ đã tham gia. Admin/mod chọn 2, 3 hoặc 4 đội; số cầu thủ giữa các đội được phân bổ chênh lệch tối đa 1 người.</p></div>
+            <div class="rounded-lg border border-gray-200 bg-gray-50 p-4"><h4 class="font-semibold text-gray-900">1. Điều kiện và số đội</h4><p class="mt-1 text-sm text-gray-600">Cần ít nhất 12 cầu thủ đăng ký Sân 5 hoặc 16 cầu thủ đăng ký Sân 7. Admin/mod chọn 2, 3 hoặc 4 đội; số cầu thủ giữa các đội được phân bổ chênh lệch tối đa 1 người.</p></div>
             <div class="rounded-lg border border-gray-200 bg-gray-50 p-4"><h4 class="font-semibold text-gray-900">2. Phân bổ thủ môn</h4><p class="mt-1 text-sm text-gray-600">Thủ môn được xếp trước, ưu tiên mỗi đội một GK. GK còn lại được đưa vào đội có ít GK nhất để giữ cân bằng vị trí.</p></div>
             <div class="rounded-lg border border-gray-200 bg-gray-50 p-4"><h4 class="font-semibold text-gray-900">3. Ưu tiên Tier 1 và Tier 2</h4><p class="mt-1 text-sm text-gray-600">Tier 1 và Tier 2 là cầu thủ mạnh, được chia trước theo thứ tự Tier 1 rồi Tier 2. Khi chia Tier 2, đội có ít Tier 1 hơn sẽ được ưu tiên trước.</p></div>
             <div class="rounded-lg border border-gray-200 bg-gray-50 p-4"><h4 class="font-semibold text-gray-900">4. Cân bằng cuối cùng</h4><p class="mt-1 text-sm text-gray-600">Các Tier 3–6 được xếp theo sức chứa và tổng Tier. Sau đó hệ thống đổi tối đa 100 cặp cầu thủ phù hợp để giảm chênh lệch Tier trung bình; Tier 1/2 và GK chính được giữ ổn định.</p></div>
@@ -1349,9 +1349,10 @@
       <div class="mt-2 grid grid-cols-2 gap-3">
         <button v-for="field in [{ value: 'FIELD_5', label: 'Sân 5' }, { value: 'FIELD_7', label: 'Sân 7' }]" :key="field.value" type="button" @click="selectedTeamField = field.value as 'FIELD_5' | 'FIELD_7'" class="rounded-lg border-2 px-3 py-3 font-semibold transition-colors" :class="selectedTeamField === field.value ? 'border-primary-600 bg-primary-600 text-white' : 'border-gray-200 text-gray-700 hover:border-primary-400'">{{ field.label }}</button>
       </div>
+      <p v-if="teamCountModalTournamentId" class="mt-3 text-sm text-gray-600">Sân {{ selectedTeamField === 'FIELD_5' ? '5' : '7' }} hiện có {{ getFieldAttendanceCount(teamCountModalTournamentId, selectedTeamField) }} cầu thủ; cần tối thiểu {{ getMinimumPlayersForField(selectedTeamField) }} cầu thủ.</p>
       <div class="flex justify-end gap-3 mt-6">
         <button type="button" class="btn-secondary" @click="closeTeamCountModal">Hủy</button>
-        <button type="button" class="btn-primary" :disabled="teamGenerationLoading" @click="confirmGenerateRandomTeams">
+        <button type="button" class="btn-primary" :disabled="teamGenerationLoading || !canGenerateTeams(teamCountModalTournamentId || '', selectedTeamField)" @click="confirmGenerateRandomTeams">
           {{ teamGenerationLoading ? 'Đang chia...' : 'Chia đội' }}
         </button>
       </div>
@@ -2048,16 +2049,24 @@ const getFilteredModalData = (): TournamentAttendanceDetails[] => {
 }
 
 // Team generation functions
-const canGenerateTeams = (tournamentId: string): boolean => {
+const getMinimumPlayersForField = (field: 'FIELD_5' | 'FIELD_7'): number => field === 'FIELD_5' ? 12 : 16
+
+const getFieldAttendanceCount = (tournamentId: string, field: 'FIELD_5' | 'FIELD_7'): number => {
   const stats = attendanceStats.value.get(tournamentId)
-  return stats ? stats.attendingCount >= 10 : false
+  if (!stats) return 0
+  return field === 'FIELD_5' ? (stats.field5Count ?? 0) : (stats.field7Count ?? 0)
+}
+
+const canGenerateTeams = (tournamentId: string, field?: 'FIELD_5' | 'FIELD_7'): boolean => {
+  if (field) return getFieldAttendanceCount(tournamentId, field) >= getMinimumPlayersForField(field)
+  return ['FIELD_5', 'FIELD_7'].some(candidate => canGenerateTeams(tournamentId, candidate as 'FIELD_5' | 'FIELD_7'))
 }
 
 const getTeamCount = (tournamentId: string): number => {
   const stats = attendanceStats.value.get(tournamentId)
   if (!stats) return 0
   
-  const playerCount = stats.attendingCount
+  const playerCount = getFieldAttendanceCount(tournamentId, selectedTeamField.value)
   if (playerCount < 15) return 2
   if (playerCount < 20) return 3
   return 4
@@ -2114,8 +2123,8 @@ const isGoalkeeper = (position: string): boolean => position === 'GK' || positio
 
 const openTeamCountModal = (tournamentId: string): void => {
   if (!canGenerateTeams(tournamentId) || teamGenerationLoading.value) return
+  selectedTeamField.value = canGenerateTeams(tournamentId, 'FIELD_5') ? 'FIELD_5' : 'FIELD_7'
   selectedTeamCount.value = getTeamCount(tournamentId) as 2 | 3 | 4
-  selectedTeamField.value = 'FIELD_5'
   teamCountModalTournamentId.value = tournamentId
   showTeamCountModal.value = true
 }
@@ -2131,7 +2140,7 @@ const confirmGenerateRandomTeams = async (): Promise<void> => {
 }
 
 const generateRandomTeams = async (tournamentId: string, teamCount: 2 | 3 | 4, field: 'FIELD_5' | 'FIELD_7'): Promise<void> => {
-  if (!canGenerateTeams(tournamentId) || teamGenerationLoading.value) return
+  if (!canGenerateTeams(tournamentId, field) || teamGenerationLoading.value) return
   
   const stats = attendanceStats.value.get(tournamentId)
   if (!stats) return

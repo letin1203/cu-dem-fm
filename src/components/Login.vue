@@ -80,48 +80,6 @@
           </button>
         </div>
 
-        <!-- Demo credentials -->
-        <div class="mt-6 border-t border-gray-200 pt-6">
-          <h3 class="text-sm font-medium text-gray-900 mb-3">Tài khoản mẫu:</h3>
-          <div class="space-y-2 text-xs text-gray-600">
-            <div class="flex justify-between">
-              <span class="font-medium">Quản trị viên:</span>
-              <span>admin / admin123</span>
-            </div>
-            <div class="flex justify-between">
-              <span class="font-medium">Điều hành viên:</span>
-              <span>moderator / mod123</span>
-            </div>
-            <div class="flex justify-between">
-              <span class="font-medium">Người dùng:</span>
-              <span>testuser20 / test123</span>
-            </div>
-          </div>
-          <div class="mt-3 space-y-1">
-            <button
-              type="button"
-              @click="setDemoCredentials('admin', 'admin123')"
-              class="text-xs text-primary-600 hover:text-primary-800 mr-4"
-            >
-              Dùng tài khoản quản trị
-            </button>
-            <button
-              type="button"
-              @click="setDemoCredentials('moderator', 'mod123')"
-              class="text-xs text-primary-600 hover:text-primary-800 mr-4"
-            >
-              Dùng tài khoản điều hành
-            </button>
-            <button
-              type="button"
-              @click="setDemoCredentials('testuser20', 'test123')"
-              class="text-xs text-primary-600 hover:text-primary-800"
-            >
-              Dùng tài khoản người dùng
-            </button>
-          </div>
-        </div>
-
         <!-- Version Information -->
         <div class="mt-6 pt-4 border-t border-gray-200">
           <div class="text-center">
@@ -243,11 +201,6 @@ async function handleLogin() {
   } finally {
     isLoading.value = false
   }
-}
-
-function setDemoCredentials(username: string, password: string) {
-  credentials.value.username = username
-  credentials.value.password = password
 }
 
 function openForgotPasswordModal() {

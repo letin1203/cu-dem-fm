@@ -192,6 +192,14 @@ class ApiClient {
     return this.post('/auth/reset-password', { token, password });
   }
 
+  async getPasswordResetRequests() {
+    return this.get<Array<{ id: string; username: string; email: string; player?: { name: string } | null }>>('/auth/password-reset-requests');
+  }
+
+  async getPasswordResetLink(userId: string) {
+    return this.post<{ link: string }>(`/auth/password-reset-requests/${userId}/link`);
+  }
+
   async getCurrentUser() {
     return this.get('/auth/me');
   }

@@ -20,6 +20,7 @@ model User {
   lastLogin DateTime?
   passwordResetTokenHash String?
   passwordResetExpiresAt DateTime?
+  passwordResetStatus String @default("NONE")
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 

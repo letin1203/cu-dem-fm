@@ -148,7 +148,7 @@
       <div v-if="showForgotPasswordModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" @click.self="closeForgotPasswordModal">
         <div class="w-full max-w-md rounded-lg bg-white p-6 shadow-xl" role="dialog" aria-modal="true" aria-labelledby="forgot-password-title">
           <div class="flex items-start justify-between gap-4">
-            <div><h3 id="forgot-password-title" class="text-lg font-semibold text-gray-900">Quên mật khẩu</h3><p class="mt-1 text-sm text-gray-600">Nhập email để nhận liên kết đặt lại mật khẩu.</p></div>
+            <div><h3 id="forgot-password-title" class="text-lg font-semibold text-gray-900">Quên mật khẩu</h3><p class="mt-1 text-sm text-gray-600">Nhập email để gửi yêu cầu đổi mật khẩu đến quản trị viên.</p></div>
             <button type="button" class="text-2xl leading-none text-gray-400 hover:text-gray-700" aria-label="Đóng" @click="closeForgotPasswordModal">×</button>
           </div>
           <form class="mt-5" @submit.prevent="submitForgotPassword">
@@ -267,7 +267,7 @@ async function submitForgotPassword() {
   try {
     const response = await apiClient.forgotPassword(forgotPasswordEmail.value)
     if (!response.success) throw new Error(response.error || 'Không thể gửi liên kết đặt lại mật khẩu.')
-    forgotPasswordMessage.value = response.message || 'Nếu email tồn tại, liên kết đặt lại mật khẩu đã được gửi.'
+    forgotPasswordMessage.value = response.message || 'Yêu cầu đổi mật khẩu đã được gửi. Vui lòng chờ quản trị viên cấp liên kết.'
   } catch (err: any) {
     forgotPasswordError.value = err.response?.data?.error || err.message || 'Không thể gửi liên kết đặt lại mật khẩu.'
   } finally {

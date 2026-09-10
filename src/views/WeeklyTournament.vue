@@ -100,9 +100,15 @@
                 </div>
                 <!-- Financial Information -->
                 <div v-if="systemStore.currentSettings" class="flex flex-wrap items-center gap-4 mt-2 text-sm">
-                  <span class="text-green-600 font-medium">
+                  <button
+                    v-if="authStore.hasAnyRole(['admin', 'mod'])"
+                    @click="openSponsorMoneyModal(ongoingTournament)"
+                    class="text-green-600 font-medium hover:underline"
+                    title="Chỉnh sửa tiền tài trợ"
+                  >
                     💰 Sponsor: {{ getTournamentSponsorMoney(ongoingTournament).toLocaleString('vi-VN') }} ₫
-                  </span>
+                  </button>
+                  <span v-else class="text-green-600 font-medium">💰 Sponsor: {{ getTournamentSponsorMoney(ongoingTournament).toLocaleString('vi-VN') }} ₫</span>
                   <button
                     v-if="authStore.hasAnyRole(['admin', 'mod'])"
                     @click="openStadiumCostModal(ongoingTournament)"
@@ -782,7 +788,7 @@
 
   <!-- Attendance Details Modal -->
   <div v-if="showAttendanceModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" @click="closeAttendanceModal">
-    <div class="bg-white rounded-lg shadow-xl max-w-2xl w-full mx-4 max-h-[80vh] overflow-hidden" @click.stop>
+    <div class="bg-white rounded-lg shadow-xl max-w-5xl w-full mx-4 max-h-[85vh] overflow-hidden" @click.stop>
       <!-- Modal Header -->
       <div class="flex items-center justify-between p-6 border-b border-gray-200">
         <h3 class="text-lg font-semibold text-gray-900">{{ attendanceModalTitle }}</h3>
@@ -797,10 +803,13 @@
       </div>
 
       <!-- Modal Content -->
-      <div class="p-6 overflow-y-auto max-h-[60vh]">
+      <div class="p-6 overflow-y-auto max-h-[65vh]">
         <div class="mb-4">
           <label class="form-label">Tìm theo tên cầu thủ</label>
           <input v-model="attendancePlayerNameFilter" type="text" class="form-input mt-1" placeholder="Nhập tên cầu thủ...">
+        </div>
+        <div class="mb-4">
+          <button type="button" class="rounded-lg px-3 py-1.5 text-sm font-medium transition-colors" :class="attendanceSortByTier ? 'bg-primary-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'" :aria-pressed="attendanceSortByTier" @click="attendanceSortByTier = !attendanceSortByTier">Sắp xếp theo Tier {{ attendanceSortByTier ? '✓' : '' }}</button>
         </div>
         <div v-if="attendanceModalType === 'attending'" class="mb-4 flex gap-2">
           <button type="button" class="rounded-lg px-4 py-2 text-sm font-medium" :class="attendanceFieldTab === 'FIELD_5' ? 'bg-primary-600 text-white' : 'bg-gray-100 text-gray-700'" @click="attendanceFieldTab = 'FIELD_5'">Sân 5</button>
@@ -837,7 +846,7 @@
         </div>
         
         <!-- Player List -->
-        <div v-else class="space-y-3">
+        <div v-else class="grid grid-cols-1 gap-3 md:grid-cols-2">
           <div 
             v-for="attendance in getFilteredModalData()" 
             :key="attendance.id"
@@ -955,6 +964,14 @@
       </div>
       <div class="flex justify-end gap-3 border-t pt-4"><button type="button" @click="closeStadiumCostModal" class="btn-secondary">Hủy</button><button type="submit" :disabled="stadiumCostSaving" class="btn-primary disabled:opacity-50">{{ stadiumCostSaving ? 'Đang lưu...' : 'Lưu' }}</button></div>
     </form>
+  </div>
+
+  <div v-if="showSponsorMoneyModal" class="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4" @click.self="closeSponsorMoneyModal">
+    <div class="w-full max-w-md rounded-lg bg-white p-6 shadow-xl">
+      <div class="flex items-center justify-between border-b pb-4"><div><h3 class="text-lg font-semibold text-gray-900">Chỉnh sửa tiền tài trợ</h3><p class="text-sm text-gray-500">{{ sponsorMoneyTournament?.name }}</p></div><button type="button" @click="closeSponsorMoneyModal" class="text-2xl text-gray-400 hover:text-gray-700">×</button></div>
+      <div class="grid grid-cols-2 gap-3 py-5"><button v-for="amount in sponsorMoneyOptions" :key="amount" type="button" @click="selectedSponsorMoney = amount" class="rounded-lg border-2 px-4 py-4 font-semibold transition-colors" :class="selectedSponsorMoney === amount ? 'border-primary-600 bg-primary-600 text-white' : 'border-gray-200 text-gray-700 hover:border-primary-400'">{{ amount.toLocaleString('vi-VN') }} ₫</button></div>
+      <div class="flex justify-end gap-3 border-t pt-4"><button type="button" class="btn-secondary" @click="closeSponsorMoneyModal">Hủy</button><button type="button" class="btn-primary" :disabled="sponsorMoneySaving" @click="saveSponsorMoney">{{ sponsorMoneySaving ? 'Đang lưu...' : 'Lưu' }}</button></div>
+    </div>
   </div>
 
   <div v-if="showTournamentTimeModal" class="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4" @click.self="closeTournamentTimeModal">
@@ -1458,6 +1475,7 @@ const attendanceModalLoading = ref(false)
 const playerAttendanceLoading = ref<Set<string>>(new Set())
 const attendancePlayerNameFilter = ref('')
 const attendancePlayerTierFilter = ref<number | null>(null)
+const attendanceSortByTier = ref(false)
 const attendanceFieldTab = ref<'FIELD_5' | 'FIELD_7'>('FIELD_5')
 const attendanceModalTournamentId = ref<string | null>(null)
 const selectedPendingPlayerIds = ref<Set<string>>(new Set())
@@ -1514,6 +1532,11 @@ const showStadiumCostModal = ref(false)
 const stadiumCostTournament = ref<Tournament | null>(null)
 const stadiumCostForm = ref<number | null>(null)
 const stadiumCostSaving = ref(false)
+const showSponsorMoneyModal = ref(false)
+const sponsorMoneyTournament = ref<Tournament | null>(null)
+const selectedSponsorMoney = ref(400000)
+const sponsorMoneySaving = ref(false)
+const sponsorMoneyOptions = [0, 400000]
 
 const showTournamentTimeModal = ref(false)
 const timeTournament = ref<Tournament | null>(null)
@@ -1745,7 +1768,7 @@ const changeOldTournamentCalendarMonth = async (offset: number): Promise<void> =
 }
 
 const getTournamentSponsorMoney = (tournament: Tournament) => {
-  return tournament.status === 'COMPLETED' && tournament.sponsorMoney !== null && tournament.sponsorMoney !== undefined
+  return tournament.sponsorMoney !== null && tournament.sponsorMoney !== undefined
     ? tournament.sponsorMoney
     : (systemStore.currentSettings?.sponsorMoney || 0)
 }
@@ -1990,6 +2013,7 @@ const openAttendanceModal = async (tournamentId: string, type: 'attending' | 'no
   attendanceModalData.value = [] // Clear previous data
   attendancePlayerNameFilter.value = ''
   attendancePlayerTierFilter.value = null
+  attendanceSortByTier.value = false
   attendanceFieldTab.value = 'FIELD_5'
   attendanceModalTournamentId.value = tournamentId
   selectedPendingPlayerIds.value = new Set()
@@ -2003,6 +2027,7 @@ const closeAttendanceModal = (): void => {
   attendanceModalLoading.value = false
   attendancePlayerNameFilter.value = ''
   attendancePlayerTierFilter.value = null
+  attendanceSortByTier.value = false
   attendanceModalTournamentId.value = null
   selectedPendingPlayerIds.value = new Set()
 }
@@ -2010,24 +2035,28 @@ const closeAttendanceModal = (): void => {
 const getFilteredModalData = (): TournamentAttendanceDetails[] => {
   const matchesName = (item: TournamentAttendanceDetails) =>
     item.player.name.toLowerCase().includes(attendancePlayerNameFilter.value.trim().toLowerCase())
+  const sortPlayers = (a: TournamentAttendanceDetails, b: TournamentAttendanceDetails) =>
+    attendanceSortByTier.value
+      ? a.player.tier - b.player.tier || a.player.name.localeCompare(b.player.name, 'vi')
+      : a.player.name.localeCompare(b.player.name, 'vi')
   if (attendanceModalType.value === 'pending') {
     return attendanceModalData.value
       .filter(item => item.status !== 'ATTEND' && item.status !== 'NOT_ATTEND')
       .filter(matchesName)
       .filter(item => attendancePlayerTierFilter.value === null || item.player.tier === attendancePlayerTierFilter.value)
-      .sort((a, b) => a.player.tier - b.player.tier || a.player.name.localeCompare(b.player.name, 'vi'))
+      .sort(sortPlayers)
   }
   if (attendanceModalType.value === 'betting') {
     // Filter by bet field for betting players
     return attendanceModalData.value
       .filter(item => item.bet === true)
       .filter(matchesName)
-      .sort((a, b) => b.player.tier - a.player.tier) // Sort by tier descending (highest tier first)
+      .sort(sortPlayers)
   } else if (attendanceModalType.value === 'water') {
     return attendanceModalData.value
       .filter(item => item.status === 'ATTEND' && item.withWater === true)
       .filter(matchesName)
-      .sort((a, b) => b.player.tier - a.player.tier)
+      .sort(sortPlayers)
   } else {
     // Filter by status for attending/not-attending players
     let targetStatus: string
@@ -2041,10 +2070,7 @@ const getFilteredModalData = (): TournamentAttendanceDetails[] => {
       .filter(item => item.status === targetStatus)
       .filter(item => attendanceModalType.value !== 'attending' || (attendanceFieldTab.value === 'FIELD_5' ? item.field5 !== false : item.field7 !== false))
       .filter(matchesName)
-      .sort((a, b) => attendanceModalType.value === 'attending'
-        ? new Date(b.registeredAt || b.createdAt).getTime() - new Date(a.registeredAt || a.createdAt).getTime()
-          || a.player.name.localeCompare(b.player.name, 'vi')
-        : b.player.tier - a.player.tier) // Attending players are listed by latest registration; other lists keep tier order.
+      .sort(sortPlayers)
   }
 }
 
@@ -2622,6 +2648,34 @@ const closeStadiumCostModal = () => {
   showStadiumCostModal.value = false
   stadiumCostTournament.value = null
   stadiumCostForm.value = null
+}
+
+const openSponsorMoneyModal = (tournament: Tournament) => {
+  sponsorMoneyTournament.value = tournament
+  selectedSponsorMoney.value = getTournamentSponsorMoney(tournament)
+  showSponsorMoneyModal.value = true
+}
+
+const closeSponsorMoneyModal = () => {
+  showSponsorMoneyModal.value = false
+  sponsorMoneyTournament.value = null
+}
+
+const saveSponsorMoney = async () => {
+  if (!sponsorMoneyTournament.value || sponsorMoneySaving.value) return
+  try {
+    sponsorMoneySaving.value = true
+    const response = await apiClient.updateTournament(sponsorMoneyTournament.value.id, { sponsorMoney: selectedSponsorMoney.value })
+    if (!response.success || !response.data) throw new Error(response.error || 'Không thể lưu tiền tài trợ')
+    const tournament = weeklyTournaments.value.find(item => item.id === sponsorMoneyTournament.value?.id)
+    if (tournament) tournament.sponsorMoney = (response.data as Tournament).sponsorMoney
+    toast.success('Đã cập nhật tiền tài trợ')
+    closeSponsorMoneyModal()
+  } catch (error: any) {
+    toast.error(error.response?.data?.error || error.message || 'Không thể lưu tiền tài trợ')
+  } finally {
+    sponsorMoneySaving.value = false
+  }
 }
 
 const saveStadiumCost = async () => {

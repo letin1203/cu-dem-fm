@@ -367,7 +367,7 @@ router.put('/:id', authenticate, authorize(['ADMIN', 'MOD']), async (req: Authen
       return;
     }
 
-    if (existingTournament.status === 'COMPLETED' && (updateData.stadiumCost !== undefined || updateData.fundContribution !== undefined)) {
+    if (existingTournament.status === 'COMPLETED' && (updateData.stadiumCost !== undefined || updateData.sponsorMoney !== undefined || updateData.fundContribution !== undefined)) {
       res.status(400).json({
         success: false,
         error: 'Không thể chỉnh sửa tài chính của giải đã hoàn thành',
@@ -1879,7 +1879,7 @@ router.put('/:id/end', authenticate, authorize(['ADMIN', 'MOD']), async (req: Au
 
     // Calculate additional costs total
     const totalAdditionalCosts = tournament.additionalCosts.reduce((sum, cost) => sum + cost.amount, 0);
-    const sponsorMoney = systemSettings?.sponsorMoney ?? 0;
+    const sponsorMoney = tournament.sponsorMoney ?? systemSettings?.sponsorMoney ?? 0;
     const stadiumCost = tournament.stadiumCost ?? systemSettings?.stadiumCost ?? 0;
     const fundContribution = tournament.fundContribution ?? 0;
     const netTournamentCost = stadiumCost - sponsorMoney + totalAdditionalCosts - fundContribution;

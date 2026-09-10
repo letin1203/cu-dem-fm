@@ -95,6 +95,7 @@ export const updateTournamentSchema = z.object({
   startDate: z.string().transform((str) => new Date(str)).optional(),
   endDate: z.string().transform((str) => new Date(str)).optional().nullable(),
   stadiumCost: z.number().int().min(0).optional(),
+  sponsorMoney: z.number().int().min(0).optional(),
   fundContribution: z.number().int().min(0).optional(),
   winnerId: z.string().optional(),
 });

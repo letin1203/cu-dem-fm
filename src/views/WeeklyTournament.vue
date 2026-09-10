@@ -244,13 +244,14 @@
             <!-- Attendance Toggle Button -->
             <div v-if="(ongoingTournament.status === 'UPCOMING' && getTournamentTeams(ongoingTournament).length === 0 && getAttendanceButtonText(ongoingTournament.id) !== 'Không có cầu thủ') || canUserToggleBet(ongoingTournament)" class="flex justify-center pt-2 border-t border-gray-200">
               <div class="flex w-full flex-col items-stretch gap-3 sm:w-auto sm:flex-row sm:flex-wrap sm:justify-center [&>button]:w-full sm:[&>button]:w-auto">
-                <div v-if="ongoingTournament.status === 'UPCOMING' && getTournamentTeams(ongoingTournament).length === 0 && getAttendanceButtonText(ongoingTournament.id) !== 'Không có cầu thủ'" class="w-full sm:w-auto">
+                <div v-if="ongoingTournament.status === 'UPCOMING' && getTournamentTeams(ongoingTournament).length === 0 && getAttendanceButtonText(ongoingTournament.id) !== 'Không có cầu thủ'" class="flex flex-col items-center" :class="getUserAttendanceStatus(ongoingTournament.id) === 'ATTEND' ? 'w-full sm:w-auto' : 'w-auto self-center'">
                   <button
                     @click="toggleAttendance(ongoingTournament.id)"
                     :disabled="attendanceLoading.has(ongoingTournament.id) || (getAttendanceButtonText(ongoingTournament.id) === 'Tham gia' && cannotSelfRegisterDueToDebt)"
                     :title="cannotSelfRegisterDueToDebt ? 'Vui lòng thanh toán số dư âm trước khi đăng ký' : undefined"
-                    class="w-full px-6 py-2 rounded-lg font-medium transition-colors duration-200 sm:w-auto"
+                    class="px-6 py-2 rounded-lg font-medium transition-colors duration-200"
                     :class="[
+                      getUserAttendanceStatus(ongoingTournament.id) === 'ATTEND' ? 'w-full sm:w-auto' : 'w-auto',
                       attendanceLoading.has(ongoingTournament.id) || (getAttendanceButtonText(ongoingTournament.id) === 'Tham gia' && cannotSelfRegisterDueToDebt)
                         ? 'opacity-50 cursor-not-allowed' 
                         : 'hover:shadow-md',
@@ -265,7 +266,10 @@
                       <span>{{ attendanceLoading.has(ongoingTournament.id) ? 'Đang tải...' : `${getAttendanceButtonText(ongoingTournament.id)}${getAttendanceButtonText(ongoingTournament.id) === 'Đã tham gia' ? ' ✓' : ''}` }}</span>
                     </div>
                   </button>
-                  <p v-if="getAttendanceButtonText(ongoingTournament.id) === 'Tham gia' && cannotSelfRegisterDueToDebt" class="mt-2 text-center text-xs font-medium text-red-600">Bạn đang có số dư âm. Vui lòng thanh toán trước khi đăng ký tham gia.</p>
+                  <div v-if="getAttendanceButtonText(ongoingTournament.id) === 'Tham gia' && cannotSelfRegisterDueToDebt" class="mt-2 text-center text-xs font-medium text-red-600">
+                    <p>Bạn không thể tham gia vì số dư: <strong>{{ (authStore.currentUser?.player?.money || 0).toLocaleString('vi-VN') }} ₫</strong>.</p>
+                    <button type="button" class="mt-2 rounded bg-red-600 px-3 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-red-700" @click="openCurrentUserDebtTopUp">Thanh toán</button>
+                  </div>
                 </div>
                 
                 <!-- Water Button -->
@@ -3206,6 +3210,28 @@ const openTournamentDebtTopUp = async (item: TournamentMoneyHistoryItem): Promis
   let currentBalance = item.balanceAfter
   try {
     const response = await apiClient.getPlayer(item.player.id)
+    if (response.success && response.data) currentBalance = Number((response.data as any).money)
+  } catch (error) {
+    console.warn('Unable to refresh player balance before top-up:', error)
+  }
+
+  if (currentBalance >= 0) {
+    toast.info('Số dư hiện tại không còn âm')
+    return
+  }
+
+  tournamentDebtAmount.value = Math.abs(currentBalance)
+  selectedTournamentDebtTopUpAmount.value = tournamentDebtAmount.value
+  showTournamentDebtTopUpModal.value = true
+}
+
+const openCurrentUserDebtTopUp = async (): Promise<void> => {
+  const player = authStore.currentUser?.player
+  if (!player) return
+
+  let currentBalance = Number(player.money)
+  try {
+    const response = await apiClient.getPlayer(player.id)
     if (response.success && response.data) currentBalance = Number((response.data as any).money)
   } catch (error) {
     console.warn('Unable to refresh player balance before top-up:', error)

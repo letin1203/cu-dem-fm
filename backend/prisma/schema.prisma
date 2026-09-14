@@ -36,6 +36,7 @@ model Player {
   id          String   @id @default(cuid())
   name        String   @unique
   position    String
+  positionSecond String?
   yearOfBirth Int
   tier        Int      @default(1)
   money       Int      @default(0)

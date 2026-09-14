@@ -51,6 +51,7 @@ router.get('/', async (req: AuthenticatedRequest, res: Response): Promise<void> 
                   id: true,
                   name: true,
                   position: true,
+                  positionSecond: true,
                   tier: true,
                   avatar: true,
                   money: true,
@@ -189,6 +190,7 @@ router.get('/:id', async (req: AuthenticatedRequest, res: Response): Promise<voi
                     id: true,
                     name: true,
                     position: true,
+                    positionSecond: true,
                     tier: true,
                     avatar: true,
                   },
@@ -205,6 +207,7 @@ router.get('/:id', async (req: AuthenticatedRequest, res: Response): Promise<voi
                 id: true,
                 name: true,
                 position: true,
+                positionSecond: true,
                 tier: true,
                 avatar: true,
                 money: true,
@@ -1310,7 +1313,7 @@ router.get('/:id/attendance-details', async (req: AuthenticatedRequest, res: Res
     // Missing records are represented as NULL so staff can mark them as ATTEND.
     const [players, attendanceRecords] = await Promise.all([
       prisma.player.findMany({
-        select: { id: true, name: true, position: true, tier: true, avatar: true },
+        select: { id: true, name: true, position: true, positionSecond: true, tier: true, avatar: true },
         orderBy: { name: 'asc' },
       }),
       prisma.tournamentPlayerAttendance.findMany({ where: { tournamentId } }),
@@ -1493,6 +1496,7 @@ router.post('/:id/generate-teams', authenticate, authorize(['ADMIN', 'MOD']), as
             id: true,
             name: true,
             position: true,
+            positionSecond: true,
             tier: true,
           },
         },
@@ -1742,6 +1746,22 @@ router.post('/:id/generate-teams', authenticate, authorize(['ADMIN', 'MOD']), as
           teams[bestTeamIndex].lockedPlayers.add(player.id);
         }
       }
+    }
+
+    // If primary GKs are insufficient, fill the remaining teams with players
+    // whose second position is GK, before the normal tier distribution.
+    const missingGkTeams = teams
+      .map((team, index) => ({ team, index }))
+      .filter(({ team }) => !team.players.some((player: any) => player.position === 'GK'));
+    const secondaryGkPlayers = nonGkPlayers.filter((player: any) => player.positionSecond === 'GK');
+    for (let i = 0; i < missingGkTeams.length && i < secondaryGkPlayers.length; i++) {
+      const secondaryGk = secondaryGkPlayers[i];
+      const team = missingGkTeams[i].team;
+      team.players.push(secondaryGk);
+      team.totalTier += secondaryGk.tier;
+      team.lockedPlayers.add(secondaryGk.id);
+      if (secondaryGk.tier <= 2) team.tier9Plus++;
+      nonGkPlayers.splice(nonGkPlayers.findIndex((player: any) => player.id === secondaryGk.id), 1);
     }
 
     // Final balancing pass: use average Tier, rather than total Tier. This

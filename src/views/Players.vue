@@ -115,7 +115,7 @@
               </div>
               <div>
                 <div class="text-sm font-medium text-gray-900">{{ index + 1 }}. {{ player.name }}</div>
-                <div class="text-xs text-gray-500">{{ displayPosition(player.position) }} • {{ player.yearOfBirth }}</div>
+                <div class="text-xs text-gray-500">{{ displayPosition(player.position) }}<template v-if="player.positionSecond">-{{ displayPosition(player.positionSecond) }}</template> • {{ player.yearOfBirth }}</div>
               </div>
             </div>
             <div class="flex space-x-2">
@@ -187,6 +187,9 @@
                 Vị trí
               </th>
               <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Vị trí 2nd
+              </th>
+              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Năm sinh
               </th>
               <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -220,6 +223,9 @@
               </td>
               <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                 {{ displayPosition(player.position) }}
+              </td>
+              <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                {{ player.positionSecond ? displayPosition(player.positionSecond) : '—' }}
               </td>
               <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                 {{ player.yearOfBirth }}
@@ -314,6 +320,13 @@
               <option value="DEF">DEF - Hậu vệ</option>
               <option value="MID">MID - Tiền vệ</option>
               <option value="FWD">FWD - Tiền đạo</option>
+            </select>
+          </div>
+          <div v-if="formData.position">
+            <label class="form-label">Vị trí 2nd</label>
+            <select v-model="formData.positionSecond" class="form-input">
+              <option value="">Không chọn</option>
+              <option v-for="position in positionOptions.filter(item => item.value !== formData.position)" :key="position.value" :value="position.value">{{ position.label }}</option>
             </select>
           </div>
           
@@ -432,6 +445,12 @@ const friendsListLoading = ref(false)
 const friendGroups = ref<any[]>([])
 
 const tierOptions = [1, 2, 3, 4, 5, 6]
+const positionOptions = [
+  { value: 'GK', label: 'GK - Thủ môn' },
+  { value: 'DEF', label: 'DEF - Hậu vệ' },
+  { value: 'MID', label: 'MID - Tiền vệ' },
+  { value: 'FWD', label: 'FWD - Tiền đạo' },
+]
 
 const positionLabels: Record<string, string> = {
   GK: 'GK',
@@ -503,6 +522,7 @@ watch(selectedTier, (newValue, oldValue) => {
 const formData = ref({
   name: '',
   position: '',
+  positionSecond: '',
   yearOfBirth: '',
   tier: '',
   money: ''
@@ -513,6 +533,7 @@ function editPlayer(player: Player) {
   formData.value = {
     name: player.name,
     position: player.position,
+    positionSecond: player.positionSecond || '',
     yearOfBirth: player.yearOfBirth.toString(),
     tier: player.tier.toString(),
     money: player.money.toString()
@@ -523,6 +544,7 @@ function submitForm() {
   const playerData = {
     name: formData.value.name,
     position: formData.value.position,
+    positionSecond: formData.value.positionSecond || null,
     yearOfBirth: parseInt(formData.value.yearOfBirth),
     tier: parseInt(formData.value.tier),
     teamId: undefined, // Remove team assignment from player creation
@@ -561,6 +583,7 @@ function cancelForm() {
   formData.value = {
     name: '',
     position: '',
+    positionSecond: '',
     yearOfBirth: '',
     tier: '',
     money: ''

@@ -2,6 +2,7 @@ export interface Player {
   id: string
   name: string
   position: string
+  positionSecond?: string | null
   yearOfBirth: number
   tier: number // Tier rating from 1-6; Tier 1 is strongest
   money: number // Player's money/value
@@ -33,6 +34,7 @@ export interface TournamentAttendanceDetails {
     id: string
     name: string
     position: string
+    positionSecond?: string | null
     tier: number
     avatar?: string
   }
@@ -264,6 +266,7 @@ export interface TournamentAttendanceDetails {
     id: string
     name: string
     position: string
+    positionSecond?: string | null
     tier: number
     avatar?: string
   }

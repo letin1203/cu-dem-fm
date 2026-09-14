@@ -35,6 +35,7 @@ export const updateUserSchema = z.object({
 export const createPlayerSchema = z.object({
   name: z.string().min(1, 'Name is required'),
   position: z.string().min(1, 'Position is required'),
+  positionSecond: z.string().optional().nullable(),
   yearOfBirth: z.number().int().min(1950).max(new Date().getFullYear()),
   tier: z.number().int().min(1).max(6).default(6),
   money: z.number().int().min(0).default(0),

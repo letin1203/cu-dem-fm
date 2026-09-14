@@ -239,7 +239,7 @@
                         <span v-if="isPlayerWithWater(ongoingTournament.id, player.id)" class="ml-1" title="Đã đăng ký uống nước">💧</span>
                       </div>
                       <div class="flex items-center text-gray-600">
-                        <span class="text-xs mr-1 px-1.5 py-0.5 rounded" :class="isGoalkeeper(player.position) ? 'bg-green-100 text-green-700 font-semibold' : ''">{{ getPositionLabel(player.position) }}</span>
+                        <span class="text-xs mr-1 px-1.5 py-0.5 rounded" :class="isGoalkeeper(player.position) ? 'bg-green-100 text-green-700 font-semibold' : ''">{{ getPositionLabel(player.position) }}<template v-if="player.positionSecond">-{{ getPositionLabel(player.positionSecond) }}</template></span>
                         <span class="text-xs">T{{ player.tier }}</span>
                       </div>
                     </div>
@@ -622,7 +622,7 @@
                           <span v-if="isPlayerWithWater(tournament.id, player.id)" class="ml-1" title="Đã đăng ký uống nước">💧</span>
                         </div>
                         <div class="flex items-center text-gray-600">
-                          <span class="text-xs mr-1 px-1.5 py-0.5 rounded" :class="isGoalkeeper(player.position) ? 'bg-green-100 text-green-700 font-semibold' : ''">{{ getPositionLabel(player.position) }}</span>
+                          <span class="text-xs mr-1 px-1.5 py-0.5 rounded" :class="isGoalkeeper(player.position) ? 'bg-green-100 text-green-700 font-semibold' : ''">{{ getPositionLabel(player.position) }}<template v-if="player.positionSecond">-{{ getPositionLabel(player.positionSecond) }}</template></span>
                           <span class="text-xs">T{{ player.tier }}</span>
                         </div>
                       </div>
@@ -939,7 +939,7 @@
               
               <!-- Player Details Row -->
               <div class="mt-1 flex items-center justify-between gap-3">
-                <span class="text-sm text-gray-600">{{ attendance.player.position }} - Tier {{ attendance.player.tier }}</span>
+                <span class="text-sm text-gray-600">{{ attendance.player.position }}<template v-if="attendance.player.positionSecond">-{{ attendance.player.positionSecond }}</template> - Tier {{ attendance.player.tier }}</span>
                 <span v-if="attendanceModalType === 'attending' && attendance.registeredAt" class="shrink-0 text-xs text-gray-500">{{ formatRegistrationTime(attendance.registeredAt) }}</span>
               </div>
             </div>

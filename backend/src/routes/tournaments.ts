@@ -1540,9 +1540,13 @@ router.post('/:id/generate-teams', authenticate, authorize(['ADMIN', 'MOD']), as
     // Generate unique team names using tournament start date
     const startDate = new Date(tournament.startDate);
     const dateStr = startDate.toISOString().split('T')[0]; // YYYY-MM-DD format
+    // Team names are globally unique. A tournament can be recreated on the
+    // same day, so include a short, stable tournament identifier to avoid a
+    // collision with teams from an earlier tournament.
+    const teamNameSuffix = tournamentId.slice(-6);
     for (let i = 0; i < teamCount; i++) {
       teams.push({
-        name: `Team ${i + 1} - ${dateStr}`, // Team 1 - 2025-07-21, Team 2 - 2025-07-21, etc.
+        name: `Team ${i + 1} - ${dateStr} (${teamNameSuffix})`,
         players: [],
         totalTier: 0,
         tier9Plus: 0,

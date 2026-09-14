@@ -200,7 +200,7 @@
                 Đội thi đấu ({{ getTournamentTeams(ongoingTournament).length }})
               </h4>
               
-              <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+              <div class="grid gap-4" :class="teamGridClass(getTournamentTeams(ongoingTournament).length)">
                 <div
                   v-for="team in getTournamentTeams(ongoingTournament)"
                   :key="team.id"
@@ -583,7 +583,7 @@
                   Đội thi đấu ({{ getTournamentTeams(tournament).length }})
                 </h4>
                 
-                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                <div class="grid gap-4" :class="teamGridClass(getTournamentTeams(tournament).length)">
                   <div
                     v-for="team in getTournamentTeams(tournament)"
                     :key="team.id"
@@ -2339,6 +2339,12 @@ const getPositionLabel = (position: string): string => ({
 }[position] || position)
 
 const isGoalkeeper = (position: string): boolean => position === 'GK' || position === 'Goalkeeper'
+
+const teamGridClass = (teamCount: number): string => {
+  if (teamCount <= 2) return 'grid-cols-1 md:grid-cols-2 mx-auto max-w-5xl'
+  if (teamCount === 3) return 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3 mx-auto max-w-7xl'
+  return 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4'
+}
 
 const isTeamGoalkeeper = (players: any[], player: any): boolean =>
   isGoalkeeper(player.position) ||

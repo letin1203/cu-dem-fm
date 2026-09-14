@@ -1603,6 +1603,25 @@ router.post('/:id/generate-teams', authenticate, authorize(['ADMIN', 'MOD']), as
       }
     }
 
+    // When there are not enough primary GKs, assign players whose secondary
+    // position is GK before the tier groups are distributed. Removing them
+    // from nonGkPlayers is essential: otherwise the same player would later
+    // be assigned a second time and violate the tournament-player uniqueness
+    // constraint when teams are saved.
+    const missingGkTeams = teams
+      .map((team, index) => ({ team, index }))
+      .filter(({ team }) => !team.players.some((player: any) => player.position === 'GK'));
+    const secondaryGkPlayers = nonGkPlayers.filter((player: any) => player.positionSecond === 'GK');
+    for (let i = 0; i < missingGkTeams.length && i < secondaryGkPlayers.length; i++) {
+      const secondaryGk = secondaryGkPlayers[i];
+      const team = missingGkTeams[i].team;
+      team.players.push(secondaryGk);
+      team.totalTier += secondaryGk.tier;
+      team.lockedPlayers.add(secondaryGk.id);
+      if (secondaryGk.tier <= 2) team.tier9Plus++;
+      nonGkPlayers.splice(nonGkPlayers.findIndex((player: any) => player.id === secondaryGk.id), 1);
+    }
+
     // Calculate target players per team for balanced distribution
     const targetPlayersPerTeam = Math.floor(playerCount / teamCount);
     const teamsWithExtraPlayer = playerCount % teamCount;
@@ -1746,22 +1765,6 @@ router.post('/:id/generate-teams', authenticate, authorize(['ADMIN', 'MOD']), as
           teams[bestTeamIndex].lockedPlayers.add(player.id);
         }
       }
-    }
-
-    // If primary GKs are insufficient, fill the remaining teams with players
-    // whose second position is GK, before the normal tier distribution.
-    const missingGkTeams = teams
-      .map((team, index) => ({ team, index }))
-      .filter(({ team }) => !team.players.some((player: any) => player.position === 'GK'));
-    const secondaryGkPlayers = nonGkPlayers.filter((player: any) => player.positionSecond === 'GK');
-    for (let i = 0; i < missingGkTeams.length && i < secondaryGkPlayers.length; i++) {
-      const secondaryGk = secondaryGkPlayers[i];
-      const team = missingGkTeams[i].team;
-      team.players.push(secondaryGk);
-      team.totalTier += secondaryGk.tier;
-      team.lockedPlayers.add(secondaryGk.id);
-      if (secondaryGk.tier <= 2) team.tier9Plus++;
-      nonGkPlayers.splice(nonGkPlayers.findIndex((player: any) => player.id === secondaryGk.id), 1);
     }
 
     // Final balancing pass: use average Tier, rather than total Tier. This

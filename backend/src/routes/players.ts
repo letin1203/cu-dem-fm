@@ -6,6 +6,43 @@ import { AVATAR_PATHS, getRandomAvatar } from '../lib/avatars';
 
 const router = Router();
 
+// Friends are players created and financially sponsored by a user (maximum two).
+router.get('/friends/mine', authenticate, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  const friends = await prisma.player.findMany({
+    where: { friendOwnerId: req.user!.id },
+    include: { stats: true },
+    orderBy: { name: 'asc' },
+  });
+  res.json({ success: true, data: friends });
+});
+
+router.post('/friends', authenticate, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  try {
+    const count = await prisma.player.count({ where: { friendOwnerId: req.user!.id } });
+    if (count >= 2) {
+      res.status(400).json({ success: false, error: 'Mỗi user chỉ được tạo tối đa 2 bạn' });
+      return;
+    }
+    const playerData = createPlayerSchema.omit({ money: true }).parse(req.body);
+    const player = await prisma.player.create({
+      data: { ...playerData, money: 0, avatar: playerData.avatar || getRandomAvatar(), friendOwnerId: req.user!.id, stats: { create: {} } },
+      include: { stats: true },
+    });
+    res.status(201).json({ success: true, data: player });
+  } catch (error) {
+    res.status(400).json({ success: false, error: error instanceof Error ? error.message : 'Không thể tạo bạn mới' });
+  }
+});
+
+router.get('/friends', authenticate, authorize(['ADMIN', 'MOD']), async (_req: AuthenticatedRequest, res: Response): Promise<void> => {
+  const users = await prisma.user.findMany({
+    where: { friends: { some: {} } },
+    select: { id: true, username: true, email: true, player: { select: { id: true, name: true, money: true } }, friends: { include: { stats: true }, orderBy: { name: 'asc' } } },
+    orderBy: { username: 'asc' },
+  });
+  res.json({ success: true, data: users });
+});
+
 // Get all players with pagination and filters
 router.get('/', async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   try {

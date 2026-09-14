@@ -12,6 +12,7 @@ export interface Player {
   }
   stats: PlayerStats
   avatar?: string
+  friendOwnerId?: string | null
   createdAt: string | Date
   updatedAt: string | Date
 }

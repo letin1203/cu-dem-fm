@@ -10,6 +10,7 @@
       >
         Thêm cầu thủ
       </button>
+      <button v-if="authStore.hasPermission('canEditPlayers')" @click="openFriendsModal" class="btn-secondary w-full sm:w-auto">Danh sách bạn</button>
     </div>
 
     <!-- Filter Section -->
@@ -337,7 +338,7 @@
             </select>
           </div>
           
-          <div>
+          <div v-if="!editingPlayer?.friendOwnerId">
             <label class="form-label">Tiền (₫)</label>
             <input
               v-model="formData.money"
@@ -379,6 +380,16 @@
         <div class="flex justify-end gap-3 mt-6"><button type="button" @click="showAdminTopUpModal = false" class="btn-secondary">Hủy</button><button type="button" @click="submitAdminTopUp" :disabled="submittingAdminTopUp" class="btn-primary">{{ submittingAdminTopUp ? 'Đang nạp...' : 'Xác nhận' }}</button></div>
       </div>
     </div>
+
+    <div v-if="showFriendsModal" class="fixed inset-0 z-[70] flex items-center justify-center bg-black/50 p-4" @click.self="showFriendsModal = false">
+      <div class="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-lg bg-white p-6 shadow-xl">
+        <div class="flex items-center justify-between"><h2 class="text-lg font-semibold">Danh sách bạn</h2><button class="text-2xl text-gray-400" @click="showFriendsModal = false">×</button></div>
+        <p v-if="friendsListLoading" class="py-8 text-center text-gray-500">Đang tải...</p>
+        <div v-else-if="!friendGroups.length" class="py-8 text-center text-gray-500">Chưa có bạn nào.</div>
+        <div v-else class="mt-4 space-y-4"><section v-for="user in friendGroups" :key="user.id" class="rounded-lg border border-gray-200 p-4"><h3 class="font-semibold text-gray-900">{{ user.username }} <span class="font-normal text-gray-500">({{ user.player?.name || 'Chưa gắn cầu thủ' }})</span></h3><div class="mt-3 space-y-2"><div v-for="friend in user.friends" :key="friend.id" class="flex items-center justify-between rounded bg-gray-50 px-3 py-2"><span>{{ friend.name }} · {{ displayPosition(friend.position) }} · Tier {{ friend.tier }}</span><button class="text-primary-600 hover:text-primary-800" @click="editFriend(friend)">Sửa</button></div></div></section></div>
+        <div class="mt-6 flex justify-end"><button class="btn-secondary" @click="showFriendsModal = false">Đóng</button></div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -416,6 +427,9 @@ const submittingAdminTopUp = ref(false)
 const selectedTopUpAmount = ref(100000)
 const adminTopUpReason = ref('')
 const topUpAmounts = [50000, 100000, 200000, 500000]
+const showFriendsModal = ref(false)
+const friendsListLoading = ref(false)
+const friendGroups = ref<any[]>([])
 
 const tierOptions = [1, 2, 3, 4, 5, 6]
 
@@ -436,7 +450,8 @@ function displayPosition(position: string) {
 
 // Computed properties for pagination and filtering
 const filteredPlayers = computed(() => {
-  let result = players.value
+  // Friend players are managed from the dedicated friend list, not the main roster.
+  let result = players.value.filter(player => !player.friendOwnerId)
   
   // Apply name filter if provided
   if (playerNameFilter.value) {
@@ -562,6 +577,23 @@ function deletePlayer(id: string) {
       }
     })
   }
+}
+
+async function openFriendsModal() {
+  showFriendsModal.value = true
+  friendsListLoading.value = true
+  try {
+    const response = await apiClient.getFriends()
+    if (!response.success) throw new Error(response.error || 'Không thể tải danh sách bạn')
+    friendGroups.value = (response.data || []) as any[]
+  } catch (error: any) {
+    toast.error(error.message || 'Không thể tải danh sách bạn')
+  } finally { friendsListLoading.value = false }
+}
+
+function editFriend(friend: Player) {
+  showFriendsModal.value = false
+  editPlayer(friend)
 }
 
 function openAdminTopUp() {

@@ -807,6 +807,47 @@ router.get('/:id/attendance', authenticate, async (req: AuthenticatedRequest, re
   }
 });
 
+// Register one or more of the current user's friends in a single request.
+router.put('/:id/friend-attendance', authenticate, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  try {
+    const tournamentId = req.params.id;
+    const rawPlayerIds: unknown[] = Array.isArray(req.body?.playerIds) ? req.body.playerIds : [];
+    const playerIds: string[] = [...new Set(rawPlayerIds.filter((playerId): playerId is string => typeof playerId === 'string'))];
+    const field5 = req.body?.field5 !== false;
+    const field7 = req.body?.field7 !== false;
+    if (playerIds.length === 0 || playerIds.length > 2 || (!field5 && !field7)) {
+      res.status(400).json({ success: false, error: 'Vui lòng chọn bạn và ít nhất một sân' });
+      return;
+    }
+    const [tournament, owner, friends] = await Promise.all([
+      prisma.tournament.findUnique({ where: { id: tournamentId }, select: { id: true, status: true, selfFunded: true } }),
+      prisma.user.findUnique({ where: { id: req.user!.id }, include: { player: true } }),
+      prisma.player.findMany({ where: { id: { in: playerIds }, friendOwnerId: req.user!.id }, select: { id: true } }),
+    ]);
+    if (!tournament || !['UPCOMING', 'ONGOING'].includes(tournament.status)) {
+      res.status(400).json({ success: false, error: 'Giải đấu không mở đăng ký' });
+      return;
+    }
+    if (friends.length !== playerIds.length) {
+      res.status(403).json({ success: false, error: 'Bạn chỉ có thể đăng ký cho bạn bè của mình' });
+      return;
+    }
+    if (!tournament.selfFunded && (owner?.player?.money ?? 0) < 0) {
+      res.status(400).json({ success: false, error: 'Số dư của bạn đang âm, vui lòng thanh toán trước' });
+      return;
+    }
+    await prisma.$transaction(playerIds.map(playerId => prisma.tournamentPlayerAttendance.upsert({
+      where: { tournamentId_playerId: { tournamentId, playerId } },
+      update: { status: 'ATTEND', field5, field7, registeredAt: new Date(), withWater: false, bet: false },
+      create: { tournamentId, playerId, status: 'ATTEND', field5, field7, registeredAt: new Date() },
+    })));
+    res.json({ success: true, data: { playerIds } });
+  } catch (error) {
+    console.error('Friend attendance error:', error);
+    res.status(500).json({ success: false, error: 'Không thể đăng ký cho bạn' });
+  }
+});
+
 // Update player attendance for a tournament
 router.put('/:id/attendance', authenticate, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   try {
@@ -1820,7 +1861,7 @@ router.put('/:id/end', authenticate, authorize(['ADMIN', 'MOD']), async (req: Au
         },
         playerAttendances: {
           include: {
-            player: true,
+            player: { include: { friendOwner: { include: { player: true } } } },
           },
         },
         additionalCosts: true,
@@ -1945,28 +1986,30 @@ router.put('/:id/end', authenticate, authorize(['ADMIN', 'MOD']), async (req: Au
 
       const moneyChange = moneyChangeDetails.reduce((total, item) => total + item.amount, 0);
 
-      // Update player money
-      const newMoney = player.money + moneyChange;
+      // A friend's tournament costs belong to the linked user's own player balance.
+      const payerId = player.friendOwner?.player?.id || player.id;
+      const payer = await prisma.player.findUniqueOrThrow({ where: { id: payerId }, select: { id: true, money: true } });
+      const newMoney = payer.money + moneyChange;
       await prisma.player.update({
-        where: { id: player.id },
+        where: { id: payer.id },
         data: { money: newMoney },
       });
 
       await prisma.playerMoneyHistory.create({
         data: {
-          playerId: player.id,
+          playerId: payer.id,
           tournamentId: tournament.id,
           amount: moneyChange,
-          balanceBefore: player.money,
+          balanceBefore: payer.money,
           balanceAfter: newMoney,
-          description: `Tổng kết giải đấu: ${tournament.name}`,
+          description: player.friendOwnerId ? `Tổng kết giải đấu: ${tournament.name} (chi phí cho ${player.name})` : `Tổng kết giải đấu: ${tournament.name}`,
           details: moneyChangeDetails,
         },
       });
 
       moneyUpdates.push({
-        playerId: player.id,
-        oldMoney: player.money,
+        playerId: payer.id,
+        oldMoney: payer.money,
         newMoney,
         change: moneyChange,
       });

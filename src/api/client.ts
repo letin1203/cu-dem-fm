@@ -283,6 +283,18 @@ class ApiClient {
     return this.post('/players', data);
   }
 
+  async getMyFriends() {
+    return this.get('/players/friends/mine');
+  }
+
+  async getFriends() {
+    return this.get('/players/friends');
+  }
+
+  async createFriend(data: any) {
+    return this.post('/players/friends', data);
+  }
+
   async updatePlayer(id: string, data: any) {
     return this.put(`/players/${id}`, data);
   }
@@ -335,6 +347,10 @@ class ApiClient {
 
   async getTournament(id: string) {
     return this.get(`/tournaments/${id}`);
+  }
+
+  async registerFriendsForTournament(tournamentId: string, playerIds: string[], field5: boolean, field7: boolean) {
+    return this.put(`/tournaments/${tournamentId}/friend-attendance`, { playerIds, field5, field7 });
   }
 
   async getTournamentMoneyHistory(id: string) {

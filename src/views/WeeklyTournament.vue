@@ -290,6 +290,12 @@
                     <button type="button" class="mt-2 rounded bg-red-600 px-3 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-red-700" @click="openCurrentUserDebtTopUp">Thanh toán</button>
                   </div>
                 </div>
+                <button
+                  v-if="ongoingTournament.status === 'UPCOMING' && getTournamentTeams(ongoingTournament).length === 0 && authStore.currentUser?.player"
+                  type="button"
+                  class="rounded-lg bg-blue-600 px-6 py-2 font-medium text-white transition-colors hover:bg-blue-700"
+                  @click="openFriendRegistration(ongoingTournament.id)"
+                >Đăng ký dùm bạn</button>
                 
                 <!-- Water Button -->
                 <button
@@ -1451,6 +1457,45 @@
       </div>
     </div>
   </div>
+
+  <div v-if="showFriendRegistrationModal" class="fixed inset-0 z-[70] flex items-center justify-center bg-black/50 p-4" @click.self="showFriendRegistrationModal = false">
+    <div class="max-h-[90vh] w-full max-w-md overflow-y-auto rounded-lg bg-white p-6 shadow-xl">
+      <div class="flex items-center gap-1"><h3 class="text-lg font-semibold">Chọn sân đăng ký</h3><button type="button" class="inline-flex h-6 w-6 items-center justify-center rounded-full text-primary-600 transition-colors hover:bg-primary-50" title="Hướng dẫn đăng ký dùm bạn" aria-label="Hướng dẫn đăng ký dùm bạn" @click="showFriendRegistrationGuideModal = true"><svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9" stroke-width="2"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0-9h.01"/></svg></button></div>
+      <p class="mt-1 text-sm text-gray-600">Chọn bạn và sân muốn đăng ký.</p>
+      <div v-if="friendsLoading" class="py-8 text-center text-gray-500">Đang tải...</div>
+      <template v-else>
+        <div v-if="friends.length" class="mt-5 space-y-3">
+          <button v-for="friend in friends" :key="friend.id" type="button" @click="toggleFriend(friend.id)" class="flex w-full items-center justify-between rounded-lg border-2 px-4 py-3 text-left font-medium transition-colors" :class="friendSelectedIds.includes(friend.id) ? 'border-blue-600 bg-blue-50 text-blue-800' : 'border-gray-200 text-gray-700'">
+            <span>{{ friend.name }}</span><span>{{ friendSelectedIds.includes(friend.id) ? '✓' : '' }}</span>
+          </button>
+        </div>
+        <p v-else class="mt-5 rounded-lg bg-gray-50 p-4 text-sm text-gray-600">Bạn chưa có cầu thủ bạn bè nào.</p>
+        <button v-if="friends.length < 2" type="button" class="mt-4 w-full rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 font-semibold text-blue-700 hover:bg-blue-100" @click="showCreateFriendModal = true">+ Tạo bạn mới</button>
+        <div class="mt-5"><p class="form-label">Chọn sân</p><div class="grid grid-cols-2 gap-3"><button type="button" @click="friendField5 = !friendField5" class="rounded-lg border-2 px-4 py-3 font-semibold" :class="friendField5 ? 'border-primary-600 bg-primary-600 text-white' : 'border-gray-200'">Sân 5{{ friendField5 ? ' ✓' : '' }}</button><button type="button" @click="friendField7 = !friendField7" class="rounded-lg border-2 px-4 py-3 font-semibold" :class="friendField7 ? 'border-primary-600 bg-primary-600 text-white' : 'border-gray-200'">Sân 7{{ friendField7 ? ' ✓' : '' }}</button></div></div>
+      </template>
+      <div class="mt-6 flex justify-end gap-3 border-t pt-4"><button class="btn-secondary" @click="showFriendRegistrationModal = false">Hủy</button><button class="btn-primary" :disabled="friendRegistrationSaving || !friendSelectedIds.length || (!friendField5 && !friendField7)" @click="registerFriends">{{ friendRegistrationSaving ? 'Đang đăng ký...' : 'Đăng ký' }}</button></div>
+    </div>
+  </div>
+
+  <div v-if="showFriendRegistrationGuideModal" class="fixed inset-0 z-[80] flex items-center justify-center bg-black/50 p-4" @click.self="showFriendRegistrationGuideModal = false">
+    <div class="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-lg bg-white shadow-xl">
+      <div class="flex items-center justify-between border-b p-5"><div><h3 class="text-lg font-semibold">Hướng dẫn đăng ký dùm bạn</h3><p class="text-sm text-gray-500">Quy định và cách tính tiền</p></div><button type="button" class="text-2xl text-gray-400 hover:text-gray-700" @click="showFriendRegistrationGuideModal = false">×</button></div>
+      <div class="space-y-5 p-5 text-sm leading-6 text-gray-700">
+        <section><h4 class="font-semibold text-gray-900">1. Bạn bè</h4><ul class="mt-2 list-disc space-y-1 pl-5"><li>Mỗi user được tạo tối đa 2 cầu thủ bạn bè.</li><li>Chỉ user đã tạo bạn mới có thể đăng ký thi đấu cho bạn đó.</li><li>Khi chỉ có một bạn, bạn đó luôn được chọn sẵn.</li></ul></section>
+        <section><h4 class="font-semibold text-gray-900">2. Đăng ký sân</h4><ul class="mt-2 list-disc space-y-1 pl-5"><li>Có thể chọn một hoặc hai bạn để đăng ký cùng lúc.</li><li>Chọn Sân 5, Sân 7 hoặc cả hai trước khi bấm Đăng ký.</li><li>Thời điểm đăng ký của bạn được lưu như một cầu thủ bình thường.</li></ul></section>
+        <section><h4 class="font-semibold text-gray-900">3. Tiền của bạn</h4><ul class="mt-2 list-disc space-y-1 pl-5"><li>Mọi chi phí, phạt đội thua, nước hoặc cược của bạn sẽ được cộng/trừ vào số dư cầu thủ của user sở hữu bạn đó.</li><li>Lịch sử tiền của user sẽ ghi rõ khoản chi phí được tính cho tên bạn.</li><li>Nếu số dư user đang âm, không thể đăng ký bạn trong giải thường; giải Tự túc không áp dụng điều kiện này và không phát sinh biến động tiền.</li></ul></section>
+      </div>
+      <div class="border-t bg-gray-50 p-4 text-right"><button type="button" class="btn-primary" @click="showFriendRegistrationGuideModal = false">Đã hiểu</button></div>
+    </div>
+  </div>
+
+  <div v-if="showCreateFriendModal" class="fixed inset-0 z-[80] flex items-center justify-center bg-black/50 p-4" @click.self="showCreateFriendModal = false">
+    <form class="max-h-[90vh] w-full max-w-md overflow-y-auto rounded-lg bg-white p-6 shadow-xl" @submit.prevent="createFriend">
+      <h3 class="text-lg font-semibold">Thêm cầu thủ</h3><p class="mt-1 text-sm text-gray-600">Cầu thủ này sẽ là bạn của bạn và dùng tiền của bạn.</p>
+      <div class="mt-4 space-y-3"><input v-model="friendForm.name" required class="form-input" placeholder="Tên cầu thủ"><select v-model="friendForm.position" required class="form-input"><option value="">Chọn vị trí</option><option value="GK">GK</option><option value="DEF">DEF</option><option value="MID">MID</option><option value="FWD">FWD</option></select><input v-model.number="friendForm.yearOfBirth" required min="1950" :max="new Date().getFullYear()" type="number" class="form-input" placeholder="Năm sinh"><select v-model.number="friendForm.tier" required class="form-input"><option :value="0">Chọn Tier</option><option v-for="tier in 6" :key="tier" :value="tier">Tier {{ tier }}</option></select></div>
+      <div class="mt-6 flex justify-end gap-3"><button type="button" class="btn-secondary" @click="showCreateFriendModal = false">Hủy</button><button class="btn-primary" :disabled="friendCreateSaving">{{ friendCreateSaving ? 'Đang tạo...' : 'Tạo bạn' }}</button></div>
+    </form>
+  </div>
 </template>
 
 <script setup lang="ts">
@@ -1483,6 +1528,18 @@ const attendanceMap = ref<Map<string, TournamentPlayerAttendance>>(new Map())
 const attendanceLoading = ref<Set<string>>(new Set())
 const attendanceStats = ref<Map<string, TournamentAttendanceStats>>(new Map())
 const cannotSelfRegisterDueToDebt = computed(() => (authStore.currentUser?.player?.money ?? 0) < 0)
+const showFriendRegistrationModal = ref(false)
+const showFriendRegistrationGuideModal = ref(false)
+const showCreateFriendModal = ref(false)
+const friendsLoading = ref(false)
+const friendRegistrationSaving = ref(false)
+const friendCreateSaving = ref(false)
+const friendTournamentId = ref<string | null>(null)
+const friends = ref<any[]>([])
+const friendSelectedIds = ref<string[]>([])
+const friendField5 = ref(true)
+const friendField7 = ref(true)
+const friendForm = ref({ name: '', position: '', yearOfBirth: 1990, tier: 0 })
 
 // Water tracking
 const waterLoading = ref<Set<string>>(new Set())
@@ -1903,6 +1960,60 @@ const fetchAttendance = async (tournamentId: string): Promise<void> => {
     console.error('Fetch attendance error:', err)
     // Silent error for attendance fetch - we don't want to spam the user with toasts
   }
+}
+
+const openFriendRegistration = async (tournamentId: string): Promise<void> => {
+  friendTournamentId.value = tournamentId
+  friendField5.value = true
+  friendField7.value = true
+  friendsLoading.value = true
+  showFriendRegistrationModal.value = true
+  try {
+    const response = await apiClient.getMyFriends()
+    if (!response.success) throw new Error(response.error || 'Không thể tải danh sách bạn')
+    friends.value = (response.data || []) as any[]
+    friendSelectedIds.value = friends.value.length === 1 ? [friends.value[0].id] : []
+  } catch (error: any) {
+    toast.error(error.message || 'Không thể tải danh sách bạn')
+  } finally { friendsLoading.value = false }
+}
+
+const toggleFriend = (id: string): void => {
+  if (friends.value.length === 1) return
+  friendSelectedIds.value = friendSelectedIds.value.includes(id)
+    ? friendSelectedIds.value.filter(item => item !== id)
+    : [...friendSelectedIds.value, id]
+}
+
+const createFriend = async (): Promise<void> => {
+  if (!friendForm.value.name || !friendForm.value.position || !friendForm.value.yearOfBirth || !friendForm.value.tier) return
+  friendCreateSaving.value = true
+  try {
+    const response = await apiClient.createFriend(friendForm.value)
+    if (!response.success || !response.data) throw new Error(response.error || 'Không thể tạo bạn mới')
+    const createdFriend = response.data as any
+    friends.value = [...friends.value, createdFriend]
+    friendSelectedIds.value = [createdFriend.id]
+    friendForm.value = { name: '', position: '', yearOfBirth: 1990, tier: 0 }
+    showCreateFriendModal.value = false
+    toast.success('Đã tạo bạn mới')
+  } catch (error: any) {
+    toast.error(error.message || 'Không thể tạo bạn mới')
+  } finally { friendCreateSaving.value = false }
+}
+
+const registerFriends = async (): Promise<void> => {
+  if (!friendTournamentId.value || !friendSelectedIds.value.length) return
+  friendRegistrationSaving.value = true
+  try {
+    const response = await apiClient.registerFriendsForTournament(friendTournamentId.value, friendSelectedIds.value, friendField5.value, friendField7.value)
+    if (!response.success) throw new Error(response.error || 'Không thể đăng ký cho bạn')
+    showFriendRegistrationModal.value = false
+    await Promise.all([fetchAttendance(friendTournamentId.value), fetchAttendanceStats(friendTournamentId.value), fetchAttendanceDetails(friendTournamentId.value)])
+    toast.success('Đã đăng ký cho bạn')
+  } catch (error: any) {
+    toast.error(error.message || 'Không thể đăng ký cho bạn')
+  } finally { friendRegistrationSaving.value = false }
 }
 
 const toggleAttendance = async (tournamentId: string): Promise<void> => {

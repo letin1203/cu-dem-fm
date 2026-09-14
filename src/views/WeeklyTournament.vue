@@ -267,12 +267,12 @@
                 <div v-if="ongoingTournament.status === 'UPCOMING' && getTournamentTeams(ongoingTournament).length === 0 && getAttendanceButtonText(ongoingTournament.id) !== 'Không có cầu thủ'" class="flex flex-col items-center" :class="getUserAttendanceStatus(ongoingTournament.id) === 'ATTEND' ? 'w-full sm:w-auto' : 'w-auto self-center'">
                   <button
                     @click="toggleAttendance(ongoingTournament.id)"
-                    :disabled="attendanceLoading.has(ongoingTournament.id) || isAttendanceLimitReached(ongoingTournament) || (getAttendanceButtonText(ongoingTournament.id) === 'Tham gia' && cannotSelfRegisterDueToDebt && !ongoingTournament.selfFunded)"
-                    :title="isAttendanceLimitReached(ongoingTournament) ? attendanceLimitMessage(ongoingTournament) : (cannotSelfRegisterDueToDebt && !ongoingTournament.selfFunded ? 'Vui lòng thanh toán số dư âm trước khi đăng ký' : undefined)"
+                    :disabled="attendanceLoading.has(ongoingTournament.id) || (getAttendanceButtonText(ongoingTournament.id) === 'Tham gia' && (isAttendanceLimitReached(ongoingTournament) || (cannotSelfRegisterDueToDebt && !ongoingTournament.selfFunded)))"
+                    :title="getAttendanceButtonText(ongoingTournament.id) === 'Tham gia' && isAttendanceLimitReached(ongoingTournament) ? attendanceLimitMessage(ongoingTournament) : (cannotSelfRegisterDueToDebt && !ongoingTournament.selfFunded ? 'Vui lòng thanh toán số dư âm trước khi đăng ký' : undefined)"
                     class="px-6 py-2 rounded-lg font-medium transition-colors duration-200"
                     :class="[
                       getUserAttendanceStatus(ongoingTournament.id) === 'ATTEND' ? 'w-full sm:w-auto' : 'w-auto',
-                      attendanceLoading.has(ongoingTournament.id) || isAttendanceLimitReached(ongoingTournament) || (getAttendanceButtonText(ongoingTournament.id) === 'Tham gia' && cannotSelfRegisterDueToDebt && !ongoingTournament.selfFunded)
+                      attendanceLoading.has(ongoingTournament.id) || (getAttendanceButtonText(ongoingTournament.id) === 'Tham gia' && (isAttendanceLimitReached(ongoingTournament) || (cannotSelfRegisterDueToDebt && !ongoingTournament.selfFunded)))
                         ? 'opacity-50 cursor-not-allowed' 
                         : 'hover:shadow-md',
                         getAttendanceButtonText(ongoingTournament.id) === 'Tham gia'
@@ -906,8 +906,9 @@
                 <h4 class="font-semibold text-gray-900">{{ attendance.player.name }}</h4>
                 
                 <!-- Water Toggle Button (Admin/Mod only) - Shows same as water status -->
-                <div v-if="attendanceModalType === 'attending' && authStore.hasAnyRole(['admin', 'mod']) && !isSelfFundedTournament(attendanceModalTournamentId)" class="flex items-center">
+                <div v-if="attendanceModalType === 'attending' && authStore.hasAnyRole(['admin', 'mod'])" class="flex items-center">
                   <button
+                    v-if="!isSelfFundedTournament(attendanceModalTournamentId)"
                     @click="togglePlayerWater(attendance)"
                     :disabled="playerWaterLoading.has(attendance.player.id)"
                     class="text-xs px-2 py-1 rounded-full transition-colors"
@@ -3458,9 +3459,24 @@ const cancelPlayerAttendance = async (attendance: TournamentAttendanceDetails): 
     const field5 = attendanceFieldTab.value === 'FIELD_5' ? false : attendance.field5 !== false
     const field7 = attendanceFieldTab.value === 'FIELD_7' ? false : attendance.field7 !== false
     const remainsRegistered = field5 || field7
+    const payload: {
+      status: 'ATTEND' | 'NULL'
+      field5: boolean
+      field7: boolean
+      withWater?: boolean
+      bet?: boolean
+    } = {
+      status: remainsRegistered ? 'ATTEND' : 'NULL',
+      field5,
+      field7,
+    }
+    if (!isSelfFundedTournament(attendance.tournamentId)) {
+      payload.withWater = remainsRegistered ? attendance.withWater : false
+      payload.bet = remainsRegistered ? attendance.bet : false
+    }
     const response = await apiClient.put<TournamentPlayerAttendance>(
       `/tournaments/${attendance.tournamentId}/attendance/${attendance.player.id}`,
-      { status: remainsRegistered ? 'ATTEND' : 'NULL', field5, field7, withWater: remainsRegistered ? attendance.withWater : false, bet: remainsRegistered ? attendance.bet : false },
+      payload,
     )
     if (!response.success) throw new Error(response.error || 'Không thể hủy tham gia')
     const index = attendanceModalData.value.findIndex(item => item.id === attendance.id)

@@ -23,9 +23,11 @@
 import { ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { apiClient } from '../api/client'
+import { useAuthStore } from '../stores/auth'
 
 const route = useRoute()
 const router = useRouter()
+const authStore = useAuthStore()
 const token = typeof route.query.token === 'string' ? route.query.token : ''
 const username = typeof route.query.username === 'string' ? route.query.username : ''
 const password = ref('')
@@ -55,6 +57,9 @@ async function submitResetPassword() {
 }
 
 function backToLogin() {
-  router.push({ path: '/login', query: username ? { username } : {} })
+  // Ensure an old remembered account cannot interfere with this navigation.
+  authStore.clearSession()
+  const query = username ? `?username=${encodeURIComponent(username)}` : ''
+  window.location.replace(`${import.meta.env.BASE_URL}login${query}`)
 }
 </script>

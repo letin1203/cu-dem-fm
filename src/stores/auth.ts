@@ -179,6 +179,15 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
+  // Clear a remembered session without redirecting or calling the API.
+  // Used by password-reset links so they can never inherit another user's session.
+  function clearSession(): void {
+    currentUser.value = null
+    token.value = null
+    localStorage.removeItem('auth_token')
+    localStorage.removeItem('current_user')
+  }
+
   async function getCurrentUser(): Promise<void> {
     if (!token.value) {
       currentUser.value = null
@@ -411,6 +420,7 @@ export const useAuthStore = defineStore('auth', () => {
     login,
     loginAsGuest,
     logout,
+    clearSession,
     forceLogout,
     getCurrentUser,
     fetchUsers,

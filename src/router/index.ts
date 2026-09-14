@@ -99,6 +99,12 @@ const router = createRouter({
 // Navigation guard
 router.beforeEach((to, from, next) => {
   const authStore = useAuthStore()
+  // A reset link must always open as a guest, even when another account was remembered.
+  if (to.name === 'resetPassword') {
+    authStore.clearSession()
+    next()
+    return
+  }
   const requiresAuth = to.matched.some(record => record.meta.requiresAuth)
   const requiresGuest = to.matched.some(record => record.meta.requiresGuest)
 

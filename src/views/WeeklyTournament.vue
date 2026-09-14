@@ -298,7 +298,7 @@
                   class="rounded-lg bg-blue-600 px-6 py-2 font-medium text-white transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
                   @click="openFriendRegistration(ongoingTournament.id)"
                 >Đăng ký dùm bạn</button>
-                <p v-if="isAttendanceLimitReached(ongoingTournament)" class="w-full text-center text-xs font-medium text-orange-700">{{ attendanceLimitMessage(ongoingTournament) }}. Không thể đăng ký thêm.</p>
+                <p v-if="ongoingTournament.status === 'UPCOMING' && isAttendanceLimitReached(ongoingTournament)" class="w-full text-center text-xs font-medium text-orange-700">{{ attendanceLimitMessage(ongoingTournament) }}. Không thể đăng ký thêm.</p>
                 
                 <!-- Water Button -->
                 <button
@@ -420,7 +420,7 @@
               >
                 Trích quỹ
               </button>
-              <button v-if="authStore.hasAnyRole(['admin', 'mod']) && ongoingTournament.status !== 'COMPLETED'" @click="openMaxAttendanceModal(ongoingTournament)" class="btn-secondary">Số lượng cầu thủ</button>
+              <button v-if="authStore.hasAnyRole(['admin', 'mod']) && ongoingTournament.status === 'UPCOMING'" @click="openMaxAttendanceModal(ongoingTournament)" class="btn-secondary">Số lượng cầu thủ</button>
               <button
                 v-if="authStore.hasPermission('canDeleteTournaments') && ongoingTournament.status !== 'COMPLETED'"
                 @click="deleteTournament(ongoingTournament.id)"
@@ -927,6 +927,7 @@
                     </span>
                   </button>
                   <button
+                    v-if="getTournamentById(attendance.tournamentId)?.status === 'UPCOMING'"
                     @click="cancelPlayerAttendance(attendance)"
                     :disabled="playerAttendanceLoading.has(attendance.player.id)"
                     :title="`Hủy ${attendanceFieldTab === 'FIELD_5' ? 'Sân 5' : 'Sân 7'}`"

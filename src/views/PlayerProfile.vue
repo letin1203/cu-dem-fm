@@ -676,8 +676,11 @@ const scoreSortedTeams = (attendance: TournamentAttendanceHistory) =>
     (first, second) => second.team.score - first.team.score,
   );
 const highestScoreTeamName = (attendance: TournamentAttendanceHistory) =>
-  scoreSortedTeams(attendance)[0]?.team.name || "Chưa xác định";
+  attendance.tournament.status === "ONGOING"
+    ? "Chưa xác định"
+    : scoreSortedTeams(attendance)[0]?.team.name || "Chưa xác định";
 const lowestScoreTeamName = (attendance: TournamentAttendanceHistory) => {
+  if (attendance.tournament.status === "ONGOING") return "Chưa xác định";
   const teams = scoreSortedTeams(attendance);
   return teams[teams.length - 1]?.team.name || "Chưa xác định";
 };

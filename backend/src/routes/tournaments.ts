@@ -6,6 +6,15 @@ import { authenticate, authorize, AuthenticatedRequest } from '../middleware/aut
 
 const router = Router();
 
+const hasAttendanceCapacity = async (tournamentId: string, maxAttendance: number | null | undefined, field5: boolean, field7: boolean, additions = 1): Promise<boolean> => {
+  if (!maxAttendance) return true;
+  const [field5Count, field7Count] = await Promise.all([
+    field5 ? prisma.tournamentPlayerAttendance.count({ where: { tournamentId, status: { in: ['ATTEND', 'ATTENDING'] }, field5: true } }) : 0,
+    field7 ? prisma.tournamentPlayerAttendance.count({ where: { tournamentId, status: { in: ['ATTEND', 'ATTENDING'] }, field7: true } }) : 0,
+  ]);
+  return (!field5 || field5Count + additions <= maxAttendance) && (!field7 || field7Count + additions <= maxAttendance);
+};
+
 // Get all tournaments with pagination and filters
 router.get('/', async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   try {
@@ -367,7 +376,7 @@ router.put('/:id', authenticate, authorize(['ADMIN', 'MOD']), async (req: Authen
       return;
     }
 
-    if (existingTournament.status === 'COMPLETED' && (updateData.stadiumCost !== undefined || updateData.sponsorMoney !== undefined || updateData.fundContribution !== undefined || updateData.selfFunded !== undefined)) {
+    if (existingTournament.status === 'COMPLETED' && (updateData.stadiumCost !== undefined || updateData.sponsorMoney !== undefined || updateData.fundContribution !== undefined || updateData.selfFunded !== undefined || updateData.maxAttendance !== undefined)) {
       res.status(400).json({
         success: false,
         error: 'Không thể chỉnh sửa tài chính của giải đã hoàn thành',
@@ -820,7 +829,7 @@ router.put('/:id/friend-attendance', authenticate, async (req: AuthenticatedRequ
       return;
     }
     const [tournament, owner, friends] = await Promise.all([
-      prisma.tournament.findUnique({ where: { id: tournamentId }, select: { id: true, status: true, selfFunded: true } }),
+      prisma.tournament.findUnique({ where: { id: tournamentId }, select: { id: true, status: true, selfFunded: true, maxAttendance: true } }),
       prisma.user.findUnique({ where: { id: req.user!.id }, include: { player: true } }),
       prisma.player.findMany({ where: { id: { in: playerIds }, friendOwnerId: req.user!.id }, select: { id: true } }),
     ]);
@@ -834,6 +843,11 @@ router.put('/:id/friend-attendance', authenticate, async (req: AuthenticatedRequ
     }
     if (!tournament.selfFunded && (owner?.player?.money ?? 0) < 0) {
       res.status(400).json({ success: false, error: 'Số dư của bạn đang âm, vui lòng thanh toán trước' });
+      return;
+    }
+    const alreadyAttending = await prisma.tournamentPlayerAttendance.count({ where: { tournamentId, playerId: { in: playerIds }, status: { in: ['ATTEND', 'ATTENDING'] } } });
+    if (!await hasAttendanceCapacity(tournamentId, tournament.maxAttendance, field5, field7, playerIds.length - alreadyAttending)) {
+      res.status(400).json({ success: false, error: `Giải đấu đã đạt giới hạn ${tournament.maxAttendance} cầu thủ điểm danh` });
       return;
     }
     await prisma.$transaction(playerIds.map(playerId => prisma.tournamentPlayerAttendance.upsert({
@@ -1008,6 +1022,11 @@ router.put('/:id/attendance', authenticate, async (req: AuthenticatedRequest, re
       select: { status: true },
     });
 
+    if (status === 'ATTEND' && existingAttendance?.status !== 'ATTEND' && !await hasAttendanceCapacity(tournamentId, tournament.maxAttendance, field5 ?? true, field7 ?? true)) {
+      res.status(400).json({ success: false, error: `Giải đấu đã đạt giới hạn ${tournament.maxAttendance} cầu thủ điểm danh` });
+      return;
+    }
+
     // Prepare update data for regular attendance update
     const updateData: any = { status };
     if (status === 'ATTEND' && existingAttendance?.status !== 'ATTEND') {
@@ -1072,7 +1091,7 @@ router.put('/:id/attendance/batch', authenticate, authorize(['ADMIN', 'MOD']), a
     }
 
     const [tournament, players, existingAttendances] = await Promise.all([
-      prisma.tournament.findUnique({ where: { id: tournamentId }, select: { id: true } }),
+      prisma.tournament.findUnique({ where: { id: tournamentId }, select: { id: true, maxAttendance: true } }),
       prisma.player.findMany({ where: { id: { in: playerIds } }, select: { id: true } }),
       prisma.tournamentPlayerAttendance.findMany({
         where: { tournamentId, playerId: { in: playerIds } },
@@ -1096,6 +1115,10 @@ router.put('/:id/attendance/batch', authenticate, authorize(['ADMIN', 'MOD']), a
       const status = attendanceByPlayerId.get(playerId);
       return status === undefined || status === 'NULL';
     });
+    if (!await hasAttendanceCapacity(tournamentId, tournament.maxAttendance, true, true, pendingPlayerIds.length)) {
+      res.status(400).json({ success: false, error: `Giải đấu đã đạt giới hạn ${tournament.maxAttendance} cầu thủ điểm danh` });
+      return;
+    }
 
     await prisma.$transaction(
       pendingPlayerIds.map(playerId => prisma.tournamentPlayerAttendance.upsert({
@@ -1153,6 +1176,11 @@ router.put('/:id/attendance/:playerId', authenticate, authorize(['ADMIN', 'MOD']
       where: { tournamentId_playerId: { tournamentId, playerId } },
       select: { status: true },
     });
+
+    if (status === 'ATTEND' && existingAttendance?.status !== 'ATTEND' && !await hasAttendanceCapacity(tournamentId, tournament.maxAttendance, field5 ?? true, field7 ?? true)) {
+      res.status(400).json({ success: false, error: `Giải đấu đã đạt giới hạn ${tournament.maxAttendance} cầu thủ điểm danh` });
+      return;
+    }
 
     // Prepare update data
     const updateData: any = { status };

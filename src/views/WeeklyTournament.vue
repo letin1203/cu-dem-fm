@@ -87,6 +87,7 @@
                         :class="getStatusBadge(ongoingTournament.status)">
                     {{ ongoingTournament.status }}
                   </span>
+                  <span v-if="ongoingTournament.maxAttendance" class="inline-flex items-center rounded-full bg-orange-100 px-2 py-1 text-xs font-semibold uppercase text-orange-800">Max: {{ ongoingTournament.maxAttendance }} cháu</span>
                   <span>{{ formatDate(ongoingTournament.startDate) }}</span>
                   <button
                   v-if="authStore.hasAnyRole(['admin', 'mod'])"
@@ -266,12 +267,12 @@
                 <div v-if="ongoingTournament.status === 'UPCOMING' && getTournamentTeams(ongoingTournament).length === 0 && getAttendanceButtonText(ongoingTournament.id) !== 'Không có cầu thủ'" class="flex flex-col items-center" :class="getUserAttendanceStatus(ongoingTournament.id) === 'ATTEND' ? 'w-full sm:w-auto' : 'w-auto self-center'">
                   <button
                     @click="toggleAttendance(ongoingTournament.id)"
-                    :disabled="attendanceLoading.has(ongoingTournament.id) || (getAttendanceButtonText(ongoingTournament.id) === 'Tham gia' && cannotSelfRegisterDueToDebt && !ongoingTournament.selfFunded)"
-                    :title="cannotSelfRegisterDueToDebt && !ongoingTournament.selfFunded ? 'Vui lòng thanh toán số dư âm trước khi đăng ký' : undefined"
+                    :disabled="attendanceLoading.has(ongoingTournament.id) || isAttendanceLimitReached(ongoingTournament) || (getAttendanceButtonText(ongoingTournament.id) === 'Tham gia' && cannotSelfRegisterDueToDebt && !ongoingTournament.selfFunded)"
+                    :title="isAttendanceLimitReached(ongoingTournament) ? attendanceLimitMessage(ongoingTournament) : (cannotSelfRegisterDueToDebt && !ongoingTournament.selfFunded ? 'Vui lòng thanh toán số dư âm trước khi đăng ký' : undefined)"
                     class="px-6 py-2 rounded-lg font-medium transition-colors duration-200"
                     :class="[
                       getUserAttendanceStatus(ongoingTournament.id) === 'ATTEND' ? 'w-full sm:w-auto' : 'w-auto',
-                      attendanceLoading.has(ongoingTournament.id) || (getAttendanceButtonText(ongoingTournament.id) === 'Tham gia' && cannotSelfRegisterDueToDebt && !ongoingTournament.selfFunded)
+                      attendanceLoading.has(ongoingTournament.id) || isAttendanceLimitReached(ongoingTournament) || (getAttendanceButtonText(ongoingTournament.id) === 'Tham gia' && cannotSelfRegisterDueToDebt && !ongoingTournament.selfFunded)
                         ? 'opacity-50 cursor-not-allowed' 
                         : 'hover:shadow-md',
                         getAttendanceButtonText(ongoingTournament.id) === 'Tham gia'
@@ -293,9 +294,11 @@
                 <button
                   v-if="ongoingTournament.status === 'UPCOMING' && getTournamentTeams(ongoingTournament).length === 0 && authStore.currentUser?.player"
                   type="button"
-                  class="rounded-lg bg-blue-600 px-6 py-2 font-medium text-white transition-colors hover:bg-blue-700"
+                  :disabled="isAttendanceLimitReached(ongoingTournament)"
+                  class="rounded-lg bg-blue-600 px-6 py-2 font-medium text-white transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
                   @click="openFriendRegistration(ongoingTournament.id)"
                 >Đăng ký dùm bạn</button>
+                <p v-if="isAttendanceLimitReached(ongoingTournament)" class="w-full text-center text-xs font-medium text-orange-700">{{ attendanceLimitMessage(ongoingTournament) }}. Không thể đăng ký thêm.</p>
                 
                 <!-- Water Button -->
                 <button
@@ -417,6 +420,7 @@
               >
                 Trích quỹ
               </button>
+              <button v-if="authStore.hasAnyRole(['admin', 'mod']) && ongoingTournament.status !== 'COMPLETED'" @click="openMaxAttendanceModal(ongoingTournament)" class="btn-secondary">Số lượng cầu thủ</button>
               <button
                 v-if="authStore.hasPermission('canDeleteTournaments') && ongoingTournament.status !== 'COMPLETED'"
                 @click="deleteTournament(ongoingTournament.id)"
@@ -1021,6 +1025,10 @@
       <div class="py-5"><p class="form-label mb-3">Chọn số tiền trích quỹ</p><div class="grid grid-cols-2 gap-3"><button v-for="amount in fundContributionOptions" :key="amount" type="button" @click="fundContributionForm = amount" class="rounded-lg border px-4 py-3 font-medium transition-colors" :class="fundContributionForm === amount ? 'border-primary-600 bg-primary-600 text-white' : 'border-gray-200 text-gray-700 hover:bg-gray-50'">{{ amount.toLocaleString('vi-VN') }} ₫</button></div><label for="fund-contribution" class="form-label mt-5 block">Hoặc nhập số tiền khác</label><div class="relative mt-1"><span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">₫</span><input id="fund-contribution" v-model.number="fundContributionForm" type="number" min="0" required class="form-input pl-8" placeholder="Nhập số tiền trích quỹ"></div></div>
       <div class="flex justify-end gap-3 border-t pt-4"><button type="button" @click="closeFundContributionModal" class="btn-secondary">Hủy</button><button type="submit" :disabled="fundContributionSaving" class="btn-primary disabled:opacity-50">{{ fundContributionSaving ? 'Đang lưu...' : 'Lưu' }}</button></div>
     </form>
+  </div>
+
+  <div v-if="showMaxAttendanceModal" class="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4" @click.self="closeMaxAttendanceModal">
+    <div class="w-full max-w-md rounded-lg bg-white p-6 shadow-xl"><div class="flex items-center justify-between border-b pb-4"><div><h3 class="text-lg font-semibold text-gray-900">Số lượng cầu thủ</h3><p class="text-sm text-gray-500">{{ maxAttendanceTournament?.name }}</p></div><button type="button" class="text-2xl text-gray-400" @click="closeMaxAttendanceModal">×</button></div><p class="mt-4 text-sm text-gray-600">Chọn số lượng tối đa có thể điểm danh. Không chọn là không giới hạn.</p><div class="mt-4 grid grid-cols-2 gap-3"><button v-for="amount in maxAttendanceOptions" :key="amount" type="button" @click="selectedMaxAttendance = selectedMaxAttendance === amount ? null : amount" class="rounded-lg border-2 px-4 py-4 font-semibold" :class="selectedMaxAttendance === amount ? 'border-primary-600 bg-primary-600 text-white' : 'border-gray-200 text-gray-700 hover:border-primary-400'">{{ amount }}{{ selectedMaxAttendance === amount ? ' ✓' : '' }}</button></div><button v-if="selectedMaxAttendance !== null" type="button" class="mt-3 text-sm font-medium text-primary-600 hover:underline" @click="selectedMaxAttendance = null">Bỏ giới hạn</button><div class="mt-6 flex justify-end gap-3 border-t pt-4"><button class="btn-secondary" @click="closeMaxAttendanceModal">Hủy</button><button class="btn-primary" :disabled="maxAttendanceSaving" @click="saveMaxAttendance">{{ maxAttendanceSaving ? 'Đang lưu...' : 'Lưu' }}</button></div></div>
   </div>
 
   <!-- Additional Cost Modal -->
@@ -1633,6 +1641,11 @@ const fundContributionTournament = ref<Tournament | null>(null)
 const fundContributionForm = ref<number | null>(null)
 const fundContributionSaving = ref(false)
 const fundContributionOptions = [100000, 200000, 300000, 400000, 500000]
+const showMaxAttendanceModal = ref(false)
+const maxAttendanceTournament = ref<Tournament | null>(null)
+const selectedMaxAttendance = ref<number | null>(null)
+const maxAttendanceSaving = ref(false)
+const maxAttendanceOptions = [21, 24, 28, 32]
 
 // Confirmation Modal variables
 const showEndTournamentModal = ref(false)
@@ -1876,6 +1889,23 @@ const getTournamentStadiumCost = (tournament: Tournament) => {
 }
 
 const getTournamentFundContribution = (tournament: Tournament) => tournament.fundContribution || 0
+
+const isAttendanceLimitReached = (tournament: Tournament): boolean => {
+  const limit = tournament.maxAttendance
+  if (!limit) return false
+  const stats = getAttendanceStats(tournament.id)
+  return (stats?.field5Count || 0) >= limit || (stats?.field7Count || 0) >= limit
+}
+
+const attendanceLimitMessage = (tournament: Tournament): string => {
+  const limit = tournament.maxAttendance || 0
+  const stats = getAttendanceStats(tournament.id)
+  const fullFields = [
+    (stats?.field5Count || 0) >= limit ? 'Sân 5' : '',
+    (stats?.field7Count || 0) >= limit ? 'Sân 7' : '',
+  ].filter(Boolean)
+  return `${fullFields.join(' và ')} đã đạt giới hạn ${limit} cầu thủ`
+}
 
 const formatDate = (date: string | Date): string => {
   if (!date) return 'Không có'
@@ -2887,6 +2917,33 @@ const openFundContributionModal = (tournament: Tournament) => {
   fundContributionTournament.value = tournament
   fundContributionForm.value = getTournamentFundContribution(tournament)
   showFundContributionModal.value = true
+}
+
+const openMaxAttendanceModal = (tournament: Tournament) => {
+  maxAttendanceTournament.value = tournament
+  selectedMaxAttendance.value = tournament.maxAttendance ?? null
+  showMaxAttendanceModal.value = true
+}
+
+const closeMaxAttendanceModal = () => {
+  showMaxAttendanceModal.value = false
+  maxAttendanceTournament.value = null
+  selectedMaxAttendance.value = null
+}
+
+const saveMaxAttendance = async () => {
+  if (!maxAttendanceTournament.value || maxAttendanceSaving.value) return
+  try {
+    maxAttendanceSaving.value = true
+    const response = await apiClient.updateTournament(maxAttendanceTournament.value.id, { maxAttendance: selectedMaxAttendance.value })
+    if (!response.success || !response.data) throw new Error(response.error || 'Không thể lưu số lượng cầu thủ')
+    const tournament = weeklyTournaments.value.find(item => item.id === maxAttendanceTournament.value?.id)
+    if (tournament) tournament.maxAttendance = (response.data as Tournament).maxAttendance ?? null
+    toast.success(selectedMaxAttendance.value ? `Đã giới hạn tối đa ${selectedMaxAttendance.value} cầu thủ` : 'Đã bỏ giới hạn số lượng cầu thủ')
+    closeMaxAttendanceModal()
+  } catch (error: any) {
+    toast.error(error.response?.data?.error || error.message || 'Không thể lưu số lượng cầu thủ')
+  } finally { maxAttendanceSaving.value = false }
 }
 
 const closeFundContributionModal = () => {

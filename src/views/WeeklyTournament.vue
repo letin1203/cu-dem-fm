@@ -239,7 +239,7 @@
                         <span v-if="isPlayerWithWater(ongoingTournament.id, player.id)" class="ml-1" title="Đã đăng ký uống nước">💧</span>
                       </div>
                       <div class="flex items-center text-gray-600">
-                        <span class="text-xs mr-1 px-1.5 py-0.5 rounded" :class="isGoalkeeper(player.position) ? 'bg-green-100 text-green-700 font-semibold' : ''">{{ getPositionLabel(player.position) }}<template v-if="player.positionSecond">-{{ getPositionLabel(player.positionSecond) }}</template></span>
+                        <span class="text-xs mr-1 px-1.5 py-0.5 rounded" :class="isTeamGoalkeeper(team.players, player) ? 'bg-green-100 text-green-700 font-semibold' : ''">{{ getPositionLabel(player.position) }}<template v-if="player.positionSecond">-{{ getPositionLabel(player.positionSecond) }}</template></span>
                         <span class="text-xs">T{{ player.tier }}</span>
                       </div>
                     </div>
@@ -622,7 +622,7 @@
                           <span v-if="isPlayerWithWater(tournament.id, player.id)" class="ml-1" title="Đã đăng ký uống nước">💧</span>
                         </div>
                         <div class="flex items-center text-gray-600">
-                          <span class="text-xs mr-1 px-1.5 py-0.5 rounded" :class="isGoalkeeper(player.position) ? 'bg-green-100 text-green-700 font-semibold' : ''">{{ getPositionLabel(player.position) }}<template v-if="player.positionSecond">-{{ getPositionLabel(player.positionSecond) }}</template></span>
+                          <span class="text-xs mr-1 px-1.5 py-0.5 rounded" :class="isTeamGoalkeeper(team.players, player) ? 'bg-green-100 text-green-700 font-semibold' : ''">{{ getPositionLabel(player.position) }}<template v-if="player.positionSecond">-{{ getPositionLabel(player.positionSecond) }}</template></span>
                           <span class="text-xs">T{{ player.tier }}</span>
                         </div>
                       </div>
@@ -2305,12 +2305,23 @@ const getTournamentTeams = (tournament: Tournament): any[] => {
       id: team.id,
       name: team.name,
       logo: team.logo,
-      players: [...(teamPlayersMap.get(team.id) || [])].sort((first, second) => {
+      players: (() => {
+        const players = [...(teamPlayersMap.get(team.id) || [])]
+        const hasPrimaryGoalkeeper = players.some((player: any) => isGoalkeeper(player.position))
+        return players.sort((first, second) => {
         const firstIsGoalkeeper = isGoalkeeper(first.position)
         const secondIsGoalkeeper = isGoalkeeper(second.position)
         if (firstIsGoalkeeper !== secondIsGoalkeeper) return firstIsGoalkeeper ? -1 : 1
+        // If the team lacks a primary GK, make its secondary GK visibly lead
+        // the list as the designated goalkeeper for that team.
+        if (!hasPrimaryGoalkeeper) {
+          const firstIsSecondaryGoalkeeper = isGoalkeeper(first.positionSecond)
+          const secondIsSecondaryGoalkeeper = isGoalkeeper(second.positionSecond)
+          if (firstIsSecondaryGoalkeeper !== secondIsSecondaryGoalkeeper) return firstIsSecondaryGoalkeeper ? -1 : 1
+        }
         return first.tier - second.tier || first.name.localeCompare(second.name, 'vi')
-      }),
+        })
+      })(),
       score: team.score || 0
     }
   })
@@ -2328,6 +2339,10 @@ const getPositionLabel = (position: string): string => ({
 }[position] || position)
 
 const isGoalkeeper = (position: string): boolean => position === 'GK' || position === 'Goalkeeper'
+
+const isTeamGoalkeeper = (players: any[], player: any): boolean =>
+  isGoalkeeper(player.position) ||
+  (!players.some(teamPlayer => isGoalkeeper(teamPlayer.position)) && isGoalkeeper(player.positionSecond))
 
 const openTeamCountModal = (tournamentId: string): void => {
   if (!canGenerateTeams(tournamentId) || teamGenerationLoading.value) return

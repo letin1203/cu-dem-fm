@@ -101,7 +101,7 @@
           <div class="border-t pt-4 space-y-3">
             <div class="flex justify-between">
               <span class="text-gray-600">Năm sinh:</span
-              ><span class="font-medium">{{ playerProfile.yearOfBirth }}</span>
+              ><span class="flex items-center gap-2"><button type="button" class="text-primary-600 hover:text-primary-800" title="Chỉnh sửa năm sinh" @click="openYearOfBirthModal">✎</button><span class="font-medium">{{ playerProfile.yearOfBirth }}</span></span>
             </div>
             <div class="flex justify-between">
               <span class="text-gray-600">Tuổi:</span
@@ -443,6 +443,8 @@
       </div>
     </div>
 
+    <div v-if="showYearOfBirthModal" class="fixed inset-0 z-[70] flex items-center justify-center bg-gray-900/50 p-4" @click.self="showYearOfBirthModal = false"><div class="w-full max-w-md rounded-lg bg-white p-6 shadow-xl"><div class="flex items-center justify-between"><h3 class="text-lg font-semibold">Chỉnh sửa năm sinh</h3><button type="button" class="text-2xl text-gray-400" @click="showYearOfBirthModal = false">×</button></div><label class="form-label mt-5 block">Năm sinh</label><select v-model.number="selectedYearOfBirth" class="form-input mt-1"><option v-for="year in yearOfBirthOptions" :key="year" :value="year">{{ year }}</option></select><div class="mt-6 flex justify-end gap-3"><button class="btn-secondary" @click="showYearOfBirthModal = false">Hủy</button><button class="btn-primary" :disabled="savingYearOfBirth" @click="saveYearOfBirth">{{ savingYearOfBirth ? 'Đang lưu...' : 'Lưu' }}</button></div></div></div>
+
     <div
       v-if="selectedTournamentDetail"
       class="fixed inset-0 z-[70] flex items-center justify-center bg-black/50 p-4"
@@ -626,6 +628,10 @@ const topUpAmounts = computed(() => {
 const showAvatarModal = ref(false);
 const savingAvatar = ref(false);
 const selectedAvatar = ref('');
+const showYearOfBirthModal = ref(false);
+const savingYearOfBirth = ref(false);
+const selectedYearOfBirth = ref(1990);
+const yearOfBirthOptions = Array.from({ length: 2010 - 1975 + 1 }, (_, index) => 2010 - index);
 const avatarOptions = [
   '/avatars/01-side-eye.png', '/avatars/01-sleepy.png', '/avatars/02-excited.png', '/avatars/02-worried.png',
   '/avatars/03-masked.png', '/avatars/03-unimpressed.png', '/avatars/04-laughing.png', '/avatars/04-shouting.png',
@@ -789,6 +795,24 @@ const refreshPlayerProfile = async () => {
 const openAvatarModal = (): void => {
   selectedAvatar.value = playerProfile.value?.avatar || avatarOptions[0];
   showAvatarModal.value = true;
+};
+const openYearOfBirthModal = (): void => {
+  selectedYearOfBirth.value = playerProfile.value?.yearOfBirth || 1990;
+  showYearOfBirthModal.value = true;
+};
+const saveYearOfBirth = async (): Promise<void> => {
+  if (!playerProfile.value || savingYearOfBirth.value) return;
+  savingYearOfBirth.value = true;
+  try {
+    const response = await apiClient.updateMyPlayerYearOfBirth(playerProfile.value.id, selectedYearOfBirth.value);
+    if (!response.success) throw new Error(response.error || 'Không thể cập nhật năm sinh');
+    playerProfile.value = { ...playerProfile.value, yearOfBirth: selectedYearOfBirth.value };
+    if (authStore.currentUser?.player) authStore.currentUser.player.yearOfBirth = selectedYearOfBirth.value;
+    showYearOfBirthModal.value = false;
+    toast.success('Đã cập nhật năm sinh');
+  } catch (error: any) {
+    toast.error(error.message || 'Không thể cập nhật năm sinh');
+  } finally { savingYearOfBirth.value = false; }
 };
 const openTopUpModal = (): void => {
   selectedTopUpAmount.value = debtSettlementAmount.value || 100000;

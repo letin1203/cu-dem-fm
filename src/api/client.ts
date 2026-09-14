@@ -303,6 +303,10 @@ class ApiClient {
     return this.put(`/players/${id}/avatar`, { avatar });
   }
 
+  async updateMyPlayerYearOfBirth(id: string, yearOfBirth: number) {
+    return this.put(`/players/${id}/year-of-birth`, { yearOfBirth });
+  }
+
   async deletePlayer(id: string) {
     return this.delete(`/players/${id}`);
   }

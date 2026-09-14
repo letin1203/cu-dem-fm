@@ -310,6 +310,31 @@ router.put('/:id/avatar', authenticate, async (req: AuthenticatedRequest, res: R
   }
 });
 
+// A user may correct the birth year of their own linked player.
+router.put('/:id/year-of-birth', authenticate, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  try {
+    const { id } = req.params;
+    const yearOfBirth = Number(req.body?.yearOfBirth);
+    if (!Number.isInteger(yearOfBirth) || yearOfBirth < 1975 || yearOfBirth > 2010) {
+      res.status(400).json({ success: false, error: 'Năm sinh phải từ 1975 đến 2010' });
+      return;
+    }
+    const player = await prisma.player.findUnique({ where: { id }, select: { user: { select: { id: true } } } });
+    if (!player) {
+      res.status(404).json({ success: false, error: 'Không tìm thấy cầu thủ' });
+      return;
+    }
+    if (player.user?.id !== req.user!.id) {
+      res.status(403).json({ success: false, error: 'Bạn chỉ có thể chỉnh sửa năm sinh của chính mình' });
+      return;
+    }
+    const updatedPlayer = await prisma.player.update({ where: { id }, data: { yearOfBirth } });
+    res.json({ success: true, data: updatedPlayer });
+  } catch (error) {
+    res.status(500).json({ success: false, error: 'Không thể cập nhật năm sinh' });
+  }
+});
+
 // Update player
 router.put('/:id', authenticate, authorize(['ADMIN', 'MOD']), async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   try {

@@ -40,12 +40,11 @@
           </div>
         </div>
 
-        <div class="flex items-center justify-between">
+        <div class="flex items-center">
           <label class="flex items-center text-sm text-primary-700">
             <input type="checkbox" v-model="rememberMe" class="form-checkbox h-4 w-4 text-primary-600 rounded" />
             <span class="ml-2">Ghi nhớ đăng nhập</span>
           </label>
-          <button type="button" class="text-sm font-medium text-primary-600 hover:text-primary-800" @click="openForgotPasswordModal">Quên mật khẩu?</button>
         </div>
 
         <div v-if="error" class="rounded-md bg-red-50 p-4">

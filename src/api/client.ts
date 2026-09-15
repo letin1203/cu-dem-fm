@@ -410,6 +410,18 @@ class ApiClient {
     return this.get('/system-settings/fund-history');
   }
 
+  async createFundContribution(amount: number, reason: string) {
+    return this.post('/fund-contributions', { amount, reason });
+  }
+
+  async getPendingFundContributions() {
+    return this.get('/fund-contributions/pending');
+  }
+
+  async approveFundContribution(id: string) {
+    return this.put(`/fund-contributions/${id}/approve`);
+  }
+
   // Matches endpoints
   async getMatches(params?: any) {
     return this.get('/matches', { params });

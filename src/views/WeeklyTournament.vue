@@ -301,12 +301,12 @@
                 
                 <!-- Water Button -->
                 <button
-                  v-if="!ongoingTournament.selfFunded && getUserAttendanceStatus(ongoingTournament.id) === 'ATTEND'"
+                  v-if="!ongoingTournament.selfFunded"
                   @click="toggleWater(ongoingTournament.id)"
-                  :disabled="waterLoading.has(ongoingTournament.id)"
+                  :disabled="waterLoading.has(ongoingTournament.id) || getUserAttendanceStatus(ongoingTournament.id) !== 'ATTEND'"
                   class="px-4 py-2 rounded-lg font-medium transition-colors duration-200"
                   :class="[
-                    waterLoading.has(ongoingTournament.id)
+                    waterLoading.has(ongoingTournament.id) || getUserAttendanceStatus(ongoingTournament.id) !== 'ATTEND'
                       ? 'opacity-50 cursor-not-allowed' 
                       : 'hover:shadow-md',
                     getUserWaterStatus(ongoingTournament.id)
@@ -323,9 +323,9 @@
                 <button
                   v-if="!ongoingTournament.selfFunded && canUserToggleBet(ongoingTournament)"
                   @click="toggleBet(ongoingTournament.id)"
-                  :disabled="betLoading.has(ongoingTournament.id)"
+                  :disabled="betLoading.has(ongoingTournament.id) || getUserAttendanceStatus(ongoingTournament.id) !== 'ATTEND'"
                   class="px-4 py-2 text-center rounded-lg font-medium transition-colors duration-200"
-                  :class="[betLoading.has(ongoingTournament.id) ? 'opacity-50 cursor-not-allowed' : 'hover:shadow-md', getUserBetStatus(ongoingTournament.id) ? 'bg-yellow-600 text-white hover:bg-yellow-700' : 'bg-gray-300 text-gray-700 hover:bg-gray-400']"
+                  :class="[betLoading.has(ongoingTournament.id) || getUserAttendanceStatus(ongoingTournament.id) !== 'ATTEND' ? 'opacity-50 cursor-not-allowed' : 'hover:shadow-md', getUserBetStatus(ongoingTournament.id) ? 'bg-yellow-600 text-white hover:bg-yellow-700' : 'bg-gray-300 text-gray-700 hover:bg-gray-400']"
                 >
                   {{ betLoading.has(ongoingTournament.id) ? 'Đang tải...' : (getUserBetStatus(ongoingTournament.id) ? 'Cược đội mình thắng ✓' : 'Cược đội mình thắng') }}
                 </button>
@@ -1744,10 +1744,18 @@ const calculateTournamentNet = (tournamentId: string) => {
 
 const calculateCostPerPlayer = (tournamentId: string) => {
   const net = calculateTournamentNet(tournamentId)
-  const attendingCount = getAttendanceStats(tournamentId)?.attendingCount || 0
+  const stats = getAttendanceStats(tournamentId)
+  const attendingCount = stats?.attendingCount || 0
   if (attendingCount === 0) return 0
+
+  // Estimate from the busier pitch: sân 5 is calculated for at least 12
+  // players, while sân 7 is calculated for at least 16 players.
+  const field5Count = stats?.field5Count ?? attendingCount
+  const field7Count = stats?.field7Count ?? attendingCount
+  const useField5 = field5Count >= field7Count
+  const divisor = Math.max(useField5 ? field5Count : field7Count, useField5 ? 12 : 16)
   
-  const baseCost = net / attendingCount
+  const baseCost = net / divisor
   const tournament = getTournamentById(tournamentId)
   if (tournament?.selfFunded) return Math.round(baseCost)
   // Round up to nearest 5000 and add 5000
@@ -3489,7 +3497,6 @@ const togglePlayerWater = async (attendance: TournamentAttendanceDetails): Promi
 const canUserToggleBet = (tournament: Tournament): boolean => {
   return ['UPCOMING', 'ONGOING'].includes(tournament.status)
     && new Date(tournament.startDate).getTime() > Date.now()
-    && getUserAttendanceStatus(tournament.id) === 'ATTEND'
 }
 
 const isPlayerBetting = (tournamentId: string, playerId: string): boolean => {

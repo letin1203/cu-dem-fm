@@ -10,7 +10,8 @@ router.get('/fund-history', authenticate, async (_req: AuthenticatedRequest, res
     const settings = await prisma.systemSettings.findFirst();
     const defaultStadiumCost = settings?.stadiumCost ?? 10000;
     const defaultSponsorMoney = settings?.sponsorMoney ?? 50000;
-    const tournaments = await prisma.tournament.findMany({
+    const [tournaments, approvedContributions] = await Promise.all([
+      prisma.tournament.findMany({
       // Self-funded tournaments are fully separate from the club fund.
       where: { status: 'COMPLETED', selfFunded: false },
       orderBy: { startDate: 'asc' },
@@ -24,10 +25,15 @@ router.get('/fund-history', authenticate, async (_req: AuthenticatedRequest, res
         additionalCosts: { select: { description: true, amount: true } },
         moneyHistory: { select: { amount: true } },
       },
-    });
+      }),
+      prisma.fundContribution.findMany({
+        where: { status: 'APPROVED' },
+        include: { user: { select: { username: true, player: { select: { name: true } } } } },
+        orderBy: { approvedAt: 'asc' },
+      }),
+    ]);
 
-    let balanceAfter = 0;
-    const history = tournaments.map((tournament) => {
+    const tournamentHistory = tournaments.map((tournament) => {
       const playerMoneyChanges = tournament.moneyHistory.reduce((total, item) => total + item.amount, 0);
       const playerFundImpact = -playerMoneyChanges;
       const stadiumCost = tournament.stadiumCost ?? defaultStadiumCost;
@@ -35,9 +41,8 @@ router.get('/fund-history', authenticate, async (_req: AuthenticatedRequest, res
       const additionalCosts = tournament.additionalCosts.filter((cost) => cost.amount > 0);
       const totalAdditionalCosts = additionalCosts.reduce((total, cost) => total + cost.amount, 0);
       const fundChange = playerFundImpact + sponsorMoney - stadiumCost - totalAdditionalCosts;
-      balanceAfter += fundChange;
-
       return {
+        type: 'TOURNAMENT',
         id: tournament.id,
         name: tournament.name,
         startDate: tournament.startDate,
@@ -47,9 +52,21 @@ router.get('/fund-history', authenticate, async (_req: AuthenticatedRequest, res
         additionalCosts,
         fundContribution: tournament.fundContribution,
         fundChange,
-        balanceAfter,
       };
     });
+    const contributionHistory = approvedContributions.map((contribution) => ({
+      type: 'CONTRIBUTION',
+      id: contribution.id,
+      name: `Góp quỹ · ${contribution.user.player?.name || contribution.user.username}`,
+      reason: contribution.reason,
+      startDate: contribution.approvedAt || contribution.requestedAt,
+      fundChange: contribution.amount,
+      amount: contribution.amount,
+    }));
+    let balanceAfter = 0;
+    const history = [...tournamentHistory, ...contributionHistory]
+      .sort((first, second) => new Date(first.startDate).getTime() - new Date(second.startDate).getTime())
+      .map((entry) => ({ ...entry, balanceAfter: balanceAfter += entry.fundChange }));
 
     const playerDebt = await prisma.player.aggregate({
       where: { money: { lt: 0 } },
@@ -79,7 +96,7 @@ router.get('/', authenticate, async (req: AuthenticatedRequest, res: Response): 
       });
     }
 
-    const [playerMoneyChanges, completedTournaments] = await Promise.all([
+    const [playerMoneyChanges, completedTournaments, approvedFundContributions] = await Promise.all([
       prisma.playerMoneyHistory.aggregate({
         where: {
           tournament: {
@@ -96,6 +113,7 @@ router.get('/', authenticate, async (req: AuthenticatedRequest, res: Response): 
           additionalCosts: { select: { amount: true } },
         },
       }),
+      prisma.fundContribution.aggregate({ where: { status: 'APPROVED' }, _sum: { amount: true } }),
     ]);
 
     const totalTournamentCosts = completedTournaments.reduce((total, tournament) => {
@@ -105,7 +123,7 @@ router.get('/', authenticate, async (req: AuthenticatedRequest, res: Response): 
       return total + stadiumCost + additionalCosts - sponsorMoney;
     }, 0);
     // Tiền bị trừ từ cầu thủ là tiền thu vào quỹ; tiền cộng cho cầu thủ là tiền chi từ quỹ.
-    const calculatedClubFund = -(playerMoneyChanges._sum.amount ?? 0) - totalTournamentCosts;
+    const calculatedClubFund = -(playerMoneyChanges._sum.amount ?? 0) - totalTournamentCosts + (approvedFundContributions._sum.amount ?? 0);
 
     res.json({
       success: true,

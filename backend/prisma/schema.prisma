@@ -29,6 +29,7 @@ model User {
   player   Player? @relation(fields: [playerId], references: [id])
   playerId String? @unique
   friends  Player[] @relation("PlayerFriendOwner")
+  fundContributions FundContribution[]
 
   @@map("users")
 }
@@ -272,6 +273,21 @@ model PlayerMoneyTopUp {
 
   @@index([status, requestedAt])
   @@map("player_money_top_ups")
+}
+
+model FundContribution {
+  id           String   @id @default(cuid())
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId       String
+  amount       Int
+  reason       String
+  status       String   @default("PENDING") // "PENDING", "APPROVED"
+  requestedAt  DateTime @default(now())
+  approvedAt   DateTime?
+  approvedById String?
+
+  @@index([status, requestedAt])
+  @@map("fund_contributions")
 }
 
 model PlayerMoneyHistory {

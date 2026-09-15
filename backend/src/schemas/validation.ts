@@ -99,7 +99,7 @@ export const updateTournamentSchema = z.object({
   sponsorMoney: z.number().int().min(0).optional(),
   fundContribution: z.number().int().min(0).optional(),
   selfFunded: z.boolean().optional(),
-  maxAttendance: z.union([z.literal(21), z.literal(24), z.literal(28), z.literal(32)]).nullable().optional(),
+  maxAttendance: z.number().int().min(1).nullable().optional(),
   winnerId: z.string().optional(),
 });
 

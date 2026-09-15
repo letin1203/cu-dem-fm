@@ -414,6 +414,25 @@
             {{ amount.toLocaleString("vi-VN") }} ₫
           </button>
         </div>
+        <label for="profile-top-up" class="form-label mt-5 block"
+          >Hoặc nhập số tiền khác</label
+        >
+        <div class="mt-1 flex items-center gap-2">
+          <button
+            type="button"
+            class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-gray-100 text-xl font-semibold text-gray-700 hover:bg-gray-200"
+            @click="selectedTopUpAmount = Math.max(0, selectedTopUpAmount - 100000)"
+          >−</button>
+          <div class="relative flex-1">
+            <span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">₫</span>
+            <input id="profile-top-up" v-model.number="selectedTopUpAmount" type="number" min="0" class="form-input pl-8" placeholder="Nhập số tiền" />
+          </div>
+          <button
+            type="button"
+            class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary-100 text-xl font-semibold text-primary-700 hover:bg-primary-200"
+            @click="selectedTopUpAmount += 100000"
+          >+</button>
+        </div>
         <div class="flex justify-end gap-3 mt-6">
           <button @click="showTopUpModal = false" class="btn-secondary">
             Hủy</button

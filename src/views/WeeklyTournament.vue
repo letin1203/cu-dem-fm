@@ -150,7 +150,11 @@
                     📊 Tổng: {{ calculateTournamentNet(ongoingTournament.id).toLocaleString('vi-VN') }} ₫
                   </span>
                   <span v-if="getAttendanceStats(ongoingTournament.id)?.attendingCount" class="text-purple-600 font-medium">
-                    👥 Est mỗi cháu: {{ calculateCostPerPlayer(ongoingTournament.id).toLocaleString('vi-VN') }} ₫
+                    👥 Est mỗi cháu:
+                    <template v-if="shouldShowMinimumCostRange(ongoingTournament)">
+                      {{ getCostEstimateInfo(ongoingTournament.id).minimum }}+ cháu: {{ calculateCostPerPlayer(ongoingTournament.id).toLocaleString('vi-VN') }} ₫ · Max {{ ongoingTournament.maxAttendance }} cháu: {{ calculateCostPerPlayerForCount(ongoingTournament.id, ongoingTournament.maxAttendance || 0).toLocaleString('vi-VN') }} ₫
+                    </template>
+                    <template v-else>{{ calculateCostPerPlayer(ongoingTournament.id).toLocaleString('vi-VN') }} ₫</template>
                   </span>
                 </div>
               </div>
@@ -1754,25 +1758,34 @@ const calculateTournamentNet = (tournamentId: string) => {
   return stadium - sponsor + additionalCosts - (tournament ? getTournamentFundContribution(tournament) : 0)
 }
 
-const calculateCostPerPlayer = (tournamentId: string) => {
+const calculateCostPerPlayerForCount = (tournamentId: string, divisor: number) => {
   const net = calculateTournamentNet(tournamentId)
-  const stats = getAttendanceStats(tournamentId)
-  const attendingCount = stats?.attendingCount || 0
-  if (attendingCount === 0) return 0
-
-  // Estimate from the busier pitch: sân 5 is calculated for at least 12
-  // players, while sân 7 is calculated for at least 16 players.
-  const field5Count = stats?.field5Count ?? attendingCount
-  const field7Count = stats?.field7Count ?? attendingCount
-  const useField5 = field5Count >= field7Count
-  const divisor = Math.max(useField5 ? field5Count : field7Count, useField5 ? 12 : 16)
-  
+  if (divisor <= 0) return 0
   const baseCost = net / divisor
   const tournament = getTournamentById(tournamentId)
   if (tournament?.selfFunded) return Math.round(baseCost)
-  // Round up to nearest 5000 and add 5000
-  const roundedUp = Math.ceil(baseCost / 5000) * 5000
-  return roundedUp + 5000
+  return Math.ceil(baseCost / 5000) * 5000 + 5000
+}
+
+const getCostEstimateInfo = (tournamentId: string) => {
+  const stats = getAttendanceStats(tournamentId)
+  const attendingCount = stats?.attendingCount || 0
+  const field5Count = stats?.field5Count ?? attendingCount
+  const field7Count = stats?.field7Count ?? attendingCount
+  const useField5 = field5Count >= field7Count
+  const registered = useField5 ? field5Count : field7Count
+  const minimum = useField5 ? 12 : 16
+  return { registered, minimum, divisor: Math.max(registered, minimum) }
+}
+
+const calculateCostPerPlayer = (tournamentId: string) => {
+  const { divisor } = getCostEstimateInfo(tournamentId)
+  return calculateCostPerPlayerForCount(tournamentId, divisor)
+}
+
+const shouldShowMinimumCostRange = (tournament: Tournament): boolean => {
+  const { registered, minimum } = getCostEstimateInfo(tournament.id)
+  return registered <= minimum && Boolean(tournament.maxAttendance && tournament.maxAttendance > minimum)
 }
 
 // Get next Monday (or today if today is Monday)

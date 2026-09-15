@@ -295,6 +295,10 @@ class ApiClient {
     return this.post('/players/friends', data);
   }
 
+  async updateFriend(id: string, data: any) {
+    return this.put(`/players/friends/${id}`, data);
+  }
+
   async updatePlayer(id: string, data: any) {
     return this.put(`/players/${id}`, data);
   }

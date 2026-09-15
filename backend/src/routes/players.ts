@@ -34,6 +34,26 @@ router.post('/friends', authenticate, async (req: AuthenticatedRequest, res: Res
   }
 });
 
+// A user may edit only the friends they created. Friends do not own a balance,
+// so this route deliberately excludes money and ownership fields.
+router.put('/friends/:id', authenticate, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  try {
+    const { id } = req.params;
+    const friend = await prisma.player.findFirst({ where: { id, friendOwnerId: req.user!.id } });
+    if (!friend) {
+      res.status(404).json({ success: false, error: 'Không tìm thấy cầu thủ bạn bè' });
+      return;
+    }
+    const updateData = updatePlayerSchema
+      .pick({ name: true, position: true, positionSecond: true, yearOfBirth: true, tier: true, avatar: true, teamId: true })
+      .parse(req.body);
+    const updatedFriend = await prisma.player.update({ where: { id }, data: updateData, include: { stats: true } });
+    res.json({ success: true, data: updatedFriend });
+  } catch (error) {
+    res.status(400).json({ success: false, error: error instanceof Error ? error.message : 'Không thể cập nhật cầu thủ bạn bè' });
+  }
+});
+
 router.get('/friends', authenticate, authorize(['ADMIN', 'MOD']), async (_req: AuthenticatedRequest, res: Response): Promise<void> => {
   const users = await prisma.user.findMany({
     where: { friends: { some: {} } },

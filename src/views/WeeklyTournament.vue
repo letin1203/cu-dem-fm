@@ -730,7 +730,8 @@
           <ul class="mt-2 space-y-1 leading-6">
             <li>• Chọn <strong>Tham gia</strong> khi giải đang mở đăng ký; hệ thống sẽ lưu thời điểm đăng ký.</li>
             <li v-if="!ongoingTournament.selfFunded">• Cầu thủ có số dư âm cần thanh toán trước khi tự đăng ký tham gia.</li>
-            <li>• Khi đã chia đội, không thể tự thay đổi trạng thái tham gia. Admin/mod có thể đăng ký giúp trước khi chia đội.</li>
+            <li>• Admin/mod chia đội lúc <strong>17:00</strong>.</li>
+            <li>• Sau khi đã chia đội, không thể hủy tham gia. Admin/mod có thể đăng ký giúp trước khi chia đội.</li>
           </ul>
         </section>
         <section v-if="ongoingTournament.selfFunded" class="rounded-lg border border-violet-200 bg-violet-50 p-4">
@@ -1475,9 +1476,9 @@
       <div v-if="friendsLoading" class="py-8 text-center text-gray-500">Đang tải...</div>
       <template v-else>
         <div v-if="friends.length" class="mt-5 space-y-3">
-          <button v-for="friend in friends" :key="friend.id" type="button" @click="toggleFriend(friend.id)" class="flex w-full items-center justify-between rounded-lg border-2 px-4 py-3 text-left font-medium transition-colors" :class="friendSelectedIds.includes(friend.id) ? 'border-blue-600 bg-blue-50 text-blue-800' : 'border-gray-200 text-gray-700'">
-            <span>{{ friend.name }}</span><span>{{ friendSelectedIds.includes(friend.id) ? '✓' : '' }}</span>
-          </button>
+          <div v-for="friend in friends" :key="friend.id" role="button" tabindex="0" @click="toggleFriend(friend.id)" @keydown.enter="toggleFriend(friend.id)" class="flex w-full cursor-pointer items-center justify-between rounded-lg border-2 px-4 py-3 text-left font-medium transition-colors" :class="friendSelectedIds.includes(friend.id) ? 'border-blue-600 bg-blue-50 text-blue-800' : 'border-gray-200 text-gray-700'">
+            <span>{{ friend.name }}</span><span class="flex items-center gap-3"><span>{{ friendSelectedIds.includes(friend.id) ? '✓' : '' }}</span><button type="button" class="rounded p-1 text-gray-500 hover:bg-white hover:text-primary-600" title="Chỉnh sửa bạn" @click.stop="openEditFriend(friend)"><svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m16.86 3.49 3.65 3.65M4 20l3.6-.8L19.7 7.1a2.58 2.58 0 0 0-3.65-3.65L3.95 15.55 4 20Z"/></svg></button></span>
+          </div>
         </div>
         <p v-else class="mt-5 rounded-lg bg-gray-50 p-4 text-sm text-gray-600">Bạn chưa có cầu thủ bạn bè nào.</p>
         <button v-if="friends.length < 2" type="button" class="mt-4 w-full rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 font-semibold text-blue-700 hover:bg-blue-100" @click="showCreateFriendModal = true">+ Tạo bạn mới</button>
@@ -1500,10 +1501,10 @@
   </div>
 
   <div v-if="showCreateFriendModal" class="fixed inset-0 z-[80] flex items-center justify-center bg-black/50 p-4" @click.self="showCreateFriendModal = false">
-    <form class="max-h-[90vh] w-full max-w-md overflow-y-auto rounded-lg bg-white p-6 shadow-xl" @submit.prevent="createFriend">
-      <h3 class="text-lg font-semibold">Thêm cầu thủ</h3><p class="mt-1 text-sm text-gray-600">Cầu thủ này sẽ là bạn của bạn và dùng tiền của bạn.</p>
+    <form class="max-h-[90vh] w-full max-w-md overflow-y-auto rounded-lg bg-white p-6 shadow-xl" @submit.prevent="saveFriend">
+      <h3 class="text-lg font-semibold">{{ editingFriendId ? 'Chỉnh sửa cầu thủ' : 'Thêm cầu thủ' }}</h3><p class="mt-1 text-sm text-gray-600">Cầu thủ này sẽ là bạn của bạn và dùng tiền của bạn.</p>
       <div class="mt-4 space-y-3"><input v-model="friendForm.name" required class="form-input" placeholder="Tên cầu thủ"><select v-model="friendForm.position" required class="form-input"><option value="">Chọn vị trí</option><option value="GK">GK</option><option value="DEF">DEF</option><option value="MID">MID</option><option value="FWD">FWD</option></select><input v-model.number="friendForm.yearOfBirth" required min="1950" :max="new Date().getFullYear()" type="number" class="form-input" placeholder="Năm sinh"><select v-model.number="friendForm.tier" required class="form-input"><option :value="0">Chọn Tier</option><option v-for="tier in 6" :key="tier" :value="tier">Tier {{ tier }}</option></select></div>
-      <div class="mt-6 flex justify-end gap-3"><button type="button" class="btn-secondary" @click="showCreateFriendModal = false">Hủy</button><button class="btn-primary" :disabled="friendCreateSaving">{{ friendCreateSaving ? 'Đang tạo...' : 'Tạo bạn' }}</button></div>
+      <div class="mt-6 flex justify-end gap-3"><button type="button" class="btn-secondary" @click="closeFriendForm">Hủy</button><button class="btn-primary" :disabled="friendCreateSaving">{{ friendCreateSaving ? 'Đang lưu...' : (editingFriendId ? 'Lưu thay đổi' : 'Tạo bạn') }}</button></div>
     </form>
   </div>
 </template>
@@ -1544,6 +1545,7 @@ const showCreateFriendModal = ref(false)
 const friendsLoading = ref(false)
 const friendRegistrationSaving = ref(false)
 const friendCreateSaving = ref(false)
+const editingFriendId = ref<string | null>(null)
 const friendTournamentId = ref<string | null>(null)
 const friends = ref<any[]>([])
 const friendSelectedIds = ref<string[]>([])
@@ -2017,6 +2019,41 @@ const toggleFriend = (id: string): void => {
     : [...friendSelectedIds.value, id]
 }
 
+const openEditFriend = (friend: any): void => {
+  editingFriendId.value = friend.id
+  friendForm.value = {
+    name: friend.name,
+    position: friend.position,
+    yearOfBirth: friend.yearOfBirth,
+    tier: friend.tier,
+  }
+  showCreateFriendModal.value = true
+}
+
+const closeFriendForm = (): void => {
+  showCreateFriendModal.value = false
+  editingFriendId.value = null
+  friendForm.value = { name: '', position: '', yearOfBirth: 1990, tier: 0 }
+}
+
+const saveFriend = async (): Promise<void> => {
+  if (editingFriendId.value) {
+    if (!friendForm.value.name || !friendForm.value.position || !friendForm.value.yearOfBirth || !friendForm.value.tier) return
+    friendCreateSaving.value = true
+    try {
+      const response = await apiClient.updateFriend(editingFriendId.value, friendForm.value)
+      if (!response.success || !response.data) throw new Error(response.error || 'Không thể cập nhật bạn')
+      friends.value = friends.value.map(friend => friend.id === editingFriendId.value ? response.data : friend)
+      closeFriendForm()
+      toast.success('Đã cập nhật bạn')
+    } catch (error: any) {
+      toast.error(error.message || 'Không thể cập nhật bạn')
+    } finally { friendCreateSaving.value = false }
+    return
+  }
+  await createFriend()
+}
+
 const createFriend = async (): Promise<void> => {
   if (!friendForm.value.name || !friendForm.value.position || !friendForm.value.yearOfBirth || !friendForm.value.tier) return
   friendCreateSaving.value = true
@@ -2026,8 +2063,7 @@ const createFriend = async (): Promise<void> => {
     const createdFriend = response.data as any
     friends.value = [...friends.value, createdFriend]
     friendSelectedIds.value = [createdFriend.id]
-    friendForm.value = { name: '', position: '', yearOfBirth: 1990, tier: 0 }
-    showCreateFriendModal.value = false
+    closeFriendForm()
     toast.success('Đã tạo bạn mới')
   } catch (error: any) {
     toast.error(error.message || 'Không thể tạo bạn mới')

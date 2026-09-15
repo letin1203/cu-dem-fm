@@ -47,12 +47,28 @@
           <button class="btn-secondary" :disabled="pagination.page >= pagination.pages || loading" @click="emit('page-change', pagination.page + 1)">Sau</button>
         </div>
       </div>
-      <div class="flex justify-end border-t p-4"><button class="btn-primary" @click="emit('close')">Đóng</button></div>
+      <div class="flex flex-wrap justify-end gap-3 border-t p-4">
+        <button v-if="canDeduct" type="button" class="rounded-lg bg-red-600 px-4 py-2 font-medium text-white hover:bg-red-700" @click="openDeductModal">Trừ tiền</button>
+        <button class="btn-primary" @click="emit('close')">Đóng</button>
+      </div>
+
+      <div v-if="showDeductModal" class="absolute inset-0 z-10 flex items-center justify-center bg-black/40 p-4" @click.self="showDeductModal = false">
+        <div class="w-full max-w-md rounded-lg bg-white p-5 shadow-xl">
+          <h3 class="text-lg font-semibold text-gray-900">Trừ tiền cầu thủ</h3>
+          <p class="mt-1 text-sm text-gray-500">{{ player?.name }}</p>
+          <label class="form-label mt-4">Số tiền trừ</label>
+          <div class="flex items-center gap-2"><button type="button" class="btn-secondary h-10 w-10 px-0 text-lg" :disabled="deductAmount <= 50000 || deducting" @click="deductAmount -= 50000">−</button><input v-model.number="deductAmount" type="number" min="50000" step="50000" class="form-input text-center" :disabled="deducting"><button type="button" class="btn-secondary h-10 w-10 px-0 text-lg" :disabled="deducting" @click="deductAmount += 50000">+</button></div>
+          <label class="form-label mt-4">Lý do</label>
+          <textarea v-model="deductReason" rows="3" class="form-input" placeholder="Nhập lý do trừ tiền..." :disabled="deducting"></textarea>
+          <div class="mt-5 flex justify-end gap-3"><button type="button" class="btn-secondary" :disabled="deducting" @click="showDeductModal = false">Hủy</button><button type="button" class="rounded-lg bg-red-600 px-4 py-2 font-medium text-white hover:bg-red-700 disabled:opacity-50" :disabled="deducting || !isValidDeduction" @click="submitDeduction">{{ deducting ? 'Đang lưu...' : 'Xác nhận' }}</button></div>
+        </div>
+      </div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
+import { computed, ref } from 'vue'
 import type { Player, PlayerMoneyHistory } from '../types'
 
 defineProps<{
@@ -62,9 +78,25 @@ defineProps<{
   pagination: { page: number; pages: number; total: number }
   loading: boolean
   error: string | null
+  canDeduct?: boolean
+  deducting?: boolean
 }>()
 
-const emit = defineEmits<{ close: []; 'page-change': [page: number] }>()
+const emit = defineEmits<{ close: []; 'page-change': [page: number]; deduct: [payload: { amount: number; reason: string }] }>()
+const showDeductModal = ref(false)
+const deductAmount = ref(50000)
+const deductReason = ref('')
+const isValidDeduction = computed(() => Number.isInteger(deductAmount.value) && deductAmount.value >= 50000 && Boolean(deductReason.value.trim()))
+const openDeductModal = () => {
+  deductAmount.value = 50000
+  deductReason.value = ''
+  showDeductModal.value = true
+}
+const submitDeduction = () => {
+  if (!isValidDeduction.value) return
+  emit('deduct', { amount: deductAmount.value, reason: deductReason.value.trim() })
+  showDeductModal.value = false
+}
 const formatMoney = (value: number) => `${value.toLocaleString('vi-VN')} ₫`
 const formatDate = (value: string | Date) => new Date(value).toLocaleString('vi-VN')
 </script>

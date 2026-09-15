@@ -180,6 +180,45 @@ router.get('/:id/money-history', async (req: AuthenticatedRequest, res: Response
   }
 });
 
+// Staff can record a manual deduction. It is stored as money history for auditing.
+router.post('/:id/deduct-money', authenticate, authorize(['ADMIN', 'MOD']), async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  try {
+    const amount = Number(req.body?.amount);
+    const reason = String(req.body?.reason || '').trim();
+    if (!Number.isInteger(amount) || amount <= 0) {
+      res.status(400).json({ success: false, error: 'Số tiền trừ không hợp lệ' });
+      return;
+    }
+    if (!reason) {
+      res.status(400).json({ success: false, error: 'Vui lòng nhập lý do trừ tiền' });
+      return;
+    }
+
+    const result = await prisma.$transaction(async (tx) => {
+      const player = await tx.player.findUnique({ where: { id: req.params.id } });
+      if (!player) throw new Error('Không tìm thấy cầu thủ');
+
+      const balanceAfter = player.money - amount;
+      const updatedPlayer = await tx.player.update({ where: { id: player.id }, data: { money: balanceAfter } });
+      const history = await tx.playerMoneyHistory.create({
+        data: {
+          playerId: player.id,
+          amount: -amount,
+          balanceBefore: player.money,
+          balanceAfter,
+          description: reason,
+        },
+      });
+      return { player: updatedPlayer, history };
+    });
+
+    res.json({ success: true, data: result, message: 'Đã trừ tiền cầu thủ' });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Không thể trừ tiền cầu thủ';
+    res.status(message === 'Không tìm thấy cầu thủ' ? 404 : 500).json({ success: false, error: message });
+  }
+});
+
 // Get the tournaments a player attended, newest first.
 router.get('/:id/tournament-history', async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   try {

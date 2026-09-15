@@ -255,6 +255,10 @@ class ApiClient {
     return this.get(`/players/${id}/money-history`, { params });
   }
 
+  async deductPlayerMoney(id: string, amount: number, reason: string) {
+    return this.post(`/players/${id}/deduct-money`, { amount, reason });
+  }
+
   async getPlayerTournamentHistory(id: string) {
     return this.get(`/players/${id}/tournament-history`);
   }

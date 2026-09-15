@@ -289,8 +289,11 @@
       :pagination="moneyHistoryPagination"
       :loading="moneyHistoryLoading"
       :error="moneyHistoryError"
+      :can-deduct="authStore.hasAnyRole(['admin', 'mod'])"
+      :deducting="deductingMoney"
       @close="showMoneyHistory = false"
       @page-change="loadMoneyHistory"
+      @deduct="deductPlayerMoney"
     />
 
     <ConfirmationModal
@@ -446,6 +449,7 @@ const moneyHistory = ref<PlayerMoneyHistory[]>([])
 const moneyHistoryLoading = ref(false)
 const moneyHistoryError = ref<string | null>(null)
 const moneyHistoryPagination = ref({ page: 1, pages: 0, total: 0 })
+const deductingMoney = ref(false)
 const showAdminTopUpModal = ref(false)
 const submittingAdminTopUp = ref(false)
 const selectedTopUpAmount = ref(100000)
@@ -693,6 +697,24 @@ async function loadMoneyHistory(page: number) {
     moneyHistoryError.value = error instanceof Error ? error.message : 'Không thể tải lịch sử biến động tiền'
   } finally {
     moneyHistoryLoading.value = false
+  }
+}
+
+async function deductPlayerMoney(payload: { amount: number; reason: string }) {
+  if (!selectedMoneyPlayer.value) return
+  deductingMoney.value = true
+  try {
+    const response = await apiClient.deductPlayerMoney(selectedMoneyPlayer.value.id, payload.amount, payload.reason)
+    if (!response.success || !response.data) throw new Error(response.error || 'Không thể trừ tiền cầu thủ')
+    const data = response.data as { player: Player }
+    selectedMoneyPlayer.value.money = data.player.money
+    await playersStore.fetchPlayers()
+    await loadMoneyHistory(1)
+    toast.success('Đã trừ tiền cầu thủ')
+  } catch (error) {
+    toast.error(error instanceof Error ? error.message : 'Không thể trừ tiền cầu thủ')
+  } finally {
+    deductingMoney.value = false
   }
 }
 </script>

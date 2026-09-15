@@ -498,12 +498,12 @@
                   </div>
                   <!-- Badge and Date/Time moved below title -->
                   <div class="flex flex-wrap items-center gap-2 mt-2 text-sm text-gray-600">
+                    <span class="inline-flex items-center rounded-full bg-primary-100 px-2 py-1 text-xs font-semibold text-primary-800">{{ formatTime(tournament.startDate) }}</span>
                     <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium"
                           :class="getStatusBadge(tournament.status)">
                       {{ tournament.status }}
                     </span>
-                    <span>{{ formatDate(tournament.startDate) }}</span>
-                    <span>{{ formatTime(tournament.startDate) }}</span>
+                    <span v-if="tournament.selfFunded" class="inline-flex items-center rounded-full bg-violet-100 px-3 py-1 text-xs font-semibold uppercase text-violet-700">🤝 Tự túc</span>
                     <span v-if="tournament.winner" class="text-yellow-600 font-medium">
                       🏆 {{ tournament.winner.name }}
                     </span>
@@ -527,7 +527,7 @@
                         📊 Tổng: {{ calculateTournamentNet(tournament.id).toLocaleString('vi-VN') }} ₫
                       </span>
                       <span v-if="getAttendanceStats(tournament.id)?.attendingCount" class="text-purple-600 font-medium">
-                        👥 Est mỗi cháu: {{ calculateCostPerPlayer(tournament.id).toLocaleString('vi-VN') }} ₫
+                        👥 Chi phí mỗi cháu: {{ calculateCostPerPlayer(tournament.id).toLocaleString('vi-VN') }} ₫
                       </span>
                     </div>
                   </div>
@@ -651,13 +651,13 @@
               </div>
               <div class="flex justify-end gap-3 pt-2 border-t border-gray-200">
                 <button
-                  v-if="authStore.hasRole('admin') && getTournamentTeams(tournament).length > 0"
+                  v-if="authStore.hasRole('admin') && !tournament.selfFunded && getTournamentTeams(tournament).length > 0"
                   @click="openAdditionalCostModal(tournament)"
                   class="btn-secondary"
                 >
                   Xem chi phí phát sinh
                 </button>
-                <button @click="openTournamentMoneyHistory(tournament)" class="btn-secondary">Xem biến động tiền</button>
+                <button v-if="!tournament.selfFunded" @click="openTournamentMoneyHistory(tournament)" class="btn-secondary">Xem biến động tiền</button>
               </div>
             </div>
           </div>

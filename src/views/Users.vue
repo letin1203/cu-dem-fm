@@ -104,10 +104,6 @@
                 </span>
               </div>
 
-              <div class="flex items-center justify-between gap-3">
-                <span class="text-sm text-gray-500">Email:</span>
-                <span class="truncate text-right text-sm text-gray-900" :title="user.email">{{ user.email || 'Chưa có email' }}</span>
-              </div>
               
               <!-- Linked Player -->
               <div class="flex items-center justify-between">
@@ -227,7 +223,7 @@
             >
           </div>
 
-          <div>
+          <div v-if="!editingUser">
             <label class="form-label">Email</label>
             <input
               v-model="formData.email"
@@ -348,11 +344,16 @@ const filteredUsers = computed(() => {
   const usernameQuery = normalizeSearchText(usernameFilter.value)
   const playerQuery = normalizeSearchText(playerNameFilter.value)
 
+  const rolePriority: Record<string, number> = { admin: 0, mod: 1, user: 2 }
   return users.value.filter(user => {
+    if (String(user.role).toLowerCase() === 'guest') return false
     const usernameMatches = !usernameQuery || normalizeSearchText(user.username).includes(usernameQuery)
     const playerName = normalizeSearchText(getLinkedPlayerName(user))
     const playerMatches = !playerQuery || playerName.includes(playerQuery)
     return usernameMatches && playerMatches
+  }).sort((first, second) => {
+    const roleDifference = (rolePriority[String(first.role).toLowerCase()] ?? 99) - (rolePriority[String(second.role).toLowerCase()] ?? 99)
+    return roleDifference || first.username.localeCompare(second.username, 'vi')
   })
 })
 

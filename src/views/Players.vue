@@ -21,7 +21,7 @@
           v-model="playerNameFilter"
           type="text"
           class="form-input"
-          placeholder="Nhập tên cầu thủ..."
+          placeholder="Nhập tên cầu thủ (có hoặc không dấu)..."
         >
       </div>
       
@@ -480,6 +480,13 @@ function displayPosition(position: string) {
   return positionLabels[position] || position
 }
 
+const normalizeSearchText = (value: string) => value
+  .toLocaleLowerCase('vi')
+  .normalize('NFD')
+  .replace(/[\u0300-\u036f]/g, '')
+  .replace(/đ/g, 'd')
+  .trim()
+
 // Computed properties for pagination and filtering
 const filteredPlayers = computed(() => {
   // Friend players are managed from the dedicated friend list, not the main roster.
@@ -487,8 +494,9 @@ const filteredPlayers = computed(() => {
   
   // Apply name filter if provided
   if (playerNameFilter.value) {
+    const query = normalizeSearchText(playerNameFilter.value)
     result = result.filter(player => 
-      player.name.toLowerCase().includes(playerNameFilter.value.toLowerCase())
+      normalizeSearchText(player.name).includes(query)
     )
   }
   

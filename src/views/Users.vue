@@ -153,13 +153,6 @@
               >
                 Chỉnh sửa
               </button>
-              <button
-                v-if="user.id !== authStore.currentUser?.id"
-                @click="deleteUser(user.id)"
-                class="flex-1 bg-red-50 text-red-600 hover:bg-red-100 px-3 py-2 rounded-md text-sm font-medium transition-colors"
-              >
-                Xóa
-              </button>
             </div>
           </div>
         </div>
@@ -312,7 +305,6 @@
       </div>
     </div>
   </div>
-  <ConfirmationModal :is-open="Boolean(deleteUserId)" title="Xóa người dùng" message="Bạn có chắc muốn xóa người dùng này?" confirm-label="Xóa người dùng" @cancel="deleteUserId = null" @confirm="confirmDeleteUser" />
 </template>
 
 <script setup lang="ts">
@@ -320,7 +312,6 @@ import { ref, computed, onMounted, nextTick } from 'vue'
 import { useAuthStore } from '../stores/auth'
 import { usePlayersStore } from '../stores/players'
 import { useToast } from 'vue-toastification'
-import ConfirmationModal from '../components/ConfirmationModal.vue'
 import type { User, UserRole } from '../types'
 
 const authStore = useAuthStore()
@@ -340,7 +331,6 @@ const linkingUser = ref<User | null>(null)
 const selectedLinkedPlayerId = ref('')
 const linkablePlayerPage = ref(1)
 const playerLinkSaving = ref(false)
-const deleteUserId = ref<string | null>(null)
 const PLAYERS_PER_LINK_PAGE = 5
 
 const normalizeSearchText = (value: string) => value
@@ -399,7 +389,9 @@ const formatDate = (date: string | Date | null | undefined): string => {
   if (!date) return 'Chưa từng đăng nhập'
   try {
     const dateObj = typeof date === 'string' ? new Date(date) : date
-    return dateObj.toLocaleDateString()
+    return dateObj.toLocaleString('vi-VN', {
+      day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit'
+    })
   } catch {
     return 'Ngày không hợp lệ'
   }
@@ -603,16 +595,6 @@ function cancelForm() {
     playerId: '',
     isActive: true
   }
-}
-
-function deleteUser(id: string) {
-  deleteUserId.value = id
-}
-
-async function confirmDeleteUser() {
-  if (!deleteUserId.value) return
-  await authStore.deleteUser(deleteUserId.value)
-  deleteUserId.value = null
 }
 
 async function createBulkUserPlayer() {

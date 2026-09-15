@@ -29,6 +29,8 @@ app.use(Toast, {
 
 // Initialize auth state before mounting
 const authStore = useAuthStore()
-authStore.initializeAuth().then(() => {
+authStore.initializeAuth().finally(() => {
+  // The static loader in index.html remains visible while Render wakes up.
+  // Mounting Vue replaces it with the application once auth initialization ends.
   app.mount('#app')
 })

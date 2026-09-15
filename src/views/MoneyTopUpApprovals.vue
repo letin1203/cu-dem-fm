@@ -1,12 +1,13 @@
 <template>
   <div class="space-y-6">
     <div class="flex items-center justify-between gap-3">
-      <div><h1 class="text-2xl sm:text-3xl font-bold text-gray-900">Duyệt</h1><p class="text-sm text-gray-500 mt-1">{{ activeTab === 'top-up' ? 'Các yêu cầu nạp tiền đang chờ duyệt.' : 'Các yêu cầu đổi mật khẩu đang chờ xử lý.' }}</p></div>
+      <div><h1 class="text-2xl sm:text-3xl font-bold text-gray-900">Duyệt</h1><p class="text-sm text-gray-500 mt-1">{{ activeTab === 'top-up' ? 'Các yêu cầu nạp tiền đang chờ duyệt.' : activeTab === 'password' ? 'Các yêu cầu đổi mật khẩu đang chờ xử lý.' : 'Danh sách cầu thủ đã chuyển sang inactive.' }}</p></div>
       <button @click="loadActiveTab" :disabled="loading" class="btn-secondary">{{ loading ? 'Đang tải...' : 'Tải lại' }}</button>
     </div>
     <div class="flex border-b border-gray-200">
       <button class="border-b-2 px-4 py-2 text-sm font-medium" :class="activeTab === 'top-up' ? 'border-primary-600 text-primary-600' : 'border-transparent text-gray-500'" @click="activeTab = 'top-up'; loadPending()">Nạp tiền</button>
       <button v-if="authStore.hasRole('admin')" class="border-b-2 px-4 py-2 text-sm font-medium" :class="activeTab === 'password' ? 'border-primary-600 text-primary-600' : 'border-transparent text-gray-500'" @click="activeTab = 'password'; loadPasswordRequests()">Quên mật khẩu</button>
+      <button v-if="authStore.hasAnyRole(['admin', 'mod'])" class="border-b-2 px-4 py-2 text-sm font-medium" :class="activeTab === 'inactive' ? 'border-primary-600 text-primary-600' : 'border-transparent text-gray-500'" @click="activeTab = 'inactive'; loadInactivePlayers()">Cầu thủ inactive</button>
     </div>
     <div class="card p-0 overflow-hidden">
       <div v-if="loading" class="flex justify-center py-10"><div class="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div></div>
@@ -15,6 +16,11 @@
       <div v-else-if="activeTab === 'password'" class="p-6 text-center">
         <p class="text-gray-600">Tạo link đặt lại mật khẩu cho người dùng trong hệ thống.</p>
         <button type="button" class="btn-primary mt-4" @click="openPasswordLinkModal">Lấy link quên mật khẩu</button>
+      </div>
+      <div v-else-if="activeTab === 'inactive'" class="p-6">
+        <div v-if="!inactivePlayers.length" class="py-8 text-center text-gray-500">Không có cầu thủ inactive.</div>
+        <div v-else class="space-y-3"><div v-for="player in inactivePlayers" :key="player.id" class="flex flex-col gap-3 rounded-lg border border-gray-200 p-4 sm:flex-row sm:items-center sm:justify-between"><div><p class="font-semibold text-gray-900">{{ player.name }}</p><p class="mt-1 text-sm text-gray-500">{{ player.position }} · Tier {{ player.tier }} · {{ player.yearOfBirth }}</p></div><button type="button" class="btn-primary" :disabled="activatingPlayerId === player.id" @click="activatePlayer(player.id)">{{ activatingPlayerId === player.id ? 'Đang Active...' : 'Active' }}</button></div></div>
+        <div v-if="inactivePagination.pages > 1" class="mt-6 flex items-center justify-center gap-3"><button type="button" class="btn-secondary" :disabled="inactivePagination.page <= 1" @click="loadInactivePlayers(inactivePagination.page - 1)">Trước</button><span class="text-sm text-gray-600">Trang {{ inactivePagination.page }} / {{ inactivePagination.pages }}</span><button type="button" class="btn-secondary" :disabled="inactivePagination.page >= inactivePagination.pages" @click="loadInactivePlayers(inactivePagination.page + 1)">Sau</button></div>
       </div>
       <div v-else class="divide-y divide-gray-200">
         <template v-if="activeTab === 'top-up'"><div v-for="request in requests" :key="request.id" class="p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
@@ -44,7 +50,7 @@ import { useAuthStore } from '../stores/auth'
 interface TopUpRequest { id: string; amount: number; requestedAt: string | Date; player: { name: string; position: string; money: number } }
 const toast = useToast()
 const authStore = useAuthStore()
-const activeTab = ref<'top-up' | 'password'>('top-up')
+const activeTab = ref<'top-up' | 'password' | 'inactive'>('top-up')
 const requests = ref<TopUpRequest[]>([])
 const loading = ref(false)
 const error = ref<string | null>(null)
@@ -53,6 +59,9 @@ const passwordRequests = ref<{ id: string; username: string; email: string; pass
 const linkLoadingId = ref<string | null>(null)
 const showPasswordLinkModal = ref(false)
 const passwordRequestNameFilter = ref('')
+const inactivePlayers = ref<any[]>([])
+const inactivePagination = ref({ page: 1, pages: 0, total: 0 })
+const activatingPlayerId = ref<string | null>(null)
 const formatDate = (date: string | Date) => new Date(date).toLocaleString('vi-VN')
 
 const loadPending = async () => {
@@ -80,7 +89,19 @@ const loadPasswordRequests = async () => {
   catch (err) { error.value = err instanceof Error ? err.message : 'Không thể tải yêu cầu' }
   finally { loading.value = false }
 }
-const loadActiveTab = () => activeTab.value === 'top-up' ? loadPending() : loadPasswordRequests()
+const loadInactivePlayers = async (page = 1) => {
+  loading.value = true; error.value = null
+  try { const response = await apiClient.get<{ players: any[]; pagination: { page: number; pages: number; total: number } }>('/players/inactive', { params: { page, limit: 10 } }); if (!response.success || !response.data) throw new Error(response.error || 'Không thể tải cầu thủ inactive'); inactivePlayers.value = response.data.players || []; inactivePagination.value = response.data.pagination || { page: 1, pages: 0, total: 0 } }
+  catch (err) { error.value = err instanceof Error ? err.message : 'Không thể tải cầu thủ inactive' }
+  finally { loading.value = false }
+}
+const activatePlayer = async (id: string) => {
+  activatingPlayerId.value = id
+  try { const response = await apiClient.put(`/players/inactive/${id}/activate`); if (!response.success) throw new Error(response.error || 'Không thể Active cầu thủ'); toast.success('Đã Active cầu thủ'); await loadInactivePlayers(inactivePlayers.value.length === 1 && inactivePagination.value.page > 1 ? inactivePagination.value.page - 1 : inactivePagination.value.page) }
+  catch (err) { toast.error(err instanceof Error ? err.message : 'Không thể Active cầu thủ') }
+  finally { activatingPlayerId.value = null }
+}
+const loadActiveTab = () => activeTab.value === 'top-up' ? loadPending() : activeTab.value === 'password' ? loadPasswordRequests() : loadInactivePlayers()
 const filteredPasswordRequests = computed(() => {
   const query = passwordRequestNameFilter.value.trim().toLocaleLowerCase('vi')
   if (!query) return passwordRequests.value
@@ -93,7 +114,7 @@ const openPasswordLinkModal = async () => {
 }
 const copyPasswordResetLink = async (userId: string) => {
   linkLoadingId.value = userId
-  try { const response = await apiClient.getPasswordResetLink(userId); const link = response.data?.link; if (!response.success || !link) throw new Error(response.error || 'Không thể tạo link'); await navigator.clipboard.writeText(link); passwordRequests.value = passwordRequests.value.map(user => user.id === userId ? { ...user, passwordResetLinkCreatedAt: response.data?.passwordResetLinkCreatedAt || new Date() } : user); toast.success('Đã copy link đặt lại mật khẩu') }
+  try { const response = await apiClient.getPasswordResetLink(userId); const link = response.data?.link; if (!response.success || !link) throw new Error(response.error || 'Không thể tạo link'); await navigator.clipboard.writeText(`${link}\n\nReset password xong login điểm danh nha`); passwordRequests.value = passwordRequests.value.map(user => user.id === userId ? { ...user, passwordResetLinkCreatedAt: response.data?.passwordResetLinkCreatedAt || new Date() } : user); toast.success('Đã copy link đặt lại mật khẩu') }
   catch (err) { toast.error(err instanceof Error ? err.message : 'Không thể copy link') }
   finally { linkLoadingId.value = null }
 }

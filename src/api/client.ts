@@ -295,6 +295,14 @@ class ApiClient {
     return this.post('/players/friends', data);
   }
 
+  async getInactivePlayers(page = 1, limit = 10) {
+    return this.get<{ players: any[]; pagination: { page: number; limit: number; total: number; pages: number } }>('/players/inactive', { params: { page, limit } });
+  }
+
+  async activatePlayer(id: string) {
+    return this.put(`/players/inactive/${id}/activate`);
+  }
+
   async updateFriend(id: string, data: any) {
     return this.put(`/players/friends/${id}`, data);
   }

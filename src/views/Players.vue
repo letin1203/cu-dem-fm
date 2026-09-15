@@ -293,6 +293,16 @@
       @page-change="loadMoneyHistory"
     />
 
+    <ConfirmationModal
+      :is-open="showInactiveConfirm"
+      title="Chuyển cầu thủ sang Inactive"
+      message="Cầu thủ sẽ không còn hiển thị trong danh sách và không thể được admin/mod điểm danh. Dữ liệu lịch sử vẫn được giữ lại."
+      confirm-label="Chuyển Inactive"
+      :loading="playersStore.loading"
+      @cancel="showInactiveConfirm = false; inactivePlayerId = null"
+      @confirm="confirmInactivePlayer"
+    />
+
     <!-- Add/Edit Player Modal -->
     <div v-if="showAddForm || editingPlayer" class="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center z-50">
       <div class="bg-white rounded-lg p-6 w-full max-w-md">
@@ -414,6 +424,7 @@ import { useAuthStore } from '../stores/auth'
 import { apiClient } from '../api/client'
 import { useToast } from 'vue-toastification'
 import PlayerMoneyDetailModal from '../components/PlayerMoneyDetailModal.vue'
+import ConfirmationModal from '../components/ConfirmationModal.vue'
 import type { Player, PlayerMoneyHistory } from '../types'
 
 const playersStore = usePlayersStore()
@@ -443,6 +454,8 @@ const topUpAmounts = [50000, 100000, 200000, 500000]
 const showFriendsModal = ref(false)
 const friendsListLoading = ref(false)
 const friendGroups = ref<any[]>([])
+const showInactiveConfirm = ref(false)
+const inactivePlayerId = ref<string | null>(null)
 
 const tierOptions = [1, 2, 3, 4, 5, 6]
 const positionOptions = [
@@ -591,14 +604,20 @@ function cancelForm() {
 }
 
 function deletePlayer(id: string) {
-  if (confirm('Bạn có chắc chắn muốn xóa cầu thủ này không?')) {
-    playersStore.deletePlayer(id).then(() => {
-      // If we're on a page beyond the first and have no more players on current page,
-      // we might need to reload to adjust pagination
-      if (playersStore.players.length === 0 && playersStore.currentPage > 1) {
-        playersStore.fetchPlayers()
-      }
-    })
+  inactivePlayerId.value = id
+  showInactiveConfirm.value = true
+}
+
+async function confirmInactivePlayer() {
+  if (!inactivePlayerId.value) return
+  try {
+    await playersStore.deletePlayer(inactivePlayerId.value)
+    if (playersStore.players.length === 0 && playersStore.currentPage > 1) await playersStore.fetchPlayers()
+    toast.success('Đã chuyển cầu thủ sang Inactive')
+    showInactiveConfirm.value = false
+    inactivePlayerId.value = null
+  } catch {
+    toast.error('Không thể chuyển cầu thủ sang Inactive')
   }
 }
 

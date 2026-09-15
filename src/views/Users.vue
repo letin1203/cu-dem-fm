@@ -307,16 +307,20 @@
       </div>
     </div>
   </div>
+  <ConfirmationModal :is-open="Boolean(deleteUserId)" title="Xóa người dùng" message="Bạn có chắc muốn xóa người dùng này?" confirm-label="Xóa người dùng" @cancel="deleteUserId = null" @confirm="confirmDeleteUser" />
 </template>
 
 <script setup lang="ts">
 import { ref, computed, onMounted, nextTick } from 'vue'
 import { useAuthStore } from '../stores/auth'
 import { usePlayersStore } from '../stores/players'
+import { useToast } from 'vue-toastification'
+import ConfirmationModal from '../components/ConfirmationModal.vue'
 import type { User, UserRole } from '../types'
 
 const authStore = useAuthStore()
 const playersStore = usePlayersStore()
+const toast = useToast()
 
 const users = computed(() => authStore.users)
 const players = computed(() => playersStore.players)
@@ -330,6 +334,7 @@ const linkingUser = ref<User | null>(null)
 const selectedLinkedPlayerId = ref('')
 const linkablePlayerPage = ref(1)
 const playerLinkSaving = ref(false)
+const deleteUserId = ref<string | null>(null)
 const PLAYERS_PER_LINK_PAGE = 5
 
 const normalizeSearchText = (value: string) => value
@@ -515,7 +520,7 @@ async function unlinkLinkedPlayer() {
   try {
     const success = await authStore.updateUser(linkingUser.value.id, { playerId: null } as any)
     if (!success) {
-      alert('Không thể hủy liên kết cầu thủ. Vui lòng thử lại.')
+      toast.error('Không thể hủy liên kết cầu thủ. Vui lòng thử lại.')
       return
     }
     playerLinkSaving.value = false
@@ -532,7 +537,7 @@ async function linkSelectedPlayer() {
   try {
     const success = await authStore.updateUser(linkingUser.value.id, { playerId: selectedLinkedPlayerId.value })
     if (!success) {
-      alert('Không thể liên kết cầu thủ. Vui lòng thử lại.')
+      toast.error('Không thể liên kết cầu thủ. Vui lòng thử lại.')
       return
     }
     playerLinkSaving.value = false
@@ -582,9 +587,13 @@ function cancelForm() {
 }
 
 function deleteUser(id: string) {
-  if (confirm('Bạn có chắc muốn xóa người dùng này?')) {
-    authStore.deleteUser(id)
-  }
+  deleteUserId.value = id
+}
+
+async function confirmDeleteUser() {
+  if (!deleteUserId.value) return
+  await authStore.deleteUser(deleteUserId.value)
+  deleteUserId.value = null
 }
 
 async function createBulkUserPlayer() {
@@ -593,7 +602,7 @@ async function createBulkUserPlayer() {
     // Optionally show success message or refresh players list
     playersStore.fetchPlayers().catch(err => console.warn('Failed to refresh players:', err))
   } else {
-    alert('Không thể tạo tài khoản và cầu thủ. Vui lòng thử lại.')
+    toast.error('Không thể tạo tài khoản và cầu thủ. Vui lòng thử lại.')
   }
 }
 </script>

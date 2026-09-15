@@ -471,6 +471,7 @@
       </div>
     </div>
   </div>
+  <ConfirmationModal :is-open="Boolean(deleteMatchId)" title="Xóa trận đấu" message="Bạn có chắc muốn xóa trận đấu này?" confirm-label="Xóa trận đấu" @cancel="deleteMatchId = null" @confirm="confirmDeleteMatch" />
 </template>
 
 <script setup lang="ts">
@@ -481,12 +482,14 @@ import { useTeamsStore } from '../stores/teams'
 import { usePlayersStore } from '../stores/players'
 import { useAuthStore } from '../stores/auth'
 import type { Match, MatchEvent } from '../types'
+import ConfirmationModal from '../components/ConfirmationModal.vue'
 
 const matchesStore = useMatchesStore()
 const tournamentsStore = useTournamentsStore()
 const teamsStore = useTeamsStore()
 const playersStore = usePlayersStore()
 const authStore = useAuthStore()
+const deleteMatchId = ref<string | null>(null)
 
 const matches = computed(() => matchesStore.matches)
 const tournaments = computed(() => tournamentsStore.tournaments)
@@ -817,8 +820,12 @@ function cancelForm() {
 }
 
 function deleteMatch(id: string) {
-  if (confirm('Are you sure you want to delete this match?')) {
-    matchesStore.deleteMatch(id)
-  }
+  deleteMatchId.value = id
+}
+
+async function confirmDeleteMatch() {
+  if (!deleteMatchId.value) return
+  await matchesStore.deleteMatch(deleteMatchId.value)
+  deleteMatchId.value = null
 }
 </script>

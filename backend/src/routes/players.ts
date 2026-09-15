@@ -69,7 +69,7 @@ router.get('/', async (req: AuthenticatedRequest, res: Response): Promise<void> 
     const { page, limit, teamId, position, tier } = playerQuerySchema.parse(req.query);
     const skip = (page - 1) * limit;
 
-    const where: any = {};
+    const where: any = { isActive: true };
     if (teamId) where.teamId = teamId;
     if (position) where.position = { contains: position, mode: 'insensitive' };
     if (tier) where.tier = tier;
@@ -120,6 +120,32 @@ router.get('/', async (req: AuthenticatedRequest, res: Response): Promise<void> 
       success: false,
       error: error instanceof Error ? error.message : 'Invalid query parameters',
     });
+  }
+});
+
+// Inactive players are hidden from the normal list and can be restored by staff.
+router.get('/inactive', authenticate, authorize(['ADMIN', 'MOD']), async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  try {
+    const page = Math.max(1, Number.parseInt(String(req.query.page || '1'), 10) || 1);
+    const limit = Math.min(100, Math.max(1, Number.parseInt(String(req.query.limit || '10'), 10) || 10));
+    const skip = (page - 1) * limit;
+    const where = { isActive: false };
+    const [players, total] = await Promise.all([
+      prisma.player.findMany({ where, skip, take: limit, include: { stats: true, user: { select: { id: true, username: true, role: true } } }, orderBy: { name: 'asc' } }),
+      prisma.player.count({ where }),
+    ]);
+    res.json({ success: true, data: { players, pagination: { page, limit, total, pages: Math.ceil(total / limit) } } });
+  } catch (error) {
+    res.status(500).json({ success: false, error: 'Không thể tải cầu thủ inactive' });
+  }
+});
+
+router.put('/inactive/:id/activate', authenticate, authorize(['ADMIN', 'MOD']), async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  try {
+    const player = await prisma.player.update({ where: { id: req.params.id }, data: { isActive: true }, include: { stats: true } });
+    res.json({ success: true, data: player });
+  } catch (error) {
+    res.status(404).json({ success: false, error: 'Không tìm thấy cầu thủ inactive' });
   }
 });
 
@@ -433,13 +459,11 @@ router.delete('/:id', authenticate, authorize(['ADMIN']), async (req: Authentica
       return;
     }
 
-    await prisma.player.delete({
-      where: { id },
-    });
+    await prisma.player.update({ where: { id }, data: { isActive: false } });
 
     res.json({
       success: true,
-      message: 'Player deleted successfully',
+      message: 'Player marked as inactive successfully',
     });
   } catch (error) {
     res.status(500).json({

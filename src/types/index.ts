@@ -6,6 +6,7 @@ export interface Player {
   yearOfBirth: number
   tier: number // Tier rating from 1-6; Tier 1 is strongest
   money: number // Player's money/value
+  isActive?: boolean
   teamId?: string
   team?: {
     name: string

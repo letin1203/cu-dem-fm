@@ -41,6 +41,7 @@ model Player {
   yearOfBirth Int
   tier        Int      @default(1)
   money       Int      @default(0)
+  isActive    Boolean  @default(true)
   avatar      String?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt

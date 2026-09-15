@@ -1313,6 +1313,7 @@ router.get('/:id/attendance-details', async (req: AuthenticatedRequest, res: Res
     // Missing records are represented as NULL so staff can mark them as ATTEND.
     const [players, attendanceRecords] = await Promise.all([
       prisma.player.findMany({
+        where: { isActive: true },
         select: { id: true, name: true, position: true, positionSecond: true, tier: true, avatar: true },
         orderBy: { name: 'asc' },
       }),

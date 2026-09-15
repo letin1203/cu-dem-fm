@@ -188,20 +188,24 @@ router.post('/forgot-password', async (req: Request, res: Response): Promise<voi
 
 router.get('/password-reset-requests', authenticate, authorize(['ADMIN']), async (_req: AuthenticatedRequest, res: Response): Promise<void> => {
   const users = await prisma.user.findMany({
-    select: { id: true, username: true, email: true, player: { select: { name: true } } },
+    select: { id: true, username: true, email: true, passwordResetLastCreatedAt: true, player: { select: { name: true } } },
     orderBy: { username: 'asc' },
   });
-  res.json({ success: true, data: users });
+  res.json({
+    success: true,
+    data: users.map(({ passwordResetLastCreatedAt, ...user }) => ({ ...user, passwordResetLinkCreatedAt: passwordResetLastCreatedAt })),
+  });
 });
 
 router.post('/password-reset-requests/:id/link', authenticate, authorize(['ADMIN']), async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   const user = await prisma.user.findUnique({ where: { id: req.params.id } });
   if (!user) { res.status(404).json({ success: false, error: 'Người dùng không tồn tại.' }); return; }
   const token = randomBytes(32).toString('hex');
-  await prisma.user.update({ where: { id: user.id }, data: { passwordResetStatus: 'CHANGE_PASSWORD', passwordResetTokenHash: hashResetToken(token), passwordResetExpiresAt: new Date(Date.now() + PASSWORD_RESET_TOKEN_TTL_MS) } });
+  const passwordResetLinkCreatedAt = new Date();
+  await prisma.user.update({ where: { id: user.id }, data: { passwordResetStatus: 'CHANGE_PASSWORD', passwordResetTokenHash: hashResetToken(token), passwordResetExpiresAt: new Date(passwordResetLinkCreatedAt.getTime() + PASSWORD_RESET_TOKEN_TTL_MS), passwordResetLastCreatedAt: passwordResetLinkCreatedAt } });
   const frontendUrl = (process.env.FRONTEND_URL || process.env.CORS_ORIGIN || 'http://localhost:5173').replace(/\/$/, '');
   const link = `${frontendUrl}/reset-password?token=${encodeURIComponent(token)}&username=${encodeURIComponent(user.username)}`;
-  res.json({ success: true, data: { link } });
+  res.json({ success: true, data: { link, passwordResetLinkCreatedAt } });
 });
 
 // Reset a password using the one-time, time-limited token from the email.

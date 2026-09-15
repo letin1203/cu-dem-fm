@@ -197,11 +197,11 @@ class ApiClient {
   }
 
   async getPasswordResetRequests() {
-    return this.get<Array<{ id: string; username: string; email: string; player?: { name: string } | null }>>('/auth/password-reset-requests');
+    return this.get<Array<{ id: string; username: string; email: string; passwordResetLinkCreatedAt: string | Date | null; player?: { name: string } | null }>>('/auth/password-reset-requests');
   }
 
   async getPasswordResetLink(userId: string) {
-    return this.post<{ link: string }>(`/auth/password-reset-requests/${userId}/link`);
+    return this.post<{ link: string; passwordResetLinkCreatedAt: string | Date }>(`/auth/password-reset-requests/${userId}/link`);
   }
 
   async getCurrentUser() {

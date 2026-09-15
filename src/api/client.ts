@@ -279,6 +279,10 @@ class ApiClient {
     return this.put(`/money-top-ups/${id}/approve`);
   }
 
+  async deleteMoneyTopUp(id: string) {
+    return this.delete(`/money-top-ups/${id}`);
+  }
+
   async createPlayer(data: any) {
     return this.post('/players', data);
   }

@@ -25,7 +25,7 @@
       <div v-else class="divide-y divide-gray-200">
         <template v-if="activeTab === 'top-up'"><div v-for="request in requests" :key="request.id" class="p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <div><p class="font-semibold text-gray-900">{{ request.player.name }}</p><p class="text-sm text-gray-500">{{ request.player.position }} · Số dư hiện tại: {{ request.player.money.toLocaleString('vi-VN') }} ₫</p><p class="text-xs text-gray-400 mt-1">Yêu cầu lúc {{ formatDate(request.requestedAt) }}</p></div>
-          <div class="flex items-center gap-4"><span class="font-bold text-green-600">+{{ request.amount.toLocaleString('vi-VN') }} ₫</span><button @click="approve(request.id)" :disabled="approvingId === request.id" class="btn-primary">{{ approvingId === request.id ? 'Đang duyệt...' : 'Duyệt' }}</button></div>
+          <div class="flex items-center gap-3"><span class="font-bold text-green-600">+{{ request.amount.toLocaleString('vi-VN') }} ₫</span><button @click="approve(request.id)" :disabled="approvingId === request.id || deletingId === request.id" class="btn-primary">{{ approvingId === request.id ? 'Đang duyệt...' : 'Duyệt' }}</button><button v-if="authStore.hasAnyRole(['admin', 'mod'])" type="button" @click="deleteRequestId = request.id" :disabled="approvingId === request.id || deletingId === request.id" class="rounded-md bg-red-50 px-3 py-2 text-sm font-medium text-red-600 transition-colors hover:bg-red-100 disabled:opacity-50">Xóa</button></div>
         </div></template>
         <template v-else></template>
       </div>
@@ -38,6 +38,7 @@
         <div class="flex justify-end border-t p-4"><button type="button" class="btn-secondary" @click="showPasswordLinkModal = false">Đóng</button></div>
       </div>
     </div>
+    <ConfirmationModal :is-open="Boolean(deleteRequestId)" title="Xóa yêu cầu nạp tiền" message="Yêu cầu nạp tiền này sẽ bị xóa và không cộng vào số dư cầu thủ." confirm-label="Xóa yêu cầu" :loading="Boolean(deletingId)" @cancel="deleteRequestId = null" @confirm="deleteTopUpRequest" />
   </div>
 </template>
 
@@ -46,6 +47,7 @@ import { computed, ref, onMounted } from 'vue'
 import { useToast } from 'vue-toastification'
 import { apiClient } from '../api/client'
 import { useAuthStore } from '../stores/auth'
+import ConfirmationModal from '../components/ConfirmationModal.vue'
 
 interface TopUpRequest { id: string; amount: number; requestedAt: string | Date; player: { name: string; position: string; money: number } }
 const toast = useToast()
@@ -55,6 +57,8 @@ const requests = ref<TopUpRequest[]>([])
 const loading = ref(false)
 const error = ref<string | null>(null)
 const approvingId = ref<string | null>(null)
+const deleteRequestId = ref<string | null>(null)
+const deletingId = ref<string | null>(null)
 const passwordRequests = ref<{ id: string; username: string; email: string; passwordResetLinkCreatedAt: string | Date | null; player?: { name: string } | null }[]>([])
 const linkLoadingId = ref<string | null>(null)
 const showPasswordLinkModal = ref(false)
@@ -82,6 +86,19 @@ const approve = async (id: string) => {
     toast.success('Đã duyệt và cộng tiền cho cầu thủ')
   } catch (err) { toast.error(err instanceof Error ? err.message : 'Không thể duyệt yêu cầu') }
   finally { approvingId.value = null }
+}
+const deleteTopUpRequest = async () => {
+  const id = deleteRequestId.value
+  if (!id) return
+  deletingId.value = id
+  try {
+    const response = await apiClient.deleteMoneyTopUp(id)
+    if (!response.success) throw new Error(response.error || 'Không thể xóa yêu cầu nạp tiền')
+    requests.value = requests.value.filter(request => request.id !== id)
+    deleteRequestId.value = null
+    toast.success('Đã xóa yêu cầu nạp tiền')
+  } catch (err) { toast.error(err instanceof Error ? err.message : 'Không thể xóa yêu cầu nạp tiền') }
+  finally { deletingId.value = null }
 }
 const loadPasswordRequests = async () => {
   loading.value = true; error.value = null

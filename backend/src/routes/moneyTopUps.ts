@@ -140,4 +140,24 @@ router.put('/:id/approve', authenticate, authorize(['ADMIN', 'MOD']), async (req
   }
 });
 
+// Staff can cancel a pending request made by mistake. No player balance is changed.
+router.delete('/:id', authenticate, authorize(['ADMIN', 'MOD']), async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  try {
+    const pending = await prisma.playerMoneyTopUp.findUnique({ where: { id: req.params.id } });
+    if (!pending) {
+      res.status(404).json({ success: false, error: 'Yêu cầu nạp tiền không tồn tại' });
+      return;
+    }
+    if (pending.status !== 'PENDING') {
+      res.status(400).json({ success: false, error: 'Chỉ có thể xóa yêu cầu đang chờ duyệt' });
+      return;
+    }
+
+    await prisma.playerMoneyTopUp.delete({ where: { id: pending.id } });
+    res.json({ success: true, message: 'Đã xóa yêu cầu nạp tiền' });
+  } catch (error) {
+    res.status(500).json({ success: false, error: 'Không thể xóa yêu cầu nạp tiền' });
+  }
+});
+
 export { router as moneyTopUpRoutes };

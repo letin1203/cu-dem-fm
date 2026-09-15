@@ -35,6 +35,15 @@
           >
         </div>
       </div>
+      <button
+        type="button"
+        class="mt-4 rounded-md border px-4 py-2 text-sm font-medium transition-colors"
+        :class="sortByLatestLogin ? 'border-primary-600 bg-primary-600 text-white' : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-50'"
+        :aria-pressed="sortByLatestLogin"
+        @click="sortByLatestLogin = !sortByLatestLogin"
+      >
+        {{ sortByLatestLogin ? 'Đăng nhập mới nhất trước ✓' : 'Sắp xếp theo đăng nhập mới nhất' }}
+      </button>
     </div>
 
     <!-- Users Cards -->
@@ -326,6 +335,7 @@ const isLoading = ref(false)
 const error = ref<string | null>(null)
 const usernameFilter = ref('')
 const playerNameFilter = ref('')
+const sortByLatestLogin = ref(false)
 const linkingUser = ref<User | null>(null)
 const selectedLinkedPlayerId = ref('')
 const linkablePlayerPage = ref(1)
@@ -353,7 +363,15 @@ const filteredUsers = computed(() => {
     return usernameMatches && playerMatches
   }).sort((first, second) => {
     const roleDifference = (rolePriority[String(first.role).toLowerCase()] ?? 99) - (rolePriority[String(second.role).toLowerCase()] ?? 99)
-    return roleDifference || first.username.localeCompare(second.username, 'vi')
+    if (roleDifference) return roleDifference
+
+    if (sortByLatestLogin.value) {
+      const firstLogin = first.lastLogin ? new Date(first.lastLogin).getTime() : 0
+      const secondLogin = second.lastLogin ? new Date(second.lastLogin).getTime() : 0
+      if (firstLogin !== secondLogin) return secondLogin - firstLogin
+    }
+
+    return first.username.localeCompare(second.username, 'vi')
   })
 })
 

@@ -152,7 +152,7 @@
                   <span v-if="getAttendanceStats(ongoingTournament.id)?.attendingCount" class="text-purple-600 font-medium">
                     👥 Est mỗi cháu:
                     <template v-if="shouldShowMinimumCostRange(ongoingTournament)">
-                      {{ getCostEstimateInfo(ongoingTournament.id).minimum }}+ cháu: {{ calculateCostPerPlayer(ongoingTournament.id).toLocaleString('vi-VN') }} ₫ · Max {{ ongoingTournament.maxAttendance }} cháu: {{ calculateCostPerPlayerForCount(ongoingTournament.id, ongoingTournament.maxAttendance || 0).toLocaleString('vi-VN') }} ₫
+                      {{ getCostEstimateInfo(ongoingTournament.id).minimum }} cháu: {{ calculateCostPerPlayer(ongoingTournament.id).toLocaleString('vi-VN') }} ₫ · Max {{ ongoingTournament.maxAttendance }} cháu: {{ calculateCostPerPlayerForCount(ongoingTournament.id, ongoingTournament.maxAttendance || 0).toLocaleString('vi-VN') }} ₫
                     </template>
                     <template v-else>{{ calculateCostPerPlayer(ongoingTournament.id).toLocaleString('vi-VN') }} ₫</template>
                   </span>

@@ -17,8 +17,9 @@
           <div v-for="item in history" :key="item.id" class="rounded-lg border border-gray-200 p-4">
             <div class="flex flex-wrap items-start justify-between gap-2">
               <div>
-                <p class="font-medium text-gray-900">{{ item.description }}</p>
+                <p class="font-medium text-gray-900">{{ getDescription(item) }}</p>
                 <p v-if="item.tournament" class="mt-1 text-sm text-primary-700">{{ item.tournament.name }}</p>
+                <p v-if="getApprovedByUsername(item)" class="mt-1 text-sm text-gray-600">Duyệt bởi: <strong class="text-gray-800">{{ getApprovedByUsername(item) }}</strong></p>
                 <p class="mt-1 text-xs text-gray-500">{{ formatDate(item.createdAt) }}</p>
               </div>
               <span class="font-semibold" :class="item.amount >= 0 ? 'text-green-600' : 'text-red-600'">
@@ -99,4 +100,8 @@ const submitDeduction = () => {
 }
 const formatMoney = (value: number) => `${value.toLocaleString('vi-VN')} ₫`
 const formatDate = (value: string | Date) => new Date(value).toLocaleString('vi-VN')
+const getApprovedByUsername = (item: PlayerMoneyHistory) =>
+  item.approvedByUsername || item.description.match(/^Nạp tiền đã được duyệt bởi (.+)$/)?.[1] || null
+const getDescription = (item: PlayerMoneyHistory) =>
+  item.approvedByUsername ? item.description : item.description.replace(/^Nạp tiền đã được duyệt bởi .+$/, 'Nạp tiền đã được duyệt')
 </script>

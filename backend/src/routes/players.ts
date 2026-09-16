@@ -168,10 +168,19 @@ router.get('/:id/money-history', async (req: AuthenticatedRequest, res: Response
       prisma.playerMoneyHistory.count({ where: { playerId: id } }),
     ]);
 
+    const historyWithApprover = history.map((entry) => {
+      const details = entry.details;
+      const approvedByUsername = details && !Array.isArray(details) && typeof details === 'object'
+        && typeof (details as Record<string, unknown>).approvedByUsername === 'string'
+        ? (details as Record<string, string>).approvedByUsername
+        : null;
+      return { ...entry, approvedByUsername };
+    });
+
     res.json({
       success: true,
       data: {
-        history,
+        history: historyWithApprover,
         pagination: { page, limit, total, pages: Math.ceil(total / limit) },
       },
     });

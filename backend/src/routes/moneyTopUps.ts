@@ -78,7 +78,8 @@ router.post('/admin', authenticate, authorize(['ADMIN', 'MOD']), async (req: Aut
           amount,
           balanceBefore: player.money,
           balanceAfter,
-          description: `${reason || `Nạp tiền dùm ${player.name}`} (Duyệt bởi ${req.user!.username})`,
+          description: reason || `Nạp tiền dùm ${player.name}`,
+          details: { approvedByUsername: req.user!.username },
         },
       });
       return tx.playerMoneyTopUp.create({
@@ -124,7 +125,8 @@ router.put('/:id/approve', authenticate, authorize(['ADMIN', 'MOD']), async (req
           amount: pending.amount,
           balanceBefore,
           balanceAfter,
-          description: `Nạp tiền đã được duyệt bởi ${req.user!.username}`,
+          description: 'Nạp tiền đã được duyệt',
+          details: { approvedByUsername: req.user!.username },
         },
       });
       return tx.playerMoneyTopUp.update({

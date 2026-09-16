@@ -176,7 +176,7 @@
             ]"
           >
             <div class="flex items-center space-x-1">
-              <span>{{ betLoading === true ? 'Đang tải...' : (getUserBetStatus() ? 'Cược ✓' : 'Cược') }}</span>
+              <span>{{ betLoading === true ? 'Đang tải...' : (getUserBetStatus() ? 'Ngôi sao hy vọng ✓' : 'Ngôi sao hy vọng') }}</span>
             </div>
           </button>
         </div>

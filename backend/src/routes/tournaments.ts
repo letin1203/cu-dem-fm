@@ -928,7 +928,7 @@ router.put('/:id/attendance', authenticate, async (req: AuthenticatedRequest, re
     }
 
     if (tournament.selfFunded && (toggleWater || toggleBet || withWater !== undefined || bet !== undefined)) {
-      res.status(400).json({ success: false, error: 'Giải tự túc không hỗ trợ Uống nước hoặc Cược' });
+      res.status(400).json({ success: false, error: 'Giải tự túc không hỗ trợ Uống nước hoặc Ngôi sao hy vọng' });
       return;
     }
 
@@ -975,7 +975,7 @@ router.put('/:id/attendance', authenticate, async (req: AuthenticatedRequest, re
       if (!['UPCOMING', 'ONGOING'].includes(tournament.status) || tournament.startDate.getTime() <= Date.now()) {
         res.status(400).json({
           success: false,
-          error: 'Chỉ được thay đổi cược trước thời gian diễn ra giải đấu',
+          error: 'Chỉ được thay đổi Ngôi sao hy vọng trước thời gian diễn ra giải đấu',
         });
         return;
       }
@@ -1166,7 +1166,7 @@ router.put('/:id/attendance/:playerId', authenticate, authorize(['ADMIN', 'MOD']
     }
 
     if (tournament.selfFunded && (withWater !== undefined || bet !== undefined)) {
-      res.status(400).json({ success: false, error: 'Giải tự túc không hỗ trợ Uống nước hoặc Cược' });
+      res.status(400).json({ success: false, error: 'Giải tự túc không hỗ trợ Uống nước hoặc Ngôi sao hy vọng' });
       return;
     }
 
@@ -2025,10 +2025,10 @@ router.put('/:id/end', authenticate, authorize(['ADMIN', 'MOD']), async (req: Au
       if (!tournament.selfFunded && attendance.bet) {
         if (playerTeam && playerTeam.id === winnerTeam.id) {
           // Betting winner gets bonus
-          moneyChangeDetails.push({ description: 'Cược thắng', amount: bettingWinBonus });
+          moneyChangeDetails.push({ description: 'Ngôi sao hy vọng thắng', amount: bettingWinBonus });
         } else {
           // Betting loser pays penalty
-          moneyChangeDetails.push({ description: 'Cược thua', amount: -bettingLossAmount });
+          moneyChangeDetails.push({ description: 'Ngôi sao hy vọng thua', amount: -bettingLossAmount });
         }
       }
 

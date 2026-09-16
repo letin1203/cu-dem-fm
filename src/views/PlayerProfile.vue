@@ -259,7 +259,7 @@
                 Có uống nước
               </div>
               <div v-if="latestTournament.bet" class="text-yellow-700">
-                Có cược
+                Có Ngôi sao hy vọng
               </div>
             </div>
             <div class="mt-4">
@@ -578,7 +578,7 @@
             ><span
               v-if="selectedTournamentDetail.bet"
               class="rounded bg-yellow-100 px-2 py-1 text-yellow-700"
-              >Có cược</span
+              >Có Ngôi sao hy vọng</span
             >
           </div>
         </div>

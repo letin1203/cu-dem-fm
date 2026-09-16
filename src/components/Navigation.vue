@@ -358,7 +358,10 @@
                   }}{{ formatMoney(entry.fundChange) }} ₫</strong
                 >
               </div>
-              <div v-if="entry.type === 'CONTRIBUTION'" class="mt-3 border-t pt-3 text-sm text-gray-600">Lý do: {{ entry.reason }}</div>
+              <div v-if="entry.type === 'CONTRIBUTION'" class="mt-3 space-y-1 border-t pt-3 text-sm text-gray-600">
+                <p>Lý do: {{ entry.reason }}</p>
+                <p v-if="entry.approvedByUsername">Duyệt bởi: <strong class="text-gray-800">{{ entry.approvedByUsername }}</strong></p>
+              </div>
               <div v-else class="mt-3 space-y-1 border-t pt-3 text-xs">
                 <div class="flex justify-between gap-3">
                   <span class="min-w-0 text-gray-600"
@@ -514,6 +517,7 @@ const fundHistory = ref<
     balanceAfter: number;
     type?: "TOURNAMENT" | "CONTRIBUTION";
     reason?: string;
+    approvedByUsername?: string | null;
   }>
 >([]);
 
@@ -640,6 +644,7 @@ async function exportFundHistory() {
         "Loại": isContribution ? "Góp quỹ" : "Giải đấu",
         "Tên / giải đấu": entry.name || "",
         "Lý do": entry.reason || "",
+        "Duyệt bởi": entry.approvedByUsername || "",
         "Thu/chi ròng cầu thủ (đ)": isContribution ? "" : toMoneyNumber(entry.playerFundImpact),
         "Tiền tài trợ (đ)": isContribution ? "" : toMoneyNumber(entry.sponsorMoney),
         "Chi phí sân (đ)": isContribution ? "" : toMoneyNumber(entry.stadiumCost),
@@ -668,9 +673,9 @@ async function exportFundHistory() {
     overviewSheet["!cols"] = [{ wch: 38 }, { wch: 22 }];
     const detailSheet = XLSX.utils.json_to_sheet(detailRows);
     detailSheet["!cols"] = [
-      { wch: 20 }, { wch: 14 }, { wch: 38 }, { wch: 42 }, { wch: 24 },
-      { wch: 18 }, { wch: 18 }, { wch: 25 }, { wch: 45 }, { wch: 27 },
-      { wch: 16 }, { wch: 18 },
+      { wch: 20 }, { wch: 14 }, { wch: 38 }, { wch: 42 }, { wch: 20 },
+      { wch: 24 }, { wch: 18 }, { wch: 18 }, { wch: 25 }, { wch: 45 },
+      { wch: 27 }, { wch: 16 }, { wch: 18 },
     ];
     const playerMoneyHistory = Array.isArray(playerMoneyHistoryResponse.data)
       ? playerMoneyHistoryResponse.data

@@ -151,8 +151,8 @@
                   </span>
                   <span v-if="getAttendanceStats(ongoingTournament.id)?.attendingCount" class="text-purple-600 font-medium">
                     👥 Est mỗi cháu:
-                    <template v-if="shouldShowMinimumCostRange(ongoingTournament)">
-                      {{ getCostEstimateInfo(ongoingTournament.id).minimum }} cháu: {{ calculateCostPerPlayer(ongoingTournament.id).toLocaleString('vi-VN') }} ₫ · Max {{ ongoingTournament.maxAttendance }} cháu: {{ calculateCostPerPlayerForCount(ongoingTournament.id, ongoingTournament.maxAttendance || 0).toLocaleString('vi-VN') }} ₫
+                    <template v-if="shouldShowMaxCostRange(ongoingTournament)">
+                      {{ getCostEstimateInfo(ongoingTournament.id).divisor }} cháu: {{ calculateCostPerPlayer(ongoingTournament.id).toLocaleString('vi-VN') }} ₫ · Max {{ ongoingTournament.maxAttendance }} cháu: {{ calculateCostPerPlayerForCount(ongoingTournament.id, ongoingTournament.maxAttendance || 0).toLocaleString('vi-VN') }} ₫
                     </template>
                     <template v-else>{{ calculateCostPerPlayer(ongoingTournament.id).toLocaleString('vi-VN') }} ₫</template>
                   </span>
@@ -196,7 +196,7 @@
                   class="text-center p-2 bg-yellow-100 rounded-lg hover:bg-yellow-200 transition-colors cursor-pointer"
                 >
                   <div class="font-semibold text-yellow-800">{{ getBettingCount(ongoingTournament.id) }}</div>
-                  <div class="text-yellow-600">Cược</div>
+                  <div class="text-yellow-600">Ngôi sao hy vọng</div>
                 </button>
               </div>
             </div>
@@ -331,7 +331,7 @@
                   class="px-4 py-2 text-center rounded-lg font-medium transition-colors duration-200"
                   :class="[betLoading.has(ongoingTournament.id) || getUserAttendanceStatus(ongoingTournament.id) !== 'ATTEND' ? 'opacity-50 cursor-not-allowed' : 'hover:shadow-md', getUserBetStatus(ongoingTournament.id) ? 'bg-yellow-600 text-white hover:bg-yellow-700' : 'bg-gray-300 text-gray-700 hover:bg-gray-400']"
                 >
-                  {{ betLoading.has(ongoingTournament.id) ? 'Đang tải...' : (getUserBetStatus(ongoingTournament.id) ? 'Cược đội mình thắng ✓' : 'Cược đội mình thắng') }}
+                  {{ betLoading.has(ongoingTournament.id) ? 'Đang tải...' : (getUserBetStatus(ongoingTournament.id) ? 'Ngôi sao hy vọng đội mình thắng ✓' : 'Ngôi sao hy vọng đội mình thắng') }}
                 </button>
                 <button
                   v-if="ongoingTournament.status === 'UPCOMING' && getTournamentTeams(ongoingTournament).length === 0 && authStore.currentUser?.player"
@@ -590,7 +590,7 @@
                     class="text-center p-2 bg-yellow-100 rounded-lg hover:bg-yellow-200 transition-colors cursor-pointer"
                   >
                     <div class="font-semibold text-yellow-800">{{ getBettingCount(tournament.id) }}</div>
-                    <div class="text-yellow-600">Cược</div>
+                    <div class="text-yellow-600">Ngôi sao hy vọng</div>
                   </button>
                 </div>
               </div>
@@ -759,16 +759,16 @@
           <h4 class="font-semibold text-violet-900">2. Giải tự túc</h4>
           <ul class="mt-2 space-y-1 leading-6 text-violet-900">
             <li>• Giải tự túc không dùng tiền tài trợ, không có chi phí phát sinh và không trích quỹ.</li>
-            <li>• Cầu thủ không bị trừ tiền, không có thưởng/phạt cược và không tính chi phí nước.</li>
+            <li>• Cầu thủ không bị trừ tiền, không có thưởng/phạt Ngôi sao hy vọng và không tính chi phí nước.</li>
             <li>• Kết quả giải không ảnh hưởng đến Tiền Quỹ.</li>
           </ul>
         </section>
         <section v-if="!ongoingTournament.selfFunded">
-          <h4 class="font-semibold text-gray-900">2. Cược đội mình thắng</h4>
+          <h4 class="font-semibold text-gray-900">2. Ngôi sao hy vọng đội mình thắng</h4>
           <ul class="mt-2 space-y-1 leading-6">
-            <li>• Chỉ cầu thủ đã tham gia mới có thể chọn cược trước giờ bắt đầu giải đấu.</li>
+            <li>• Chỉ cầu thủ đã tham gia mới có thể chọn Ngôi sao hy vọng trước giờ bắt đầu giải đấu.</li>
             <li>• Khi đã chọn, nút hiển thị dấu ✓ và dòng cầu thủ trong danh sách đội được tô vàng nhạt.</li>
-            <li>• Cược thắng: +10.000 ₫; cược thua: -10.000 ₫.</li>
+            <li>• Ngôi sao hy vọng thắng: +10.000 ₫; Ngôi sao hy vọng thua: -10.000 ₫.</li>
           </ul>
         </section>
         <section v-if="!ongoingTournament.selfFunded">
@@ -798,7 +798,7 @@
         <section v-if="!ongoingTournament.selfFunded">
           <h4 class="font-semibold text-gray-900">6. Điều chỉnh khi kết thúc giải</h4>
           <ul class="mt-2 space-y-1 leading-6">
-            <li>• Cược thắng: +10.000 ₫; cược thua: -10.000 ₫.</li>
+            <li>• Ngôi sao hy vọng thắng: +10.000 ₫; Ngôi sao hy vọng thua: -10.000 ₫.</li>
             <li>• Cầu thủ đội thua: -10.000 ₫.</li>
             <li>• Người chọn nước: -10.000 ₫; đội thắng được miễn phí nước.</li>
             <li>• Giải chỉ có thể kết thúc khi xác định được đúng một đội thắng và đúng một đội thua; không thể có hai đội thắng hoặc hai đội thua.</li>
@@ -898,7 +898,7 @@
         
         <!-- No Data State -->
         <div v-else-if="getFilteredModalData().length === 0" class="text-center py-8">
-          <p class="text-gray-600">Không có cầu thủ {{ attendanceModalType === 'pending' ? 'chưa phản hồi' : attendanceModalType === 'attending' ? 'tham gia' : attendanceModalType === 'not-attending' ? 'không tham gia' : attendanceModalType === 'water' ? 'uống nước' : 'cược' }} giải đấu này.</p>
+          <p class="text-gray-600">Không có cầu thủ {{ attendanceModalType === 'pending' ? 'chưa phản hồi' : attendanceModalType === 'attending' ? 'tham gia' : attendanceModalType === 'not-attending' ? 'không tham gia' : attendanceModalType === 'water' ? 'uống nước' : 'chọn Ngôi sao hy vọng' }} giải đấu này.</p>
         </div>
         
         <!-- Player List -->
@@ -985,7 +985,7 @@
       <!-- Modal Footer -->
       <div class="flex items-center justify-between border-t border-gray-200 bg-gray-50 p-6" :class="attendanceModalType === 'pending' ? 'flex-col' : ''">
         <p v-if="attendanceModalType !== 'pending'" class="text-sm text-gray-600">
-          {{ getFilteredModalData().length }} cầu thủ {{ attendanceModalType === 'attending' ? 'tham gia' : attendanceModalType === 'not-attending' ? 'không tham gia' : attendanceModalType === 'water' ? 'uống nước' : 'cược' }}
+          {{ getFilteredModalData().length }} cầu thủ {{ attendanceModalType === 'attending' ? 'tham gia' : attendanceModalType === 'not-attending' ? 'không tham gia' : attendanceModalType === 'water' ? 'uống nước' : 'chọn Ngôi sao hy vọng' }}
         </p>
         <div class="flex items-center gap-3" :class="attendanceModalType === 'pending' ? 'w-full flex-col sm:w-auto sm:flex-row' : ''">
           <button
@@ -1300,8 +1300,8 @@
             <li v-if="getTournamentById(endTournamentId)?.selfFunded">• Giải tự túc: không có biến động tiền cầu thủ.</li>
             <li v-if="!getTournamentById(endTournamentId)?.selfFunded">• Chi phí giải đấu mỗi cầu thủ: -{{ calculateCostPerPlayer(endTournamentId).toLocaleString('vi-VN') }} ₫</li>
             <li v-if="!getTournamentById(endTournamentId)?.selfFunded">• GK được giảm 50% chi phí giải đấu</li>
-            <li v-if="!getTournamentById(endTournamentId)?.selfFunded">• Cược thắng: +10.000 ₫</li>
-            <li v-if="!getTournamentById(endTournamentId)?.selfFunded">• Cược thua: -10.000 ₫</li>
+            <li v-if="!getTournamentById(endTournamentId)?.selfFunded">• Ngôi sao hy vọng thắng: +10.000 ₫</li>
+            <li v-if="!getTournamentById(endTournamentId)?.selfFunded">• Ngôi sao hy vọng thua: -10.000 ₫</li>
             <li v-if="!getTournamentById(endTournamentId)?.selfFunded">• Cầu thủ đội thua: -10.000 ₫</li>
             <li v-if="!getTournamentById(endTournamentId)?.selfFunded">• Chi phí nước: -10.000 ₫</li>
             <li v-if="!getTournamentById(endTournamentId)?.selfFunded">• Đội thắng được miễn phí nước</li>
@@ -1517,7 +1517,7 @@
       <div class="space-y-5 p-5 text-sm leading-6 text-gray-700">
         <section><h4 class="font-semibold text-gray-900">1. Bạn bè</h4><ul class="mt-2 list-disc space-y-1 pl-5"><li>Mỗi user được tạo tối đa 2 cầu thủ bạn bè.</li><li>Chỉ user đã tạo bạn mới có thể đăng ký thi đấu cho bạn đó.</li><li>Khi chỉ có một bạn, bạn đó luôn được chọn sẵn.</li></ul></section>
         <section><h4 class="font-semibold text-gray-900">2. Đăng ký sân</h4><ul class="mt-2 list-disc space-y-1 pl-5"><li>Có thể chọn một hoặc hai bạn để đăng ký cùng lúc.</li><li>Chọn Sân 5, Sân 7 hoặc cả hai trước khi bấm Đăng ký.</li><li>Thời điểm đăng ký của bạn được lưu như một cầu thủ bình thường.</li></ul></section>
-        <section><h4 class="font-semibold text-gray-900">3. Tiền của bạn</h4><ul class="mt-2 list-disc space-y-1 pl-5"><li>Mọi chi phí, phạt đội thua, nước hoặc cược của bạn sẽ được cộng/trừ vào số dư cầu thủ của user sở hữu bạn đó.</li><li>Lịch sử tiền của user sẽ ghi rõ khoản chi phí được tính cho tên bạn.</li><li>Nếu số dư user đang âm, không thể đăng ký bạn trong giải thường; giải Tự túc không áp dụng điều kiện này và không phát sinh biến động tiền.</li></ul></section>
+        <section><h4 class="font-semibold text-gray-900">3. Tiền của bạn</h4><ul class="mt-2 list-disc space-y-1 pl-5"><li>Mọi chi phí, phạt đội thua, nước hoặc Ngôi sao hy vọng của bạn sẽ được cộng/trừ vào số dư cầu thủ của user sở hữu bạn đó.</li><li>Lịch sử tiền của user sẽ ghi rõ khoản chi phí được tính cho tên bạn.</li><li>Nếu số dư user đang âm, không thể đăng ký bạn trong giải thường; giải Tự túc không áp dụng điều kiện này và không phát sinh biến động tiền.</li></ul></section>
       </div>
       <div class="border-t bg-gray-50 p-4 text-right"><button type="button" class="btn-primary" @click="showFriendRegistrationGuideModal = false">Đã hiểu</button></div>
     </div>
@@ -1783,9 +1783,9 @@ const calculateCostPerPlayer = (tournamentId: string) => {
   return calculateCostPerPlayerForCount(tournamentId, divisor)
 }
 
-const shouldShowMinimumCostRange = (tournament: Tournament): boolean => {
-  const { registered, minimum } = getCostEstimateInfo(tournament.id)
-  return registered <= minimum && Boolean(tournament.maxAttendance && tournament.maxAttendance > minimum)
+const shouldShowMaxCostRange = (tournament: Tournament): boolean => {
+  const { divisor } = getCostEstimateInfo(tournament.id)
+  return Boolean(tournament.maxAttendance && tournament.maxAttendance > divisor)
 }
 
 // Get next Monday (or today if today is Monday)
@@ -2265,7 +2265,7 @@ const openAttendanceModal = async (tournamentId: string, type: 'attending' | 'no
   } else if (type === 'not-attending') {
     attendanceModalTitle.value = 'Cầu thủ không tham gia'
   } else if (type === 'betting') {
-    attendanceModalTitle.value = 'Cầu thủ cược'
+    attendanceModalTitle.value = 'Cầu thủ chọn Ngôi sao hy vọng'
   } else if (type === 'water') {
     attendanceModalTitle.value = 'Cầu thủ uống nước'
   }
@@ -3130,7 +3130,7 @@ const toggleSelfFunded = async (tournament: Tournament) => {
       fetchAttendanceStats(tournament.id),
     ])
     toast.success(updatedTournament.selfFunded
-      ? 'Đã bật Tự túc: Sponsor, nước, cược và chi phí phát sinh đã được tắt'
+      ? 'Đã bật Tự túc: Sponsor, nước, Ngôi sao hy vọng và chi phí phát sinh đã được tắt'
       : 'Đã tắt chế độ Tự túc')
   } catch (error: any) {
     toast.error(error.response?.data?.error || error.message || 'Không thể cập nhật chế độ tự túc')
@@ -3475,11 +3475,11 @@ const toggleBet = async (tournamentId: string): Promise<void> => {
       // Refresh attendance details to update betting count
       await fetchAttendanceDetails(tournamentId)
       
-      toast.success(newBetStatus ? 'Đã chọn cược!' : 'Đã bỏ chọn cược!')
+      toast.success(newBetStatus ? 'Đã chọn Ngôi sao hy vọng!' : 'Đã bỏ chọn Ngôi sao hy vọng!')
     }
   } catch (err: any) {
     console.error('Toggle bet error:', err)
-    toast.error(err.response?.data?.error || 'Không thể cập nhật cược')
+    toast.error(err.response?.data?.error || 'Không thể cập nhật Ngôi sao hy vọng')
   } finally {
     betLoading.value.delete(tournamentId)
   }
@@ -3741,14 +3741,14 @@ const getDetailedMoneyChange = (tournamentId: string, team: any, player: any): {
       changes.push({
         type: 'betting_win',
         amount: winAmount,
-        description: 'Cược thắng'
+        description: 'Ngôi sao hy vọng thắng'
       })
     } else {
       // Betting loser
       changes.push({
         type: 'betting_loss',
         amount: -10000,
-        description: 'Cược thua'
+        description: 'Ngôi sao hy vọng thua'
       })
     }
   }

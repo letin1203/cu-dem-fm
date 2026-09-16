@@ -32,6 +32,18 @@ router.get('/fund-history', authenticate, async (_req: AuthenticatedRequest, res
         orderBy: { approvedAt: 'asc' },
       }),
     ]);
+    const approverIds = [...new Set(
+      approvedContributions
+        .map((contribution) => contribution.approvedById)
+        .filter((id): id is string => Boolean(id)),
+    )];
+    const approvers = approverIds.length
+      ? await prisma.user.findMany({
+          where: { id: { in: approverIds } },
+          select: { id: true, username: true },
+        })
+      : [];
+    const approverUsernameById = new Map(approvers.map((approver) => [approver.id, approver.username]));
 
     const tournamentHistory = tournaments.map((tournament) => {
       const playerMoneyChanges = tournament.moneyHistory.reduce((total, item) => total + item.amount, 0);
@@ -59,6 +71,9 @@ router.get('/fund-history', authenticate, async (_req: AuthenticatedRequest, res
       id: contribution.id,
       name: `Góp quỹ · ${contribution.user.player?.name || contribution.user.username}`,
       reason: contribution.reason,
+      approvedByUsername: contribution.approvedById
+        ? approverUsernameById.get(contribution.approvedById) || null
+        : null,
       startDate: contribution.approvedAt || contribution.requestedAt,
       fundChange: contribution.amount,
       amount: contribution.amount,

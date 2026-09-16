@@ -84,7 +84,7 @@
                 <!-- Badge and Date/Time moved below title -->
                 <div class="flex flex-wrap items-center gap-2 mt-2 text-sm text-gray-600">
                   <button
-                    v-if="authStore.hasAnyRole(['admin', 'mod'])"
+                    v-if="authStore.hasRole('admin')"
                     @click="openTournamentTimeModal(ongoingTournament)"
                     class="inline-flex items-center rounded-full bg-primary-100 px-2 py-1 text-xs font-semibold text-primary-800 transition-colors hover:bg-primary-200"
                     title="Chỉnh sửa giờ thi đấu"

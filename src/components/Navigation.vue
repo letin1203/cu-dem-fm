@@ -300,7 +300,7 @@
               sân − Chi phí phát sinh.
             </p>
             <p class="mt-2">
-              Tiền quỹ hiện tại = Tiền quỹ dự tính − Tổng số dư âm của các cầu
+              Tiền quỹ hiện tại = Tiền quỹ dự tính + Tổng số dư âm của các cầu
               thủ.
             </p>
             <p class="mt-2 text-xs text-primary-700">
@@ -321,7 +321,7 @@
             >
           </div>
           <div class="mt-3 flex items-center justify-between rounded-lg bg-amber-50 p-4">
-            <div><span class="font-medium text-gray-700">Tiền quỹ hiện tại</span><p class="mt-1 text-xs text-amber-800">Đã trừ tổng số dư âm: {{ formatMoney(fundHistoryTotalPlayerDebt) }} ₫</p></div>
+            <div><span class="font-medium text-gray-700">Tiền quỹ hiện tại</span><p class="mt-1 text-xs text-amber-800">Đã cộng tiền cầu thủ nợ: {{ formatMoney(fundHistoryTotalPlayerDebt) }} ₫</p></div>
             <strong class="whitespace-nowrap text-lg" :class="fundHistoryActualFund >= 0 ? 'text-green-600' : 'text-red-600'">{{ formatMoney(fundHistoryActualFund) }} ₫</strong>
           </div>
           <div
@@ -429,6 +429,15 @@
         </div>
         <div class="flex justify-end gap-3 border-t p-4">
           <button @click="openFundContributionModal" class="btn-secondary">Góp quỹ</button>
+          <button
+            v-if="isStaff"
+            type="button"
+            class="btn-secondary"
+            :disabled="exportingFundHistory"
+            @click="exportFundHistory"
+          >
+            {{ exportingFundHistory ? "Đang xuất..." : "Export lịch sử" }}
+          </button>
           <button @click="showFundHistoryModal = false" class="btn-primary">
             Đóng
           </button>
@@ -460,6 +469,7 @@ import { usePlayersStore } from "../stores/players";
 import { useSystemStore } from "../stores/system";
 import { apiClient } from "../api/client";
 import { useToast } from "vue-toastification";
+import * as XLSX from "xlsx";
 import {
   TrophyIcon,
   CalendarIcon,
@@ -486,9 +496,10 @@ const fundContributionReason = ref("");
 const fundContributionAmounts = [50000, 100000, 200000, 500000];
 const isStaff = computed(() => authStore.hasAnyRole(["admin", "mod"]));
 const fundHistoryLoading = ref(false);
+const exportingFundHistory = ref(false);
 const fundHistoryEstimatedFund = ref(0);
 const fundHistoryTotalPlayerDebt = ref(0);
-const fundHistoryActualFund = computed(() => fundHistoryEstimatedFund.value - fundHistoryTotalPlayerDebt.value);
+const fundHistoryActualFund = computed(() => fundHistoryEstimatedFund.value + fundHistoryTotalPlayerDebt.value);
 const fundHistory = ref<
   Array<{
     id: string;
@@ -573,6 +584,125 @@ const formatMoney = (amount: number | null | undefined) =>
 
 const toMoneyNumber = (amount: unknown) =>
   typeof amount === "number" && Number.isFinite(amount) ? amount : 0;
+
+function formatDateTimeForExport(date: string | Date) {
+  const parsedDate = new Date(date);
+  return Number.isNaN(parsedDate.getTime())
+    ? ""
+    : parsedDate.toLocaleString("vi-VN", {
+        day: "2-digit",
+        month: "2-digit",
+        year: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+      });
+}
+
+function formatPlayerMoneyDetails(details: unknown) {
+  if (!Array.isArray(details)) return "";
+  return details
+    .map((detail: any) => {
+      const description = String(detail?.description || "Chi tiết");
+      const amount = toMoneyNumber(detail?.amount);
+      return `${description}: ${amount >= 0 ? "+" : ""}${amount.toLocaleString("vi-VN")} đ`;
+    })
+    .join("\n");
+}
+
+async function exportFundHistory() {
+  exportingFundHistory.value = true;
+  try {
+    const [fundHistoryResponse, playerMoneyHistoryResponse] = await Promise.all([
+      apiClient.getFundHistory(),
+      apiClient.getAllPlayerMoneyHistory(),
+    ]);
+    if (!fundHistoryResponse.success || !fundHistoryResponse.data) {
+      throw new Error(fundHistoryResponse.error || "Không thể tải lịch sử quỹ");
+    }
+    if (!playerMoneyHistoryResponse.success || !playerMoneyHistoryResponse.data) {
+      throw new Error(playerMoneyHistoryResponse.error || "Không thể tải lịch sử biến động tiền của cầu thủ");
+    }
+
+    const data = fundHistoryResponse.data as any;
+    const entries = Array.isArray(data.history) ? data.history : [];
+    const detailRows = entries.map((entry: any) => {
+      const additionalCosts = Array.isArray(entry.additionalCosts)
+        ? entry.additionalCosts.filter((cost: any) => toMoneyNumber(cost?.amount) > 0)
+        : [];
+      const totalAdditionalCosts = additionalCosts.reduce(
+        (total: number, cost: any) => total + toMoneyNumber(cost.amount),
+        0,
+      );
+      const isContribution = entry.type === "CONTRIBUTION";
+
+      return {
+        "Thời gian": formatDateTimeForExport(entry.startDate),
+        "Loại": isContribution ? "Góp quỹ" : "Giải đấu",
+        "Tên / giải đấu": entry.name || "",
+        "Lý do": entry.reason || "",
+        "Thu/chi ròng cầu thủ (đ)": isContribution ? "" : toMoneyNumber(entry.playerFundImpact),
+        "Tiền tài trợ (đ)": isContribution ? "" : toMoneyNumber(entry.sponsorMoney),
+        "Chi phí sân (đ)": isContribution ? "" : toMoneyNumber(entry.stadiumCost),
+        "Tổng chi phí phát sinh (đ)": isContribution ? "" : totalAdditionalCosts,
+        "Chi tiết chi phí phát sinh": additionalCosts
+          .map((cost: any) => `${cost.description || "Chi phí phát sinh"}: ${toMoneyNumber(cost.amount).toLocaleString("vi-VN")} đ`)
+          .join("\n"),
+        "Trích quỹ hỗ trợ chi phí (đ)": isContribution ? "" : toMoneyNumber(entry.fundContribution),
+        "Góp quỹ (đ)": isContribution ? toMoneyNumber(entry.amount ?? entry.fundChange) : "",
+        "Thay đổi quỹ (đ)": toMoneyNumber(entry.fundChange),
+        "Số dư quỹ sau mốc (đ)": toMoneyNumber(entry.balanceAfter),
+      };
+    });
+
+    const estimatedFund = toMoneyNumber(data.estimatedFund ?? data.currentFund);
+    const totalPlayerDebt = toMoneyNumber(data.totalPlayerDebt);
+    const overviewRows = [
+      { "Chỉ số": "Tiền quỹ dự tính (đ)", "Số tiền": estimatedFund },
+      { "Chỉ số": "Tổng số dư âm của cầu thủ (đ)", "Số tiền": totalPlayerDebt },
+      { "Chỉ số": "Tiền quỹ hiện tại (đ)", "Số tiền": estimatedFund - totalPlayerDebt },
+      { "Chỉ số": "Tổng số mốc lịch sử", "Số tiền": entries.length },
+    ];
+
+    const workbook = XLSX.utils.book_new();
+    const overviewSheet = XLSX.utils.json_to_sheet(overviewRows);
+    overviewSheet["!cols"] = [{ wch: 38 }, { wch: 22 }];
+    const detailSheet = XLSX.utils.json_to_sheet(detailRows);
+    detailSheet["!cols"] = [
+      { wch: 20 }, { wch: 14 }, { wch: 38 }, { wch: 42 }, { wch: 24 },
+      { wch: 18 }, { wch: 18 }, { wch: 25 }, { wch: 45 }, { wch: 27 },
+      { wch: 16 }, { wch: 18 },
+    ];
+    const playerMoneyHistory = Array.isArray(playerMoneyHistoryResponse.data)
+      ? playerMoneyHistoryResponse.data
+      : [];
+    const playerMoneyHistoryRows = playerMoneyHistory.map((entry: any) => ({
+      "Thời gian": formatDateTimeForExport(entry.createdAt),
+      "Cầu thủ": entry.player?.name || "",
+      "Vị trí": entry.player?.position || "",
+      "Tier": toMoneyNumber(entry.player?.tier),
+      "Giải đấu": entry.tournament?.name || "",
+      "Mô tả": entry.description || "",
+      "Chi tiết": formatPlayerMoneyDetails(entry.details),
+      "Số dư trước (đ)": toMoneyNumber(entry.balanceBefore),
+      "Biến động (đ)": toMoneyNumber(entry.amount),
+      "Số dư sau (đ)": toMoneyNumber(entry.balanceAfter),
+    }));
+    const playerMoneyHistorySheet = XLSX.utils.json_to_sheet(playerMoneyHistoryRows);
+    playerMoneyHistorySheet["!cols"] = [
+      { wch: 20 }, { wch: 28 }, { wch: 12 }, { wch: 8 }, { wch: 38 },
+      { wch: 42 }, { wch: 52 }, { wch: 20 }, { wch: 18 }, { wch: 20 },
+    ];
+    XLSX.utils.book_append_sheet(workbook, overviewSheet, "Tổng quan");
+    XLSX.utils.book_append_sheet(workbook, detailSheet, "Lịch sử chi tiết");
+    XLSX.utils.book_append_sheet(workbook, playerMoneyHistorySheet, "Biến động cầu thủ");
+    XLSX.writeFile(workbook, `lich-su-tien-quy-${new Date().toISOString().slice(0, 10)}.xlsx`);
+    toast.success("Đã tải file lịch sử tiền quỹ");
+  } catch (error) {
+    toast.error(error instanceof Error ? error.message : "Không thể xuất lịch sử tiền quỹ");
+  } finally {
+    exportingFundHistory.value = false;
+  }
+}
 
 async function openFundHistoryModal() {
   showFundHistoryModal.value = true;

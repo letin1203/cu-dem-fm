@@ -80,6 +80,22 @@ router.get('/fund-history', authenticate, async (_req: AuthenticatedRequest, res
   }
 });
 
+// Full player money history is available only to staff for the fund-history export.
+router.get('/fund-history/player-money-history', authenticate, authorize(['ADMIN', 'MOD']), async (_req: AuthenticatedRequest, res: Response): Promise<void> => {
+  try {
+    const history = await prisma.playerMoneyHistory.findMany({
+      include: {
+        player: { select: { id: true, name: true, position: true, tier: true } },
+        tournament: { select: { id: true, name: true } },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+    res.json({ success: true, data: history });
+  } catch (_error) {
+    res.status(500).json({ success: false, error: 'Không thể tải lịch sử biến động tiền của cầu thủ' });
+  }
+});
+
 // Get system settings
 router.get('/', authenticate, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   try {

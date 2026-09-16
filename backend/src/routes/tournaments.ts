@@ -379,6 +379,14 @@ router.put('/:id', authenticate, authorize(['ADMIN', 'MOD']), async (req: Authen
       return;
     }
 
+    if (updateData.selfFunded !== undefined && req.user!.role !== 'ADMIN') {
+      res.status(403).json({
+        success: false,
+        error: 'Chỉ admin mới có thể thay đổi chế độ Tự túc',
+      });
+      return;
+    }
+
     if (existingTournament.status === 'COMPLETED' && (updateData.stadiumCost !== undefined || updateData.sponsorMoney !== undefined || updateData.fundContribution !== undefined || updateData.selfFunded !== undefined || updateData.maxAttendance !== undefined)) {
       res.status(400).json({
         success: false,

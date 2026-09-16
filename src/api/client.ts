@@ -406,6 +406,10 @@ class ApiClient {
     return this.get('/system-settings/fund-history');
   }
 
+  async getAllPlayerMoneyHistory() {
+    return this.get('/system-settings/fund-history/player-money-history');
+  }
+
   async createFundContribution(amount: number, reason: string) {
     return this.post('/fund-contributions', { amount, reason });
   }

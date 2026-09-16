@@ -813,7 +813,7 @@
         </section>
         <section v-if="!ongoingTournament.selfFunded">
           <h4 class="font-semibold text-gray-900">5. Số tiền mỗi cầu thủ</h4>
-          <p class="mt-1 leading-6">Tổng cần chia được chia cho số cầu thủ tham gia, làm tròn lên bội số 5.000 ₫ rồi cộng thêm 5.000 ₫.</p>
+          <p class="mt-1 leading-6">Tổng cần chia được chia cho số cầu thủ tham gia và làm tròn lên bội số 5.000 ₫.</p>
           <p v-if="getAttendanceStats(ongoingTournament.id)?.attendingCount" class="mt-2 rounded-lg bg-primary-50 p-3 font-medium text-primary-800">Tạm tính {{ getAttendanceStats(ongoingTournament.id)?.attendingCount }} cầu thủ: {{ calculateCostPerPlayer(ongoingTournament.id).toLocaleString('vi-VN') }} ₫/người.</p>
           <p class="mt-2">Thủ môn (GK) được giảm 50% chi phí cơ bản, trừ khi admin/mod hủy ưu đãi này lúc kết thúc giải.</p>
         </section>
@@ -867,7 +867,7 @@
   <div v-if="showSwapModal" class="fixed inset-0 z-[70] flex items-center justify-center bg-black/50 p-4" @click.self="closeSwapModal">
     <div class="flex max-h-[90vh] w-full max-w-2xl flex-col overflow-hidden rounded-lg bg-white shadow-xl">
       <div class="flex items-center justify-between border-b p-5"><div><h3 class="text-lg font-semibold text-gray-900">Swap cầu thủ</h3><p class="mt-1 text-sm text-gray-500">Chọn cầu thủ chưa tham gia để gửi yêu cầu swap.</p></div><button type="button" class="text-2xl text-gray-400 hover:text-gray-700" @click="closeSwapModal">×</button></div>
-      <div class="min-h-0 overflow-y-auto p-5"><input v-model="swapCandidateFilter" type="search" class="form-input mb-4" placeholder="Lọc theo tên cầu thủ..."><div v-if="swapCandidatesLoading" class="py-10 text-center text-gray-500">Đang tải danh sách...</div><div v-else-if="!filteredSwapCandidates.length" class="py-10 text-center text-gray-500">Không có cầu thủ phù hợp.</div><div v-else class="grid grid-cols-1 gap-3 sm:grid-cols-2"><div v-for="player in filteredSwapCandidates" :key="player.id" class="flex items-center justify-between gap-3 rounded-lg border border-gray-200 p-3"><div class="flex min-w-0 items-center gap-3"><div class="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full bg-gray-100 text-sm font-semibold text-gray-600"><img v-if="player.avatar" :src="player.avatar" :alt="player.name" class="h-full w-full object-cover"><span v-else>{{ player.name.charAt(0).toUpperCase() }}</span></div><div class="min-w-0"><p class="truncate font-semibold text-gray-900">{{ player.name }}</p><p class="text-xs text-gray-500">{{ getPositionLabel(player.position) }} · Tier {{ player.tier }}</p></div></div><button type="button" class="btn-primary shrink-0 text-sm" :disabled="swapRequestSavingId === player.id" @click="requestSwap(player.id)">{{ swapRequestSavingId === player.id ? 'Đang gửi...' : 'Yêu cầu swap' }}</button></div></div></div>
+      <div class="min-h-0 overflow-y-auto p-5"><div v-if="pendingSwapTargetName" class="rounded-lg bg-amber-50 p-3 text-sm text-amber-800">Bạn đang chờ <strong>{{ pendingSwapTargetName }}</strong> phản hồi. Mỗi cầu thủ chỉ được có một yêu cầu swap đang chờ.</div><template v-else><input v-model="swapCandidateFilter" type="search" class="form-input mb-4" placeholder="Lọc theo tên cầu thủ..."><div v-if="swapCandidatesLoading" class="py-10 text-center text-gray-500">Đang tải danh sách...</div><div v-else-if="!filteredSwapCandidates.length" class="py-10 text-center text-gray-500">Không có cầu thủ phù hợp.</div><div v-else class="grid grid-cols-1 gap-3 sm:grid-cols-2"><div v-for="player in filteredSwapCandidates" :key="player.id" class="flex items-center justify-between gap-3 rounded-lg border border-gray-200 p-3"><div class="flex min-w-0 items-center gap-3"><div class="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full bg-gray-100 text-sm font-semibold text-gray-600"><img v-if="player.avatar" :src="player.avatar" :alt="player.name" class="h-full w-full object-cover"><span v-else>{{ player.name.charAt(0).toUpperCase() }}</span></div><div class="min-w-0"><p class="truncate font-semibold text-gray-900">{{ player.name }}</p><p class="text-xs text-gray-500">{{ getPositionLabel(player.position) }} · Tier {{ player.tier }}</p></div></div><button type="button" class="btn-primary shrink-0 text-sm" :disabled="swapRequestSavingId === player.id" @click="requestSwap(player.id)">{{ swapRequestSavingId === player.id ? 'Đang gửi...' : 'Yêu cầu swap' }}</button></div></div></template></div>
       <div class="flex justify-end border-t p-4"><button type="button" class="btn-secondary" @click="closeSwapModal">Đóng</button></div>
     </div>
   </div>
@@ -1647,6 +1647,7 @@ const swapCandidates = ref<SwapCandidate[]>([])
 const swapCandidateFilter = ref('')
 const swapCandidatesLoading = ref(false)
 const swapRequestSavingId = ref<string | null>(null)
+const pendingSwapTargetName = ref<string | null>(null)
 const incomingSwapRequests = ref<Map<string, IncomingSwapRequest[]>>(new Map())
 const pendingSwapRequest = ref<IncomingSwapRequest | null>(null)
 const batchAttendanceSaving = ref(false)
@@ -1822,7 +1823,7 @@ const calculateCostPerPlayerForCount = (tournamentId: string, divisor: number) =
   const baseCost = net / divisor
   const tournament = getTournamentById(tournamentId)
   if (tournament?.selfFunded) return Math.round(baseCost)
-  return Math.ceil(baseCost / 5000) * 5000 + 5000
+  return Math.ceil(baseCost / 5000) * 5000
 }
 
 const getCostEstimateInfo = (tournamentId: string) => {
@@ -2242,12 +2243,15 @@ const openSwapModal = async (tournament: Tournament): Promise<void> => {
   swapTournament.value = tournament
   swapCandidateFilter.value = ''
   swapCandidates.value = []
+  pendingSwapTargetName.value = null
   showSwapModal.value = true
   swapCandidatesLoading.value = true
   try {
     const response = await apiClient.getSwapCandidates(tournament.id)
     if (!response.success) throw new Error(response.error || 'Không thể tải danh sách cầu thủ')
-    swapCandidates.value = (response.data || []) as SwapCandidate[]
+    const swapData = (response.data || {}) as { candidates?: SwapCandidate[]; pendingTargetName?: string | null }
+    swapCandidates.value = swapData.candidates || []
+    pendingSwapTargetName.value = swapData.pendingTargetName || null
   } catch (error: any) {
     toast.error(error.response?.data?.error || error.message || 'Không thể tải danh sách cầu thủ')
   } finally {
@@ -2260,6 +2264,7 @@ const closeSwapModal = (): void => {
   swapTournament.value = null
   swapCandidates.value = []
   swapCandidateFilter.value = ''
+  pendingSwapTargetName.value = null
 }
 
 const requestSwap = async (targetPlayerId: string): Promise<void> => {

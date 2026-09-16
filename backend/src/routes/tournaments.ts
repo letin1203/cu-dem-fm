@@ -931,13 +931,27 @@ router.get('/:id/swap-candidates', authenticate, async (req: AuthenticatedReques
       res.status(400).json({ success: false, error: 'Bạn cần đăng ký tham gia trước khi yêu cầu swap' });
       return;
     }
-    const attendingPlayers = await prisma.tournamentPlayerAttendance.findMany({ where: { tournamentId: tournament.id, status: 'ATTEND' }, select: { playerId: true } });
+    const [attendingPlayers, pendingRequest] = await Promise.all([
+      prisma.tournamentPlayerAttendance.findMany({ where: { tournamentId: tournament.id, status: 'ATTEND' }, select: { playerId: true } }),
+      prisma.tournamentSwapRequest.findFirst({
+        where: { tournamentId: tournament.id, requesterPlayerId: user.playerId, status: 'PENDING' },
+        include: { target: { select: { name: true } } },
+      }),
+    ]);
+    const pendingTargets = await prisma.tournamentSwapRequest.findMany({
+      where: { tournamentId: tournament.id, status: 'PENDING' },
+      select: { targetPlayerId: true },
+    });
     const candidates = await prisma.player.findMany({
-      where: { id: { notIn: attendingPlayers.map((attendance) => attendance.playerId) }, isActive: true, user: { is: { isActive: true } } },
+      where: {
+        id: { notIn: [...attendingPlayers.map((attendance) => attendance.playerId), ...pendingTargets.map((request) => request.targetPlayerId)] },
+        isActive: true,
+        user: { is: { isActive: true } },
+      },
       select: { id: true, name: true, position: true, positionSecond: true, tier: true, avatar: true },
       orderBy: { name: 'asc' },
     });
-    res.json({ success: true, data: candidates });
+    res.json({ success: true, data: { candidates, pendingTargetName: pendingRequest?.target.name || null } });
   } catch (_error) {
     res.status(500).json({ success: false, error: 'Không thể tải danh sách cầu thủ để swap' });
   }
@@ -958,10 +972,18 @@ router.post('/:id/swap-requests', authenticate, async (req: AuthenticatedRequest
       res.status(400).json({ success: false, error: 'Chỉ có thể swap sau thời gian chốt hủy và trước khi chia đội' });
       return;
     }
-    const [requesterAttendance, targetPlayer, targetAttendance] = await Promise.all([
+    const [requesterAttendance, targetPlayer, targetAttendance, pendingRequest] = await Promise.all([
       prisma.tournamentPlayerAttendance.findUnique({ where: { tournamentId_playerId: { tournamentId: tournament.id, playerId: user.playerId } } }),
       prisma.player.findUnique({ where: { id: targetPlayerId }, include: { user: { select: { id: true, isActive: true } } } }),
       prisma.tournamentPlayerAttendance.findUnique({ where: { tournamentId_playerId: { tournamentId: tournament.id, playerId: targetPlayerId } } }),
+      prisma.tournamentSwapRequest.findFirst({
+        where: {
+          tournamentId: tournament.id,
+          status: 'PENDING',
+          OR: [{ requesterPlayerId: user.playerId }, { targetPlayerId }],
+        },
+        include: { requester: { select: { name: true } }, target: { select: { name: true } } },
+      }),
     ]);
     if (requesterAttendance?.status !== 'ATTEND') {
       res.status(400).json({ success: false, error: 'Bạn cần đăng ký tham gia trước khi yêu cầu swap' });
@@ -969,6 +991,13 @@ router.post('/:id/swap-requests', authenticate, async (req: AuthenticatedRequest
     }
     if (!targetPlayer?.isActive || !targetPlayer.user?.isActive || targetAttendance?.status === 'ATTEND') {
       res.status(400).json({ success: false, error: 'Cầu thủ được chọn không thể nhận yêu cầu swap' });
+      return;
+    }
+    if (pendingRequest) {
+      const error = pendingRequest.requesterPlayerId === user.playerId
+        ? `Bạn đã gửi yêu cầu swap tới ${pendingRequest.target.name}. Mỗi cầu thủ chỉ được gửi một yêu cầu swap.`
+        : `${pendingRequest.target.name} đã có yêu cầu swap đang chờ xử lý.`;
+      res.status(409).json({ success: false, error });
       return;
     }
     const request = await prisma.tournamentSwapRequest.upsert({
@@ -2176,7 +2205,7 @@ router.put('/:id/end', authenticate, authorize(['ADMIN', 'MOD']), async (req: Au
     const tournamentCostPerPlayer = attendingPlayers.length > 0
       ? (tournament.selfFunded
         ? 0
-        : Math.ceil((netTournamentCost / attendingPlayers.length) / 5000) * 5000 + 5000)
+        : Math.ceil((netTournamentCost / attendingPlayers.length) / 5000) * 5000)
       : 0;
 
     // Process each attending player

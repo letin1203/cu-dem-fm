@@ -485,9 +485,9 @@ const calculateCostPerPlayer = () => {
   const attendingCount = getAttendingCount()
   if (attendingCount === 0) return 0
   const baseCost = net / attendingCount
-  // Round up to nearest 5000 and add 5000
+  // Round up to the nearest 5,000 VND.
   const roundedUp = Math.ceil(baseCost / 5000) * 5000
-  return roundedUp + 5000
+  return roundedUp
 }
 
 const getAttendanceButtonText = () => {

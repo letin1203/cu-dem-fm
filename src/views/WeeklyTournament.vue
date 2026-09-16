@@ -2600,7 +2600,6 @@ const formatOldTournamentFilterDate = (value: string): string => {
 const editTournament = (tournament: Tournament) => {
   // Navigate to regular tournaments page with edit functionality
   // Since we're reusing tournament functionality
-  console.log('Edit tournament:', tournament.id)
   // You can implement this based on your tournament editing needs
 }
 
@@ -2632,16 +2631,11 @@ const openScoresModal = async (tournamentId: string) => {
     const teams = getTournamentTeams(tournament)
     teamScores.value.clear()
     
-    console.log('Opening scores modal for tournament:', tournamentId)
-    console.log('Teams found:', teams.map(t => ({ id: t.id, name: t.name, score: t.score })))
-    
     // Use team scores directly from tournament data
     teams.forEach(team => {
-      console.log(`Setting score for team ${team.name} (${team.id}): ${team.score || 0}`)
       teamScores.value.set(team.id, team.score || 0)
     })
     
-    console.log('Final teamScores Map:', Object.fromEntries(teamScores.value))
   }
 }
 

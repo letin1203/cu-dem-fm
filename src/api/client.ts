@@ -47,7 +47,6 @@ class ApiClient {
         if (error.code === 'ECONNABORTED' && error.message.includes('timeout') && !originalRequest._retry) {
           originalRequest._retry = true;
           originalRequest.timeout = 60000; // Very long timeout for retry (60s)
-          console.log('Request timed out, retrying with longer timeout...');
           
           // Add a small delay before retry
           await new Promise(resolve => setTimeout(resolve, 1000));
@@ -58,7 +57,6 @@ class ApiClient {
         if ((error.code === 'NETWORK_ERROR' || error.code === 'ERR_NETWORK') && !originalRequest._retry) {
           originalRequest._retry = true;
           originalRequest.timeout = 60000;
-          console.log('Network error, retrying...');
           
           // Add a delay before retry
           await new Promise(resolve => setTimeout(resolve, 2000));
@@ -153,7 +151,6 @@ class ApiClient {
     
     while (retryCount < maxRetries) {
       try {
-        console.log(`Login attempt ${retryCount + 1}/${maxRetries}`);
         return await this.post('/auth/login', credentials);
       } catch (error: any) {
         retryCount++;
@@ -170,7 +167,6 @@ class ApiClient {
         
         if (isRetryableError) {
           const delay = retryCount * 3000; // Increasing delay: 3s, 6s
-          console.log(`Login failed with ${error.code || 'timeout'}, retrying in ${delay}ms...`);
           await new Promise(resolve => setTimeout(resolve, delay));
         } else {
           // Non-retryable error, throw immediately
@@ -505,7 +501,6 @@ class ApiClient {
       await this.client.get('/auth/me', { timeout: 45000 });
     } catch (error) {
       // Ignore errors, this is just to wake up the backend
-      console.log('Backend wake-up request completed');
     }
   }
 }

@@ -1505,7 +1505,6 @@ router.post('/:id/generate-teams', authenticate, authorize(['ADMIN', 'MOD']), as
     });
 
     const playerCount = attendingPlayers.length;
-    console.log(`Team generation: Found ${playerCount} attending players`);
 
     const minimumPlayers = selectedField === 'FIELD_5' ? 12 : 16;
     if (playerCount < minimumPlayers) {
@@ -1567,7 +1566,6 @@ router.post('/:id/generate-teams', authenticate, authorize(['ADMIN', 'MOD']), as
       }
     });
 
-    console.log(`Team generation: ${gkPlayers.length} GK players, ${nonGkPlayers.length} non-GK players`);
 
     // First, distribute GK players (one per team if possible) - LOCK only the first GK per team
     for (let i = 0; i < gkPlayers.length && i < teamCount; i++) {
@@ -1826,10 +1824,8 @@ router.post('/:id/generate-teams', authenticate, authorize(['ADMIN', 'MOD']), as
 
     // Create teams in database
     const createdTeams = [];
-    console.log(`Team generation: Creating ${teams.length} teams`);
     
     for (const teamData of teams) {
-      console.log(`Creating team: ${teamData.name} with ${teamData.players.length} players`);
       
       const team = await prisma.team.create({
         data: {
@@ -1848,7 +1844,6 @@ router.post('/:id/generate-teams', authenticate, authorize(['ADMIN', 'MOD']), as
 
       // Assign players to the team in this tournament
       if (teamData.players.length > 0) {
-        console.log(`Assigning ${teamData.players.length} players to team ${team.name}`);
         await prisma.tournamentTeamPlayer.createMany({
           data: teamData.players.map((player: any) => ({
             tournamentId,
@@ -1866,7 +1861,6 @@ router.post('/:id/generate-teams', authenticate, authorize(['ADMIN', 'MOD']), as
       });
     }
 
-    console.log(`Team generation completed: Created ${createdTeams.length} teams`);
 
     await prisma.tournament.update({
       where: { id: tournamentId },

@@ -171,16 +171,11 @@ app.use(errorHandler);
 
 // Start server
 app.listen(PORT, () => {
-  console.log(`🚀 Server running on port ${PORT}`);
-  console.log(`📱 Environment: ${process.env.NODE_ENV || 'development'}`);
-  console.log(`🌐 Allowed Origins: ${allowedOrigins.join(', ')}`);
-  console.log(`🔒 JWT Secret: ${process.env.JWT_SECRET ? '***configured***' : 'Not set'}`);
-  console.log(`🗄️ Database: ${process.env.DATABASE_URL ? '***connected***' : 'Not configured'}`);
   void assignMissingPlayerAvatars()
-    .then(count => count > 0 && console.log(`🖼️ Assigned avatars to ${count} players without one`))
+    .then(() => undefined)
     .catch(error => console.error('Unable to assign missing player avatars:', error));
   void syncKnownPlayerRoster()
-    .then(count => count > 0 && console.log(`👥 Updated ${count} known test players`))
+    .then(() => undefined)
     .catch(error => console.error('Unable to update known player roster:', error));
 });
 

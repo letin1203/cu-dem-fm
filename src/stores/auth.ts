@@ -221,19 +221,15 @@ export const useAuthStore = defineStore('auth', () => {
 
   async function fetchUsers(): Promise<void> {
     if (!userPermissions.value.canManageUsers) {
-      console.log('User does not have permission to manage users')
       return
     }
     
     try {
-      console.log('Fetching users from API...')
       // Fetch up to 100 users (system max)
       const response = await apiClient.getUsers({ limit: 100 })
-      console.log('API response:', response)
       
       if (response.success && response.data) {
         const data = response.data as any
-        console.log('Raw users data:', data)
         
         // Convert all user roles to lowercase for frontend compatibility
         users.value = (data.users || []).map((user: any) => ({
@@ -241,9 +237,6 @@ export const useAuthStore = defineStore('auth', () => {
           role: user.role.toLowerCase()
         }))
         
-        console.log('Processed users:', users.value)
-      } else {
-        console.log('API response was not successful:', response)
       }
     } catch (error) {
       console.error('Failed to fetch users:', error)

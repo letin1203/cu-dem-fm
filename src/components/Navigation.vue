@@ -300,7 +300,7 @@
               sân − Chi phí phát sinh.
             </p>
             <p class="mt-2">
-              Tiền quỹ hiện tại = Tiền quỹ dự tính + Tổng số dư âm của các cầu
+              Tiền quỹ dự tính = Tiền quỹ hiện tại + Tổng số dư âm của các cầu
               thủ.
             </p>
             <p class="mt-2 text-xs text-primary-700">
@@ -311,7 +311,7 @@
           <div
             class="mt-4 flex items-center justify-between rounded-lg bg-gray-50 p-4"
           >
-            <span class="font-medium text-gray-700">Tiền quỹ dự tính</span
+            <span class="font-medium text-gray-700">Tiền quỹ hiện tại</span
             ><strong
               class="whitespace-nowrap text-lg"
               :class="
@@ -321,7 +321,7 @@
             >
           </div>
           <div class="mt-3 flex items-center justify-between rounded-lg bg-amber-50 p-4">
-            <div><span class="font-medium text-gray-700">Tiền quỹ hiện tại</span><p class="mt-1 text-xs text-amber-800">Đã cộng tiền cầu thủ nợ: {{ formatMoney(fundHistoryTotalPlayerDebt) }} ₫</p></div>
+            <div><span class="font-medium text-gray-700">Tiền quỹ dự tính</span><p class="mt-1 text-xs text-amber-800">Đã cộng tiền cầu thủ nợ: {{ formatMoney(fundHistoryTotalPlayerDebt) }} ₫</p></div>
             <strong class="whitespace-nowrap text-lg" :class="fundHistoryActualFund >= 0 ? 'text-green-600' : 'text-red-600'">{{ formatMoney(fundHistoryActualFund) }} ₫</strong>
           </div>
           <div
@@ -657,9 +657,9 @@ async function exportFundHistory() {
     const estimatedFund = toMoneyNumber(data.estimatedFund ?? data.currentFund);
     const totalPlayerDebt = toMoneyNumber(data.totalPlayerDebt);
     const overviewRows = [
-      { "Chỉ số": "Tiền quỹ dự tính (đ)", "Số tiền": estimatedFund },
+      { "Chỉ số": "Tiền quỹ hiện tại (đ)", "Số tiền": estimatedFund },
       { "Chỉ số": "Tổng số dư âm của cầu thủ (đ)", "Số tiền": totalPlayerDebt },
-      { "Chỉ số": "Tiền quỹ hiện tại (đ)", "Số tiền": estimatedFund - totalPlayerDebt },
+      { "Chỉ số": "Tiền quỹ dự tính (đ)", "Số tiền": estimatedFund + totalPlayerDebt },
       { "Chỉ số": "Tổng số mốc lịch sử", "Số tiền": entries.length },
     ];
 

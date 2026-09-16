@@ -59,6 +59,8 @@ model Player {
   moneyTopUps             PlayerMoneyTopUp[]
   friendOwner             User? @relation("PlayerFriendOwner", fields: [friendOwnerId], references: [id], onDelete: SetNull)
   friendOwnerId           String?
+  swapRequestsSent        TournamentSwapRequest[] @relation("TournamentSwapRequester")
+  swapRequestsReceived    TournamentSwapRequest[] @relation("TournamentSwapTarget")
 
   @@map("players")
 }
@@ -133,6 +135,7 @@ model Tournament {
   pitchType String?
   selfFunded Boolean @default(false)
   maxAttendance Int?
+  cancellationDeadline DateTime?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -147,6 +150,7 @@ model Tournament {
   playerAttendances  TournamentPlayerAttendance[]
   additionalCosts    AdditionalCost[]
   moneyHistory       PlayerMoneyHistory[]
+  swapRequests       TournamentSwapRequest[]
 
   @@map("tournaments")
 }
@@ -306,6 +310,23 @@ model PlayerMoneyHistory {
   @@index([playerId, createdAt])
   @@index([tournamentId])
   @@map("player_money_history")
+}
+
+model TournamentSwapRequest {
+  id                String     @id @default(cuid())
+  tournament        Tournament @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+  tournamentId      String
+  requester         Player     @relation("TournamentSwapRequester", fields: [requesterPlayerId], references: [id], onDelete: Cascade)
+  requesterPlayerId String
+  target            Player     @relation("TournamentSwapTarget", fields: [targetPlayerId], references: [id], onDelete: Cascade)
+  targetPlayerId    String
+  status            String     @default("PENDING")
+  createdAt         DateTime   @default(now())
+  resolvedAt        DateTime?
+
+  @@unique([tournamentId, requesterPlayerId, targetPlayerId])
+  @@index([tournamentId, targetPlayerId, status])
+  @@map("tournament_swap_requests")
 }
 
 

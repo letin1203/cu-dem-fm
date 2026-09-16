@@ -92,6 +92,14 @@
                     {{ formatTime(ongoingTournament.startDate) }}
                   </button>
                   <span v-else class="inline-flex items-center rounded-full bg-primary-100 px-2 py-1 text-xs font-semibold text-primary-800">{{ formatTime(ongoingTournament.startDate) }}</span>
+                  <button
+                    v-if="authStore.hasAnyRole(['admin', 'mod'])"
+                    type="button"
+                    class="inline-flex items-center rounded-full bg-rose-100 px-2 py-1 text-xs font-semibold uppercase text-rose-800 transition-colors hover:bg-rose-200"
+                    title="Chỉnh sửa thời gian chốt hủy"
+                    @click="openCancellationDeadlineModal(ongoingTournament)"
+                  >Chốt hủy: {{ formatCancellationDeadline(ongoingTournament.cancellationDeadline || getDefaultCancellationDeadline(ongoingTournament.startDate)) }}</button>
+                  <span v-else class="inline-flex items-center rounded-full bg-rose-100 px-2 py-1 text-xs font-semibold uppercase text-rose-800">Chốt hủy: {{ formatCancellationDeadline(ongoingTournament.cancellationDeadline || getDefaultCancellationDeadline(ongoingTournament.startDate)) }}</span>
                   <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium"
                         :class="getStatusBadge(ongoingTournament.status)">
                     {{ ongoingTournament.status }}
@@ -114,7 +122,7 @@
                     :class="ongoingTournament.selfFunded ? 'bg-violet-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'"
                   >
                     <span class="h-3 w-3 rounded-full" :class="ongoingTournament.selfFunded ? 'bg-white' : 'bg-gray-400'"></span>
-                    Tự túc
+                    {{ ongoingTournament.selfFunded ? 'Tự túc' : 'Dùng quỹ' }}
                   </button>
                   <span v-else-if="ongoingTournament.selfFunded" class="inline-flex items-center rounded-full bg-violet-100 px-3 py-1 text-xs font-semibold uppercase text-violet-700">🤝 Tự túc</span>
                 </div>
@@ -277,12 +285,12 @@
                 <div v-if="ongoingTournament.status === 'UPCOMING' && getTournamentTeams(ongoingTournament).length === 0 && getAttendanceButtonText(ongoingTournament.id) !== 'Không có cầu thủ'" class="flex flex-col items-center" :class="getUserAttendanceStatus(ongoingTournament.id) === 'ATTEND' ? 'w-full sm:w-auto' : 'w-auto self-center'">
                   <button
                     @click="toggleAttendance(ongoingTournament.id)"
-                    :disabled="attendanceLoading.has(ongoingTournament.id) || (getAttendanceButtonText(ongoingTournament.id) === 'Tham gia' && (isAttendanceLimitReached(ongoingTournament) || (cannotSelfRegisterDueToDebt && !ongoingTournament.selfFunded)))"
-                    :title="getAttendanceButtonText(ongoingTournament.id) === 'Tham gia' && isAttendanceLimitReached(ongoingTournament) ? attendanceLimitMessage(ongoingTournament) : (cannotSelfRegisterDueToDebt && !ongoingTournament.selfFunded ? 'Vui lòng thanh toán số dư âm trước khi đăng ký' : undefined)"
+                    :disabled="attendanceLoading.has(ongoingTournament.id) || (getAttendanceButtonText(ongoingTournament.id) === 'Đã tham gia' && isUserCancellationLocked(ongoingTournament)) || (getAttendanceButtonText(ongoingTournament.id) === 'Tham gia' && (isAttendanceLimitReached(ongoingTournament) || (cannotSelfRegisterDueToDebt && !ongoingTournament.selfFunded)))"
+                    :title="getAttendanceButtonText(ongoingTournament.id) === 'Đã tham gia' && isUserCancellationLocked(ongoingTournament) ? 'Đã quá thời gian chốt hủy' : (getAttendanceButtonText(ongoingTournament.id) === 'Tham gia' && isAttendanceLimitReached(ongoingTournament) ? attendanceLimitMessage(ongoingTournament) : (cannotSelfRegisterDueToDebt && !ongoingTournament.selfFunded ? 'Vui lòng thanh toán số dư âm trước khi đăng ký' : undefined))"
                     class="px-6 py-2 rounded-lg font-medium transition-colors duration-200"
                     :class="[
                       getUserAttendanceStatus(ongoingTournament.id) === 'ATTEND' ? 'w-full sm:w-auto' : 'w-auto',
-                      attendanceLoading.has(ongoingTournament.id) || (getAttendanceButtonText(ongoingTournament.id) === 'Tham gia' && (isAttendanceLimitReached(ongoingTournament) || (cannotSelfRegisterDueToDebt && !ongoingTournament.selfFunded)))
+                      attendanceLoading.has(ongoingTournament.id) || (getAttendanceButtonText(ongoingTournament.id) === 'Đã tham gia' && isUserCancellationLocked(ongoingTournament)) || (getAttendanceButtonText(ongoingTournament.id) === 'Tham gia' && (isAttendanceLimitReached(ongoingTournament) || (cannotSelfRegisterDueToDebt && !ongoingTournament.selfFunded)))
                         ? 'opacity-50 cursor-not-allowed' 
                         : 'hover:shadow-md',
                         getAttendanceButtonText(ongoingTournament.id) === 'Tham gia'
@@ -301,6 +309,19 @@
                     <button type="button" class="mt-2 rounded bg-red-600 px-3 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-red-700" @click="openCurrentUserDebtTopUp">Thanh toán</button>
                   </div>
                 </div>
+                <button
+                  v-if="canRequestSwap(ongoingTournament)"
+                  type="button"
+                  class="bg-blue-600 px-4 py-2 text-center rounded-lg font-medium text-white transition-colors hover:bg-blue-700"
+                  @click="openSwapModal(ongoingTournament)"
+                >Swap cầu thủ</button>
+                <button
+                  v-for="request in getIncomingSwapRequests(ongoingTournament.id)"
+                  :key="request.id"
+                  type="button"
+                  class="bg-blue-600 px-4 py-2 text-center rounded-lg font-medium text-white transition-colors hover:bg-blue-700"
+                  @click="openSwapAcceptance(request)"
+                >{{ request.requester.name }} muốn swap với bạn</button>
                 <p v-if="ongoingTournament.status === 'UPCOMING' && isAttendanceLimitReached(ongoingTournament)" class="w-full text-center text-xs font-medium text-orange-700">{{ attendanceLimitMessage(ongoingTournament) }}. Không thể đăng ký thêm.</p>
                 
                 <!-- Water Button -->
@@ -752,6 +773,7 @@
             <li>• Chọn <strong>Tham gia</strong> khi giải đang mở đăng ký; hệ thống sẽ lưu thời điểm đăng ký.</li>
             <li v-if="!ongoingTournament.selfFunded">• Cầu thủ có số dư âm cần thanh toán trước khi tự đăng ký tham gia.</li>
             <li>• Admin/mod chia đội lúc <strong>17:00</strong>.</li>
+            <li>• User chỉ được hủy tham gia trước <strong>Chốt hủy: {{ formatCancellationDeadline(ongoingTournament.cancellationDeadline || getDefaultCancellationDeadline(ongoingTournament.startDate)) }}</strong>. Sau thời điểm này, nút Đã tham gia sẽ bị khóa.</li>
             <li>• Sau khi đã chia đội, không thể hủy tham gia. Admin/mod có thể đăng ký giúp trước khi chia đội.</li>
           </ul>
         </section>
@@ -831,14 +853,22 @@
 
   <div v-if="showFieldRegistrationModal" class="fixed inset-0 z-[70] flex items-center justify-center bg-black/50 p-4" @click.self="closeFieldRegistrationModal">
     <div class="w-full max-w-md rounded-lg bg-white p-6 shadow-xl">
-      <h3 class="text-lg font-semibold text-gray-900">Chọn sân đăng ký</h3>
-      <p class="mt-1 text-sm text-gray-600">Bạn có thể đăng ký một hoặc cả hai sân.</p>
+      <h3 class="text-lg font-semibold text-gray-900">{{ pendingSwapRequest ? `Xác nhận swap với ${pendingSwapRequest.requester.name}` : 'Chọn sân đăng ký' }}</h3>
+      <p class="mt-1 text-sm text-gray-600">{{ pendingSwapRequest ? 'Chọn sân trước khi xác nhận thay thế cầu thủ.' : 'Bạn có thể đăng ký một hoặc cả hai sân.' }}</p>
       <div class="mt-5 grid grid-cols-2 gap-3">
         <button type="button" class="rounded-lg border-2 px-4 py-4 font-semibold transition-colors" :class="registrationField5 ? 'border-primary-600 bg-primary-600 text-white' : 'border-gray-200 text-gray-700 hover:border-primary-400'" @click="registrationField5 = !registrationField5">Sân 5 {{ registrationField5 ? '✓' : '' }}</button>
         <button type="button" class="rounded-lg border-2 px-4 py-4 font-semibold transition-colors" :class="registrationField7 ? 'border-primary-600 bg-primary-600 text-white' : 'border-gray-200 text-gray-700 hover:border-primary-400'" @click="registrationField7 = !registrationField7">Sân 7 {{ registrationField7 ? '✓' : '' }}</button>
       </div>
       <p v-if="!registrationField5 && !registrationField7" class="mt-3 text-sm text-red-600">Vui lòng chọn ít nhất một sân.</p>
-      <div class="mt-6 flex justify-end gap-3"><button type="button" class="btn-secondary" @click="closeFieldRegistrationModal">Hủy</button><button type="button" class="btn-primary" :disabled="!registrationField5 && !registrationField7" @click="confirmFieldRegistration">Xác nhận</button></div>
+      <div class="mt-6 flex justify-end gap-3"><button type="button" class="btn-secondary" @click="closeFieldRegistrationModal">Hủy</button><button type="button" class="btn-primary" :disabled="!registrationField5 && !registrationField7" @click="confirmFieldRegistration">{{ pendingSwapRequest ? 'Xác nhận swap' : 'Xác nhận' }}</button></div>
+    </div>
+  </div>
+
+  <div v-if="showSwapModal" class="fixed inset-0 z-[70] flex items-center justify-center bg-black/50 p-4" @click.self="closeSwapModal">
+    <div class="flex max-h-[90vh] w-full max-w-2xl flex-col overflow-hidden rounded-lg bg-white shadow-xl">
+      <div class="flex items-center justify-between border-b p-5"><div><h3 class="text-lg font-semibold text-gray-900">Swap cầu thủ</h3><p class="mt-1 text-sm text-gray-500">Chọn cầu thủ chưa tham gia để gửi yêu cầu swap.</p></div><button type="button" class="text-2xl text-gray-400 hover:text-gray-700" @click="closeSwapModal">×</button></div>
+      <div class="min-h-0 overflow-y-auto p-5"><input v-model="swapCandidateFilter" type="search" class="form-input mb-4" placeholder="Lọc theo tên cầu thủ..."><div v-if="swapCandidatesLoading" class="py-10 text-center text-gray-500">Đang tải danh sách...</div><div v-else-if="!filteredSwapCandidates.length" class="py-10 text-center text-gray-500">Không có cầu thủ phù hợp.</div><div v-else class="grid grid-cols-1 gap-3 sm:grid-cols-2"><div v-for="player in filteredSwapCandidates" :key="player.id" class="flex items-center justify-between gap-3 rounded-lg border border-gray-200 p-3"><div class="flex min-w-0 items-center gap-3"><div class="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full bg-gray-100 text-sm font-semibold text-gray-600"><img v-if="player.avatar" :src="player.avatar" :alt="player.name" class="h-full w-full object-cover"><span v-else>{{ player.name.charAt(0).toUpperCase() }}</span></div><div class="min-w-0"><p class="truncate font-semibold text-gray-900">{{ player.name }}</p><p class="text-xs text-gray-500">{{ getPositionLabel(player.position) }} · Tier {{ player.tier }}</p></div></div><button type="button" class="btn-primary shrink-0 text-sm" :disabled="swapRequestSavingId === player.id" @click="requestSwap(player.id)">{{ swapRequestSavingId === player.id ? 'Đang gửi...' : 'Yêu cầu swap' }}</button></div></div></div>
+      <div class="flex justify-end border-t p-4"><button type="button" class="btn-secondary" @click="closeSwapModal">Đóng</button></div>
     </div>
   </div>
 
@@ -1042,6 +1072,14 @@
       </div>
       <div class="py-5"><p class="form-label mb-3">Chọn giờ bắt đầu</p><div class="grid grid-cols-3 gap-3"><button v-for="time in tournamentTimeOptions" :key="time" type="button" @click="selectedTournamentTime = time" class="rounded-lg border px-3 py-3 font-medium transition-colors" :class="selectedTournamentTime === time ? 'border-primary-600 bg-primary-600 text-white' : 'border-gray-200 text-gray-700 hover:bg-gray-50'">{{ time }}</button></div><label for="tournament-time" class="form-label mt-5 block">Hoặc chọn giờ khác</label><div class="mt-1 flex items-center gap-2"><button type="button" class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-gray-100 text-xl font-semibold text-gray-700 hover:bg-gray-200" title="Giảm 30 phút" @click="adjustTournamentTime(-30)">−</button><input id="tournament-time" v-model="selectedTournamentTime" type="time" step="1800" class="form-input flex-1 text-center"><button type="button" class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary-100 text-xl font-semibold text-primary-700 hover:bg-primary-200" title="Tăng 30 phút" @click="adjustTournamentTime(30)">+</button></div></div>
       <div class="flex justify-end gap-3 border-t pt-4"><button type="button" @click="closeTournamentTimeModal" class="btn-secondary">Hủy</button><button type="button" @click="saveTournamentTime" :disabled="tournamentTimeSaving" class="btn-primary disabled:opacity-50">{{ tournamentTimeSaving ? 'Đang lưu...' : 'Lưu' }}</button></div>
+    </div>
+  </div>
+
+  <div v-if="showCancellationDeadlineModal" class="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4" @click.self="closeCancellationDeadlineModal">
+    <div class="w-full max-w-md rounded-lg bg-white p-6 shadow-xl">
+      <div class="flex items-center justify-between border-b pb-4"><div><h3 class="text-lg font-semibold text-gray-900">Chốt hủy tham gia</h3><p class="text-sm text-gray-500">{{ cancellationDeadlineTournament?.name }}</p></div><button type="button" class="text-2xl text-gray-400 hover:text-gray-700" @click="closeCancellationDeadlineModal">×</button></div>
+      <div class="py-5"><label for="cancellation-deadline" class="form-label block">Chọn ngày giờ chốt hủy</label><input id="cancellation-deadline" v-model="selectedCancellationDeadline" type="datetime-local" class="form-input mt-1" :min="cancellationDeadlineMin" :max="cancellationDeadlineMax"><p class="mt-2 text-xs text-gray-500">Chỉ có thể chọn từ thời điểm hiện tại đến trước giờ diễn ra giải đấu.</p></div>
+      <div class="flex justify-end gap-3 border-t pt-4"><button type="button" class="btn-secondary" :disabled="cancellationDeadlineSaving" @click="closeCancellationDeadlineModal">Hủy</button><button type="button" class="btn-primary" :disabled="cancellationDeadlineSaving || !selectedCancellationDeadline" @click="saveCancellationDeadline">{{ cancellationDeadlineSaving ? 'Đang lưu...' : 'Lưu' }}</button></div>
     </div>
   </div>
 
@@ -1533,7 +1571,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import { useToast } from 'vue-toastification'
 import { useTournamentsStore } from '../stores/tournaments'
 import { useAuthStore } from '../stores/auth'
@@ -1601,6 +1639,16 @@ const showFieldRegistrationModal = ref(false)
 const fieldRegistrationTournamentId = ref<string | null>(null)
 const registrationField5 = ref(true)
 const registrationField7 = ref(true)
+interface SwapCandidate { id: string; name: string; position: string; positionSecond?: string | null; tier: number; avatar?: string | null }
+interface IncomingSwapRequest { id: string; tournamentId: string; requester: SwapCandidate }
+const showSwapModal = ref(false)
+const swapTournament = ref<Tournament | null>(null)
+const swapCandidates = ref<SwapCandidate[]>([])
+const swapCandidateFilter = ref('')
+const swapCandidatesLoading = ref(false)
+const swapRequestSavingId = ref<string | null>(null)
+const incomingSwapRequests = ref<Map<string, IncomingSwapRequest[]>>(new Map())
+const pendingSwapRequest = ref<IncomingSwapRequest | null>(null)
 const batchAttendanceSaving = ref(false)
 const attendanceDetailsLoadingIds = ref<Set<string>>(new Set())
 const areAllPendingPlayersSelected = computed(() => {
@@ -1663,6 +1711,16 @@ const timeTournament = ref<Tournament | null>(null)
 const selectedTournamentTime = ref('19:00')
 const tournamentTimeSaving = ref(false)
 const tournamentTimeOptions = ['19:00', '19:30', '20:00']
+
+const showCancellationDeadlineModal = ref(false)
+const cancellationDeadlineTournament = ref<Tournament | null>(null)
+const selectedCancellationDeadline = ref('')
+const cancellationDeadlineSaving = ref(false)
+const currentTimestamp = ref(Date.now())
+const cancellationDeadlineMin = computed(() => toDateTimeLocalValue(new Date(currentTimestamp.value + 60_000)))
+const cancellationDeadlineMax = computed(() => cancellationDeadlineTournament.value
+  ? toDateTimeLocalValue(new Date(new Date(cancellationDeadlineTournament.value.startDate).getTime() - 60_000))
+  : '')
 
 const showFundContributionModal = ref(false)
 const fundContributionTournament = ref<Tournament | null>(null)
@@ -1978,6 +2036,27 @@ const formatTime = (date: string | Date): string => {
   }
 }
 
+const toDateTimeLocalValue = (date: Date): string => {
+  const adjustedDate = new Date(date.getTime() - date.getTimezoneOffset() * 60_000)
+  return adjustedDate.toISOString().slice(0, 16)
+}
+
+const formatCancellationDeadline = (deadline?: string | Date | null): string => {
+  if (!deadline) return 'Chưa đặt'
+  const date = new Date(deadline)
+  if (Number.isNaN(date.getTime())) return 'Chưa đặt'
+  const hours = date.getHours()
+  const minutes = date.getMinutes()
+  const weekdays = ['Chủ nhật', 'Thứ 2', 'Thứ 3', 'Thứ 4', 'Thứ 5', 'Thứ 6', 'Thứ 7']
+  return `${hours}h${minutes ? String(minutes).padStart(2, '0') : ''} ${weekdays[date.getDay()]}`
+}
+
+const isUserCancellationLocked = (tournament: Tournament): boolean => {
+  currentTimestamp.value
+  return authStore.hasRole('user')
+    && new Date(tournament.cancellationDeadline || getDefaultCancellationDeadline(tournament.startDate)).getTime() < Date.now()
+}
+
 const formatRegistrationTime = (date: string | Date): string => {
   try {
     const dateObj = typeof date === 'string' ? new Date(date) : date
@@ -2126,6 +2205,86 @@ const registerFriends = async (): Promise<void> => {
   } finally { friendRegistrationSaving.value = false }
 }
 
+const normalizeSwapText = (value: string): string => value
+  .normalize('NFD')
+  .replace(/[\u0300-\u036f]/g, '')
+  .replace(/đ/g, 'd')
+  .replace(/Đ/g, 'D')
+  .toLocaleLowerCase('vi')
+
+const filteredSwapCandidates = computed(() => {
+  const query = normalizeSwapText(swapCandidateFilter.value.trim())
+  return query ? swapCandidates.value.filter(player => normalizeSwapText(player.name).includes(query)) : swapCandidates.value
+})
+
+const getIncomingSwapRequests = (tournamentId: string): IncomingSwapRequest[] => incomingSwapRequests.value.get(tournamentId) || []
+
+const canRequestSwap = (tournament: Tournament): boolean => (
+  tournament.status === 'UPCOMING'
+  && getTournamentTeams(tournament).length === 0
+  && getUserAttendanceStatus(tournament.id) === 'ATTEND'
+  && isUserCancellationLocked(tournament)
+)
+
+const fetchIncomingSwapRequests = async (tournamentId: string): Promise<void> => {
+  try {
+    const response = await apiClient.getMySwapRequests(tournamentId)
+    if (!response.success) return
+    const updatedRequests = new Map(incomingSwapRequests.value)
+    updatedRequests.set(tournamentId, (response.data || []) as IncomingSwapRequest[])
+    incomingSwapRequests.value = updatedRequests
+  } catch {
+    // Swap requests are optional UI data; attendance remains available if loading them fails.
+  }
+}
+
+const openSwapModal = async (tournament: Tournament): Promise<void> => {
+  swapTournament.value = tournament
+  swapCandidateFilter.value = ''
+  swapCandidates.value = []
+  showSwapModal.value = true
+  swapCandidatesLoading.value = true
+  try {
+    const response = await apiClient.getSwapCandidates(tournament.id)
+    if (!response.success) throw new Error(response.error || 'Không thể tải danh sách cầu thủ')
+    swapCandidates.value = (response.data || []) as SwapCandidate[]
+  } catch (error: any) {
+    toast.error(error.response?.data?.error || error.message || 'Không thể tải danh sách cầu thủ')
+  } finally {
+    swapCandidatesLoading.value = false
+  }
+}
+
+const closeSwapModal = (): void => {
+  showSwapModal.value = false
+  swapTournament.value = null
+  swapCandidates.value = []
+  swapCandidateFilter.value = ''
+}
+
+const requestSwap = async (targetPlayerId: string): Promise<void> => {
+  if (!swapTournament.value || swapRequestSavingId.value) return
+  try {
+    swapRequestSavingId.value = targetPlayerId
+    const response = await apiClient.createSwapRequest(swapTournament.value.id, targetPlayerId)
+    if (!response.success) throw new Error(response.error || 'Không thể gửi yêu cầu swap')
+    toast.success(response.message || 'Đã gửi yêu cầu swap')
+    closeSwapModal()
+  } catch (error: any) {
+    toast.error(error.response?.data?.error || error.message || 'Không thể gửi yêu cầu swap')
+  } finally {
+    swapRequestSavingId.value = null
+  }
+}
+
+const openSwapAcceptance = (request: IncomingSwapRequest): void => {
+  pendingSwapRequest.value = request
+  fieldRegistrationTournamentId.value = request.tournamentId
+  registrationField5.value = true
+  registrationField7.value = true
+  showFieldRegistrationModal.value = true
+}
+
 const toggleAttendance = async (tournamentId: string): Promise<void> => {
   if (attendanceLoading.value.has(tournamentId)) return
   
@@ -2234,6 +2393,7 @@ const fetchAttendanceDetails = async (tournamentId: string): Promise<void> => {
 const closeFieldRegistrationModal = (): void => {
   showFieldRegistrationModal.value = false
   fieldRegistrationTournamentId.value = null
+  pendingSwapRequest.value = null
 }
 
 const confirmFieldRegistration = async (): Promise<void> => {
@@ -2241,6 +2401,15 @@ const confirmFieldRegistration = async (): Promise<void> => {
   if (!tournamentId || (!registrationField5.value && !registrationField7.value) || attendanceLoading.value.has(tournamentId)) return
   try {
     attendanceLoading.value.add(tournamentId)
+    if (pendingSwapRequest.value) {
+      const response = await apiClient.acceptSwapRequest(tournamentId, pendingSwapRequest.value.id, registrationField5.value, registrationField7.value)
+      if (!response.success || !response.data) throw new Error(response.error || 'Không thể xác nhận swap')
+      attendanceMap.value.set(tournamentId, response.data as TournamentPlayerAttendance)
+      await Promise.all([fetchAttendanceStats(tournamentId), fetchAttendanceDetails(tournamentId), fetchIncomingSwapRequests(tournamentId)])
+      closeFieldRegistrationModal()
+      toast.success('Đã swap cầu thủ thành công')
+      return
+    }
     const response = await apiClient.put<TournamentPlayerAttendance>(`/tournaments/${tournamentId}/attendance`, {
       status: 'ATTEND', field5: registrationField5.value, field7: registrationField7.value,
     })
@@ -2543,6 +2712,7 @@ const createWeeklyTournament = async (tournamentDay: Date) => {
       startDate: startDateISO,
       endDate: endDateISO
     }
+    tournamentData.cancellationDeadline = getDefaultCancellationDeadline(startDate).toISOString()
     
     await tournamentsStore.addTournament(tournamentData)
     closeCreateTournamentModal()
@@ -2883,6 +3053,7 @@ const loadAttendanceData = async (tournaments: Tournament[]): Promise<void> => {
     ...tournamentIds.map(id => fetchAttendance(id)),
     ...tournamentIds.map(id => fetchAttendanceStats(id)),
     ...tournamentIds.map(id => fetchAttendanceDetails(id)),
+    ...tournamentIds.map(id => fetchIncomingSwapRequests(id)),
     ...tournamentIds.map(id => systemStore.fetchAdditionalCosts(id)),
   ])
 }
@@ -3030,6 +3201,58 @@ const saveTournamentTime = async () => {
     toast.error(error.response?.data?.error || error.message || 'Không thể lưu giờ thi đấu')
   } finally {
     tournamentTimeSaving.value = false
+  }
+}
+
+const getDefaultCancellationDeadline = (startDate: string | Date): Date => {
+  const deadline = new Date(startDate)
+  const startTime = deadline.getTime()
+  const daysSinceThursday = (deadline.getDay() - 4 + 7) % 7
+  deadline.setDate(deadline.getDate() - daysSinceThursday)
+  deadline.setHours(14, 0, 0, 0)
+  if (deadline.getTime() >= startTime) deadline.setDate(deadline.getDate() - 7)
+  return deadline
+}
+
+const openCancellationDeadlineModal = (tournament: Tournament) => {
+  cancellationDeadlineTournament.value = tournament
+  const defaultDeadline = getDefaultCancellationDeadline(tournament.startDate)
+  const deadline = tournament.cancellationDeadline
+    ? new Date(tournament.cancellationDeadline)
+    : defaultDeadline.getTime() > Date.now() ? defaultDeadline : null
+  selectedCancellationDeadline.value = deadline ? toDateTimeLocalValue(deadline) : ''
+  currentTimestamp.value = Date.now()
+  showCancellationDeadlineModal.value = true
+}
+
+const closeCancellationDeadlineModal = () => {
+  showCancellationDeadlineModal.value = false
+  cancellationDeadlineTournament.value = null
+  selectedCancellationDeadline.value = ''
+}
+
+const saveCancellationDeadline = async () => {
+  if (!cancellationDeadlineTournament.value || !selectedCancellationDeadline.value || cancellationDeadlineSaving.value) return
+  const deadline = new Date(selectedCancellationDeadline.value)
+  const startDate = new Date(cancellationDeadlineTournament.value.startDate)
+  if (Number.isNaN(deadline.getTime()) || deadline.getTime() <= Date.now() || deadline.getTime() >= startDate.getTime()) {
+    toast.error('Thời gian chốt hủy phải sau thời điểm hiện tại và trước giờ diễn ra giải đấu')
+    return
+  }
+  try {
+    cancellationDeadlineSaving.value = true
+    const response = await apiClient.updateTournament(cancellationDeadlineTournament.value.id, {
+      cancellationDeadline: deadline.toISOString(),
+    })
+    if (!response.success || !response.data) throw new Error(response.error || 'Không thể lưu thời gian chốt hủy')
+    const tournament = weeklyTournaments.value.find(item => item.id === cancellationDeadlineTournament.value?.id)
+    if (tournament) tournament.cancellationDeadline = (response.data as Tournament).cancellationDeadline ?? null
+    toast.success('Đã cập nhật thời gian chốt hủy')
+    closeCancellationDeadlineModal()
+  } catch (error: any) {
+    toast.error(error.response?.data?.error || error.message || 'Không thể lưu thời gian chốt hủy')
+  } finally {
+    cancellationDeadlineSaving.value = false
   }
 }
 
@@ -3390,6 +3613,12 @@ const fetchData = async () => {
 onMounted(async () => {
   await fetchData()
 })
+
+const cancellationDeadlineTimer = window.setInterval(() => {
+  currentTimestamp.value = Date.now()
+}, 30_000)
+
+onBeforeUnmount(() => window.clearInterval(cancellationDeadlineTimer))
 
 // Water-related functions
 const getUserWaterStatus = (tournamentId: string): boolean => {

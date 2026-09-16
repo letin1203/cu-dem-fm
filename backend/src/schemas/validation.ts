@@ -74,6 +74,7 @@ export const createTournamentSchema = z.object({
   status: TournamentStatus.default('UPCOMING'),
   startDate: z.string().transform((str) => new Date(str)),
   endDate: z.string().transform((str) => new Date(str)).optional().nullable(),
+  cancellationDeadline: z.string().transform((str) => new Date(str)).optional().nullable(),
   teamIds: z.array(z.string()).optional().default([]),
 }).superRefine((data, ctx) => {
   // For non-weekly tournaments, require at least 2 teams
@@ -100,6 +101,7 @@ export const updateTournamentSchema = z.object({
   fundContribution: z.number().int().min(0).optional(),
   selfFunded: z.boolean().optional(),
   maxAttendance: z.number().int().min(1).nullable().optional(),
+  cancellationDeadline: z.string().transform((str) => new Date(str)).optional().nullable(),
   winnerId: z.string().optional(),
 });
 

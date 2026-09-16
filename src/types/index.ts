@@ -99,6 +99,7 @@ export interface Tournament {
   pitchType?: 'FIELD_5' | 'FIELD_7' | null
   selfFunded?: boolean
   maxAttendance?: number | null
+  cancellationDeadline?: string | Date | null
   teams: Team[]
   tournamentTeamPlayers?: TournamentTeamPlayer[]
   additionalCosts?: AdditionalCost[]
@@ -115,6 +116,7 @@ export interface CreateTournamentRequest {
   status: 'UPCOMING' | 'ONGOING' | 'COMPLETED'
   startDate: string
   endDate?: string
+  cancellationDeadline?: string
   teamIds?: string[]
 }
 

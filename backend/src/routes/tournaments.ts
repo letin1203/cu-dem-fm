@@ -6,6 +6,20 @@ import { authenticate, authorize, AuthenticatedRequest } from '../middleware/aut
 
 const router = Router();
 
+const getDefaultCancellationDeadline = (startDate: Date): Date => {
+  const deadline = new Date(startDate);
+  const daysSinceThursday = (deadline.getDay() - 4 + 7) % 7;
+  deadline.setDate(deadline.getDate() - daysSinceThursday);
+  deadline.setHours(14, 0, 0, 0);
+  if (deadline.getTime() >= startDate.getTime()) {
+    deadline.setDate(deadline.getDate() - 7);
+  }
+  return deadline;
+};
+
+const getTournamentCancellationDeadline = (tournament: { startDate: Date; cancellationDeadline: Date | null }): Date =>
+  tournament.cancellationDeadline ?? getDefaultCancellationDeadline(tournament.startDate);
+
 const hasAttendanceCapacity = async (tournamentId: string, maxAttendance: number | null | undefined, field5: boolean, field7: boolean, additions = 1): Promise<boolean> => {
   if (!maxAttendance) return true;
   const [field5Count, field7Count] = await Promise.all([
@@ -319,6 +333,7 @@ router.post('/', authenticate, authorize(['ADMIN', 'MOD']), async (req: Authenti
     const tournament = await prisma.tournament.create({
       data: {
         ...tournamentData,
+        cancellationDeadline: tournamentData.cancellationDeadline ?? getDefaultCancellationDeadline(tournamentData.startDate),
         teams: teamIds.length > 0 ? {
           create: teamIds.map((teamId) => ({
             team: {
@@ -385,6 +400,29 @@ router.put('/:id', authenticate, authorize(['ADMIN', 'MOD']), async (req: Authen
         error: 'Chỉ admin mới có thể thay đổi chế độ Tự túc',
       });
       return;
+    }
+
+    if (
+      updateData.startDate
+      && existingTournament.cancellationDeadline
+      && existingTournament.cancellationDeadline.getTime() >= updateData.startDate.getTime()
+    ) {
+      res.status(400).json({
+        success: false,
+        error: 'Giờ thi đấu mới phải sau thời gian chốt hủy',
+      });
+      return;
+    }
+
+    if (updateData.cancellationDeadline !== undefined && updateData.cancellationDeadline !== null) {
+      const tournamentStartDate = updateData.startDate ?? existingTournament.startDate;
+      if (updateData.cancellationDeadline.getTime() <= Date.now() || updateData.cancellationDeadline.getTime() >= tournamentStartDate.getTime()) {
+        res.status(400).json({
+          success: false,
+          error: 'Thời gian chốt hủy phải sau thời điểm hiện tại và trước giờ diễn ra giải đấu',
+        });
+        return;
+      }
     }
 
     if (existingTournament.status === 'COMPLETED' && (updateData.stadiumCost !== undefined || updateData.sponsorMoney !== undefined || updateData.fundContribution !== undefined || updateData.selfFunded !== undefined || updateData.maxAttendance !== undefined)) {
@@ -873,6 +911,137 @@ router.put('/:id/friend-attendance', authenticate, async (req: AuthenticatedRequ
   }
 });
 
+// Swap requests are available only after the cancellation deadline and before teams are generated.
+router.get('/:id/swap-candidates', authenticate, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  try {
+    const [user, tournament] = await Promise.all([
+      prisma.user.findUnique({ where: { id: req.user!.id }, select: { playerId: true } }),
+      prisma.tournament.findUnique({ where: { id: req.params.id }, select: { id: true, status: true, startDate: true, cancellationDeadline: true, teams: { select: { teamId: true } } } }),
+    ]);
+    if (!user?.playerId || !tournament) {
+      res.status(404).json({ success: false, error: 'Không tìm thấy cầu thủ hoặc giải đấu' });
+      return;
+    }
+    if (tournament.status !== 'UPCOMING' || tournament.teams.length > 0 || Date.now() <= getTournamentCancellationDeadline(tournament).getTime()) {
+      res.status(400).json({ success: false, error: 'Chỉ có thể swap sau thời gian chốt hủy và trước khi chia đội' });
+      return;
+    }
+    const requesterAttendance = await prisma.tournamentPlayerAttendance.findUnique({ where: { tournamentId_playerId: { tournamentId: tournament.id, playerId: user.playerId } } });
+    if (requesterAttendance?.status !== 'ATTEND') {
+      res.status(400).json({ success: false, error: 'Bạn cần đăng ký tham gia trước khi yêu cầu swap' });
+      return;
+    }
+    const attendingPlayers = await prisma.tournamentPlayerAttendance.findMany({ where: { tournamentId: tournament.id, status: 'ATTEND' }, select: { playerId: true } });
+    const candidates = await prisma.player.findMany({
+      where: { id: { notIn: attendingPlayers.map((attendance) => attendance.playerId) }, isActive: true, user: { is: { isActive: true } } },
+      select: { id: true, name: true, position: true, positionSecond: true, tier: true, avatar: true },
+      orderBy: { name: 'asc' },
+    });
+    res.json({ success: true, data: candidates });
+  } catch (_error) {
+    res.status(500).json({ success: false, error: 'Không thể tải danh sách cầu thủ để swap' });
+  }
+});
+
+router.post('/:id/swap-requests', authenticate, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  try {
+    const targetPlayerId = String(req.body?.targetPlayerId || '');
+    const [user, tournament] = await Promise.all([
+      prisma.user.findUnique({ where: { id: req.user!.id }, select: { playerId: true } }),
+      prisma.tournament.findUnique({ where: { id: req.params.id }, select: { id: true, status: true, startDate: true, cancellationDeadline: true, teams: { select: { teamId: true } } } }),
+    ]);
+    if (!user?.playerId || !targetPlayerId || !tournament) {
+      res.status(400).json({ success: false, error: 'Thông tin yêu cầu swap không hợp lệ' });
+      return;
+    }
+    if (user.playerId === targetPlayerId || tournament.status !== 'UPCOMING' || tournament.teams.length > 0 || Date.now() <= getTournamentCancellationDeadline(tournament).getTime()) {
+      res.status(400).json({ success: false, error: 'Chỉ có thể swap sau thời gian chốt hủy và trước khi chia đội' });
+      return;
+    }
+    const [requesterAttendance, targetPlayer, targetAttendance] = await Promise.all([
+      prisma.tournamentPlayerAttendance.findUnique({ where: { tournamentId_playerId: { tournamentId: tournament.id, playerId: user.playerId } } }),
+      prisma.player.findUnique({ where: { id: targetPlayerId }, include: { user: { select: { id: true, isActive: true } } } }),
+      prisma.tournamentPlayerAttendance.findUnique({ where: { tournamentId_playerId: { tournamentId: tournament.id, playerId: targetPlayerId } } }),
+    ]);
+    if (requesterAttendance?.status !== 'ATTEND') {
+      res.status(400).json({ success: false, error: 'Bạn cần đăng ký tham gia trước khi yêu cầu swap' });
+      return;
+    }
+    if (!targetPlayer?.isActive || !targetPlayer.user?.isActive || targetAttendance?.status === 'ATTEND') {
+      res.status(400).json({ success: false, error: 'Cầu thủ được chọn không thể nhận yêu cầu swap' });
+      return;
+    }
+    const request = await prisma.tournamentSwapRequest.upsert({
+      where: { tournamentId_requesterPlayerId_targetPlayerId: { tournamentId: tournament.id, requesterPlayerId: user.playerId, targetPlayerId } },
+      update: { status: 'PENDING', createdAt: new Date(), resolvedAt: null },
+      create: { tournamentId: tournament.id, requesterPlayerId: user.playerId, targetPlayerId },
+      include: { target: { select: { name: true } } },
+    });
+    res.status(201).json({ success: true, data: request, message: `Đã gửi yêu cầu swap tới ${request.target.name}` });
+  } catch (_error) {
+    res.status(500).json({ success: false, error: 'Không thể gửi yêu cầu swap' });
+  }
+});
+
+router.get('/:id/swap-requests/mine', authenticate, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  try {
+    const user = await prisma.user.findUnique({ where: { id: req.user!.id }, select: { playerId: true } });
+    if (!user?.playerId) {
+      res.json({ success: true, data: [] });
+      return;
+    }
+    const requests = await prisma.tournamentSwapRequest.findMany({
+      where: { tournamentId: req.params.id, targetPlayerId: user.playerId, status: 'PENDING' },
+      include: { requester: { select: { id: true, name: true, position: true, tier: true, avatar: true } } },
+      orderBy: { createdAt: 'asc' },
+    });
+    res.json({ success: true, data: requests });
+  } catch (_error) {
+    res.status(500).json({ success: false, error: 'Không thể tải yêu cầu swap' });
+  }
+});
+
+router.put('/:id/swap-requests/:requestId/accept', authenticate, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  try {
+    const field5 = req.body?.field5 === true;
+    const field7 = req.body?.field7 === true;
+    if (!field5 && !field7) {
+      res.status(400).json({ success: false, error: 'Vui lòng chọn ít nhất một sân' });
+      return;
+    }
+    const user = await prisma.user.findUnique({ where: { id: req.user!.id }, include: { player: true } });
+    if (!user?.player) {
+      res.status(400).json({ success: false, error: 'Tài khoản chưa liên kết cầu thủ' });
+      return;
+    }
+    const attendance = await prisma.$transaction(async (tx) => {
+      const request = await tx.tournamentSwapRequest.findUnique({ where: { id: req.params.requestId } });
+      const tournament = await tx.tournament.findUnique({ where: { id: req.params.id }, select: { id: true, status: true, selfFunded: true, startDate: true, cancellationDeadline: true, teams: { select: { teamId: true } } } });
+      if (!request || request.tournamentId !== req.params.id || request.status !== 'PENDING' || request.targetPlayerId !== user.player!.id) throw new Error('Yêu cầu swap không hợp lệ');
+      if (!tournament || tournament.status !== 'UPCOMING' || tournament.teams.length > 0 || Date.now() <= getTournamentCancellationDeadline(tournament).getTime()) throw new Error('Yêu cầu swap đã hết hiệu lực');
+      if (!tournament.selfFunded && user.player!.money < 0) throw new Error('Số dư của bạn đang âm, vui lòng thanh toán trước khi tham gia');
+      const [requesterAttendance, targetAttendance] = await Promise.all([
+        tx.tournamentPlayerAttendance.findUnique({ where: { tournamentId_playerId: { tournamentId: tournament.id, playerId: request.requesterPlayerId } } }),
+        tx.tournamentPlayerAttendance.findUnique({ where: { tournamentId_playerId: { tournamentId: tournament.id, playerId: user.player!.id } } }),
+      ]);
+      if (requesterAttendance?.status !== 'ATTEND' || targetAttendance?.status === 'ATTEND') throw new Error('Không thể thực hiện swap vì trạng thái điểm danh đã thay đổi');
+      const replacementAttendance = await tx.tournamentPlayerAttendance.upsert({
+        where: { tournamentId_playerId: { tournamentId: tournament.id, playerId: user.player!.id } },
+        update: { status: 'ATTEND', field5, field7, withWater: false, bet: false, registeredAt: new Date() },
+        create: { tournamentId: tournament.id, playerId: user.player!.id, status: 'ATTEND', field5, field7, registeredAt: new Date() },
+      });
+      await tx.tournamentPlayerAttendance.update({ where: { tournamentId_playerId: { tournamentId: tournament.id, playerId: request.requesterPlayerId } }, data: { status: 'NULL', field5: false, field7: false, withWater: false, bet: false } });
+      await tx.tournamentSwapRequest.update({ where: { id: request.id }, data: { status: 'ACCEPTED', resolvedAt: new Date() } });
+      await tx.tournamentSwapRequest.updateMany({ where: { tournamentId: tournament.id, requesterPlayerId: request.requesterPlayerId, status: 'PENDING', id: { not: request.id } }, data: { status: 'CANCELLED', resolvedAt: new Date() } });
+      return replacementAttendance;
+    });
+    res.json({ success: true, data: attendance, message: 'Đã swap cầu thủ thành công' });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Không thể chấp nhận yêu cầu swap';
+    res.status(400).json({ success: false, error: message });
+  }
+});
+
 // Update player attendance for a tournament
 router.put('/:id/attendance', authenticate, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   try {
@@ -1032,6 +1201,19 @@ router.put('/:id/attendance', authenticate, async (req: AuthenticatedRequest, re
       where: { tournamentId_playerId: { tournamentId, playerId: player.id } },
       select: { status: true },
     });
+
+    if (
+      req.user!.role === 'USER'
+      && existingAttendance?.status === 'ATTEND'
+      && status !== 'ATTEND'
+      && Date.now() > getTournamentCancellationDeadline(tournament).getTime()
+    ) {
+      res.status(400).json({
+        success: false,
+        error: 'Đã quá thời gian chốt hủy, bạn không thể hủy tham gia',
+      });
+      return;
+    }
 
     if (status === 'ATTEND' && existingAttendance?.status !== 'ATTEND' && !await hasAttendanceCapacity(tournamentId, tournament.maxAttendance, field5 ?? true, field7 ?? true)) {
       res.status(400).json({ success: false, error: `Giải đấu đã đạt giới hạn ${tournament.maxAttendance} cầu thủ điểm danh` });

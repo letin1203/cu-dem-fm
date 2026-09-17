@@ -857,6 +857,10 @@ const saveAvatar = async () => {
   }
 };
 const submitTopUp = async () => {
+  if (!Number.isInteger(selectedTopUpAmount.value) || selectedTopUpAmount.value <= 0) {
+    toast.error("Vui lòng nhập số tiền nạp hợp lệ");
+    return;
+  }
   submittingTopUp.value = true;
   try {
     const response = await apiClient.createMoneyTopUp(

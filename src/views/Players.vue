@@ -661,6 +661,10 @@ function openAdminTopUp() {
 
 async function submitAdminTopUp() {
   if (!editingPlayer.value) return
+  if (!Number.isInteger(selectedTopUpAmount.value) || selectedTopUpAmount.value <= 0) {
+    toast.error('Vui lòng nhập số tiền nạp hợp lệ')
+    return
+  }
   submittingAdminTopUp.value = true
   try {
     const response = await apiClient.createAdminMoneyTopUp(editingPlayer.value.id, selectedTopUpAmount.value, adminTopUpReason.value)

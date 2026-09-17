@@ -3,8 +3,6 @@ import { prisma } from '../lib/prisma';
 import { authenticate, authorize, AuthenticatedRequest } from '../middleware/auth';
 
 const router = Router();
-const allowedAmounts = [50000, 100000, 200000, 500000];
-
 // A logged-in player submits their own top-up request.
 router.post('/', authenticate, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   try {
@@ -17,13 +15,6 @@ router.post('/', authenticate, async (req: AuthenticatedRequest, res: Response):
     const user = await prisma.user.findUnique({ where: { id: req.user!.id }, select: { playerId: true } });
     if (!user?.playerId) {
       res.status(400).json({ success: false, error: 'Tài khoản chưa được liên kết với cầu thủ' });
-      return;
-    }
-
-    const player = await prisma.player.findUnique({ where: { id: user.playerId }, select: { money: true } });
-    const isDebtSettlementAmount = Boolean(player && player.money < 0 && amount === Math.abs(player.money));
-    if (!allowedAmounts.includes(amount) && !isDebtSettlementAmount) {
-      res.status(400).json({ success: false, error: 'Số tiền nạp không hợp lệ' });
       return;
     }
 
@@ -62,7 +53,8 @@ router.post('/admin', authenticate, authorize(['ADMIN', 'MOD']), async (req: Aut
     const playerId = String(req.body?.playerId || '');
     const amount = Number(req.body?.amount);
     const reason = String(req.body?.reason || '').trim();
-    if (!playerId || !allowedAmounts.includes(amount)) {
+    // Staff may enter a custom amount in addition to the quick-select options.
+    if (!playerId || !Number.isInteger(amount) || amount <= 0) {
       res.status(400).json({ success: false, error: 'Thông tin nạp tiền không hợp lệ' });
       return;
     }

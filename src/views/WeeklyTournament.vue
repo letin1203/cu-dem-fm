@@ -3917,6 +3917,10 @@ const openCurrentUserDebtTopUp = async (): Promise<void> => {
 
 const submitTournamentDebtTopUp = async (): Promise<void> => {
   if (tournamentDebtTopUpSubmitting.value) return
+  if (!Number.isInteger(selectedTournamentDebtTopUpAmount.value) || selectedTournamentDebtTopUpAmount.value <= 0) {
+    toast.error('Vui lòng nhập số tiền nạp hợp lệ')
+    return
+  }
   tournamentDebtTopUpSubmitting.value = true
   try {
     const response = await apiClient.createMoneyTopUp(selectedTournamentDebtTopUpAmount.value)

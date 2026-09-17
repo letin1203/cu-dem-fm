@@ -30,6 +30,7 @@ model User {
   playerId String? @unique
   friends  Player[] @relation("PlayerFriendOwner")
   fundContributions FundContribution[]
+  attendancesAdded TournamentPlayerAttendance[] @relation("TournamentAttendanceAddedBy")
 
   @@map("users")
 }
@@ -163,6 +164,8 @@ model TournamentPlayerAttendance {
   field5       Boolean  @default(true) // Registered to play on a 5-a-side pitch
   field7       Boolean  @default(true) // Registered to play on a 7-a-side pitch
   registeredAt DateTime? // Time the player most recently registered as attending
+  addedBy     User?     @relation("TournamentAttendanceAddedBy", fields: [addedById], references: [id], onDelete: SetNull)
+  addedById   String?
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
@@ -173,6 +176,7 @@ model TournamentPlayerAttendance {
   playerId     String
 
   @@unique([tournamentId, playerId])
+  @@index([addedById])
   @@map("tournament_player_attendances")
 }
 

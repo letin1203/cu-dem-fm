@@ -993,7 +993,7 @@
               
               <!-- Player Details Row -->
               <div class="mt-1 flex items-center justify-between gap-3">
-                <span class="text-sm text-gray-600">{{ attendance.player.position }}<template v-if="attendance.player.positionSecond">-{{ attendance.player.positionSecond }}</template> - Tier {{ attendance.player.tier }}</span>
+                <span class="text-sm text-gray-600">{{ attendance.player.position }}<template v-if="attendance.player.positionSecond">-{{ attendance.player.positionSecond }}</template> - Tier {{ attendance.player.tier }}<template v-if="attendanceModalType === 'attending' && attendance.addedBy"> - thêm bởi {{ attendance.addedBy.username }}</template></span>
                 <span v-if="attendanceModalType === 'attending' && attendance.registeredAt" class="shrink-0 text-xs text-gray-500">{{ formatRegistrationTime(attendance.registeredAt) }}</span>
               </div>
             </div>
@@ -3101,7 +3101,7 @@ const registerSelectedPlayers = async (): Promise<void> => {
 
     const updatedPlayerIds = new Set(response.data?.playerIds || [])
     attendanceModalData.value = attendanceModalData.value.map(item =>
-      updatedPlayerIds.has(item.player.id) ? { ...item, status: 'ATTEND' } : item,
+      updatedPlayerIds.has(item.player.id) ? { ...item, status: 'ATTEND', field5: true, field7: true } : item,
     )
     attendanceDetailsMap.value.set(tournamentId, attendanceModalData.value)
     selectedPendingPlayerIds.value = new Set()

@@ -27,6 +27,7 @@ export interface TournamentAttendanceDetails {
   field5?: boolean
   field7?: boolean
   registeredAt?: string | Date | null
+  addedBy?: { username: string } | null
   tournamentId: string
   playerId: string
   createdAt: string | Date
@@ -262,6 +263,7 @@ export interface TournamentAttendanceDetails {
   field5?: boolean
   field7?: boolean
   registeredAt?: string | Date | null
+  addedBy?: { username: string } | null
   tournamentId: string
   playerId: string
   createdAt: string | Date

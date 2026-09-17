@@ -1077,6 +1077,7 @@ router.put('/:id/attendance', authenticate, async (req: AuthenticatedRequest, re
     const { id: tournamentId } = req.params;
     const userId = req.user!.id;
     const { status, withWater, bet, field5, field7, playerId, toggleWater, toggleBet } = req.body;
+    const isStaffRegisteringForPlayer = Boolean(playerId && ['ADMIN', 'MOD'].includes(req.user!.role || ''));
 
     // If playerId is provided and user is admin/mod, use that player instead
     let targetPlayerId = userId;
@@ -1253,6 +1254,7 @@ router.put('/:id/attendance', authenticate, async (req: AuthenticatedRequest, re
     const updateData: any = { status };
     if (status === 'ATTEND' && existingAttendance?.status !== 'ATTEND') {
       updateData.registeredAt = new Date();
+      if (isStaffRegisteringForPlayer) updateData.addedById = req.user!.id;
     }
     if (withWater !== undefined) {
       updateData.withWater = withWater;
@@ -1281,6 +1283,7 @@ router.put('/:id/attendance', authenticate, async (req: AuthenticatedRequest, re
         field5: field5 ?? true,
         field7: field7 ?? true,
         registeredAt: status === 'ATTEND' ? new Date() : null,
+        addedById: status === 'ATTEND' && isStaffRegisteringForPlayer ? req.user!.id : null,
       },
     });
 
@@ -1345,8 +1348,10 @@ router.put('/:id/attendance/batch', authenticate, authorize(['ADMIN', 'MOD']), a
     await prisma.$transaction(
       pendingPlayerIds.map(playerId => prisma.tournamentPlayerAttendance.upsert({
         where: { tournamentId_playerId: { tournamentId, playerId } },
-        update: { status: 'ATTEND', registeredAt: new Date() },
-        create: { tournamentId, playerId, status: 'ATTEND', registeredAt: new Date() },
+        // Staff registration follows the same default as a player's own
+        // registration: participate in both Sân 5 and Sân 7.
+        update: { status: 'ATTEND', field5: true, field7: true, registeredAt: new Date(), addedById: req.user!.id },
+        create: { tournamentId, playerId, status: 'ATTEND', field5: true, field7: true, registeredAt: new Date(), addedById: req.user!.id },
       })),
     );
 
@@ -1408,6 +1413,7 @@ router.put('/:id/attendance/:playerId', authenticate, authorize(['ADMIN', 'MOD']
     const updateData: any = { status };
     if (status === 'ATTEND' && existingAttendance?.status !== 'ATTEND') {
       updateData.registeredAt = new Date();
+      updateData.addedById = req.user!.id;
     }
     if (withWater !== undefined) {
       updateData.withWater = withWater;
@@ -1436,6 +1442,7 @@ router.put('/:id/attendance/:playerId', authenticate, authorize(['ADMIN', 'MOD']
         field5: field5 ?? true,
         field7: field7 ?? true,
         registeredAt: status === 'ATTEND' ? new Date() : null,
+        addedById: status === 'ATTEND' ? req.user!.id : null,
       },
     });
 
@@ -1536,7 +1543,10 @@ router.get('/:id/attendance-details', async (req: AuthenticatedRequest, res: Res
         select: { id: true, name: true, position: true, positionSecond: true, tier: true, avatar: true },
         orderBy: { name: 'asc' },
       }),
-      prisma.tournamentPlayerAttendance.findMany({ where: { tournamentId } }),
+      prisma.tournamentPlayerAttendance.findMany({
+        where: { tournamentId },
+        include: { addedBy: { select: { username: true } } },
+      }),
     ]);
     const attendanceByPlayerId = new Map(attendanceRecords.map(record => [record.playerId, record]));
     const attendanceDetails = players.map((player) => {

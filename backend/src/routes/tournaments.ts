@@ -1540,7 +1540,10 @@ router.get('/:id/attendance-details', async (req: AuthenticatedRequest, res: Res
     const [players, attendanceRecords] = await Promise.all([
       prisma.player.findMany({
         where: { isActive: true },
-        select: { id: true, name: true, position: true, positionSecond: true, tier: true, avatar: true },
+        select: {
+          id: true, name: true, position: true, positionSecond: true, tier: true, avatar: true,
+          friendOwner: { select: { player: { select: { name: true } } } },
+        },
         orderBy: { name: 'asc' },
       }),
       prisma.tournamentPlayerAttendance.findMany({

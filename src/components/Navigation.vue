@@ -115,6 +115,7 @@
               class="w-4 h-4 lg:w-5 lg:h-5 flex-shrink-0"
             />
             <span class="hidden lg:block">{{ item.name }}</span>
+            <span v-if="item.name === 'Duyệt' && pendingTopUpCount > 0" class="ml-1 inline-flex min-w-5 items-center justify-center rounded-full bg-red-500 px-1.5 py-0.5 text-xs font-bold text-white">{{ pendingTopUpCount }}</span>
           </router-link>
 
           <!-- User Menu -->
@@ -230,6 +231,7 @@
         >
           <component :is="item.icon" class="w-5 h-5" />
           <span>{{ item.name }}</span>
+          <span v-if="item.name === 'Duyệt' && pendingTopUpCount > 0" class="ml-1 inline-flex min-w-5 items-center justify-center rounded-full bg-red-500 px-1.5 py-0.5 text-xs font-bold text-white">{{ pendingTopUpCount }}</span>
         </router-link>
 
         <!-- Mobile User Info -->
@@ -465,7 +467,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from "vue";
+import { ref, computed, onBeforeUnmount, onMounted } from "vue";
 import { useRouter } from "vue-router";
 import { useAuthStore } from "../stores/auth";
 import { usePlayersStore } from "../stores/players";
@@ -779,6 +781,30 @@ function getRoleClasses(role: UserRole) {
 }
 
 const isLoggingOut = ref(false);
+const pendingTopUpCount = ref(0);
+let pendingTopUpRefreshTimer: ReturnType<typeof setInterval> | null = null;
+
+async function loadPendingTopUpCount() {
+  if (!authStore.hasAnyRole(["admin", "mod"])) {
+    pendingTopUpCount.value = 0;
+    return;
+  }
+  try {
+    const response = await apiClient.getPendingMoneyTopUps();
+    if (response.success) pendingTopUpCount.value = Array.isArray(response.data) ? response.data.length : 0;
+  } catch {
+    // The navigation remains usable if the optional badge cannot be refreshed.
+  }
+}
+
+onMounted(() => {
+  void loadPendingTopUpCount();
+  pendingTopUpRefreshTimer = setInterval(() => void loadPendingTopUpCount(), 60000);
+});
+
+onBeforeUnmount(() => {
+  if (pendingTopUpRefreshTimer) clearInterval(pendingTopUpRefreshTimer);
+});
 
 async function handleLogout() {
   if (isLoggingOut.value) return; // Prevent multiple logout attempts

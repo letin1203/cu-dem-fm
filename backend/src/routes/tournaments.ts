@@ -1229,19 +1229,28 @@ router.put('/:id/attendance', authenticate, async (req: AuthenticatedRequest, re
 
     const existingAttendance = await prisma.tournamentPlayerAttendance.findUnique({
       where: { tournamentId_playerId: { tournamentId, playerId: player.id } },
-      select: { status: true },
+      select: { status: true, field5: true, field7: true },
     });
 
     if (
       req.user!.role === 'USER'
       && existingAttendance?.status === 'ATTEND'
-      && status !== 'ATTEND'
+      && (status !== 'ATTEND'
+        || (field5 === false && existingAttendance.field5)
+        || (field7 === false && existingAttendance.field7))
       && Date.now() > getTournamentCancellationDeadline(tournament).getTime()
     ) {
       res.status(400).json({
         success: false,
         error: 'Đã quá thời gian chốt hủy, bạn không thể hủy tham gia',
       });
+      return;
+    }
+
+    const addsField5 = status === 'ATTEND' && existingAttendance?.status === 'ATTEND' && field5 === true && !existingAttendance.field5;
+    const addsField7 = status === 'ATTEND' && existingAttendance?.status === 'ATTEND' && field7 === true && !existingAttendance.field7;
+    if ((addsField5 || addsField7) && !await hasAttendanceCapacity(tournamentId, tournament.maxAttendance, addsField5, addsField7)) {
+      res.status(400).json({ success: false, error: `Giải đấu đã đạt giới hạn ${tournament.maxAttendance} cầu thủ điểm danh` });
       return;
     }
 

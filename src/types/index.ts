@@ -126,6 +126,9 @@ export interface TournamentPlayerAttendance {
   status: 'NULL' | 'NOT_ATTEND' | 'ATTEND'
   withWater: boolean
   bet: boolean
+  field5?: boolean
+  field7?: boolean
+  registeredAt?: string | Date | null
   tournamentId: string
   playerId: string
   createdAt: string | Date

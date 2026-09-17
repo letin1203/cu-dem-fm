@@ -285,12 +285,12 @@
                 <div v-if="ongoingTournament.status === 'UPCOMING' && getTournamentTeams(ongoingTournament).length === 0 && getAttendanceButtonText(ongoingTournament.id) !== 'Không có cầu thủ'" class="flex flex-col items-center" :class="getUserAttendanceStatus(ongoingTournament.id) === 'ATTEND' ? 'w-full sm:w-auto' : 'w-auto self-center'">
                   <button
                     @click="toggleAttendance(ongoingTournament.id)"
-                    :disabled="attendanceLoading.has(ongoingTournament.id) || (getAttendanceButtonText(ongoingTournament.id) === 'Đã tham gia' && isUserCancellationLocked(ongoingTournament)) || (getAttendanceButtonText(ongoingTournament.id) === 'Tham gia' && (isAttendanceLimitReached(ongoingTournament) || (cannotSelfRegisterDueToDebt && !ongoingTournament.selfFunded)))"
-                    :title="getAttendanceButtonText(ongoingTournament.id) === 'Đã tham gia' && isUserCancellationLocked(ongoingTournament) ? 'Đã quá thời gian chốt hủy' : (getAttendanceButtonText(ongoingTournament.id) === 'Tham gia' && isAttendanceLimitReached(ongoingTournament) ? attendanceLimitMessage(ongoingTournament) : (cannotSelfRegisterDueToDebt && !ongoingTournament.selfFunded ? 'Vui lòng thanh toán số dư âm trước khi đăng ký' : undefined))"
+                    :disabled="attendanceLoading.has(ongoingTournament.id) || (getAttendanceButtonText(ongoingTournament.id) === 'Đã tham gia' && isUserCancellationLocked(ongoingTournament) && !canAddAnotherField(ongoingTournament.id)) || (getAttendanceButtonText(ongoingTournament.id) === 'Tham gia' && (isAttendanceLimitReached(ongoingTournament) || (cannotSelfRegisterDueToDebt && !ongoingTournament.selfFunded)))"
+                    :title="getAttendanceButtonText(ongoingTournament.id) === 'Đã tham gia' && isUserCancellationLocked(ongoingTournament) && !canAddAnotherField(ongoingTournament.id) ? 'Đã quá thời gian chốt hủy' : (getAttendanceButtonText(ongoingTournament.id) === 'Tham gia' && isAttendanceLimitReached(ongoingTournament) ? attendanceLimitMessage(ongoingTournament) : (cannotSelfRegisterDueToDebt && !ongoingTournament.selfFunded ? 'Vui lòng thanh toán số dư âm trước khi đăng ký' : undefined))"
                     class="px-6 py-2 rounded-lg font-medium transition-colors duration-200"
                     :class="[
                       getUserAttendanceStatus(ongoingTournament.id) === 'ATTEND' ? 'w-full sm:w-auto' : 'w-auto',
-                      attendanceLoading.has(ongoingTournament.id) || (getAttendanceButtonText(ongoingTournament.id) === 'Đã tham gia' && isUserCancellationLocked(ongoingTournament)) || (getAttendanceButtonText(ongoingTournament.id) === 'Tham gia' && (isAttendanceLimitReached(ongoingTournament) || (cannotSelfRegisterDueToDebt && !ongoingTournament.selfFunded)))
+                      attendanceLoading.has(ongoingTournament.id) || (getAttendanceButtonText(ongoingTournament.id) === 'Đã tham gia' && isUserCancellationLocked(ongoingTournament) && !canAddAnotherField(ongoingTournament.id)) || (getAttendanceButtonText(ongoingTournament.id) === 'Tham gia' && (isAttendanceLimitReached(ongoingTournament) || (cannotSelfRegisterDueToDebt && !ongoingTournament.selfFunded)))
                         ? 'opacity-50 cursor-not-allowed' 
                         : 'hover:shadow-md',
                         getAttendanceButtonText(ongoingTournament.id) === 'Tham gia'
@@ -853,14 +853,14 @@
 
   <div v-if="showFieldRegistrationModal" class="fixed inset-0 z-[70] flex items-center justify-center bg-black/50 p-4" @click.self="closeFieldRegistrationModal">
     <div class="w-full max-w-md rounded-lg bg-white p-6 shadow-xl">
-      <h3 class="text-lg font-semibold text-gray-900">{{ pendingSwapRequest ? `Xác nhận swap với ${pendingSwapRequest.requester.name}` : 'Chọn sân đăng ký' }}</h3>
-      <p class="mt-1 text-sm text-gray-600">{{ pendingSwapRequest ? 'Chọn sân trước khi xác nhận thay thế cầu thủ.' : 'Bạn có thể đăng ký một hoặc cả hai sân.' }}</p>
+      <h3 class="text-lg font-semibold text-gray-900">{{ pendingSwapRequest ? `Xác nhận swap với ${pendingSwapRequest.requester.name}` : fieldRegistrationAddOnly ? 'Thêm sân đăng ký' : 'Chọn sân đăng ký' }}</h3>
+      <p class="mt-1 text-sm text-gray-600">{{ pendingSwapRequest ? 'Chọn sân trước khi xác nhận thay thế cầu thủ.' : fieldRegistrationAddOnly ? 'Bạn chỉ có thể thêm sân chưa đăng ký sau thời gian chốt hủy.' : 'Bạn có thể đăng ký một hoặc cả hai sân.' }}</p>
       <div class="mt-5 grid grid-cols-2 gap-3">
-        <button type="button" class="rounded-lg border-2 px-4 py-4 font-semibold transition-colors" :class="registrationField5 ? 'border-primary-600 bg-primary-600 text-white' : 'border-gray-200 text-gray-700 hover:border-primary-400'" @click="registrationField5 = !registrationField5">Sân 5 {{ registrationField5 ? '✓' : '' }}</button>
-        <button type="button" class="rounded-lg border-2 px-4 py-4 font-semibold transition-colors" :class="registrationField7 ? 'border-primary-600 bg-primary-600 text-white' : 'border-gray-200 text-gray-700 hover:border-primary-400'" @click="registrationField7 = !registrationField7">Sân 7 {{ registrationField7 ? '✓' : '' }}</button>
+        <button type="button" :disabled="fieldRegistrationAddOnly && fieldRegistrationExistingField5" class="rounded-lg border-2 px-4 py-4 font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-60" :class="registrationField5 ? 'border-primary-600 bg-primary-600 text-white' : 'border-gray-200 text-gray-700 hover:border-primary-400'" @click="registrationField5 = !registrationField5">Sân 5 {{ registrationField5 ? '✓' : '' }}</button>
+        <button type="button" :disabled="fieldRegistrationAddOnly && fieldRegistrationExistingField7" class="rounded-lg border-2 px-4 py-4 font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-60" :class="registrationField7 ? 'border-primary-600 bg-primary-600 text-white' : 'border-gray-200 text-gray-700 hover:border-primary-400'" @click="registrationField7 = !registrationField7">Sân 7 {{ registrationField7 ? '✓' : '' }}</button>
       </div>
       <p v-if="!registrationField5 && !registrationField7" class="mt-3 text-sm text-red-600">Vui lòng chọn ít nhất một sân.</p>
-      <div class="mt-6 flex justify-end gap-3"><button type="button" class="btn-secondary" @click="closeFieldRegistrationModal">Hủy</button><button type="button" class="btn-primary" :disabled="!registrationField5 && !registrationField7" @click="confirmFieldRegistration">{{ pendingSwapRequest ? 'Xác nhận swap' : 'Xác nhận' }}</button></div>
+      <div class="mt-6 flex justify-end gap-3"><button type="button" class="btn-secondary" @click="closeFieldRegistrationModal">Hủy</button><button type="button" class="btn-primary" :disabled="!canConfirmFieldRegistration" @click="confirmFieldRegistration">{{ pendingSwapRequest ? 'Xác nhận swap' : 'Xác nhận' }}</button></div>
     </div>
   </div>
 
@@ -1639,6 +1639,12 @@ const showFieldRegistrationModal = ref(false)
 const fieldRegistrationTournamentId = ref<string | null>(null)
 const registrationField5 = ref(true)
 const registrationField7 = ref(true)
+const fieldRegistrationAddOnly = ref(false)
+const fieldRegistrationExistingField5 = ref(false)
+const fieldRegistrationExistingField7 = ref(false)
+const canConfirmFieldRegistration = computed(() => fieldRegistrationAddOnly.value
+  ? (registrationField5.value && !fieldRegistrationExistingField5.value) || (registrationField7.value && !fieldRegistrationExistingField7.value)
+  : registrationField5.value || registrationField7.value)
 interface SwapCandidate { id: string; name: string; position: string; positionSecond?: string | null; tier: number; avatar?: string | null }
 interface IncomingSwapRequest { id: string; tournamentId: string; requester: SwapCandidate }
 const showSwapModal = ref(false)
@@ -2294,7 +2300,15 @@ const openSwapAcceptance = (request: IncomingSwapRequest): void => {
   fieldRegistrationTournamentId.value = request.tournamentId
   registrationField5.value = true
   registrationField7.value = true
+  fieldRegistrationAddOnly.value = false
+  fieldRegistrationExistingField5.value = false
+  fieldRegistrationExistingField7.value = false
   showFieldRegistrationModal.value = true
+}
+
+const canAddAnotherField = (tournamentId: string): boolean => {
+  const attendance = attendanceMap.value.get(tournamentId)
+  return attendance?.status === 'ATTEND' && (!attendance.field5 || !attendance.field7)
 }
 
 const toggleAttendance = async (tournamentId: string): Promise<void> => {
@@ -2312,6 +2326,22 @@ const toggleAttendance = async (tournamentId: string): Promise<void> => {
     fieldRegistrationTournamentId.value = tournamentId
     registrationField5.value = true
     registrationField7.value = true
+    fieldRegistrationAddOnly.value = false
+    fieldRegistrationExistingField5.value = false
+    fieldRegistrationExistingField7.value = false
+    showFieldRegistrationModal.value = true
+    return
+  }
+
+  const tournament = weeklyTournaments.value.find(item => item.id === tournamentId)
+  if (tournament && isUserCancellationLocked(tournament)) {
+    if (!canAddAnotherField(tournamentId)) return
+    fieldRegistrationTournamentId.value = tournamentId
+    fieldRegistrationExistingField5.value = Boolean(currentAttendance.field5)
+    fieldRegistrationExistingField7.value = Boolean(currentAttendance.field7)
+    registrationField5.value = Boolean(currentAttendance.field5)
+    registrationField7.value = Boolean(currentAttendance.field7)
+    fieldRegistrationAddOnly.value = true
     showFieldRegistrationModal.value = true
     return
   }
@@ -2406,11 +2436,14 @@ const closeFieldRegistrationModal = (): void => {
   showFieldRegistrationModal.value = false
   fieldRegistrationTournamentId.value = null
   pendingSwapRequest.value = null
+  fieldRegistrationAddOnly.value = false
+  fieldRegistrationExistingField5.value = false
+  fieldRegistrationExistingField7.value = false
 }
 
 const confirmFieldRegistration = async (): Promise<void> => {
   const tournamentId = fieldRegistrationTournamentId.value
-  if (!tournamentId || (!registrationField5.value && !registrationField7.value) || attendanceLoading.value.has(tournamentId)) return
+  if (!tournamentId || !canConfirmFieldRegistration.value || attendanceLoading.value.has(tournamentId)) return
   try {
     attendanceLoading.value.add(tournamentId)
     if (pendingSwapRequest.value) {
@@ -2426,10 +2459,11 @@ const confirmFieldRegistration = async (): Promise<void> => {
       status: 'ATTEND', field5: registrationField5.value, field7: registrationField7.value,
     })
     if (!response.success || !response.data) throw new Error(response.error || 'Không thể đăng ký tham gia')
+    const addedFieldAfterDeadline = fieldRegistrationAddOnly.value
     attendanceMap.value.set(tournamentId, response.data)
     await fetchAttendanceStats(tournamentId)
     closeFieldRegistrationModal()
-    toast.success('Đã đăng ký tham gia')
+    toast.success(addedFieldAfterDeadline ? 'Đã thêm sân đăng ký' : 'Đã đăng ký tham gia')
   } catch (err: any) {
     toast.error(err.response?.data?.error || err.message || 'Không thể đăng ký tham gia')
   } finally {

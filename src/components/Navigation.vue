@@ -304,7 +304,7 @@
             </p>
             <p class="mt-2">
               Tiền quỹ hiện tại = Tiền quỹ dự tính − Tổng số dư âm của các cầu
-              thủ.
+              thủ + Tổng số dư dương của các cầu thủ.
             </p>
             <p class="mt-2 text-xs text-primary-700">
               Khoản “Trích quỹ” giảm phần tiền thu từ cầu thủ trước khi chia
@@ -324,7 +324,7 @@
             >
           </div>
           <div class="mt-3 flex items-center justify-between rounded-lg bg-amber-50 p-4">
-            <div><span class="font-medium text-gray-700">Tiền quỹ hiện tại</span><p class="mt-1 text-xs text-amber-800">Đã trừ tổng số dư âm: {{ formatMoney(fundHistoryTotalPlayerDebt) }} ₫</p></div>
+            <div><span class="font-medium text-gray-700">Tiền quỹ hiện tại</span><p class="mt-1 text-xs text-amber-800">Trừ số dư âm: {{ formatMoney(fundHistoryTotalPlayerDebt) }} ₫ · Cộng số dư dương: {{ formatMoney(fundHistoryTotalPlayerCredit) }} ₫</p></div>
             <strong class="whitespace-nowrap text-lg" :class="fundHistoryActualFund >= 0 ? 'text-green-600' : 'text-red-600'">{{ formatMoney(fundHistoryActualFund) }} ₫</strong>
           </div>
           <div
@@ -505,7 +505,8 @@ const fundHistoryLoading = ref(false);
 const exportingFundHistory = ref(false);
 const fundHistoryEstimatedFund = ref(0);
 const fundHistoryTotalPlayerDebt = ref(0);
-const fundHistoryActualFund = computed(() => fundHistoryEstimatedFund.value - fundHistoryTotalPlayerDebt.value);
+const fundHistoryTotalPlayerCredit = ref(0);
+const fundHistoryActualFund = computed(() => fundHistoryEstimatedFund.value - fundHistoryTotalPlayerDebt.value + fundHistoryTotalPlayerCredit.value);
 const fundHistory = ref<
   Array<{
     id: string;
@@ -664,10 +665,12 @@ async function exportFundHistory() {
 
     const estimatedFund = toMoneyNumber(data.estimatedFund ?? data.currentFund);
     const totalPlayerDebt = toMoneyNumber(data.totalPlayerDebt);
+    const totalPlayerCredit = toMoneyNumber(data.totalPlayerCredit);
     const overviewRows = [
       { "Chỉ số": "Tiền quỹ dự tính (đ)", "Số tiền": estimatedFund },
       { "Chỉ số": "Tổng số dư âm của cầu thủ (đ)", "Số tiền": totalPlayerDebt },
-      { "Chỉ số": "Tiền quỹ hiện tại (đ)", "Số tiền": estimatedFund - totalPlayerDebt },
+      { "Chỉ số": "Tổng số dư dương của cầu thủ (đ)", "Số tiền": totalPlayerCredit },
+      { "Chỉ số": "Tiền quỹ hiện tại (đ)", "Số tiền": estimatedFund - totalPlayerDebt + totalPlayerCredit },
       { "Chỉ số": "Tổng số mốc lịch sử", "Số tiền": entries.length },
     ];
 
@@ -722,6 +725,7 @@ async function openFundHistoryModal() {
     const data = response.data as any;
     fundHistoryEstimatedFund.value = toMoneyNumber(data.estimatedFund ?? data.currentFund);
     fundHistoryTotalPlayerDebt.value = toMoneyNumber(data.totalPlayerDebt);
+    fundHistoryTotalPlayerCredit.value = toMoneyNumber(data.totalPlayerCredit);
     fundHistory.value = Array.isArray(data.history)
       ? data.history.map((entry: any) => ({
           ...entry,

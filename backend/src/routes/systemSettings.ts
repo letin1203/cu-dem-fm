@@ -83,20 +83,21 @@ router.get('/fund-history', authenticate, async (_req: AuthenticatedRequest, res
       .sort((first, second) => new Date(first.startDate).getTime() - new Date(second.startDate).getTime())
       .map((entry) => ({ ...entry, balanceAfter: balanceAfter += entry.fundChange }));
 
-    const playerDebt = await prisma.player.aggregate({
-      where: { money: { lt: 0 } },
-      _sum: { money: true },
-    });
+    const [playerDebt, playerCredit] = await Promise.all([
+      prisma.player.aggregate({ where: { money: { lt: 0 } }, _sum: { money: true } }),
+      prisma.player.aggregate({ where: { money: { gt: 0 } }, _sum: { money: true } }),
+    ]);
     const totalPlayerDebt = Math.abs(playerDebt._sum.money ?? 0);
+    const totalPlayerCredit = playerCredit._sum.money ?? 0;
 
     res.json({
       success: true,
       data: {
-        // Estimated fund is the accounting total. Current fund reserves the
-        // amount still owed by players, so it excludes their negative balances.
+        // Current fund includes player balances: subtract debt and add credit.
         estimatedFund: balanceAfter,
-        currentFund: balanceAfter - totalPlayerDebt,
+        currentFund: balanceAfter - totalPlayerDebt + totalPlayerCredit,
         totalPlayerDebt,
+        totalPlayerCredit,
         history: history.reverse(),
       },
     });

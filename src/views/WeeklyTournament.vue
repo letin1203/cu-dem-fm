@@ -98,8 +98,8 @@
                     class="inline-flex items-center rounded-full bg-rose-100 px-2 py-1 text-xs font-semibold uppercase text-rose-800 transition-colors hover:bg-rose-200"
                     title="Chỉnh sửa thời gian chốt hủy"
                     @click="openCancellationDeadlineModal(ongoingTournament)"
-                  >Chốt hủy: {{ formatCancellationDeadline(ongoingTournament.cancellationDeadline || getDefaultCancellationDeadline(ongoingTournament.startDate)) }}</button>
-                  <span v-else class="inline-flex items-center rounded-full bg-rose-100 px-2 py-1 text-xs font-semibold uppercase text-rose-800">Chốt hủy: {{ formatCancellationDeadline(ongoingTournament.cancellationDeadline || getDefaultCancellationDeadline(ongoingTournament.startDate)) }}</span>
+                  >{{ getCancellationDeadlineBadgeText(ongoingTournament) }}</button>
+                  <span v-else class="inline-flex items-center rounded-full bg-rose-100 px-2 py-1 text-xs font-semibold uppercase text-rose-800">{{ getCancellationDeadlineBadgeText(ongoingTournament) }}</span>
                   <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium"
                         :class="getStatusBadge(ongoingTournament.status)">
                     {{ ongoingTournament.status }}
@@ -773,7 +773,7 @@
             <li>• Chọn <strong>Tham gia</strong> khi giải đang mở đăng ký; hệ thống sẽ lưu thời điểm đăng ký.</li>
             <li v-if="!ongoingTournament.selfFunded">• Cầu thủ có số dư âm cần thanh toán trước khi tự đăng ký tham gia.</li>
             <li>• Admin/mod chia đội lúc <strong>17:00</strong>.</li>
-            <li>• User chỉ được hủy tham gia trước <strong>Chốt hủy: {{ formatCancellationDeadline(ongoingTournament.cancellationDeadline || getDefaultCancellationDeadline(ongoingTournament.startDate)) }}</strong>. Sau thời điểm này, nút Đã tham gia sẽ bị khóa.</li>
+            <li>• User chỉ được hủy tham gia trước <strong>Chốt hủy: {{ formatCancellationDeadline(ongoingTournament.cancellationDeadline || getDefaultCancellationDeadline(ongoingTournament.startDate)) }}</strong>. Sau thời điểm này, user không được hủy đăng ký.</li>
             <li>• Sau khi đã chia đội, không thể hủy tham gia. Admin/mod có thể đăng ký giúp trước khi chia đội.</li>
           </ul>
         </section>
@@ -2050,6 +2050,13 @@ const formatCancellationDeadline = (deadline?: string | Date | null): string => 
   const minutes = date.getMinutes()
   const weekdays = ['Chủ nhật', 'Thứ 2', 'Thứ 3', 'Thứ 4', 'Thứ 5', 'Thứ 6', 'Thứ 7']
   return `${hours}h${minutes ? String(minutes).padStart(2, '0') : ''} ${weekdays[date.getDay()]}`
+}
+
+const getCancellationDeadlineBadgeText = (tournament: Tournament): string => {
+  currentTimestamp.value
+  const deadline = new Date(tournament.cancellationDeadline || getDefaultCancellationDeadline(tournament.startDate))
+  if (!Number.isNaN(deadline.getTime()) && deadline.getTime() <= Date.now()) return 'ĐÃ CHỐT'
+  return `Chốt hủy: ${formatCancellationDeadline(deadline)}`
 }
 
 const isUserCancellationLocked = (tournament: Tournament): boolean => {

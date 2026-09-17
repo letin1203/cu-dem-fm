@@ -178,7 +178,7 @@
         <div class="md:hidden flex items-center">
           <button
             @click="mobileMenuOpen = !mobileMenuOpen"
-            class="text-gray-600 hover:text-primary-600 p-2 rounded-md"
+            class="relative text-gray-600 hover:text-primary-600 p-2 rounded-md"
             :class="{ 'text-primary-600': mobileMenuOpen }"
           >
             <svg
@@ -209,6 +209,7 @@
                 d="M6 18L18 6M6 6l12 12"
               />
             </svg>
+            <span v-if="pendingTopUpCount > 0" class="absolute right-0 top-0 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[11px] font-bold leading-none text-white">!</span>
           </button>
         </div>
       </div>

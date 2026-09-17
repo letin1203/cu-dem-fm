@@ -89,7 +89,17 @@ router.get('/fund-history', authenticate, async (_req: AuthenticatedRequest, res
     });
     const totalPlayerDebt = Math.abs(playerDebt._sum.money ?? 0);
 
-    res.json({ success: true, data: { currentFund: balanceAfter, estimatedFund: balanceAfter, totalPlayerDebt, history: history.reverse() } });
+    res.json({
+      success: true,
+      data: {
+        // Estimated fund is the accounting total. Current fund reserves the
+        // amount still owed by players, so it excludes their negative balances.
+        estimatedFund: balanceAfter,
+        currentFund: balanceAfter - totalPlayerDebt,
+        totalPlayerDebt,
+        history: history.reverse(),
+      },
+    });
   } catch (error) {
     res.status(500).json({ success: false, error: 'Không thể tải lịch sử quỹ' });
   }

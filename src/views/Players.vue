@@ -309,8 +309,8 @@
     />
 
     <!-- Add/Edit Player Modal -->
-    <div v-if="showAddForm || editingPlayer" class="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center z-50">
-      <div class="bg-white rounded-lg p-6 w-full max-w-md">
+    <div v-if="showAddForm || editingPlayer" class="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto overscroll-contain bg-gray-600 bg-opacity-50 p-4">
+      <div class="my-auto max-h-[90vh] w-full max-w-md overflow-y-auto rounded-lg bg-white p-6">
         <h2 class="text-lg font-semibold mb-4">
           {{ editingPlayer ? 'Chỉnh sửa cầu thủ' : 'Thêm cầu thủ' }}
         </h2>
@@ -398,8 +398,8 @@
       </div>
     </div>
 
-    <div v-if="showAdminTopUpModal" class="fixed inset-0 z-[70] bg-gray-900/50 flex items-center justify-center p-4" @click.self="showAdminTopUpModal = false">
-      <div class="bg-white rounded-lg shadow-xl w-full max-w-md p-6">
+    <div v-if="showAdminTopUpModal" class="fixed inset-0 z-[70] flex items-center justify-center overflow-y-auto overscroll-contain bg-gray-900/50 p-4" @click.self="showAdminTopUpModal = false">
+      <div class="my-auto max-h-[90vh] w-full max-w-md overflow-y-auto rounded-lg bg-white p-6 shadow-xl">
         <h2 class="text-lg font-semibold text-gray-900">Nạp tiền cho {{ editingPlayer?.name }}</h2>
         <p class="text-sm text-gray-500 mt-1 mb-4">Khoản nạp của Admin/Mod được duyệt tự động.</p>
         <img src="/quy-momo.jpg" alt="Mã QR MoMo nạp quỹ" class="w-full max-w-xs mx-auto rounded-lg border border-gray-200 mb-5">
@@ -409,7 +409,7 @@
       </div>
     </div>
 
-    <div v-if="showFriendsModal" class="fixed inset-0 z-[70] flex items-center justify-center bg-black/50 p-4" @click.self="showFriendsModal = false">
+    <div v-if="showFriendsModal" class="fixed inset-0 z-[70] flex items-center justify-center overflow-y-auto overscroll-contain bg-black/50 p-4" @click.self="showFriendsModal = false">
       <div class="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-lg bg-white p-6 shadow-xl">
         <div class="flex items-center justify-between"><h2 class="text-lg font-semibold">Danh sách bạn</h2><button class="text-2xl text-gray-400" @click="showFriendsModal = false">×</button></div>
         <p v-if="friendsListLoading" class="py-8 text-center text-gray-500">Đang tải...</p>

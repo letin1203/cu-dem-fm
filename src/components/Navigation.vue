@@ -271,7 +271,7 @@
     <Teleport to="body">
     <div
       v-if="showFundHistoryModal"
-      class="fixed inset-0 z-[70] flex items-center justify-center bg-black/50 p-4"
+      class="fixed inset-0 z-[70] flex items-center justify-center overflow-y-auto overscroll-contain bg-black/50 p-4"
       @click.self="showFundHistoryModal = false"
     >
       <div
@@ -450,7 +450,7 @@
         </div>
       </div>
     </div>
-    <div v-if="showFundContributionModal" class="fixed inset-0 z-[80] flex items-center justify-center bg-black/50 p-4" @click.self="showFundContributionModal = false">
+    <div v-if="showFundContributionModal" class="fixed inset-0 z-[80] flex items-center justify-center overflow-y-auto overscroll-contain bg-black/50 p-4" @click.self="showFundContributionModal = false">
       <div class="flex max-h-[90vh] w-full max-w-md flex-col overflow-hidden rounded-lg bg-white shadow-xl">
         <div class="flex items-center justify-between border-b p-5"><div><h2 class="text-lg font-semibold text-gray-900">Góp quỹ</h2><p class="mt-1 text-sm text-gray-500">{{ isStaff ? 'Khoản góp sẽ được cộng ngay vào quỹ.' : 'Yêu cầu góp quỹ sẽ chờ admin/mod duyệt.' }}</p></div><button type="button" class="text-2xl text-gray-400 hover:text-gray-700" @click="showFundContributionModal = false">×</button></div>
         <div class="min-h-0 overflow-y-auto p-5">

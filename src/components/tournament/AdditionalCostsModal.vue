@@ -1,7 +1,7 @@
 <template>
   <div 
     v-if="isOpen"
-    class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50"
+    class="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto overscroll-contain bg-black bg-opacity-50 p-4"
     @click.self="$emit('close')"
   >
     <div class="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-hidden">

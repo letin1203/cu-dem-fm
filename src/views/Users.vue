@@ -160,7 +160,7 @@
     </div>
 
     <!-- Player Link Modal -->
-    <div v-if="linkingUser" class="fixed inset-0 z-50 flex items-center justify-center bg-gray-600 bg-opacity-50 p-4" @click.self="closePlayerLinkModal">
+    <div v-if="linkingUser" class="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto overscroll-contain bg-gray-600 bg-opacity-50 p-4" @click.self="closePlayerLinkModal">
       <div class="flex max-h-[90vh] w-full max-w-md flex-col overflow-hidden rounded-lg bg-white shadow-xl" role="dialog" aria-modal="true" aria-labelledby="player-link-modal-title">
         <div class="flex items-center justify-between border-b px-5 py-4">
           <div>
@@ -207,8 +207,8 @@
     </div>
 
     <!-- Add/Edit User Modal -->
-    <div v-if="showAddForm || editingUser" class="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center z-50">
-      <div class="bg-white rounded-lg p-6 w-full max-w-md">
+    <div v-if="showAddForm || editingUser" class="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto overscroll-contain bg-gray-600 bg-opacity-50 p-4">
+      <div class="my-auto max-h-[90vh] w-full max-w-md overflow-y-auto rounded-lg bg-white p-6">
         <h2 class="text-lg font-semibold mb-4">
           {{ editingUser ? 'Chỉnh sửa người dùng' : 'Thêm người dùng' }}
         </h2>

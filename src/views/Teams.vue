@@ -103,7 +103,7 @@
     </div>
 
     <!-- Add/Edit Team Modal -->
-    <div v-if="showAddForm || editingTeam" class="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center z-50">
+    <div v-if="showAddForm || editingTeam" class="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto overscroll-contain bg-gray-600 bg-opacity-50 p-4">
       <div class="bg-white rounded-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
         <h2 class="text-lg font-semibold mb-4">
           {{ editingTeam ? 'Edit Team' : 'Add New Team' }}
@@ -189,7 +189,7 @@
     </div>
 
     <!-- Team Details Modal -->
-    <div v-if="selectedTeam && !showAddForm && !editingTeam" class="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center z-50">
+    <div v-if="selectedTeam && !showAddForm && !editingTeam" class="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto overscroll-contain bg-gray-600 bg-opacity-50 p-4">
       <div class="bg-white rounded-lg p-6 w-full max-w-2xl max-h-96 overflow-y-auto">
         <div class="flex justify-between items-center mb-4">
           <h2 class="text-xl font-semibold">{{ selectedTeam.name }}</h2>

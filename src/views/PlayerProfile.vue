@@ -385,10 +385,10 @@
 
     <div
       v-if="showTopUpModal"
-      class="fixed inset-0 z-[70] bg-gray-900/50 flex items-center justify-center p-4"
+      class="fixed inset-0 z-[70] flex items-center justify-center overflow-y-auto overscroll-contain bg-gray-900/50 p-4"
       @click.self="showTopUpModal = false"
     >
-      <div class="bg-white rounded-lg shadow-xl w-full max-w-md p-6">
+      <div class="my-auto max-h-[90vh] w-full max-w-md overflow-y-auto rounded-lg bg-white p-6 shadow-xl">
         <h2 class="text-lg font-semibold text-gray-900">Nạp tiền</h2>
         <p class="text-sm text-gray-500 mt-1 mb-4">
           Quét mã MoMo để nạp quỹ, sau đó chọn số tiền đã nạp. Yêu cầu sẽ chờ
@@ -447,7 +447,7 @@
       </div>
     </div>
 
-    <div v-if="showAvatarModal" class="fixed inset-0 z-[70] flex items-center justify-center bg-gray-900/50 p-4" @click.self="showAvatarModal = false">
+    <div v-if="showAvatarModal" class="fixed inset-0 z-[70] flex items-center justify-center overflow-y-auto overscroll-contain bg-gray-900/50 p-4" @click.self="showAvatarModal = false">
       <div class="flex max-h-[90vh] w-full max-w-lg flex-col rounded-lg bg-white shadow-xl">
         <div class="flex items-center justify-between border-b p-5">
           <div><h2 class="text-lg font-semibold text-gray-900">Chọn avatar</h2><p class="text-sm text-gray-500">Chọn một hình đại diện cho hồ sơ của bạn.</p></div>
@@ -462,11 +462,11 @@
       </div>
     </div>
 
-    <div v-if="showYearOfBirthModal" class="fixed inset-0 z-[70] flex items-center justify-center bg-gray-900/50 p-4" @click.self="showYearOfBirthModal = false"><div class="w-full max-w-md rounded-lg bg-white p-6 shadow-xl"><div class="flex items-center justify-between"><h3 class="text-lg font-semibold">Chỉnh sửa năm sinh</h3><button type="button" class="text-2xl text-gray-400" @click="showYearOfBirthModal = false">×</button></div><label class="form-label mt-5 block">Năm sinh</label><select v-model.number="selectedYearOfBirth" class="form-input mt-1"><option v-for="year in yearOfBirthOptions" :key="year" :value="year">{{ year }}</option></select><div class="mt-6 flex justify-end gap-3"><button class="btn-secondary" @click="showYearOfBirthModal = false">Hủy</button><button class="btn-primary" :disabled="savingYearOfBirth" @click="saveYearOfBirth">{{ savingYearOfBirth ? 'Đang lưu...' : 'Lưu' }}</button></div></div></div>
+    <div v-if="showYearOfBirthModal" class="fixed inset-0 z-[70] flex items-center justify-center overflow-y-auto overscroll-contain bg-gray-900/50 p-4" @click.self="showYearOfBirthModal = false"><div class="my-auto max-h-[90vh] w-full max-w-md overflow-y-auto rounded-lg bg-white p-6 shadow-xl"><div class="flex items-center justify-between"><h3 class="text-lg font-semibold">Chỉnh sửa năm sinh</h3><button type="button" class="text-2xl text-gray-400" @click="showYearOfBirthModal = false">×</button></div><label class="form-label mt-5 block">Năm sinh</label><select v-model.number="selectedYearOfBirth" class="form-input mt-1"><option v-for="year in yearOfBirthOptions" :key="year" :value="year">{{ year }}</option></select><div class="mt-6 flex justify-end gap-3"><button class="btn-secondary" @click="showYearOfBirthModal = false">Hủy</button><button class="btn-primary" :disabled="savingYearOfBirth" @click="saveYearOfBirth">{{ savingYearOfBirth ? 'Đang lưu...' : 'Lưu' }}</button></div></div></div>
 
     <div
       v-if="selectedTournamentDetail"
-      class="fixed inset-0 z-[70] flex items-center justify-center bg-black/50 p-4"
+      class="fixed inset-0 z-[70] flex items-center justify-center overflow-y-auto overscroll-contain bg-black/50 p-4"
       @click.self="selectedTournamentDetail = null"
     >
       <div class="flex max-h-[90vh] w-full max-w-lg flex-col overflow-hidden rounded-lg bg-white shadow-xl">

@@ -326,7 +326,7 @@
                 
                 <!-- Water Button -->
                 <button
-                  v-if="!ongoingTournament.selfFunded"
+                  v-if="!ongoingTournament.selfFunded && authStore.currentUser?.role !== 'guest'"
                   @click="toggleWater(ongoingTournament.id)"
                   :disabled="waterLoading.has(ongoingTournament.id) || getUserAttendanceStatus(ongoingTournament.id) !== 'ATTEND'"
                   class="px-4 py-2 rounded-lg font-medium transition-colors duration-200"
@@ -346,7 +346,7 @@
 
                 <!-- Bet Button: available before the scheduled start time -->
                 <button
-                  v-if="!ongoingTournament.selfFunded && canUserToggleBet(ongoingTournament)"
+                  v-if="!ongoingTournament.selfFunded && authStore.currentUser?.role !== 'guest' && canUserToggleBet(ongoingTournament)"
                   @click="toggleBet(ongoingTournament.id)"
                   :disabled="betLoading.has(ongoingTournament.id) || getUserAttendanceStatus(ongoingTournament.id) !== 'ATTEND'"
                   class="px-4 py-2 text-center rounded-lg font-medium transition-colors duration-200"
@@ -814,7 +814,7 @@
         <section v-if="!ongoingTournament.selfFunded">
           <h4 class="font-semibold text-gray-900">5. Số tiền mỗi cầu thủ</h4>
           <p class="mt-1 leading-6">Tổng cần chia được chia cho số cầu thủ tham gia và làm tròn lên bội số 5.000 ₫.</p>
-          <p v-if="getAttendanceStats(ongoingTournament.id)?.attendingCount" class="mt-2 rounded-lg bg-primary-50 p-3 font-medium text-primary-800">Tạm tính {{ getAttendanceStats(ongoingTournament.id)?.attendingCount }} cầu thủ: {{ calculateCostPerPlayer(ongoingTournament.id).toLocaleString('vi-VN') }} ₫/người.</p>
+          <p v-if="getCostEstimateInfo(ongoingTournament.id).registered" class="mt-2 rounded-lg bg-primary-50 p-3 font-medium text-primary-800">Tạm tính {{ getCostEstimateInfo(ongoingTournament.id).divisor }} cầu thủ: {{ formatMoney(calculateCostPerPlayer(ongoingTournament.id)) }}/người.</p>
           <p class="mt-2">Thủ môn (GK) được giảm 50% chi phí cơ bản, trừ khi admin/mod hủy ưu đãi này lúc kết thúc giải.</p>
         </section>
         <section v-if="!ongoingTournament.selfFunded">

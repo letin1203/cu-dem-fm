@@ -381,8 +381,8 @@ class ApiClient {
     return this.get(`/tournaments/${tournamentId}/swap-candidates`);
   }
 
-  async createSwapRequest(tournamentId: string, targetPlayerId: string) {
-    return this.post(`/tournaments/${tournamentId}/swap-requests`, { targetPlayerId });
+  async createSwapRequest(tournamentId: string) {
+    return this.post(`/tournaments/${tournamentId}/swap-requests`);
   }
 
   async getMySwapRequests(tournamentId: string) {

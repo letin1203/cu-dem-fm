@@ -959,54 +959,40 @@ router.get('/:id/swap-candidates', authenticate, async (req: AuthenticatedReques
 
 router.post('/:id/swap-requests', authenticate, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   try {
-    const targetPlayerId = String(req.body?.targetPlayerId || '');
     const [user, tournament] = await Promise.all([
       prisma.user.findUnique({ where: { id: req.user!.id }, select: { playerId: true } }),
       prisma.tournament.findUnique({ where: { id: req.params.id }, select: { id: true, status: true, startDate: true, cancellationDeadline: true, teams: { select: { teamId: true } } } }),
     ]);
-    if (!user?.playerId || !targetPlayerId || !tournament) {
+    if (!user?.playerId || !tournament) {
       res.status(400).json({ success: false, error: 'Thông tin yêu cầu swap không hợp lệ' });
       return;
     }
-    if (user.playerId === targetPlayerId || tournament.status !== 'UPCOMING' || tournament.teams.length > 0 || Date.now() <= getTournamentCancellationDeadline(tournament).getTime()) {
+    if (tournament.status !== 'UPCOMING' || tournament.teams.length > 0 || Date.now() <= getTournamentCancellationDeadline(tournament).getTime()) {
       res.status(400).json({ success: false, error: 'Chỉ có thể swap sau thời gian chốt hủy và trước khi chia đội' });
       return;
     }
-    const [requesterAttendance, targetPlayer, targetAttendance, pendingRequest] = await Promise.all([
+    const [requesterAttendance, pendingRequest] = await Promise.all([
       prisma.tournamentPlayerAttendance.findUnique({ where: { tournamentId_playerId: { tournamentId: tournament.id, playerId: user.playerId } } }),
-      prisma.player.findUnique({ where: { id: targetPlayerId }, include: { user: { select: { id: true, isActive: true } } } }),
-      prisma.tournamentPlayerAttendance.findUnique({ where: { tournamentId_playerId: { tournamentId: tournament.id, playerId: targetPlayerId } } }),
       prisma.tournamentSwapRequest.findFirst({
-        where: {
-          tournamentId: tournament.id,
-          status: 'PENDING',
-          OR: [{ requesterPlayerId: user.playerId }, { targetPlayerId }],
-        },
-        include: { requester: { select: { name: true } }, target: { select: { name: true } } },
+        where: { tournamentId: tournament.id, requesterPlayerId: user.playerId, status: 'PENDING' },
       }),
     ]);
     if (requesterAttendance?.status !== 'ATTEND') {
       res.status(400).json({ success: false, error: 'Bạn cần đăng ký tham gia trước khi yêu cầu swap' });
       return;
     }
-    if (!targetPlayer?.isActive || !targetPlayer.user?.isActive || targetAttendance?.status === 'ATTEND') {
-      res.status(400).json({ success: false, error: 'Cầu thủ được chọn không thể nhận yêu cầu swap' });
-      return;
-    }
     if (pendingRequest) {
-      const error = pendingRequest.requesterPlayerId === user.playerId
-        ? `Bạn đã gửi yêu cầu swap tới ${pendingRequest.target.name}. Mỗi cầu thủ chỉ được gửi một yêu cầu swap.`
-        : `${pendingRequest.target.name} đã có yêu cầu swap đang chờ xử lý.`;
-      res.status(409).json({ success: false, error });
+      res.status(409).json({ success: false, error: 'Bạn đang chờ một cầu thủ khác swap với mình.' });
       return;
     }
+    // targetPlayerId is a required legacy column. While pending, it mirrors the requester;
+    // the accepting player is determined only when they choose to swap.
     const request = await prisma.tournamentSwapRequest.upsert({
-      where: { tournamentId_requesterPlayerId_targetPlayerId: { tournamentId: tournament.id, requesterPlayerId: user.playerId, targetPlayerId } },
+      where: { tournamentId_requesterPlayerId_targetPlayerId: { tournamentId: tournament.id, requesterPlayerId: user.playerId, targetPlayerId: user.playerId } },
       update: { status: 'PENDING', createdAt: new Date(), resolvedAt: null },
-      create: { tournamentId: tournament.id, requesterPlayerId: user.playerId, targetPlayerId },
-      include: { target: { select: { name: true } } },
+      create: { tournamentId: tournament.id, requesterPlayerId: user.playerId, targetPlayerId: user.playerId },
     });
-    res.status(201).json({ success: true, data: request, message: `Đã gửi yêu cầu swap tới ${request.target.name}` });
+    res.status(201).json({ success: true, data: request, message: 'Đã gửi yêu cầu swap. Cầu thủ chưa đăng ký có thể swap với bạn.' });
   } catch (_error) {
     res.status(500).json({ success: false, error: 'Không thể gửi yêu cầu swap' });
   }
@@ -1019,12 +1005,16 @@ router.get('/:id/swap-requests/mine', authenticate, async (req: AuthenticatedReq
       res.json({ success: true, data: [] });
       return;
     }
-    const requests = await prisma.tournamentSwapRequest.findMany({
-      where: { tournamentId: req.params.id, targetPlayerId: user.playerId, status: 'PENDING' },
+    const ownAttendance = await prisma.tournamentPlayerAttendance.findUnique({ where: { tournamentId_playerId: { tournamentId: req.params.id, playerId: user.playerId } } });
+    const [requests, myPending] = await Promise.all([
+      prisma.tournamentSwapRequest.findMany({
+      where: { tournamentId: req.params.id, requesterPlayerId: { not: user.playerId }, status: 'PENDING' },
       include: { requester: { select: { id: true, name: true, position: true, tier: true, avatar: true } } },
       orderBy: { createdAt: 'asc' },
-    });
-    res.json({ success: true, data: requests });
+      }),
+      prisma.tournamentSwapRequest.findFirst({ where: { tournamentId: req.params.id, requesterPlayerId: user.playerId, status: 'PENDING' }, select: { id: true } }),
+    ]);
+    res.json({ success: true, data: { requests: ownAttendance?.status === 'ATTEND' ? [] : requests, myPending: Boolean(myPending) } });
   } catch (_error) {
     res.status(500).json({ success: false, error: 'Không thể tải yêu cầu swap' });
   }
@@ -1046,7 +1036,7 @@ router.put('/:id/swap-requests/:requestId/accept', authenticate, async (req: Aut
     const attendance = await prisma.$transaction(async (tx) => {
       const request = await tx.tournamentSwapRequest.findUnique({ where: { id: req.params.requestId } });
       const tournament = await tx.tournament.findUnique({ where: { id: req.params.id }, select: { id: true, status: true, selfFunded: true, startDate: true, cancellationDeadline: true, teams: { select: { teamId: true } } } });
-      if (!request || request.tournamentId !== req.params.id || request.status !== 'PENDING' || request.targetPlayerId !== user.player!.id) throw new Error('Yêu cầu swap không hợp lệ');
+      if (!request || request.tournamentId !== req.params.id || request.status !== 'PENDING' || request.requesterPlayerId === user.player!.id) throw new Error('Yêu cầu swap không hợp lệ');
       if (!tournament || tournament.status !== 'UPCOMING' || tournament.teams.length > 0 || Date.now() <= getTournamentCancellationDeadline(tournament).getTime()) throw new Error('Yêu cầu swap đã hết hiệu lực');
       if (!tournament.selfFunded && user.player!.money < 0) throw new Error('Số dư của bạn đang âm, vui lòng thanh toán trước khi tham gia');
       const [requesterAttendance, targetAttendance] = await Promise.all([

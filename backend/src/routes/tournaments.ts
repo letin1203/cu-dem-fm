@@ -971,10 +971,14 @@ router.post('/:id/swap-requests', authenticate, async (req: AuthenticatedRequest
       res.status(400).json({ success: false, error: 'Chỉ có thể swap sau thời gian chốt hủy và trước khi chia đội' });
       return;
     }
-    const [requesterAttendance, pendingRequest] = await Promise.all([
+    const [requesterAttendance, pendingRequest, firstWaitlistedPlayer] = await Promise.all([
       prisma.tournamentPlayerAttendance.findUnique({ where: { tournamentId_playerId: { tournamentId: tournament.id, playerId: user.playerId } } }),
       prisma.tournamentSwapRequest.findFirst({
         where: { tournamentId: tournament.id, requesterPlayerId: user.playerId, status: 'PENDING' },
+      }),
+      prisma.tournamentSwapRequest.findFirst({
+        where: { tournamentId: tournament.id, status: 'WAITING' },
+        orderBy: { createdAt: 'asc' },
       }),
     ]);
     if (requesterAttendance?.status !== 'ATTEND') {
@@ -983,6 +987,23 @@ router.post('/:id/swap-requests', authenticate, async (req: AuthenticatedRequest
     }
     if (pendingRequest) {
       res.status(409).json({ success: false, error: 'Bạn đang chờ một cầu thủ khác swap với mình.' });
+      return;
+    }
+    if (firstWaitlistedPlayer) {
+      await prisma.$transaction(async (tx) => {
+        const waitlistEntry = await tx.tournamentSwapRequest.findFirst({ where: { tournamentId: tournament.id, status: 'WAITING' }, orderBy: { createdAt: 'asc' } });
+        if (!waitlistEntry) throw new Error('Hàng chờ đã thay đổi, vui lòng thử lại');
+        const replacementAttendance = await tx.tournamentPlayerAttendance.findUnique({ where: { tournamentId_playerId: { tournamentId: tournament.id, playerId: waitlistEntry.requesterPlayerId } } });
+        if (replacementAttendance?.status === 'ATTEND') throw new Error('Cầu thủ hàng chờ đã tham gia');
+        await tx.tournamentPlayerAttendance.upsert({
+          where: { tournamentId_playerId: { tournamentId: tournament.id, playerId: waitlistEntry.requesterPlayerId } },
+          update: { status: 'ATTEND', field5: true, field7: true, withWater: false, bet: false, registeredAt: new Date() },
+          create: { tournamentId: tournament.id, playerId: waitlistEntry.requesterPlayerId, status: 'ATTEND', field5: true, field7: true, registeredAt: new Date() },
+        });
+        await tx.tournamentPlayerAttendance.update({ where: { tournamentId_playerId: { tournamentId: tournament.id, playerId: user.playerId! } }, data: { status: 'NULL', field5: false, field7: false, withWater: false, bet: false } });
+        await tx.tournamentSwapRequest.update({ where: { id: waitlistEntry.id }, data: { status: 'ACCEPTED', resolvedAt: new Date() } });
+      });
+      res.json({ success: true, message: 'Đã swap ngay với cầu thủ đứng đầu hàng chờ' });
       return;
     }
     // targetPlayerId is a required legacy column. While pending, it mirrors the requester;
@@ -998,6 +1019,30 @@ router.post('/:id/swap-requests', authenticate, async (req: AuthenticatedRequest
   }
 });
 
+router.post('/:id/swap-waitlist', authenticate, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  try {
+    const [user, tournament] = await Promise.all([
+      prisma.user.findUnique({ where: { id: req.user!.id }, select: { playerId: true } }),
+      prisma.tournament.findUnique({ where: { id: req.params.id }, select: { id: true, status: true, cancellationDeadline: true, startDate: true, teams: { select: { teamId: true } } } }),
+    ]);
+    if (!user?.playerId || !tournament || tournament.status !== 'UPCOMING' || tournament.teams.length > 0 || Date.now() <= getTournamentCancellationDeadline(tournament).getTime()) {
+      res.status(400).json({ success: false, error: 'Chỉ có thể đăng ký hàng chờ sau thời gian chốt hủy và trước khi chia đội' });
+      return;
+    }
+    const attendance = await prisma.tournamentPlayerAttendance.findUnique({ where: { tournamentId_playerId: { tournamentId: tournament.id, playerId: user.playerId } } });
+    if (attendance?.status === 'ATTEND') { res.status(400).json({ success: false, error: 'Bạn đã tham gia giải đấu' }); return; }
+    const existing = await prisma.tournamentSwapRequest.findFirst({ where: { tournamentId: tournament.id, requesterPlayerId: user.playerId, status: 'WAITING' } });
+    if (existing) { res.status(409).json({ success: false, error: 'Bạn đã ở trong hàng chờ' }); return; }
+    const position = await prisma.tournamentSwapRequest.count({ where: { tournamentId: tournament.id, status: 'WAITING' } }) + 1;
+    await prisma.tournamentSwapRequest.upsert({
+      where: { tournamentId_requesterPlayerId_targetPlayerId: { tournamentId: tournament.id, requesterPlayerId: user.playerId, targetPlayerId: user.playerId } },
+      update: { status: 'WAITING', createdAt: new Date(), resolvedAt: null },
+      create: { tournamentId: tournament.id, requesterPlayerId: user.playerId, targetPlayerId: user.playerId, status: 'WAITING' },
+    });
+    res.status(201).json({ success: true, data: { position }, message: `Bạn đã vào hàng chờ thứ ${position}` });
+  } catch (_error) { res.status(500).json({ success: false, error: 'Không thể đăng ký hàng chờ' }); }
+});
+
 router.get('/:id/swap-requests/mine', authenticate, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   try {
     const user = await prisma.user.findUnique({ where: { id: req.user!.id }, select: { playerId: true } });
@@ -1006,15 +1051,17 @@ router.get('/:id/swap-requests/mine', authenticate, async (req: AuthenticatedReq
       return;
     }
     const ownAttendance = await prisma.tournamentPlayerAttendance.findUnique({ where: { tournamentId_playerId: { tournamentId: req.params.id, playerId: user.playerId } } });
-    const [requests, myPending] = await Promise.all([
+    const [requests, myPending, waitlistEntries] = await Promise.all([
       prisma.tournamentSwapRequest.findMany({
       where: { tournamentId: req.params.id, requesterPlayerId: { not: user.playerId }, status: 'PENDING' },
       include: { requester: { select: { id: true, name: true, position: true, tier: true, avatar: true } } },
       orderBy: { createdAt: 'asc' },
       }),
       prisma.tournamentSwapRequest.findFirst({ where: { tournamentId: req.params.id, requesterPlayerId: user.playerId, status: 'PENDING' }, select: { id: true } }),
+      prisma.tournamentSwapRequest.findMany({ where: { tournamentId: req.params.id, status: 'WAITING' }, orderBy: { createdAt: 'asc' }, select: { requesterPlayerId: true } }),
     ]);
-    res.json({ success: true, data: { requests: ownAttendance?.status === 'ATTEND' ? [] : requests, myPending: Boolean(myPending) } });
+    const waitingPosition = waitlistEntries.findIndex((entry) => entry.requesterPlayerId === user.playerId) + 1;
+    res.json({ success: true, data: { requests: ownAttendance?.status === 'ATTEND' ? [] : requests, myPending: Boolean(myPending), waitingPosition } });
   } catch (_error) {
     res.status(500).json({ success: false, error: 'Không thể tải yêu cầu swap' });
   }

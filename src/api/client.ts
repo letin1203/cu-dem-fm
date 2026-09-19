@@ -385,6 +385,10 @@ class ApiClient {
     return this.post(`/tournaments/${tournamentId}/swap-requests`);
   }
 
+  async joinSwapWaitlist(tournamentId: string) {
+    return this.post(`/tournaments/${tournamentId}/swap-waitlist`);
+  }
+
   async getMySwapRequests(tournamentId: string) {
     return this.get(`/tournaments/${tournamentId}/swap-requests/mine`);
   }

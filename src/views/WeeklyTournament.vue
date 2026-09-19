@@ -2568,6 +2568,9 @@ const openAttendanceModal = async (tournamentId: string, type: 'attending' | 'no
   attendanceSortByTier.value = false
   attendanceFieldTab.value = field
   attendanceExclusiveField.value = exclusiveField
+  if (type === 'attending' && exclusiveField) {
+    attendanceModalTitle.value = 'Cầu thủ tham gia chỉ 1 loại sân'
+  }
   attendanceModalTournamentId.value = tournamentId
   selectedPendingPlayerIds.value = new Set()
   

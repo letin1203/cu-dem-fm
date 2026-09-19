@@ -69,7 +69,7 @@
               <div class="flex-1">
                 <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between">
                   <div class="flex items-center gap-2">
-                    <h3 class="text-lg font-semibold text-gray-900">{{ ongoingTournament.name }}</h3>
+                    <h3 class="text-lg font-semibold text-gray-900">{{ ongoingTournament.name.replace(/^Giải hằng tuần\s*-\s*/i, '') }}</h3>
                     <button
                       type="button"
                       class="inline-flex h-6 w-6 items-center justify-center rounded-full text-primary-600 transition-colors hover:bg-primary-50 hover:text-primary-800"
@@ -86,45 +86,45 @@
                   <button
                     v-if="authStore.hasRole('admin')"
                     @click="openTournamentTimeModal(ongoingTournament)"
-                    class="inline-flex items-center rounded-full bg-primary-100 px-2 py-1 text-xs font-semibold text-primary-800 transition-colors hover:bg-primary-200"
+                    class="inline-flex items-center rounded-full bg-primary-100 px-2 py-0.5 text-[10px] font-semibold text-primary-800 transition-colors hover:bg-primary-200 sm:py-1 sm:text-xs"
                     title="Chỉnh sửa giờ thi đấu"
                   >
                     {{ formatTime(ongoingTournament.startDate) }}
                   </button>
-                  <span v-else class="inline-flex items-center rounded-full bg-primary-100 px-2 py-1 text-xs font-semibold text-primary-800">{{ formatTime(ongoingTournament.startDate) }}</span>
+                  <span v-else class="inline-flex items-center rounded-full bg-primary-100 px-2 py-0.5 text-[10px] font-semibold text-primary-800 sm:py-1 sm:text-xs">{{ formatTime(ongoingTournament.startDate) }}</span>
                   <button
                     v-if="authStore.hasAnyRole(['admin', 'mod'])"
                     type="button"
-                    class="inline-flex items-center rounded-full bg-rose-100 px-2 py-1 text-xs font-semibold uppercase text-rose-800 transition-colors hover:bg-rose-200"
+                    class="inline-flex items-center rounded-full bg-rose-100 px-2 py-0.5 text-[10px] font-semibold uppercase text-rose-800 transition-colors hover:bg-rose-200 sm:py-1 sm:text-xs"
                     title="Chỉnh sửa thời gian chốt hủy"
                     @click="openCancellationDeadlineModal(ongoingTournament)"
                   >{{ getCancellationDeadlineBadgeText(ongoingTournament) }}</button>
-                  <span v-else class="inline-flex items-center rounded-full bg-rose-100 px-2 py-1 text-xs font-semibold uppercase text-rose-800">{{ getCancellationDeadlineBadgeText(ongoingTournament) }}</span>
-                  <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium"
+                  <span v-else class="inline-flex items-center rounded-full bg-rose-100 px-2 py-0.5 text-[10px] font-semibold uppercase text-rose-800 sm:py-1 sm:text-xs">{{ getCancellationDeadlineBadgeText(ongoingTournament) }}</span>
+                  <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium sm:py-1 sm:text-xs"
                         :class="getStatusBadge(ongoingTournament.status)">
                     {{ ongoingTournament.status }}
                   </span>
                   <button
                     v-if="authStore.hasAnyRole(['admin', 'mod'])"
                     type="button"
-                    class="inline-flex items-center rounded-full bg-orange-100 px-2 py-1 text-xs font-semibold uppercase text-orange-800 transition-colors hover:bg-orange-200"
+                    class="inline-flex items-center rounded-full bg-orange-100 px-2 py-0.5 text-[10px] font-semibold uppercase text-orange-800 transition-colors hover:bg-orange-200 sm:py-1 sm:text-xs"
                     title="Chỉnh sửa số lượng cầu thủ tối đa"
                     @click="openMaxAttendanceModal(ongoingTournament)"
                   >Max: {{ ongoingTournament.maxAttendance ? `${ongoingTournament.maxAttendance} cháu` : 'Không giới hạn' }}</button>
-                  <span v-else-if="ongoingTournament.maxAttendance" class="inline-flex items-center rounded-full bg-orange-100 px-2 py-1 text-xs font-semibold uppercase text-orange-800">Max: {{ ongoingTournament.maxAttendance }} cháu</span>
+                  <span v-else-if="ongoingTournament.maxAttendance" class="inline-flex items-center rounded-full bg-orange-100 px-2 py-0.5 text-[10px] font-semibold uppercase text-orange-800 sm:py-1 sm:text-xs">Max: {{ ongoingTournament.maxAttendance }} cháu</span>
                   <button
                     v-if="authStore.hasAnyRole(['admin', 'mod'])"
                     type="button"
                     :aria-pressed="Boolean(ongoingTournament.selfFunded)"
                     :disabled="selfFundedSaving"
                     @click="toggleSelfFunded(ongoingTournament)"
-                    class="inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-semibold uppercase transition-colors"
+                    class="inline-flex items-center gap-2 rounded-full px-3 py-0.5 text-[10px] font-semibold uppercase transition-colors sm:py-1 sm:text-xs"
                     :class="ongoingTournament.selfFunded ? 'bg-violet-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'"
                   >
                     <span class="h-3 w-3 rounded-full" :class="ongoingTournament.selfFunded ? 'bg-white' : 'bg-gray-400'"></span>
                     {{ ongoingTournament.selfFunded ? 'Tự túc' : 'Dùng quỹ' }}
                   </button>
-                  <span v-else-if="ongoingTournament.selfFunded" class="inline-flex items-center rounded-full bg-violet-100 px-3 py-1 text-xs font-semibold uppercase text-violet-700">🤝 Tự túc</span>
+                  <span v-else-if="ongoingTournament.selfFunded" class="inline-flex items-center rounded-full bg-violet-100 px-3 py-0.5 text-[10px] font-semibold uppercase text-violet-700 sm:py-1 sm:text-xs">🤝 Tự túc</span>
                 </div>
                 <!-- Financial Information -->
                 <div v-if="systemStore.currentSettings" class="flex flex-wrap items-center gap-4 mt-2 text-sm">
@@ -134,35 +134,35 @@
                     class="text-green-600 font-medium hover:underline"
                     title="Chỉnh sửa tiền tài trợ"
                   >
-                    💰 Sponsor: {{ getTournamentSponsorMoney(ongoingTournament).toLocaleString('vi-VN') }} ₫
+                    💰 Sponsor: {{ formatMoney(getTournamentSponsorMoney(ongoingTournament)) }}
                   </button>
-                  <span v-else-if="!ongoingTournament.selfFunded" class="text-green-600 font-medium">💰 Sponsor: {{ getTournamentSponsorMoney(ongoingTournament).toLocaleString('vi-VN') }} ₫</span>
+                  <span v-else-if="!ongoingTournament.selfFunded" class="text-green-600 font-medium">💰 Sponsor: {{ formatMoney(getTournamentSponsorMoney(ongoingTournament)) }}</span>
                   <button
                     v-if="authStore.hasAnyRole(['admin', 'mod'])"
                     @click="openStadiumCostModal(ongoingTournament)"
                     class="text-red-600 font-medium hover:underline"
                     title="Chỉnh sửa chi phí sân"
                   >
-                    🏟️ Sân: {{ getTournamentStadiumCost(ongoingTournament).toLocaleString('vi-VN') }} ₫
+                    🏟️ Sân: {{ formatMoney(getTournamentStadiumCost(ongoingTournament)) }}
                   </button>
                   <span v-else class="text-red-600 font-medium">
-                    🏟️ Sân: {{ getTournamentStadiumCost(ongoingTournament).toLocaleString('vi-VN') }} ₫
+                    🏟️ Sân: {{ formatMoney(getTournamentStadiumCost(ongoingTournament)) }}
                   </span>
                   <span v-for="cost in getTournamentAdditionalCosts(ongoingTournament.id)" :key="cost.id" class="text-orange-600 font-medium">
-                    💸 {{ cost.description }}: {{ cost.amount.toLocaleString('vi-VN') }} ₫
+                    💸 {{ cost.description }}: {{ formatMoney(cost.amount) }}
                   </span>
                   <span v-if="getTournamentFundContribution(ongoingTournament) > 0" class="text-indigo-600 font-medium">
-                    🏦 Trích quỹ: {{ getTournamentFundContribution(ongoingTournament).toLocaleString('vi-VN') }} ₫
+                    🏦 Trích quỹ: {{ formatMoney(getTournamentFundContribution(ongoingTournament)) }}
                   </span>
                   <span class="text-blue-600 font-medium">
-                    📊 Tổng: {{ calculateTournamentNet(ongoingTournament.id).toLocaleString('vi-VN') }} ₫
+                    📊 Tổng: {{ formatMoney(calculateTournamentNet(ongoingTournament.id)) }}
                   </span>
                   <span v-if="getAttendanceStats(ongoingTournament.id)?.attendingCount" class="text-purple-600 font-medium">
-                    👥 Est mỗi cháu:
+                    👥 Est:
                     <template v-if="shouldShowMaxCostRange(ongoingTournament)">
-                      {{ getCostEstimateInfo(ongoingTournament.id).divisor }} cháu: {{ calculateCostPerPlayer(ongoingTournament.id).toLocaleString('vi-VN') }} ₫ · Max {{ ongoingTournament.maxAttendance }} cháu: {{ calculateCostPerPlayerForCount(ongoingTournament.id, ongoingTournament.maxAttendance || 0).toLocaleString('vi-VN') }} ₫
+                      {{ getCostEstimateInfo(ongoingTournament.id).divisor }} cháu: {{ formatMoney(calculateCostPerPlayer(ongoingTournament.id)) }} · {{ ongoingTournament.maxAttendance }} cháu: {{ formatMoney(calculateCostPerPlayerForCount(ongoingTournament.id, ongoingTournament.maxAttendance || 0)) }}
                     </template>
-                    <template v-else>{{ calculateCostPerPlayer(ongoingTournament.id).toLocaleString('vi-VN') }} ₫</template>
+                    <template v-else>{{ formatMoney(calculateCostPerPlayer(ongoingTournament.id)) }}</template>
                   </span>
                 </div>
               </div>
@@ -438,13 +438,13 @@
             <div v-if="ongoingTournament.status === 'UPCOMING' && getTournamentTeams(ongoingTournament).length === 0" class="mt-4 hidden rounded-lg border border-gray-200 bg-gray-50 p-4 lg:block">
               <div class="mb-3 flex items-center justify-between"><h4 class="text-lg font-semibold text-gray-800">Cầu thủ tham gia</h4><span class="text-sm text-gray-500">Chưa chia đội</span></div>
               <div class="grid grid-cols-2 gap-4">
-                <div v-for="field in [{ value: 'FIELD_5', label: 'Sân 5' }, { value: 'FIELD_7', label: 'Sân 7' }]" :key="field.value" class="rounded-lg border border-primary-200 bg-white/80 p-3"><h5 class="mb-3 border-b pb-2 font-semibold text-gray-900">{{ field.label }} ({{ getFieldAttendanceCount(ongoingTournament.id, field.value as 'FIELD_5' | 'FIELD_7') }})</h5><div v-if="getTeamPreviewPlayers(ongoingTournament.id, field.value as 'FIELD_5' | 'FIELD_7').length" class="space-y-2"><div v-for="player in getTeamPreviewPlayers(ongoingTournament.id, field.value as 'FIELD_5' | 'FIELD_7')" :key="player.id" class="flex items-center justify-between rounded bg-gray-50 p-2 text-sm" :class="{ 'bg-yellow-100': isPlayerBetting(ongoingTournament.id, player.id), 'border-2 border-red-500': isCurrentUserPlayer(player.id) }"><div class="flex min-w-0 items-center"><div class="mr-2 flex h-6 w-6 shrink-0 items-center justify-center overflow-hidden rounded-full bg-gray-300 text-xs font-medium"><img v-if="player.avatar" :src="player.avatar" :alt="player.name" class="h-full w-full object-cover"><span v-else>{{ player.name.charAt(0).toUpperCase() }}</span></div><span class="truncate font-medium text-gray-900">{{ player.name }}<span v-if="player.addedByUsername" class="font-normal text-gray-500"> - thêm bởi {{ player.addedByUsername }}</span><span v-if="player.friendOwnerName" class="font-normal text-blue-600"> - bạn của {{ player.friendOwnerName }}</span></span><span v-if="isPlayerWithWater(ongoingTournament.id, player.id)" class="ml-1" title="Đã đăng ký uống nước">💧</span></div><div class="ml-2 flex shrink-0 items-center text-gray-600"><span class="mr-1 rounded px-1.5 py-0.5 text-xs" :class="isGoalkeeper(player.position) ? 'bg-green-100 font-semibold text-green-700' : ''">{{ getPositionLabel(player.position) }}<template v-if="player.positionSecond">-{{ getPositionLabel(player.positionSecond) }}</template></span><span class="text-xs">T{{ player.tier }}</span></div></div></div><p v-else class="py-5 text-center text-sm text-gray-500">Chưa có cầu thủ.</p></div>
+                <div v-for="field in [{ value: 'FIELD_5', label: 'Sân 5' }, { value: 'FIELD_7', label: 'Sân 7' }]" :key="field.value" class="rounded-lg border border-primary-200 bg-white/80 p-3"><h5 class="mb-3 border-b pb-2 font-semibold text-gray-900">{{ field.label }} ({{ getFieldAttendanceCount(ongoingTournament.id, field.value as 'FIELD_5' | 'FIELD_7') }})</h5><div v-if="getTeamPreviewPlayers(ongoingTournament.id, field.value as 'FIELD_5' | 'FIELD_7').length" class="space-y-2"><div v-for="player in getTeamPreviewPlayers(ongoingTournament.id, field.value as 'FIELD_5' | 'FIELD_7')" :key="player.id" class="flex items-center justify-between rounded bg-gray-50 p-2 text-sm" :class="{ 'bg-yellow-100': isPlayerBetting(ongoingTournament.id, player.id), 'border-2 border-red-500': isCurrentUserPlayer(player.id) }"><div class="flex min-w-0 items-center"><div class="mr-2 flex h-6 w-6 shrink-0 items-center justify-center overflow-hidden rounded-full bg-gray-300 text-xs font-medium"><img v-if="player.avatar" :src="player.avatar" :alt="player.name" class="h-full w-full object-cover"><span v-else>{{ player.name.charAt(0).toUpperCase() }}</span></div><div class="min-w-0"><div class="truncate font-medium text-gray-900">{{ player.name }}</div><div v-if="player.addedByUsername || player.friendOwnerName" class="truncate text-[10px] leading-4 text-gray-500"><span v-if="player.addedByUsername">thêm bởi {{ player.addedByUsername }}</span><span v-if="player.addedByUsername && player.friendOwnerName"> · </span><span v-if="player.friendOwnerName" class="text-blue-600">bạn của {{ player.friendOwnerName }}</span></div></div><span v-if="isPlayerWithWater(ongoingTournament.id, player.id)" class="ml-1" title="Đã đăng ký uống nước">💧</span></div><div class="ml-2 flex shrink-0 items-center text-gray-600"><span class="mr-1 rounded px-1.5 py-0.5 text-xs" :class="isGoalkeeper(player.position) ? 'bg-green-100 font-semibold text-green-700' : ''">{{ getPositionLabel(player.position) }}<template v-if="player.positionSecond">-{{ getPositionLabel(player.positionSecond) }}</template></span><span class="text-xs">T{{ player.tier }}</span></div></div></div><p v-else class="py-5 text-center text-sm text-gray-500">Chưa có cầu thủ.</p></div>
               </div>
             </div>
             <div v-if="ongoingTournament.status === 'UPCOMING' && getTournamentTeams(ongoingTournament).length === 0" class="mt-4 rounded-lg border border-gray-200 bg-gray-50 p-4 lg:hidden">
               <div class="mb-3 flex items-center justify-between"><h4 class="font-semibold text-gray-800">Cầu thủ tham gia</h4><span class="text-xs text-gray-500">Chưa chia đội</span></div>
               <div class="mb-3 flex border-b border-gray-200"><button type="button" class="flex-1 border-b-2 px-3 py-2 text-sm font-medium" :class="mobileTeamPreviewField === 'FIELD_5' ? 'border-primary-600 text-primary-600' : 'border-transparent text-gray-500'" @click="mobileTeamPreviewField = 'FIELD_5'">Sân 5 ({{ getFieldAttendanceCount(ongoingTournament.id, 'FIELD_5') }})</button><button type="button" class="flex-1 border-b-2 px-3 py-2 text-sm font-medium" :class="mobileTeamPreviewField === 'FIELD_7' ? 'border-primary-600 text-primary-600' : 'border-transparent text-gray-500'" @click="mobileTeamPreviewField = 'FIELD_7'">Sân 7 ({{ getFieldAttendanceCount(ongoingTournament.id, 'FIELD_7') }})</button></div>
-              <div v-if="getTeamPreviewPlayers(ongoingTournament.id, mobileTeamPreviewField).length" class="space-y-2"><div v-for="player in getTeamPreviewPlayers(ongoingTournament.id, mobileTeamPreviewField)" :key="player.id" class="flex items-center justify-between rounded bg-white p-2 text-sm" :class="{ 'bg-yellow-100': isPlayerBetting(ongoingTournament.id, player.id), 'border-2 border-red-500': isCurrentUserPlayer(player.id) }"><div class="flex min-w-0 items-center"><div class="mr-2 flex h-6 w-6 shrink-0 items-center justify-center overflow-hidden rounded-full bg-gray-300 text-xs font-medium"><img v-if="player.avatar" :src="player.avatar" :alt="player.name" class="h-full w-full object-cover"><span v-else>{{ player.name.charAt(0).toUpperCase() }}</span></div><span class="truncate font-medium text-gray-900">{{ player.name }}<span v-if="player.addedByUsername" class="font-normal text-gray-500"> - thêm bởi {{ player.addedByUsername }}</span><span v-if="player.friendOwnerName" class="font-normal text-blue-600"> - bạn của {{ player.friendOwnerName }}</span></span><span v-if="isPlayerWithWater(ongoingTournament.id, player.id)" class="ml-1">💧</span></div><div class="ml-2 flex shrink-0 items-center text-gray-600"><span class="mr-1 rounded px-1.5 py-0.5 text-xs" :class="isGoalkeeper(player.position) ? 'bg-green-100 font-semibold text-green-700' : ''">{{ getPositionLabel(player.position) }}</span><span class="text-xs">T{{ player.tier }}</span></div></div></div><p v-else class="py-5 text-center text-sm text-gray-500">Chưa có cầu thủ.</p>
+              <div v-if="getTeamPreviewPlayers(ongoingTournament.id, mobileTeamPreviewField).length" class="space-y-2"><div v-for="player in getTeamPreviewPlayers(ongoingTournament.id, mobileTeamPreviewField)" :key="player.id" class="flex items-center justify-between rounded bg-white p-2 text-sm" :class="{ 'bg-yellow-100': isPlayerBetting(ongoingTournament.id, player.id), 'border-2 border-red-500': isCurrentUserPlayer(player.id) }"><div class="flex min-w-0 items-center"><div class="mr-2 flex h-6 w-6 shrink-0 items-center justify-center overflow-hidden rounded-full bg-gray-300 text-xs font-medium"><img v-if="player.avatar" :src="player.avatar" :alt="player.name" class="h-full w-full object-cover"><span v-else>{{ player.name.charAt(0).toUpperCase() }}</span></div><div class="min-w-0"><div class="truncate font-medium text-gray-900">{{ player.name }}</div><div v-if="player.addedByUsername || player.friendOwnerName" class="truncate text-[10px] leading-4 text-gray-500"><span v-if="player.addedByUsername">thêm bởi {{ player.addedByUsername }}</span><span v-if="player.addedByUsername && player.friendOwnerName"> · </span><span v-if="player.friendOwnerName" class="text-blue-600">bạn của {{ player.friendOwnerName }}</span></div></div><span v-if="isPlayerWithWater(ongoingTournament.id, player.id)" class="ml-1">💧</span></div><div class="ml-2 flex shrink-0 items-center text-gray-600"><span class="mr-1 rounded px-1.5 py-0.5 text-xs" :class="isGoalkeeper(player.position) ? 'bg-green-100 font-semibold text-green-700' : ''">{{ getPositionLabel(player.position) }}</span><span class="text-xs">T{{ player.tier }}</span></div></div></div><p v-else class="py-5 text-center text-sm text-gray-500">Chưa có cầu thủ.</p>
             </div>
             <p v-if="ongoingTournament.selfFunded" class="mt-3 border-t border-violet-100 pt-3 text-center text-sm font-medium text-violet-700">
               Giải này không ảnh hưởng đến Tiền Quỹ và không trừ tiền của user.
@@ -548,22 +548,22 @@
                   <div v-if="getTournamentTeams(tournament).length > 0" class="mt-2">
                     <div v-if="systemStore.currentSettings" class="flex flex-wrap items-center gap-4 text-sm">
                       <span v-if="!tournament.selfFunded" class="text-green-600 font-medium">
-                        💰 Sponsor: {{ getTournamentSponsorMoney(tournament).toLocaleString('vi-VN') }} ₫
+                        💰 Sponsor: {{ formatMoney(getTournamentSponsorMoney(tournament)) }}
                       </span>
                       <span class="text-red-600 font-medium">
-                        🏟️ Sân: {{ getTournamentStadiumCost(tournament).toLocaleString('vi-VN') }} ₫
+                        🏟️ Sân: {{ formatMoney(getTournamentStadiumCost(tournament)) }}
                       </span>
                     <span v-for="cost in getTournamentAdditionalCosts(tournament.id)" :key="cost.id" class="text-orange-600 font-medium">
-                      💸 {{ cost.description }}: {{ cost.amount.toLocaleString('vi-VN') }} ₫
+                      💸 {{ cost.description }}: {{ formatMoney(cost.amount) }}
                     </span>
                       <span v-if="getTournamentFundContribution(tournament) > 0" class="text-indigo-600 font-medium">
-                        🏦 Trích quỹ: {{ getTournamentFundContribution(tournament).toLocaleString('vi-VN') }} ₫
+                        🏦 Trích quỹ: {{ formatMoney(getTournamentFundContribution(tournament)) }}
                       </span>
                       <span class="text-blue-600 font-medium">
-                        📊 Tổng: {{ calculateTournamentNet(tournament.id).toLocaleString('vi-VN') }} ₫
+                        📊 Tổng: {{ formatMoney(calculateTournamentNet(tournament.id)) }}
                       </span>
                       <span v-if="getAttendanceStats(tournament.id)?.attendingCount" class="text-purple-600 font-medium">
-                        👥 Chi phí mỗi cháu: {{ calculateCostPerPlayer(tournament.id).toLocaleString('vi-VN') }} ₫
+                        👥 Chi phí mỗi cháu: {{ formatMoney(calculateCostPerPlayer(tournament.id)) }}
                       </span>
                     </div>
                   </div>
@@ -847,7 +847,7 @@
       <p class="mb-4 mt-1 text-sm text-gray-500">Quét mã MoMo để nạp quỹ, sau đó chọn số tiền đã nạp. Yêu cầu sẽ chờ quản trị viên duyệt.</p>
       <img src="/quy-momo.jpg" alt="Mã QR MoMo nạp quỹ" class="mx-auto mb-5 w-full max-w-xs rounded-lg border border-gray-200">
       <div class="grid grid-cols-2 gap-3"><button v-for="amount in tournamentDebtTopUpAmounts" :key="amount" type="button" class="rounded-lg border px-4 py-3 font-medium transition-colors" :class="selectedTournamentDebtTopUpAmount === amount ? 'border-primary-600 bg-primary-600 text-white' : 'border-gray-200 text-gray-700 hover:bg-gray-50'" @click="selectedTournamentDebtTopUpAmount = amount">{{ amount.toLocaleString('vi-VN') }} ₫</button></div><label for="tournament-top-up" class="form-label mt-5 block">Hoặc nhập số tiền khác</label><div class="mt-1 flex items-center gap-2"><button type="button" class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-gray-100 text-xl font-semibold text-gray-700 hover:bg-gray-200" @click="selectedTournamentDebtTopUpAmount = Math.max(0, selectedTournamentDebtTopUpAmount - 100000)">−</button><div class="relative flex-1"><span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">₫</span><input id="tournament-top-up" v-model.number="selectedTournamentDebtTopUpAmount" type="number" min="0" class="form-input pl-8" placeholder="Nhập số tiền"></div><button type="button" class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary-100 text-xl font-semibold text-primary-700 hover:bg-primary-200" @click="selectedTournamentDebtTopUpAmount += 100000">+</button></div>
-      <div class="mt-6 flex justify-end gap-3"><button type="button" class="btn-secondary" @click="showTournamentDebtTopUpModal = false">Hủy</button><button type="button" class="btn-primary" :disabled="tournamentDebtTopUpSubmitting" @click="submitTournamentDebtTopUp">{{ tournamentDebtTopUpSubmitting ? 'Đang gửi...' : 'Xác nhận' }}</button></div>
+      <p class="mt-2 text-center text-xs text-gray-500">Đang nhập: {{ formatMoney(selectedTournamentDebtTopUpAmount) }}</p><div class="mt-6 flex justify-end gap-3"><button type="button" class="btn-secondary" @click="showTournamentDebtTopUpModal = false">Hủy</button><button type="button" class="btn-primary" :disabled="tournamentDebtTopUpSubmitting" @click="submitTournamentDebtTopUp">{{ tournamentDebtTopUpSubmitting ? 'Đang gửi...' : 'Xác nhận' }}</button></div>
     </div>
   </div>
 
@@ -1052,7 +1052,7 @@
         <label for="stadium-cost" class="form-label mt-5 block">Hoặc nhập chi phí sân khác</label>
         <div class="mt-1 flex items-center gap-2"><button type="button" class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-gray-100 text-xl font-semibold text-gray-700 transition-colors hover:bg-gray-200" title="Giảm 100.000 ₫" @click="stadiumCostForm = Math.max(0, (stadiumCostForm || 0) - 100000)">−</button><div class="relative flex-1"><span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">₫</span><input id="stadium-cost" v-model.number="stadiumCostForm" type="number" min="0" required class="form-input pl-8" placeholder="Nhập chi phí sân"></div><button type="button" class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary-100 text-xl font-semibold text-primary-700 transition-colors hover:bg-primary-200" title="Tăng 100.000 ₫" @click="stadiumCostForm = (stadiumCostForm || 0) + 100000">+</button></div>
       </div>
-      <div class="flex justify-end gap-3 border-t pt-4"><button type="button" @click="closeStadiumCostModal" class="btn-secondary">Hủy</button><button type="submit" :disabled="stadiumCostSaving" class="btn-primary disabled:opacity-50">{{ stadiumCostSaving ? 'Đang lưu...' : 'Lưu' }}</button></div>
+        <p class="mt-2 text-center text-xs text-gray-500">Đang nhập: {{ formatMoney(stadiumCostForm) }}</p><div class="flex justify-end gap-3 border-t pt-4"><button type="button" @click="closeStadiumCostModal" class="btn-secondary">Hủy</button><button type="submit" :disabled="stadiumCostSaving" class="btn-primary disabled:opacity-50">{{ stadiumCostSaving ? 'Đang lưu...' : 'Lưu' }}</button></div>
     </form>
   </div>
 
@@ -1060,7 +1060,7 @@
     <div class="w-full max-w-md rounded-lg bg-white p-6 shadow-xl">
       <div class="flex items-center justify-between border-b pb-4"><div><h3 class="text-lg font-semibold text-gray-900">Chỉnh sửa tiền tài trợ</h3><p class="text-sm text-gray-500">{{ sponsorMoneyTournament?.name }}</p></div><button type="button" @click="closeSponsorMoneyModal" class="text-2xl text-gray-400 hover:text-gray-700">×</button></div>
       <div class="py-5"><div class="grid grid-cols-2 gap-3"><button v-for="amount in sponsorMoneyOptions" :key="amount" type="button" @click="selectedSponsorMoney = amount" class="rounded-lg border-2 px-4 py-4 font-semibold transition-colors" :class="selectedSponsorMoney === amount ? 'border-primary-600 bg-primary-600 text-white' : 'border-gray-200 text-gray-700 hover:border-primary-400'">{{ amount.toLocaleString('vi-VN') }} ₫</button></div><label for="sponsor-money" class="form-label mt-5 block">Hoặc nhập số tiền khác</label><div class="mt-1 flex items-center gap-2"><button type="button" class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-gray-100 text-xl font-semibold text-gray-700 transition-colors hover:bg-gray-200" title="Giảm 100.000 ₫" @click="selectedSponsorMoney = Math.max(0, selectedSponsorMoney - 100000)">−</button><div class="relative flex-1"><span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">₫</span><input id="sponsor-money" v-model.number="selectedSponsorMoney" type="number" min="0" class="form-input pl-8" placeholder="Nhập tiền tài trợ"></div><button type="button" class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary-100 text-xl font-semibold text-primary-700 transition-colors hover:bg-primary-200" title="Tăng 100.000 ₫" @click="selectedSponsorMoney += 100000">+</button></div></div>
-      <div class="flex justify-end gap-3 border-t pt-4"><button type="button" class="btn-secondary" @click="closeSponsorMoneyModal">Hủy</button><button type="button" class="btn-primary" :disabled="sponsorMoneySaving" @click="saveSponsorMoney">{{ sponsorMoneySaving ? 'Đang lưu...' : 'Lưu' }}</button></div>
+      <p class="mt-2 text-center text-xs text-gray-500">Đang nhập: {{ formatMoney(selectedSponsorMoney) }}</p><div class="flex justify-end gap-3 border-t pt-4"><button type="button" class="btn-secondary" @click="closeSponsorMoneyModal">Hủy</button><button type="button" class="btn-primary" :disabled="sponsorMoneySaving" @click="saveSponsorMoney">{{ sponsorMoneySaving ? 'Đang lưu...' : 'Lưu' }}</button></div>
     </div>
   </div>
 
@@ -1579,6 +1579,7 @@ import { useTeamsStore } from '../stores/teams'
 import { useSystemStore } from '../stores/system'
 import type { Tournament, CreateTournamentRequest, TournamentPlayerAttendance, TournamentAttendanceStats, TournamentAttendanceDetails, TournamentEndResponse } from '../types'
 import { apiClient } from '../api/client'
+import { formatMoney } from '../utils/money'
 
 const toast = useToast()
 const tournamentsStore = useTournamentsStore()

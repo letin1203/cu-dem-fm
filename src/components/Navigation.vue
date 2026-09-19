@@ -4,7 +4,7 @@
     class="relative z-50 bg-white/80 backdrop-blur-md shadow-lg border-b border-primary-200"
   >
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-      <div class="flex justify-between h-16">
+      <div class="relative flex justify-between h-16">
         <!-- Logo -->
         <div class="flex items-center">
           <router-link
@@ -39,7 +39,7 @@
               systemStore.currentSettings.clubFund !== undefined
             "
             @click="openFundHistoryModal"
-            class="flex md:hidden items-center space-x-2 px-2 py-2 rounded-md bg-primary-50 text-primary-800 font-semibold text-sm hover:bg-primary-100"
+            class="absolute left-1/2 flex -translate-x-1/2 items-center gap-1 whitespace-nowrap rounded-md bg-primary-50 px-2 py-2 text-sm font-semibold text-primary-800 hover:bg-primary-100 md:hidden"
             title="Xem lịch sử quỹ"
           >
             <svg
@@ -55,13 +55,7 @@
                 d="M12 8c-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4-1.79-4-4-4zm0 0V4m0 16v-4"
               />
             </svg>
-            <span>Tiền Quỹ: </span>
-            <span class="ml-1"
-              >{{
-                systemStore.currentSettings.clubFund.toLocaleString("vi-VN")
-              }}
-              ₫</span
-            >
+            <span class="whitespace-nowrap">{{ formatCompactMoney(systemStore.currentSettings.clubFund) }}</span>
           </button>
         </div>
 
@@ -93,12 +87,7 @@
               />
             </svg>
             <span>Tiền Quỹ: </span>
-            <span class="ml-1"
-              >{{
-                systemStore.currentSettings.clubFund.toLocaleString("vi-VN")
-              }}
-              ₫</span
-            >
+            <span class="ml-1 whitespace-nowrap">{{ formatCompactMoney(systemStore.currentSettings.clubFund) }}</span>
           </button>
 
           <router-link
@@ -457,7 +446,7 @@
           <img src="/quy-momo.jpg" alt="Mã QR MoMo góp quỹ" class="mx-auto mb-5 w-full max-w-xs rounded-lg border border-gray-200">
           <div class="grid grid-cols-2 gap-3"><button v-for="amount in fundContributionAmounts" :key="amount" type="button" class="rounded-lg border px-4 py-3 font-medium transition-colors" :class="selectedFundContributionAmount === amount ? 'border-primary-600 bg-primary-600 text-white' : 'border-gray-200 text-gray-700 hover:bg-gray-50'" @click="selectedFundContributionAmount = amount">{{ formatMoney(amount) }} ₫</button></div>
           <label class="form-label mt-5 block">Hoặc nhập số tiền khác</label>
-          <div class="mt-1 flex items-center gap-2"><button type="button" class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-gray-100 text-xl font-semibold text-gray-700 hover:bg-gray-200" :disabled="submittingFundContribution" @click="selectedFundContributionAmount = Math.max(1, selectedFundContributionAmount - 100000)">−</button><input v-model.number="selectedFundContributionAmount" type="number" min="1" class="form-input text-center" placeholder="Nhập số tiền" :disabled="submittingFundContribution"><button type="button" class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary-100 text-xl font-semibold text-primary-700 hover:bg-primary-200" :disabled="submittingFundContribution" @click="selectedFundContributionAmount += 100000">+</button></div>
+          <div class="mt-1 flex items-center gap-2"><button type="button" class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-gray-100 text-xl font-semibold text-gray-700 hover:bg-gray-200" :disabled="submittingFundContribution" @click="selectedFundContributionAmount = Math.max(1, selectedFundContributionAmount - 100000)">−</button><input v-model.number="selectedFundContributionAmount" type="number" min="1" class="form-input text-center" placeholder="Nhập số tiền" :disabled="submittingFundContribution"><button type="button" class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary-100 text-xl font-semibold text-primary-700 hover:bg-primary-200" :disabled="submittingFundContribution" @click="selectedFundContributionAmount += 100000">+</button></div><p class="mt-1 text-center text-xs text-gray-500">Đang nhập: {{ formatMoney(selectedFundContributionAmount) }} ₫</p>
           <label class="form-label mt-5 block">Lý do</label><textarea v-model="fundContributionReason" rows="3" class="form-input" :disabled="submittingFundContribution"></textarea>
         </div>
         <div class="flex justify-end gap-3 border-t p-4"><button type="button" class="btn-secondary" :disabled="submittingFundContribution" @click="showFundContributionModal = false">Hủy</button><button type="button" class="btn-primary" :disabled="submittingFundContribution || selectedFundContributionAmount < 1 || !fundContributionReason.trim()" @click="submitFundContribution">{{ submittingFundContribution ? 'Đang gửi...' : 'Xác nhận' }}</button></div>
@@ -587,8 +576,14 @@ const formatDate = (date: string | Date) =>
     year: "numeric",
   });
 
-const formatMoney = (amount: number | null | undefined) =>
-  (typeof amount === "number" && Number.isFinite(amount) ? amount : 0).toLocaleString("vi-VN");
+const formatMoney = (amount: number | null | undefined) => formatCompactMoney(amount);
+
+const formatCompactMoney = (amount: number | null | undefined) => {
+  const value = typeof amount === "number" && Number.isFinite(amount) ? amount : 0;
+  return Math.abs(value) >= 1000
+    ? `${(value / 1000).toLocaleString("vi-VN", { maximumFractionDigits: 0 })}K`
+    : value.toLocaleString("vi-VN");
+};
 
 const toMoneyNumber = (amount: unknown) =>
   typeof amount === "number" && Number.isFinite(amount) ? amount : 0;

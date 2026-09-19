@@ -153,7 +153,7 @@
             </div>
             <div class="text-right">
               <span class="text-gray-500">Tiền:</span>
-              <span class="ml-1 text-sm font-medium" :class="player.money < 0 ? 'text-red-600' : 'text-gray-900'">{{ player.money.toLocaleString('vi-VN') }} ₫</span>
+              <span class="ml-1 text-sm font-medium" :class="player.money < 0 ? 'text-red-600' : 'text-gray-900'">{{ formatMoney(player.money) }}</span>
             </div>
           </div>
         </div>
@@ -404,7 +404,7 @@
         <p class="text-sm text-gray-500 mt-1 mb-4">Khoản nạp của Admin/Mod được duyệt tự động.</p>
         <img src="/quy-momo.jpg" alt="Mã QR MoMo nạp quỹ" class="w-full max-w-xs mx-auto rounded-lg border border-gray-200 mb-5">
         <div class="grid grid-cols-2 gap-3"><button v-for="amount in topUpAmounts" :key="amount" type="button" @click="selectedTopUpAmount = amount" class="rounded-lg border px-4 py-3 font-medium transition-colors" :class="selectedTopUpAmount === amount ? 'border-primary-600 bg-primary-600 text-white' : 'border-gray-200 text-gray-700 hover:bg-gray-50'">{{ amount.toLocaleString('vi-VN') }} ₫</button></div><label for="admin-top-up" class="form-label mt-5 block">Hoặc nhập số tiền khác</label><div class="mt-1 flex items-center gap-2"><button type="button" class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-gray-100 text-xl font-semibold text-gray-700 hover:bg-gray-200" @click="selectedTopUpAmount = Math.max(0, selectedTopUpAmount - 100000)">−</button><div class="relative flex-1"><span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">₫</span><input id="admin-top-up" v-model.number="selectedTopUpAmount" type="number" min="0" class="form-input pl-8" placeholder="Nhập số tiền"></div><button type="button" class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary-100 text-xl font-semibold text-primary-700 hover:bg-primary-200" @click="selectedTopUpAmount += 100000">+</button></div>
-        <div class="mt-4"><label class="form-label">Lý do</label><textarea v-model="adminTopUpReason" rows="3" class="form-input" /></div>
+        <p class="mt-1 text-center text-xs text-gray-500">Đang nhập: {{ formatMoney(selectedTopUpAmount) }}</p><div class="mt-4"><label class="form-label">Lý do</label><textarea v-model="adminTopUpReason" rows="3" class="form-input" /></div>
         <div class="flex justify-end gap-3 mt-6"><button type="button" @click="showAdminTopUpModal = false" class="btn-secondary">Hủy</button><button type="button" @click="submitAdminTopUp" :disabled="submittingAdminTopUp" class="btn-primary">{{ submittingAdminTopUp ? 'Đang nạp...' : 'Xác nhận' }}</button></div>
       </div>
     </div>
@@ -431,6 +431,7 @@ import { useToast } from 'vue-toastification'
 import PlayerMoneyDetailModal from '../components/PlayerMoneyDetailModal.vue'
 import ConfirmationModal from '../components/ConfirmationModal.vue'
 import type { Player, PlayerMoneyHistory } from '../types'
+import { formatMoney } from '../utils/money'
 
 const playersStore = usePlayersStore()
 const teamsStore = useTeamsStore()

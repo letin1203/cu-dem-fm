@@ -112,7 +112,7 @@
               ><span
                 class="font-medium"
                 :class="playerProfile.money < 0 ? 'text-red-600' : 'text-green-600'"
-                >{{ playerProfile.money.toLocaleString("vi-VN") }} ₫</span
+                >{{ formatMoney(playerProfile.money) }}</span
               >
             </div>
             <div
@@ -122,7 +122,7 @@
               <div>
                 Đang chờ duyệt:
                 <span class="font-semibold"
-                  >{{ pendingTopUpTotal.toLocaleString("vi-VN") }} ₫</span
+                  >{{ formatMoney(pendingTopUpTotal) }}</span
                 >
               </div>
               <div
@@ -130,7 +130,7 @@
                 :key="request.id"
                 class="mt-1 text-xs text-yellow-700"
               >
-                +{{ request.amount.toLocaleString("vi-VN") }} ₫ · Nạp lúc
+                +{{ formatMoney(request.amount) }} · Nạp lúc
                 {{ formatDateTime(request.requestedAt) }}
               </div>
             </div>
@@ -164,7 +164,7 @@
                   class="shrink-0 whitespace-nowrap font-semibold"
                   :class="item.amount >= 0 ? 'text-green-600' : 'text-red-600'"
                   >{{ item.amount >= 0 ? "+" : ""
-                  }}{{ item.amount.toLocaleString("vi-VN") }} ₫</span
+                  }}{{ formatMoney(item.amount) }}</span
                 >
               </div>
               <p class="mt-1 text-xs text-gray-500">
@@ -300,7 +300,7 @@
                       item.amount >= 0 ? 'text-green-600' : 'text-red-600'
                     "
                     >{{ item.amount >= 0 ? "+" : ""
-                    }}{{ item.amount.toLocaleString("vi-VN") }} ₫</strong
+                    }}{{ formatMoney(item.amount) }}</strong
                   >
                 </div>
                 <div
@@ -315,7 +315,7 @@
                     <span class="min-w-0">{{ detail.description }}</span
                     ><span class="shrink-0 whitespace-nowrap"
                       >{{ detail.amount >= 0 ? "+" : ""
-                      }}{{ detail.amount.toLocaleString("vi-VN") }} ₫</span
+                      }}{{ formatMoney(detail.amount) }}</span
                     >
                   </div>
                 </div>
@@ -411,7 +411,7 @@
                 : 'border-gray-200 text-gray-700 hover:bg-gray-50'
             "
           >
-            {{ amount.toLocaleString("vi-VN") }} ₫
+            {{ formatMoney(amount) }}
           </button>
         </div>
         <label for="profile-top-up" class="form-label mt-5 block"
@@ -433,6 +433,7 @@
             @click="selectedTopUpAmount += 100000"
           >+</button>
         </div>
+        <p class="mt-1 text-center text-xs text-gray-500">Đang nhập: {{ formatMoney(selectedTopUpAmount) }}</p>
         <div class="flex justify-end gap-3 mt-6">
           <button @click="showTopUpModal = false" class="btn-secondary">
             Hủy</button
@@ -549,7 +550,7 @@
                   class="shrink-0 whitespace-nowrap"
                   :class="item.amount >= 0 ? 'text-green-600' : 'text-red-600'"
                   >{{ item.amount >= 0 ? "+" : ""
-                  }}{{ item.amount.toLocaleString("vi-VN") }} ₫</strong
+                  }}{{ formatMoney(item.amount) }}</strong
                 >
               </div>
               <div
@@ -564,7 +565,7 @@
                   <span class="min-w-0">{{ detail.description }}</span
                   ><span class="shrink-0 whitespace-nowrap"
                     >{{ detail.amount >= 0 ? "+" : ""
-                    }}{{ detail.amount.toLocaleString("vi-VN") }} ₫</span
+                    }}{{ formatMoney(detail.amount) }}</span
                   >
                 </div>
               </div>
@@ -598,6 +599,7 @@ import { useAuthStore } from "../stores/auth";
 import { apiClient } from "../api/client";
 import { useToast } from "vue-toastification";
 import type { Player, PlayerMoneyHistory } from "../types";
+import { formatMoney } from "../utils/money";
 
 interface TournamentAttendanceHistory {
   id: string;

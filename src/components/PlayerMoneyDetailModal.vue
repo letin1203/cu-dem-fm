@@ -58,7 +58,7 @@
           <h3 class="text-lg font-semibold text-gray-900">Trừ tiền cầu thủ</h3>
           <p class="mt-1 text-sm text-gray-500">{{ player?.name }}</p>
           <label class="form-label mt-4">Số tiền trừ</label>
-          <div class="flex items-center gap-2"><button type="button" class="btn-secondary h-10 w-10 px-0 text-lg" :disabled="deductAmount <= 1 || deducting" @click="deductAmount = Math.max(1, deductAmount - 50000)">−</button><input v-model.number="deductAmount" type="number" min="1" step="50000" class="form-input text-center" :disabled="deducting"><button type="button" class="btn-secondary h-10 w-10 px-0 text-lg" :disabled="deducting" @click="deductAmount += 50000">+</button></div>
+          <div class="flex items-center gap-2"><button type="button" class="btn-secondary h-10 w-10 px-0 text-lg" :disabled="deductAmount <= 1 || deducting" @click="deductAmount = Math.max(1, deductAmount - 50000)">−</button><input v-model.number="deductAmount" type="number" min="1" step="50000" class="form-input text-center" :disabled="deducting"><button type="button" class="btn-secondary h-10 w-10 px-0 text-lg" :disabled="deducting" @click="deductAmount += 50000">+</button></div><p class="mt-1 text-center text-xs text-gray-500">{{ formatMoney(deductAmount) }}</p>
           <label class="form-label mt-4">Lý do</label>
           <textarea v-model="deductReason" rows="3" class="form-input" placeholder="Nhập lý do trừ tiền..." :disabled="deducting"></textarea>
           <div class="mt-5 flex justify-end gap-3"><button type="button" class="btn-secondary" :disabled="deducting" @click="showDeductModal = false">Hủy</button><button type="button" class="rounded-lg bg-red-600 px-4 py-2 font-medium text-white hover:bg-red-700 disabled:opacity-50" :disabled="deducting || !isValidDeduction" @click="submitDeduction">{{ deducting ? 'Đang lưu...' : 'Xác nhận' }}</button></div>
@@ -71,6 +71,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import type { Player, PlayerMoneyHistory } from '../types'
+import { formatMoney as formatCompactMoney } from '../utils/money'
 
 defineProps<{
   isOpen: boolean
@@ -98,7 +99,7 @@ const submitDeduction = () => {
   emit('deduct', { amount: deductAmount.value, reason: deductReason.value.trim() })
   showDeductModal.value = false
 }
-const formatMoney = (value: number) => `${value.toLocaleString('vi-VN')} ₫`
+const formatMoney = (value: number) => formatCompactMoney(value)
 const formatDate = (value: string | Date) => new Date(value).toLocaleString('vi-VN')
 const getApprovedByUsername = (item: PlayerMoneyHistory) =>
   item.approvedByUsername || item.description.match(/^Nạp tiền đã được duyệt bởi (.+)$/)?.[1] || null

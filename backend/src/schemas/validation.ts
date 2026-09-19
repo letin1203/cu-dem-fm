@@ -100,6 +100,7 @@ export const updateTournamentSchema = z.object({
   stadiumCost: z.number().int().min(0).optional(),
   sponsorMoney: z.number().int().min(0).optional(),
   fundContribution: z.number().int().min(0).optional(),
+  pitchType: z.enum(['FIELD_5', 'FIELD_7']).optional(),
   selfFunded: z.boolean().optional(),
   maxAttendance: z.number().int().min(1).nullable().optional(),
   cancellationDeadline: z.string().transform((str) => new Date(str)).optional().nullable(),

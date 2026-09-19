@@ -805,17 +805,18 @@
         <section v-if="!ongoingTournament.selfFunded">
           <h4 class="font-semibold text-gray-900">4. Chi phí cơ bản</h4>
           <div class="mt-2 space-y-1 rounded-lg bg-gray-50 p-3">
-            <div class="flex justify-between gap-3"><span>Chi phí sân</span><strong>{{ getTournamentStadiumCost(ongoingTournament).toLocaleString('vi-VN') }} ₫</strong></div>
-            <div class="flex justify-between gap-3"><span>Chi phí phát sinh</span><strong>{{ getTournamentAdditionalCostsTotal(ongoingTournament.id).toLocaleString('vi-VN') }} ₫</strong></div>
-            <div class="flex justify-between gap-3 text-green-700"><span>Trừ tiền tài trợ</span><strong>-{{ getTournamentSponsorMoney(ongoingTournament).toLocaleString('vi-VN') }} ₫</strong></div>
-            <div v-if="getTournamentFundContribution(ongoingTournament) > 0" class="flex justify-between gap-3 text-indigo-700"><span>Trừ phần trích quỹ</span><strong>-{{ getTournamentFundContribution(ongoingTournament).toLocaleString('vi-VN') }} ₫</strong></div>
-            <div class="flex justify-between gap-3 border-t pt-2 font-semibold text-gray-900"><span>Tổng cần chia</span><span>{{ calculateTournamentNet(ongoingTournament.id).toLocaleString('vi-VN') }} ₫</span></div>
+            <div class="flex justify-between gap-3"><span>Chi phí sân</span><strong>{{ formatMoney(getTournamentStadiumCost(ongoingTournament)) }}</strong></div>
+            <div class="flex justify-between gap-3"><span>Chi phí phát sinh</span><strong>{{ formatMoney(getTournamentAdditionalCostsTotal(ongoingTournament.id)) }}</strong></div>
+            <div v-if="getEstimateAdditionalCost(ongoingTournament.id) > 0" class="flex justify-between gap-3 text-purple-700"><span>Tạm tính chi phí phát sinh</span><strong>+{{ formatMoney(getEstimateAdditionalCost(ongoingTournament.id)) }}</strong></div>
+            <div class="flex justify-between gap-3 text-green-700"><span>Trừ tiền tài trợ</span><strong>-{{ formatMoney(getTournamentSponsorMoney(ongoingTournament)) }}</strong></div>
+            <div v-if="getTournamentFundContribution(ongoingTournament) > 0" class="flex justify-between gap-3 text-indigo-700"><span>Trừ phần trích quỹ</span><strong>-{{ formatMoney(getTournamentFundContribution(ongoingTournament)) }}</strong></div>
+            <div class="flex justify-between gap-3 border-t pt-2 font-semibold text-gray-900"><span>Tổng cần chia tạm tính</span><span>{{ formatMoney(calculateDisplayEstimateNet(ongoingTournament.id)) }}</span></div>
           </div>
         </section>
         <section v-if="!ongoingTournament.selfFunded">
           <h4 class="font-semibold text-gray-900">5. Số tiền mỗi cầu thủ</h4>
           <p class="mt-1 leading-6">Tổng cần chia được chia cho số cầu thủ tham gia và làm tròn lên bội số 5.000 ₫.</p>
-          <p v-if="getCostEstimateInfo(ongoingTournament.id).registered" class="mt-2 rounded-lg bg-primary-50 p-3 font-medium text-primary-800">Tạm tính {{ getCostEstimateInfo(ongoingTournament.id).divisor }} cầu thủ: {{ formatMoney(calculateCostPerPlayer(ongoingTournament.id)) }}/người.</p>
+          <p v-if="getCostEstimateInfo(ongoingTournament.id).registered" class="mt-2 rounded-lg bg-primary-50 p-3 font-medium text-primary-800">Tạm tính {{ getCostEstimateInfo(ongoingTournament.id).divisor }} cầu thủ: {{ formatMoney(calculateDisplayEstimateCost(ongoingTournament.id)) }}/người.</p>
           <p class="mt-2">Thủ môn (GK) được giảm 50% chi phí cơ bản, trừ khi admin/mod hủy ưu đãi này lúc kết thúc giải.</p>
         </section>
         <section v-if="!ongoingTournament.selfFunded">
@@ -1857,11 +1858,14 @@ const getEstimateAdditionalCost = (tournamentId: string): number => {
   return 120000
 }
 
+const calculateDisplayEstimateNet = (tournamentId: string) =>
+  calculateTournamentNet(tournamentId) + getEstimateAdditionalCost(tournamentId)
+
 const calculateDisplayEstimateCostForCount = (tournamentId: string, divisor: number) => {
   const estimateAdditionalCost = getEstimateAdditionalCost(tournamentId)
   if (estimateAdditionalCost === 0) return calculateCostPerPlayerForCount(tournamentId, divisor)
   if (divisor <= 0) return 0
-  return Math.ceil((calculateTournamentNet(tournamentId) + estimateAdditionalCost) / divisor / 5000) * 5000
+  return Math.ceil(calculateDisplayEstimateNet(tournamentId) / divisor / 5000) * 5000
 }
 
 const calculateDisplayEstimateCost = (tournamentId: string) => {

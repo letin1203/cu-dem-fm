@@ -104,6 +104,7 @@
                         :class="getStatusBadge(ongoingTournament.status)">
                     {{ ongoingTournament.status }}
                   </span>
+                  <span v-if="ongoingTournament.pitchType" class="inline-flex items-center rounded-full bg-primary-100 px-2 py-0.5 text-[10px] font-semibold text-primary-800 sm:py-1 sm:text-xs">{{ ongoingTournament.pitchType === 'FIELD_5' ? 'Sân 5' : 'Sân 7' }}</span>
                   <button
                     v-if="authStore.hasAnyRole(['admin', 'mod'])"
                     type="button"
@@ -443,7 +444,7 @@
             <div v-if="ongoingTournament.status === 'UPCOMING' && getTournamentTeams(ongoingTournament).length === 0" class="mt-4 hidden rounded-lg border border-gray-200 bg-gray-50 p-4 lg:block">
               <div class="mb-3 flex items-center justify-between"><h4 class="text-lg font-semibold text-gray-800">Cầu thủ tham gia</h4><span class="text-sm text-gray-500">Chưa chia đội</span></div>
               <div class="grid grid-cols-2 gap-4">
-                <div v-for="field in [{ value: 'FIELD_5', label: 'Sân 5' }, { value: 'FIELD_7', label: 'Sân 7' }]" :key="field.value" class="rounded-lg border border-primary-200 bg-white/80 p-3"><h5 class="mb-3 border-b pb-2 font-semibold text-gray-900">{{ field.label }} ({{ getFieldAttendanceCount(ongoingTournament.id, field.value as 'FIELD_5' | 'FIELD_7') }})</h5><div v-if="getTeamPreviewPlayers(ongoingTournament.id, field.value as 'FIELD_5' | 'FIELD_7').length" class="space-y-2"><div v-for="player in getTeamPreviewPlayers(ongoingTournament.id, field.value as 'FIELD_5' | 'FIELD_7')" :key="player.id" class="flex items-center justify-between rounded bg-gray-50 p-2 text-sm" :class="{ 'bg-yellow-100': isPlayerBetting(ongoingTournament.id, player.id), 'border-2 border-red-500': isCurrentUserPlayer(player.id) }"><div class="flex min-w-0 items-center"><div class="mr-2 flex h-6 w-6 shrink-0 items-center justify-center overflow-hidden rounded-full bg-gray-300 text-xs font-medium"><img v-if="player.avatar" :src="player.avatar" :alt="player.name" class="h-full w-full object-cover"><span v-else>{{ player.name.charAt(0).toUpperCase() }}</span></div><div class="min-w-0"><div class="truncate font-medium text-gray-900">{{ player.name }}</div><div v-if="player.addedByUsername || player.friendOwnerName" class="truncate text-[10px] leading-4 text-gray-500"><span v-if="player.addedByUsername">thêm bởi {{ player.addedByUsername }}</span><span v-if="player.addedByUsername && player.friendOwnerName"> · </span><span v-if="player.friendOwnerName" class="text-blue-600">bạn của {{ player.friendOwnerName }}</span></div></div><span v-if="isPlayerWithWater(ongoingTournament.id, player.id)" class="ml-1" title="Đã đăng ký uống nước">💧</span></div><div class="ml-2 flex shrink-0 items-center text-gray-600"><span class="mr-1 rounded px-1.5 py-0.5 text-xs" :class="isGoalkeeper(player.position) ? 'bg-green-100 font-semibold text-green-700' : ''">{{ getPositionLabel(player.position) }}<template v-if="player.positionSecond">-{{ getPositionLabel(player.positionSecond) }}</template></span><span class="text-xs">T{{ player.tier }}</span></div></div></div><p v-else class="py-5 text-center text-sm text-gray-500">Chưa có cầu thủ.</p></div>
+                <div v-for="field in [{ value: 'FIELD_5', label: 'Sân 5' }, { value: 'FIELD_7', label: 'Sân 7' }]" v-show="!ongoingTournament.pitchType || ongoingTournament.pitchType === field.value" :key="field.value" class="rounded-lg border border-primary-200 bg-white/80 p-3"><h5 class="mb-3 border-b pb-2 font-semibold text-gray-900">{{ field.label }} ({{ getFieldAttendanceCount(ongoingTournament.id, field.value as 'FIELD_5' | 'FIELD_7') }})</h5><div v-if="getTeamPreviewPlayers(ongoingTournament.id, field.value as 'FIELD_5' | 'FIELD_7').length" class="space-y-2"><div v-for="player in getTeamPreviewPlayers(ongoingTournament.id, field.value as 'FIELD_5' | 'FIELD_7')" :key="player.id" class="flex items-center justify-between rounded bg-gray-50 p-2 text-sm" :class="{ 'bg-yellow-100': isPlayerBetting(ongoingTournament.id, player.id), 'border-2 border-red-500': isCurrentUserPlayer(player.id) }"><div class="flex min-w-0 items-center"><div class="mr-2 flex h-6 w-6 shrink-0 items-center justify-center overflow-hidden rounded-full bg-gray-300 text-xs font-medium"><img v-if="player.avatar" :src="player.avatar" :alt="player.name" class="h-full w-full object-cover"><span v-else>{{ player.name.charAt(0).toUpperCase() }}</span></div><div class="min-w-0"><div class="truncate font-medium text-gray-900">{{ player.name }}</div></div><span v-if="isPlayerWithWater(ongoingTournament.id, player.id)" class="ml-1">💧</span></div><div class="ml-2 flex shrink-0 items-center text-gray-600"><span class="mr-1 rounded px-1.5 py-0.5 text-xs" :class="isGoalkeeper(player.position) ? 'bg-green-100 font-semibold text-green-700' : ''">{{ getPositionLabel(player.position) }}<template v-if="player.positionSecond">-{{ getPositionLabel(player.positionSecond) }}</template></span><span class="text-xs">T{{ player.tier }}</span></div></div></div><p v-else class="py-5 text-center text-sm text-gray-500">Chưa có cầu thủ.</p></div>
               </div>
             </div>
             <div v-if="ongoingTournament.status === 'UPCOMING' && getTournamentTeams(ongoingTournament).length === 0" class="mt-4 rounded-lg border border-gray-200 bg-gray-50 p-4 lg:hidden">
@@ -467,6 +468,7 @@
               >
                 Trích quỹ
               </button>
+              <button v-if="authStore.hasAnyRole(['admin', 'mod']) && ongoingTournament.status === 'UPCOMING'" @click="openPitchTypeModal(ongoingTournament)" class="btn-secondary">Chọn sân</button>
               <button v-if="authStore.hasAnyRole(['admin', 'mod']) && ongoingTournament.status === 'UPCOMING'" @click="openMaxAttendanceModal(ongoingTournament)" class="btn-secondary">Số lượng cầu thủ</button>
               <button
                 v-if="authStore.hasPermission('canDeleteTournaments') && ongoingTournament.status !== 'COMPLETED'"
@@ -1096,6 +1098,8 @@
       <div class="flex justify-end gap-3 border-t pt-4"><button type="button" @click="closeFundContributionModal" class="btn-secondary">Hủy</button><button type="submit" :disabled="fundContributionSaving" class="btn-primary disabled:opacity-50">{{ fundContributionSaving ? 'Đang lưu...' : 'Lưu' }}</button></div>
     </form>
   </div>
+
+  <div v-if="showPitchTypeModal" class="fixed inset-0 z-[60] flex items-center justify-center overflow-y-auto overscroll-contain bg-black/50 p-4" @click.self="showPitchTypeModal = false"><div class="w-full max-w-md rounded-lg bg-white p-6 shadow-xl"><h3 class="text-lg font-semibold">Chọn sân</h3><div class="mt-5 grid grid-cols-2 gap-3"><button v-for="field in [{ value: 'FIELD_5', label: 'Sân 5' }, { value: 'FIELD_7', label: 'Sân 7' }]" :key="field.value" class="rounded-lg border-2 px-4 py-4 font-semibold" :class="selectedPitchType === field.value ? 'border-primary-600 bg-primary-600 text-white' : 'border-gray-200'" @click="selectedPitchType = field.value as 'FIELD_5' | 'FIELD_7'">{{ field.label }}</button></div><div class="mt-6 flex justify-end gap-3"><button class="btn-secondary" @click="showPitchTypeModal = false">Hủy</button><button class="btn-primary" @click="savePitchType">Lưu</button></div></div></div>
 
   <div v-if="showMaxAttendanceModal" class="fixed inset-0 z-[60] flex items-center justify-center overflow-y-auto overscroll-contain bg-black/50 p-4" @click.self="closeMaxAttendanceModal">
     <div class="w-full max-w-md rounded-lg bg-white p-6 shadow-xl"><div class="flex items-center justify-between border-b pb-4"><div><h3 class="text-lg font-semibold text-gray-900">Số lượng cầu thủ</h3><p class="text-sm text-gray-500">{{ maxAttendanceTournament?.name }}</p></div><button type="button" class="text-2xl text-gray-400" @click="closeMaxAttendanceModal">×</button></div><p class="mt-4 text-sm text-gray-600">Chọn số lượng tối đa có thể điểm danh. Không chọn là không giới hạn.</p><div class="mt-4 grid grid-cols-2 gap-3"><button v-for="amount in maxAttendanceOptions" :key="amount" type="button" @click="selectedMaxAttendance = selectedMaxAttendance === amount ? null : amount" class="rounded-lg border-2 px-4 py-4 font-semibold" :class="selectedMaxAttendance === amount ? 'border-primary-600 bg-primary-600 text-white' : 'border-gray-200 text-gray-700 hover:border-primary-400'">{{ amount }}{{ selectedMaxAttendance === amount ? ' ✓' : '' }}</button></div><label for="max-attendance" class="form-label mt-5 block">Hoặc nhập số lượng khác</label><div class="mt-1 flex items-center gap-2"><button type="button" class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-gray-100 text-xl font-semibold text-gray-700 hover:bg-gray-200" @click="selectedMaxAttendance = Math.max(1, (selectedMaxAttendance || 1) - 1)">−</button><input id="max-attendance" v-model.number="selectedMaxAttendance" type="number" min="1" step="1" class="form-input flex-1 text-center" placeholder="Nhập số lượng"><button type="button" class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary-100 text-xl font-semibold text-primary-700 hover:bg-primary-200" @click="selectedMaxAttendance = (selectedMaxAttendance || 0) + 1">+</button></div><button v-if="selectedMaxAttendance !== null" type="button" class="mt-3 text-sm font-medium text-primary-600 hover:underline" @click="selectedMaxAttendance = null">Bỏ giới hạn</button><div class="mt-6 flex justify-end gap-3 border-t pt-4"><button class="btn-secondary" @click="closeMaxAttendanceModal">Hủy</button><button class="btn-primary" :disabled="maxAttendanceSaving" @click="saveMaxAttendance">{{ maxAttendanceSaving ? 'Đang lưu...' : 'Lưu' }}</button></div></div>
@@ -1739,6 +1743,9 @@ const cancellationDeadlineMax = computed(() => cancellationDeadlineTournament.va
   : '')
 
 const showFundContributionModal = ref(false)
+const showPitchTypeModal = ref(false)
+const pitchTypeTournament = ref<Tournament | null>(null)
+const selectedPitchType = ref<'FIELD_5' | 'FIELD_7'>('FIELD_7')
 const fundContributionTournament = ref<Tournament | null>(null)
 const fundContributionForm = ref<number | null>(null)
 const fundContributionSaving = ref(false)
@@ -3379,6 +3386,23 @@ const openFundContributionModal = (tournament: Tournament) => {
   fundContributionTournament.value = tournament
   fundContributionForm.value = getTournamentFundContribution(tournament)
   showFundContributionModal.value = true
+}
+
+const openPitchTypeModal = (tournament: Tournament) => {
+  pitchTypeTournament.value = tournament
+  selectedPitchType.value = tournament.pitchType === 'FIELD_5' ? 'FIELD_5' : 'FIELD_7'
+  showPitchTypeModal.value = true
+}
+
+const savePitchType = async () => {
+  if (!pitchTypeTournament.value) return
+  try {
+    const response = await apiClient.updateTournament(pitchTypeTournament.value.id, { pitchType: selectedPitchType.value })
+    if (!response.success) throw new Error(response.error || 'Không thể cập nhật sân')
+    showPitchTypeModal.value = false
+    await fetchData()
+    toast.success('Đã chọn sân')
+  } catch (error: any) { toast.error(error.message || 'Không thể cập nhật sân') }
 }
 
 const openMaxAttendanceModal = (tournament: Tournament) => {

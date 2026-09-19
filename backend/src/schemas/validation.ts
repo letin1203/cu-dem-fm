@@ -75,6 +75,7 @@ export const createTournamentSchema = z.object({
   startDate: z.string().transform((str) => new Date(str)),
   endDate: z.string().transform((str) => new Date(str)).optional().nullable(),
   cancellationDeadline: z.string().transform((str) => new Date(str)).optional().nullable(),
+  pitchType: z.enum(['FIELD_5', 'FIELD_7']).optional(),
   teamIds: z.array(z.string()).optional().default([]),
 }).superRefine((data, ctx) => {
   // For non-weekly tournaments, require at least 2 teams

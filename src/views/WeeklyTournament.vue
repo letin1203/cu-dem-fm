@@ -160,10 +160,11 @@
                   <span v-if="getAttendanceStats(ongoingTournament.id)?.attendingCount" class="text-purple-600 font-medium">
                     👥 Est:
                     <template v-if="shouldShowMaxCostRange(ongoingTournament)">
-                      {{ getCostEstimateInfo(ongoingTournament.id).divisor }} cháu: {{ formatMoney(calculateCostPerPlayer(ongoingTournament.id)) }} · {{ ongoingTournament.maxAttendance }} cháu: {{ formatMoney(calculateCostPerPlayerForCount(ongoingTournament.id, ongoingTournament.maxAttendance || 0)) }}
+                      {{ getCostEstimateInfo(ongoingTournament.id).divisor }} cháu: {{ formatMoney(calculateDisplayEstimateCost(ongoingTournament.id)) }} · {{ ongoingTournament.maxAttendance }} cháu: {{ formatMoney(calculateDisplayEstimateCostForCount(ongoingTournament.id, ongoingTournament.maxAttendance || 0)) }}
                     </template>
-                    <template v-else>{{ formatMoney(calculateCostPerPlayer(ongoingTournament.id)) }}</template>
+                    <template v-else>{{ formatMoney(calculateDisplayEstimateCost(ongoingTournament.id)) }}</template>
                   </span>
+                  <span v-if="getEstimateAdditionalCost(ongoingTournament.id) > 0" class="text-xs text-purple-500">(đã tạm cộng {{ formatMoney(getEstimateAdditionalCost(ongoingTournament.id)) }} chi phí phát sinh)</span>
                 </div>
               </div>
             </div>
@@ -1847,6 +1848,25 @@ const getCostEstimateInfo = (tournamentId: string) => {
 const calculateCostPerPlayer = (tournamentId: string) => {
   const { divisor } = getCostEstimateInfo(tournamentId)
   return calculateCostPerPlayerForCount(tournamentId, divisor)
+}
+
+// This adjustment is intentionally display-only. The persisted end-tournament calculation is unchanged.
+const getEstimateAdditionalCost = (tournamentId: string): number => {
+  const tournament = getTournamentById(tournamentId)
+  if (tournament?.selfFunded || getTournamentAdditionalCostsTotal(tournamentId) > 0) return 0
+  return 120000
+}
+
+const calculateDisplayEstimateCostForCount = (tournamentId: string, divisor: number) => {
+  const estimateAdditionalCost = getEstimateAdditionalCost(tournamentId)
+  if (estimateAdditionalCost === 0) return calculateCostPerPlayerForCount(tournamentId, divisor)
+  if (divisor <= 0) return 0
+  return Math.ceil((calculateTournamentNet(tournamentId) + estimateAdditionalCost) / divisor / 5000) * 5000
+}
+
+const calculateDisplayEstimateCost = (tournamentId: string) => {
+  const { divisor } = getCostEstimateInfo(tournamentId)
+  return calculateDisplayEstimateCostForCount(tournamentId, divisor)
 }
 
 const shouldShowMaxCostRange = (tournament: Tournament): boolean => {

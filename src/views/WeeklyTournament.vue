@@ -175,15 +175,17 @@
               <div class="flex justify-between items-center mb-3">
                 <span class="text-sm font-semibold text-gray-800">Điểm danh cầu thủ</span>
                 <span class="text-sm font-medium text-gray-700 bg-white px-2 py-1 rounded-full">
-                  {{ getDisplayedAttendanceCount(ongoingTournament) }} / {{ getAttendanceStats(ongoingTournament.id)?.totalPlayers || 0 }}
+                  {{ getDisplayedAttendanceCount(ongoingTournament) }} / {{ ongoingTournament.maxAttendance || getAttendanceStats(ongoingTournament.id)?.totalPlayers || 0 }}
                 </span>
               </div>
               <div class="w-full bg-gray-200 rounded-full h-4 mb-3 shadow-inner">
                 <div 
-                  class="bg-gradient-to-r from-green-500 to-green-600 h-4 rounded-full transition-all duration-700 ease-out shadow-sm relative overflow-hidden"
-                  :style="{ width: `${getAttendancePercentage(ongoingTournament.id)}%` }"
+                  class="h-4 rounded-full transition-all duration-700 ease-out shadow-sm relative overflow-hidden"
+                  :class="isDisplayedAttendanceFull(ongoingTournament) ? 'bg-gradient-to-r from-red-600 via-orange-500 to-red-600 animate-pulse' : 'bg-gradient-to-r from-green-500 to-green-600'"
+                  :style="{ width: `${getDisplayedAttendancePercentage(ongoingTournament)}%` }"
                 >
-                  <div class="absolute inset-0 bg-white/20 animate-pulse"></div>
+                  <div v-if="isDisplayedAttendanceFull(ongoingTournament)" class="absolute inset-0 flex items-center justify-between px-1 text-[10px] leading-none"><span v-for="fire in getAttendanceFireCount(ongoingTournament)" :key="fire">🔥</span></div>
+                  <div v-else class="absolute inset-0 bg-white/20 animate-pulse"></div>
                 </div>
               </div>
               <div class="grid gap-2 text-xs" :class="ongoingTournament.selfFunded ? 'grid-cols-1' : 'grid-cols-3'">
@@ -2652,6 +2654,19 @@ const getDisplayedAttendanceCount = (tournament: Tournament): number =>
   tournament.pitchType
     ? getFieldAttendanceCount(tournament.id, tournament.pitchType)
     : getHighestFieldAttendanceCount(tournament.id)
+
+const getDisplayedAttendancePercentage = (tournament: Tournament): number => {
+  const fallbackTotal = getAttendanceStats(tournament.id)?.totalPlayers || 0
+  const total = tournament.maxAttendance || fallbackTotal
+  if (total === 0) return 0
+  return Math.min(100, Math.round((getDisplayedAttendanceCount(tournament) / total) * 100))
+}
+
+const isDisplayedAttendanceFull = (tournament: Tournament): boolean =>
+  getDisplayedAttendancePercentage(tournament) >= 100
+
+const getAttendanceFireCount = (tournament: Tournament): number =>
+  Math.max(1, Math.ceil(getDisplayedAttendancePercentage(tournament) / 3))
 
 const getTeamPreviewPlayers = (tournamentId: string, field: 'FIELD_5' | 'FIELD_7'): any[] => {
   const details = attendanceDetailsMap.value.get(tournamentId) || []

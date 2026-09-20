@@ -1001,7 +1001,7 @@ router.post('/:id/swap-requests', authenticate, async (req: AuthenticatedRequest
           create: { tournamentId: tournament.id, playerId: waitlistEntry.requesterPlayerId, status: 'ATTEND', field5: true, field7: true, registeredAt: new Date() },
         });
         await tx.tournamentPlayerAttendance.update({ where: { tournamentId_playerId: { tournamentId: tournament.id, playerId: user.playerId! } }, data: { status: 'NULL', field5: false, field7: false, withWater: false, bet: false } });
-        await tx.tournamentSwapRequest.update({ where: { id: waitlistEntry.id }, data: { status: 'ACCEPTED', resolvedAt: new Date() } });
+        await tx.tournamentSwapRequest.update({ where: { id: waitlistEntry.id }, data: { targetPlayerId: user.playerId!, status: 'ACCEPTED', resolvedAt: new Date() } });
       });
       res.json({ success: true, message: 'Đã swap ngay với cầu thủ đứng đầu hàng chờ' });
       return;
@@ -1097,7 +1097,7 @@ router.put('/:id/swap-requests/:requestId/accept', authenticate, async (req: Aut
         create: { tournamentId: tournament.id, playerId: user.player!.id, status: 'ATTEND', field5, field7, registeredAt: new Date() },
       });
       await tx.tournamentPlayerAttendance.update({ where: { tournamentId_playerId: { tournamentId: tournament.id, playerId: request.requesterPlayerId } }, data: { status: 'NULL', field5: false, field7: false, withWater: false, bet: false } });
-      await tx.tournamentSwapRequest.update({ where: { id: request.id }, data: { status: 'ACCEPTED', resolvedAt: new Date() } });
+      await tx.tournamentSwapRequest.update({ where: { id: request.id }, data: { targetPlayerId: user.player!.id, status: 'ACCEPTED', resolvedAt: new Date() } });
       await tx.tournamentSwapRequest.updateMany({ where: { tournamentId: tournament.id, requesterPlayerId: request.requesterPlayerId, status: 'PENDING', id: { not: request.id } }, data: { status: 'CANCELLED', resolvedAt: new Date() } });
       return replacementAttendance;
     });
@@ -1583,7 +1583,7 @@ router.get('/:id/attendance-details', async (req: AuthenticatedRequest, res: Res
 
     // Return every player, including those without an attendance record yet.
     // Missing records are represented as NULL so staff can mark them as ATTEND.
-    const [players, attendanceRecords] = await Promise.all([
+    const [players, attendanceRecords, swapRequests] = await Promise.all([
       prisma.player.findMany({
         where: { isActive: true },
         select: {
@@ -1596,11 +1596,39 @@ router.get('/:id/attendance-details', async (req: AuthenticatedRequest, res: Res
         where: { tournamentId },
         include: { addedBy: { select: { username: true } } },
       }),
+      prisma.tournamentSwapRequest.findMany({
+        where: { tournamentId, status: { in: ['PENDING', 'WAITING', 'ACCEPTED'] } },
+        select: {
+          requesterPlayerId: true,
+          targetPlayerId: true,
+          status: true,
+          requester: { select: { name: true } },
+          target: { select: { name: true } },
+        },
+        orderBy: { createdAt: 'asc' },
+      }),
     ]);
     const attendanceByPlayerId = new Map(attendanceRecords.map(record => [record.playerId, record]));
+    const pendingSwapPlayerIds = new Set(swapRequests.filter(request => request.status === 'PENDING').map(request => request.requesterPlayerId));
+    const waitlistPositions = new Map(
+      swapRequests
+        .filter(request => request.status === 'WAITING')
+        .map((request, index) => [request.requesterPlayerId, index + 1]),
+    );
+    const swappedWithByPlayerId = new Map<string, string>();
+    for (const request of swapRequests.filter(request => request.status === 'ACCEPTED')) {
+      const requesterAttendance = attendanceByPlayerId.get(request.requesterPlayerId);
+      const targetAttendance = attendanceByPlayerId.get(request.targetPlayerId);
+      if (requesterAttendance?.status === 'ATTEND') {
+        swappedWithByPlayerId.set(request.requesterPlayerId, request.target.name);
+      } else if (targetAttendance?.status === 'ATTEND') {
+        swappedWithByPlayerId.set(request.targetPlayerId, request.requester.name);
+      }
+    }
     const attendanceDetails = players.map((player) => {
       const attendance = attendanceByPlayerId.get(player.id);
-      return attendance || {
+      return {
+        ...(attendance || {
         id: `pending-${player.id}`,
         tournamentId,
         playerId: player.id,
@@ -1610,6 +1638,10 @@ router.get('/:id/attendance-details', async (req: AuthenticatedRequest, res: Res
         createdAt: tournament.createdAt,
         updatedAt: tournament.updatedAt,
         player,
+        }),
+        swapPending: pendingSwapPlayerIds.has(player.id),
+        swapWaitlistPosition: waitlistPositions.get(player.id) || null,
+        swappedWithName: swappedWithByPlayerId.get(player.id) || null,
       };
     }).map((attendance: any) => attendance.player ? attendance : {
       ...attendance,

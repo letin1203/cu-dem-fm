@@ -94,13 +94,13 @@
                   <span v-else class="inline-flex items-center rounded-full bg-primary-100 px-2 py-0.5 text-[10px] font-semibold text-primary-800 sm:py-1 sm:text-xs">{{ formatTime(ongoingTournament.startDate) }}</span>
                   <span v-if="ongoingTournament.pitchType" class="inline-flex items-center rounded-full bg-primary-100 px-2 py-0.5 text-[10px] font-semibold uppercase text-primary-800 sm:py-1 sm:text-xs">{{ ongoingTournament.pitchType === 'FIELD_5' ? 'Sân 5' : 'Sân 7' }}</span>
                   <button
-                    v-if="authStore.hasAnyRole(['admin', 'mod'])"
+                    v-if="ongoingTournament.status !== 'ONGOING' && authStore.hasAnyRole(['admin', 'mod'])"
                     type="button"
                     class="inline-flex items-center rounded-full bg-rose-100 px-2 py-0.5 text-[10px] font-semibold uppercase text-rose-800 transition-colors hover:bg-rose-200 sm:py-1 sm:text-xs"
                     title="Chỉnh sửa thời gian chốt hủy"
                     @click="openCancellationDeadlineModal(ongoingTournament)"
                   >{{ getCancellationDeadlineBadgeText(ongoingTournament) }}</button>
-                  <span v-else class="inline-flex items-center rounded-full bg-rose-100 px-2 py-0.5 text-[10px] font-semibold uppercase text-rose-800 sm:py-1 sm:text-xs">{{ getCancellationDeadlineBadgeText(ongoingTournament) }}</span>
+                  <span v-else-if="ongoingTournament.status !== 'ONGOING'" class="inline-flex items-center rounded-full bg-rose-100 px-2 py-0.5 text-[10px] font-semibold uppercase text-rose-800 sm:py-1 sm:text-xs">{{ getCancellationDeadlineBadgeText(ongoingTournament) }}</span>
                   <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium sm:py-1 sm:text-xs"
                         :class="getStatusBadge(ongoingTournament.status)">
                     {{ ongoingTournament.status }}
@@ -478,7 +478,7 @@
               <button v-if="authStore.hasAnyRole(['admin', 'mod']) && ongoingTournament.status === 'UPCOMING'" @click="openPitchTypeModal(ongoingTournament)" class="btn-secondary">Chọn sân</button>
               <button v-if="authStore.hasAnyRole(['admin', 'mod']) && ongoingTournament.status === 'UPCOMING'" @click="openMaxAttendanceModal(ongoingTournament)" class="btn-secondary">Số lượng cầu thủ</button>
               <button
-                v-if="authStore.hasPermission('canDeleteTournaments') && ongoingTournament.status !== 'COMPLETED'"
+                v-if="authStore.hasPermission('canDeleteTournaments') && ongoingTournament.status !== 'COMPLETED' && getTournamentTeams(ongoingTournament).length === 0"
                 @click="deleteTournament(ongoingTournament.id)"
                 class="px-4 py-2 rounded-lg font-medium bg-red-600 text-white hover:bg-red-700 transition-colors"
               >

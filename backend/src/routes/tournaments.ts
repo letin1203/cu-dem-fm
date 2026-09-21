@@ -1660,9 +1660,13 @@ router.get('/:id/attendance-details', async (req: AuthenticatedRequest, res: Res
     for (const request of swapRequests.filter(request => request.status === 'ACCEPTED')) {
       const requesterAttendance = attendanceByPlayerId.get(request.requesterPlayerId);
       const targetAttendance = attendanceByPlayerId.get(request.targetPlayerId);
-      if (requesterAttendance?.status === 'ATTEND') {
+      const requesterStillInSelectedField = requesterAttendance?.status === 'ATTEND'
+        && (!tournament.pitchType || (tournament.pitchType === 'FIELD_5' ? requesterAttendance.field5 : requesterAttendance.field7));
+      const targetInSelectedField = targetAttendance?.status === 'ATTEND'
+        && (!tournament.pitchType || (tournament.pitchType === 'FIELD_5' ? targetAttendance.field5 : targetAttendance.field7));
+      if (requesterStillInSelectedField) {
         swappedWithByPlayerId.set(request.requesterPlayerId, request.target.name);
-      } else if (targetAttendance?.status === 'ATTEND') {
+      } else if (targetInSelectedField) {
         swappedWithByPlayerId.set(request.targetPlayerId, request.requester.name);
       }
     }

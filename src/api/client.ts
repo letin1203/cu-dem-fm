@@ -381,8 +381,8 @@ class ApiClient {
     return this.get(`/tournaments/${tournamentId}/swap-candidates`);
   }
 
-  async createSwapRequest(tournamentId: string) {
-    return this.post(`/tournaments/${tournamentId}/swap-requests`);
+  async createSwapRequest(tournamentId: string, playerId?: string) {
+    return this.post(`/tournaments/${tournamentId}/swap-requests`, playerId ? { playerId } : {});
   }
 
   async cancelSwapRequest(tournamentId: string) {
@@ -397,8 +397,8 @@ class ApiClient {
     return this.get(`/tournaments/${tournamentId}/swap-requests/mine`);
   }
 
-  async acceptSwapRequest(tournamentId: string, requestId: string, field5: boolean, field7: boolean) {
-    return this.put(`/tournaments/${tournamentId}/swap-requests/${requestId}/accept`, { field5, field7 });
+  async acceptSwapRequest(tournamentId: string, requestId: string, field5: boolean, field7: boolean, playerId?: string) {
+    return this.put(`/tournaments/${tournamentId}/swap-requests/${requestId}/accept`, { field5, field7, ...(playerId ? { playerId } : {}) });
   }
 
   async createTournament(data: any) {

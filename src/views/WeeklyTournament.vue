@@ -324,6 +324,7 @@
                   :disabled="swapRequestSavingId === ongoingTournament.id"
                   @click="hasPendingSwapRequest(ongoingTournament.id) ? cancelSwapRequest(ongoingTournament) : requestSwap(ongoingTournament)"
                 >{{ swapRequestSavingId === ongoingTournament.id ? 'Đang xử lý...' : hasPendingSwapRequest(ongoingTournament.id) ? 'Hủy đăng ký swap' : 'Yêu cầu swap' }}</button>
+                <button v-if="ongoingTournament.status === 'UPCOMING' && getTournamentTeams(ongoingTournament).length === 0 && authStore.currentUser?.player" type="button" class="bg-blue-600 px-4 py-2 text-center rounded-lg font-medium text-white hover:bg-blue-700" @click="openFriendSwap(ongoingTournament.id)">Swap dùm bạn</button>
                 <button
                   v-for="request in getIncomingSwapRequests(ongoingTournament.id)"
                   :key="request.id"
@@ -1546,6 +1547,28 @@
     </div>
   </div>
 
+  <div v-if="showFriendSwapModal" class="fixed inset-0 z-[80] flex items-center justify-center overflow-y-auto overscroll-contain bg-black/50 p-4" @click.self="showFriendSwapModal = false">
+    <div class="max-h-[90vh] w-full max-w-md overflow-y-auto rounded-lg bg-white p-6 shadow-xl">
+      <h3 class="text-lg font-semibold">Swap dùm bạn</h3>
+      <p class="mt-1 text-sm text-gray-600">Chọn một bạn, sau đó chọn cầu thủ đang chờ swap.</p>
+      <div v-if="friendsLoading" class="py-8 text-center text-gray-500">Đang tải...</div>
+      <template v-else>
+        <p class="mt-5 text-sm font-semibold">Bạn của bạn</p>
+        <div v-if="friends.length" class="mt-2 space-y-2">
+          <button v-for="friend in friends" :key="friend.id" type="button" class="w-full rounded-lg border-2 px-4 py-3 text-left font-medium" :class="friendSelectedIds[0] === friend.id ? 'border-primary-600 bg-primary-50 text-primary-800' : 'border-gray-200'" @click="friendSelectedIds = [friend.id]">{{ friend.name }} · {{ friend.position }} - Tier {{ friend.tier }}</button>
+        </div>
+        <p v-else class="mt-2 rounded-lg bg-gray-50 p-3 text-sm text-gray-600">Bạn chưa có cầu thủ bạn bè nào.</p>
+        <button v-if="friends.length < 2" type="button" class="mt-3 w-full rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 font-semibold text-blue-700 hover:bg-blue-100" @click="showCreateFriendModal = true">+ Tạo bạn mới</button>
+        <p class="mt-5 text-sm font-semibold">Cầu thủ đang chờ swap</p>
+        <div class="mt-2 space-y-2">
+          <button v-for="request in getIncomingSwapRequests(friendTournamentId || '')" :key="request.id" type="button" class="w-full rounded-lg border-2 px-4 py-3 text-left font-medium" :class="friendSwapRequest?.id === request.id ? 'border-orange-500 bg-orange-50 text-orange-800' : 'border-gray-200'" @click="friendSwapRequest = request">{{ request.requester.name }} · {{ request.requester.position }} - Tier {{ request.requester.tier }}</button>
+          <p v-if="!getIncomingSwapRequests(friendTournamentId || '').length" class="rounded-lg bg-gray-50 p-3 text-sm text-gray-600">Không có cầu thủ nào đang chờ swap.</p>
+        </div>
+      </template>
+      <div class="mt-6 flex justify-end gap-3"><button class="btn-secondary" @click="showFriendSwapModal = false">Hủy</button><button class="btn-primary" :disabled="friendsLoading || friendRegistrationSaving || !friendSelectedIds.length || !friendSwapRequest" @click="acceptSwapForFriend">Xác nhận swap</button></div>
+    </div>
+  </div>
+
   <div v-if="showFriendRegistrationModal" class="fixed inset-0 z-[70] flex items-center justify-center overflow-y-auto overscroll-contain bg-black/50 p-4" @click.self="showFriendRegistrationModal = false">
     <div class="max-h-[90vh] w-full max-w-md overflow-y-auto rounded-lg bg-white p-6 shadow-xl">
       <div class="flex items-center gap-1"><h3 class="text-lg font-semibold">Chọn sân đăng ký</h3><button type="button" class="inline-flex h-6 w-6 items-center justify-center rounded-full text-primary-600 transition-colors hover:bg-primary-50" title="Hướng dẫn đăng ký dùm bạn" aria-label="Hướng dẫn đăng ký dùm bạn" @click="showFriendRegistrationGuideModal = true"><svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9" stroke-width="2"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0-9h.01"/></svg></button></div>
@@ -1561,7 +1584,7 @@
         <button v-if="friends.length < 2" type="button" class="mt-4 w-full rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 font-semibold text-blue-700 hover:bg-blue-100" @click="showCreateFriendModal = true">+ Tạo bạn mới</button>
         <div class="mt-5"><p class="form-label">Chọn sân</p><div class="grid grid-cols-2 gap-3"><button type="button" @click="friendField5 = !friendField5" class="rounded-lg border-2 px-4 py-3 font-semibold" :class="friendField5 ? 'border-primary-600 bg-primary-600 text-white' : 'border-gray-200'">Sân 5{{ friendField5 ? ' ✓' : '' }}</button><button type="button" @click="friendField7 = !friendField7" class="rounded-lg border-2 px-4 py-3 font-semibold" :class="friendField7 ? 'border-primary-600 bg-primary-600 text-white' : 'border-gray-200'">Sân 7{{ friendField7 ? ' ✓' : '' }}</button></div></div>
       </template>
-      <div class="mt-6 flex justify-end gap-3 border-t pt-4"><button class="btn-secondary" @click="showFriendRegistrationModal = false">Hủy</button><button class="btn-primary" :disabled="friendRegistrationSaving || !friendSelectedIds.length || (!friendField5 && !friendField7)" @click="registerFriends">{{ friendRegistrationSaving ? 'Đang đăng ký...' : 'Đăng ký' }}</button></div>
+      <div class="mt-6 flex justify-end gap-3 border-t pt-4"><button class="btn-secondary" @click="showFriendRegistrationModal = false">Hủy</button><button class="btn-primary" :disabled="friendRegistrationSaving || !friendSelectedIds.length || (!friendSwapMode && !friendField5 && !friendField7)" @click="friendSwapRequest ? acceptSwapForFriend() : (friendSwapMode ? requestFriendSwap() : registerFriends())">{{ friendRegistrationSaving ? 'Đang xử lý...' : (friendSwapRequest ? 'Xác nhận swap' : (friendSwapMode ? 'Gửi yêu cầu swap' : 'Đăng ký')) }}</button></div>
     </div>
   </div>
 
@@ -1618,15 +1641,27 @@ const attendanceLoading = ref<Set<string>>(new Set())
 const attendanceStats = ref<Map<string, TournamentAttendanceStats>>(new Map())
 const cannotSelfRegisterDueToDebt = computed(() => (authStore.currentUser?.player?.money ?? 0) < 0)
 const showFriendRegistrationModal = ref(false)
+const showFriendSwapModal = ref(false)
 const showFriendRegistrationGuideModal = ref(false)
 const showCreateFriendModal = ref(false)
 const friendsLoading = ref(false)
 const friendRegistrationSaving = ref(false)
+const friendSwapMode = ref(false)
+const friendSwapRequest = ref<IncomingSwapRequest | null>(null)
 const friendCreateSaving = ref(false)
 const editingFriendId = ref<string | null>(null)
 const friendTournamentId = ref<string | null>(null)
 const friends = ref<any[]>([])
 const friendSelectedIds = ref<string[]>([])
+const friendsWaitingForSwap = computed(() => {
+  const details = friendTournamentId.value ? attendanceDetailsMap.value.get(friendTournamentId.value) || [] : []
+  const pendingIds = new Set(details.filter((item: any) => item.swapPending).map((item: any) => item.playerId))
+  return friends.value.filter(friend => pendingIds.has(friend.id))
+})
+const pendingSwapPlayers = computed(() => {
+  const details = friendTournamentId.value ? attendanceDetailsMap.value.get(friendTournamentId.value) || [] : []
+  return details.filter((item: any) => item.swapPending && item.swapRequestId).map((item: any) => ({ id: item.swapRequestId, requester: item.player }))
+})
 const friendField5 = ref(true)
 const friendField7 = ref(true)
 const friendForm = ref({ name: '', position: '', yearOfBirth: 1990, tier: 0 })
@@ -2178,6 +2213,7 @@ const fetchAttendance = async (tournamentId: string): Promise<void> => {
 }
 
 const openFriendRegistration = async (tournamentId: string): Promise<void> => {
+  friendSwapMode.value = false
   friendTournamentId.value = tournamentId
   friendField5.value = true
   friendField7.value = true
@@ -2191,6 +2227,21 @@ const openFriendRegistration = async (tournamentId: string): Promise<void> => {
   } catch (error: any) {
     toast.error(error.message || 'Không thể tải danh sách bạn')
   } finally { friendsLoading.value = false }
+}
+
+const openFriendSwap = async (tournamentId: string): Promise<void> => {
+  friendTournamentId.value = tournamentId
+  friendSelectedIds.value = []
+  friendSwapRequest.value = null
+  friendsLoading.value = true
+  showFriendSwapModal.value = true
+  try { const response = await apiClient.getMyFriends(); if (!response.success) throw new Error(response.error); friends.value = (response.data || []) as any[]; await Promise.all([fetchAttendanceDetails(tournamentId), fetchIncomingSwapRequests(tournamentId)]) } catch (error: any) { toast.error(error.message || 'Không thể tải danh sách bạn') } finally { friendsLoading.value = false }
+}
+
+const openFriendSwapAcceptance = async (tournamentId: string, request: IncomingSwapRequest): Promise<void> => {
+  friendSwapRequest.value = request
+  await openFriendSwap(tournamentId)
+  friendSwapRequest.value = request
 }
 
 const toggleFriend = (id: string): void => {
@@ -2258,11 +2309,40 @@ const registerFriends = async (): Promise<void> => {
     const response = await apiClient.registerFriendsForTournament(friendTournamentId.value, friendSelectedIds.value, friendField5.value, friendField7.value)
     if (!response.success) throw new Error(response.error || 'Không thể đăng ký cho bạn')
     showFriendRegistrationModal.value = false
+    showFriendSwapModal.value = false
     await Promise.all([fetchAttendance(friendTournamentId.value), fetchAttendanceStats(friendTournamentId.value), fetchAttendanceDetails(friendTournamentId.value)])
     toast.success('Đã đăng ký cho bạn')
   } catch (error: any) {
     toast.error(error.message || 'Không thể đăng ký cho bạn')
   } finally { friendRegistrationSaving.value = false }
+}
+
+const requestFriendSwap = async (): Promise<void> => {
+  if (!friendTournamentId.value || !friendSelectedIds.value.length) return
+  friendRegistrationSaving.value = true
+  try {
+    for (const playerId of friendSelectedIds.value) {
+      const response = await apiClient.createSwapRequest(friendTournamentId.value, playerId)
+      if (!response.success) throw new Error(response.error || 'Không thể gửi yêu cầu swap')
+    }
+    showFriendRegistrationModal.value = false
+    await Promise.all([fetchAttendanceDetails(friendTournamentId.value), fetchIncomingSwapRequests(friendTournamentId.value)])
+    toast.success('Đã gửi yêu cầu swap cho bạn')
+  } catch (error: any) { toast.error(error.message || 'Không thể gửi yêu cầu swap cho bạn') }
+  finally { friendRegistrationSaving.value = false }
+}
+
+const acceptSwapForFriend = async (): Promise<void> => {
+  if (!friendTournamentId.value || !friendSwapRequest.value || friendSelectedIds.value.length !== 1) return
+  friendRegistrationSaving.value = true
+  try {
+    const response = await apiClient.acceptSwapRequest(friendTournamentId.value, friendSwapRequest.value.id, true, true, friendSelectedIds.value[0])
+    if (!response.success) throw new Error(response.error || 'Không thể xác nhận swap')
+    showFriendRegistrationModal.value = false
+    await fetchData()
+    toast.success('Đã swap dùm bạn')
+  } catch (error: any) { toast.error(error.message || 'Không thể xác nhận swap') }
+  finally { friendRegistrationSaving.value = false; friendSwapRequest.value = null }
 }
 
 const normalizeSwapText = (value: string): string => value
@@ -2277,7 +2357,12 @@ const filteredSwapCandidates = computed(() => {
   return query ? swapCandidates.value.filter(player => normalizeSwapText(player.name).includes(query)) : swapCandidates.value
 })
 
-const getIncomingSwapRequests = (tournamentId: string): IncomingSwapRequest[] => incomingSwapRequests.value.get(tournamentId) || []
+const getIncomingSwapRequests = (tournamentId: string): IncomingSwapRequest[] => {
+  const requests = incomingSwapRequests.value.get(tournamentId) || []
+  const details = attendanceDetailsMap.value.get(tournamentId) || []
+  const pending = details.filter((item: any) => item.swapPending && item.swapRequestId).map((item: any) => ({ id: item.swapRequestId, tournamentId, requester: item.player }))
+  return [...requests, ...pending.filter((item: IncomingSwapRequest) => !requests.some(request => request.id === item.id))]
+}
 const hasPendingSwapRequest = (tournamentId: string): boolean => pendingSwapRequestTournamentIds.value.has(tournamentId)
 const getSwapWaitlistPosition = (tournamentId: string): number => swapWaitlistPositions.value.get(tournamentId) || 0
 const isUserRegisteredForSelectedField = (tournament: Tournament): boolean => {

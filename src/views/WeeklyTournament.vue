@@ -447,13 +447,13 @@
               </div>
             </div>
             <div v-if="ongoingTournament.status === 'UPCOMING' && getTournamentTeams(ongoingTournament).length === 0" class="mt-4 hidden rounded-lg border border-gray-200 bg-gray-50 p-4 lg:block">
-              <div class="mb-3 flex items-center justify-between"><h4 class="text-lg font-semibold text-gray-800">Cầu thủ tham gia</h4><span class="text-sm text-gray-500">Chưa chia đội</span></div>
+              <div class="mb-3 flex items-center justify-between"><div class="flex items-center gap-2"><h4 class="text-lg font-semibold text-gray-800">Cầu thủ tham gia</h4><button v-if="authStore.hasAnyRole(['admin', 'mod'])" type="button" class="rounded p-1 text-primary-600 hover:bg-primary-100 disabled:opacity-50" title="Làm mới danh sách cầu thủ" :disabled="refreshingAttendanceLists.has(ongoingTournament.id)" @click="refreshAttendanceList(ongoingTournament.id)"><svg class="h-4 w-4" :class="{ 'animate-spin': refreshingAttendanceLists.has(ongoingTournament.id) }" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0A8.003 8.003 0 014.582 15m15.356 0H15" /></svg></button></div><span class="text-sm text-gray-500">Chưa chia đội</span></div>
               <div class="grid gap-4" :class="ongoingTournament.pitchType ? 'grid-cols-1' : 'grid-cols-2'">
                 <div v-for="field in [{ value: 'FIELD_5', label: 'Sân 5' }, { value: 'FIELD_7', label: 'Sân 7' }]" v-show="!ongoingTournament.pitchType || ongoingTournament.pitchType === field.value" :key="field.value" class="rounded-lg border border-primary-200 bg-white/80 p-3"><h5 class="mb-3 flex items-center justify-between border-b pb-2 font-semibold text-gray-900"><span>{{ field.label }} ({{ getFieldAttendanceCount(ongoingTournament.id, field.value as 'FIELD_5' | 'FIELD_7') }})</span><button type="button" class="inline-flex h-5 w-5 items-center justify-center rounded-full bg-primary-100 text-xs text-primary-700 hover:bg-primary-200" :title="`Xem cầu thủ chỉ đăng ký ${field.label}`" @click="openAttendanceModal(ongoingTournament.id, 'attending', field.value as 'FIELD_5' | 'FIELD_7', true)">!</button></h5><div v-if="getTeamPreviewPlayers(ongoingTournament.id, field.value as 'FIELD_5' | 'FIELD_7').length" class="gap-2" :class="ongoingTournament.pitchType ? 'grid grid-cols-2' : 'space-y-2'"><div v-for="player in getTeamPreviewPlayers(ongoingTournament.id, field.value as 'FIELD_5' | 'FIELD_7')" :key="player.id" class="flex items-center justify-between rounded bg-gray-50 p-2 text-sm" :class="{ 'bg-yellow-100': isPlayerBetting(ongoingTournament.id, player.id), 'border-2 border-red-500': isCurrentUserPlayer(player.id) }"><div class="flex min-w-0 items-center"><div class="mr-2 flex h-6 w-6 shrink-0 items-center justify-center overflow-hidden rounded-full bg-gray-300 text-xs font-medium"><img v-if="player.avatar" :src="player.avatar" :alt="player.name" class="h-full w-full object-cover"><span v-else>{{ player.name.charAt(0).toUpperCase() }}</span></div><div class="min-w-0"><div class="truncate font-medium text-gray-900">{{ player.name }}</div><div v-if="player.swapPending" class="truncate text-[10px] font-medium leading-4 text-amber-700">Đang chờ swap</div><div v-if="player.swapWaitlistPosition" class="truncate text-[10px] font-medium leading-4 text-violet-700">Đang trong hàng chờ {{ player.swapWaitlistPosition }}</div><div v-if="player.swappedWithName" class="truncate text-[10px] font-medium leading-4 text-emerald-700">Đã swap với {{ player.swappedWithName }}</div><div v-if="player.addedByUsername" class="truncate text-[10px] leading-4 text-gray-500">Được thêm bởi {{ player.addedByUsername }}</div><div v-if="player.friendOwnerName" class="truncate text-[10px] leading-4 text-blue-600">Bạn của {{ player.friendOwnerName }}</div></div><span v-if="isPlayerWithWater(ongoingTournament.id, player.id)" class="ml-1">💧</span></div><div class="ml-2 flex shrink-0 items-center text-gray-600"><span class="mr-1 rounded px-1.5 py-0.5 text-xs" :class="isGoalkeeper(player.position) ? 'bg-green-100 font-semibold text-green-700' : ''">{{ getPositionLabel(player.position) }}<template v-if="player.positionSecond">-{{ getPositionLabel(player.positionSecond) }}</template></span><span class="text-xs">T{{ player.tier }}</span></div></div></div><p v-else class="py-5 text-center text-sm text-gray-500">Chưa có cầu thủ.</p></div>
               </div>
             </div>
             <div v-if="ongoingTournament.status === 'UPCOMING' && getTournamentTeams(ongoingTournament).length === 0" class="mt-4 rounded-lg border border-gray-200 bg-gray-50 p-4 lg:hidden">
-              <div class="mb-3 flex items-center justify-between"><h4 class="font-semibold text-gray-800">Cầu thủ tham gia</h4><span class="text-xs text-gray-500">Chưa chia đội</span></div>
+              <div class="mb-3 flex items-center justify-between"><div class="flex items-center gap-2"><h4 class="font-semibold text-gray-800">Cầu thủ tham gia</h4><button v-if="authStore.hasAnyRole(['admin', 'mod'])" type="button" class="rounded p-1 text-primary-600 hover:bg-primary-100 disabled:opacity-50" title="Làm mới danh sách cầu thủ" :disabled="refreshingAttendanceLists.has(ongoingTournament.id)" @click="refreshAttendanceList(ongoingTournament.id)"><svg class="h-4 w-4" :class="{ 'animate-spin': refreshingAttendanceLists.has(ongoingTournament.id) }" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0A8.003 8.003 0 014.582 15m15.356 0H15" /></svg></button></div><span class="text-xs text-gray-500">Chưa chia đội</span></div>
               <div v-if="ongoingTournament.pitchType" class="mb-3 flex items-center justify-between border-b border-primary-600 px-3 py-2 text-sm font-medium text-primary-600"><span>{{ ongoingTournament.pitchType === 'FIELD_5' ? 'Sân 5' : 'Sân 7' }} ({{ getFieldAttendanceCount(ongoingTournament.id, ongoingTournament.pitchType) }})</span><button type="button" class="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary-100 text-xs text-primary-700" :title="`Xem cầu thủ chỉ đăng ký ${ongoingTournament.pitchType === 'FIELD_5' ? 'Sân 5' : 'Sân 7'}`" @click="openAttendanceModal(ongoingTournament.id, 'attending', ongoingTournament.pitchType, true)">!</button></div>
               <div v-else class="mb-3 flex border-b border-gray-200"><button type="button" class="flex-1 border-b-2 px-3 py-2 text-sm font-medium" :class="mobileTeamPreviewField === 'FIELD_5' ? 'border-primary-600 text-primary-600' : 'border-transparent text-gray-500'" @click="mobileTeamPreviewField = 'FIELD_5'">Sân 5 ({{ getFieldAttendanceCount(ongoingTournament.id, 'FIELD_5') }})</button><button type="button" class="mr-2 inline-flex h-5 w-5 shrink-0 items-center justify-center self-center rounded-full bg-primary-100 text-xs text-primary-700" title="Xem cầu thủ chỉ đăng ký Sân 5" @click="openAttendanceModal(ongoingTournament.id, 'attending', 'FIELD_5', true)">!</button><button type="button" class="flex-1 border-b-2 px-3 py-2 text-sm font-medium" :class="mobileTeamPreviewField === 'FIELD_7' ? 'border-primary-600 text-primary-600' : 'border-transparent text-gray-500'" @click="mobileTeamPreviewField = 'FIELD_7'">Sân 7 ({{ getFieldAttendanceCount(ongoingTournament.id, 'FIELD_7') }})</button><button type="button" class="inline-flex h-5 w-5 shrink-0 items-center justify-center self-center rounded-full bg-primary-100 text-xs text-primary-700" title="Xem cầu thủ chỉ đăng ký Sân 7" @click="openAttendanceModal(ongoingTournament.id, 'attending', 'FIELD_7', true)">!</button></div>
               <div v-if="getTeamPreviewPlayers(ongoingTournament.id, ongoingTournament.pitchType || mobileTeamPreviewField).length" class="space-y-2"><div v-for="player in getTeamPreviewPlayers(ongoingTournament.id, ongoingTournament.pitchType || mobileTeamPreviewField)" :key="player.id" class="flex items-center justify-between rounded bg-white p-2 text-sm" :class="{ 'bg-yellow-100': isPlayerBetting(ongoingTournament.id, player.id), 'border-2 border-red-500': isCurrentUserPlayer(player.id) }"><div class="flex min-w-0 items-center"><div class="mr-2 flex h-6 w-6 shrink-0 items-center justify-center overflow-hidden rounded-full bg-gray-300 text-xs font-medium"><img v-if="player.avatar" :src="player.avatar" :alt="player.name" class="h-full w-full object-cover"><span v-else>{{ player.name.charAt(0).toUpperCase() }}</span></div><div class="min-w-0"><div class="truncate font-medium text-gray-900">{{ player.name }}</div><div v-if="player.swapPending" class="truncate text-[10px] font-medium leading-4 text-amber-700">Đang chờ swap</div><div v-if="player.swapWaitlistPosition" class="truncate text-[10px] font-medium leading-4 text-violet-700">Đang trong hàng chờ {{ player.swapWaitlistPosition }}</div><div v-if="player.swappedWithName" class="truncate text-[10px] font-medium leading-4 text-emerald-700">Đã swap với {{ player.swappedWithName }}</div><div v-if="player.addedByUsername" class="truncate text-[10px] leading-4 text-gray-500">Được thêm bởi {{ player.addedByUsername }}</div><div v-if="player.friendOwnerName" class="truncate text-[10px] leading-4 text-blue-600">Bạn của {{ player.friendOwnerName }}</div></div><span v-if="isPlayerWithWater(ongoingTournament.id, player.id)" class="ml-1">💧</span></div><div class="ml-2 flex shrink-0 items-center text-gray-600"><span class="mr-1 rounded px-1.5 py-0.5 text-xs" :class="isGoalkeeper(player.position) ? 'bg-green-100 font-semibold text-green-700' : ''">{{ getPositionLabel(player.position) }}</span><span class="text-xs">T{{ player.tier }}</span></div></div></div><p v-else class="py-5 text-center text-sm text-gray-500">Chưa có cầu thủ.</p>
@@ -1678,6 +1678,7 @@ const swapWaitlistPositions = ref<Map<string, number>>(new Map())
 const pendingSwapRequest = ref<IncomingSwapRequest | null>(null)
 const batchAttendanceSaving = ref(false)
 const attendanceDetailsLoadingIds = ref<Set<string>>(new Set())
+const refreshingAttendanceLists = ref<Set<string>>(new Set())
 const areAllPendingPlayersSelected = computed(() => {
   const pendingPlayers = getFilteredModalData()
   return pendingPlayers.length > 0 && pendingPlayers.every(item => selectedPendingPlayerIds.value.has(item.player.id))
@@ -2279,11 +2280,18 @@ const filteredSwapCandidates = computed(() => {
 const getIncomingSwapRequests = (tournamentId: string): IncomingSwapRequest[] => incomingSwapRequests.value.get(tournamentId) || []
 const hasPendingSwapRequest = (tournamentId: string): boolean => pendingSwapRequestTournamentIds.value.has(tournamentId)
 const getSwapWaitlistPosition = (tournamentId: string): number => swapWaitlistPositions.value.get(tournamentId) || 0
+const isUserRegisteredForSelectedField = (tournament: Tournament): boolean => {
+  const attendance = attendanceMap.value.get(tournament.id)
+  if (attendance?.status !== 'ATTEND') return false
+  if (tournament.pitchType === 'FIELD_5') return attendance.field5 !== false
+  if (tournament.pitchType === 'FIELD_7') return attendance.field7 !== false
+  return true
+}
 
 const canRequestSwap = (tournament: Tournament): boolean => (
   tournament.status === 'UPCOMING'
   && getTournamentTeams(tournament).length === 0
-  && getUserAttendanceStatus(tournament.id) === 'ATTEND'
+  && isUserRegisteredForSelectedField(tournament)
   && isUserCancellationLocked(tournament)
 )
 
@@ -2313,6 +2321,27 @@ const fetchIncomingSwapRequests = async (tournamentId: string): Promise<void> =>
     swapWaitlistPositions.value = waitlistPositions
   } catch {
     // Swap requests are optional UI data; attendance remains available if loading them fails.
+  }
+}
+
+const refreshAttendanceList = async (tournamentId: string): Promise<void> => {
+  if (refreshingAttendanceLists.value.has(tournamentId)) return
+  const refreshing = new Set(refreshingAttendanceLists.value)
+  refreshing.add(tournamentId)
+  refreshingAttendanceLists.value = refreshing
+  try {
+    await Promise.all([
+      fetchAttendanceDetails(tournamentId),
+      fetchAttendanceStats(tournamentId),
+      fetchIncomingSwapRequests(tournamentId),
+    ])
+    toast.success('Đã cập nhật danh sách cầu thủ')
+  } catch {
+    toast.error('Không thể cập nhật danh sách cầu thủ')
+  } finally {
+    const updatedRefreshing = new Set(refreshingAttendanceLists.value)
+    updatedRefreshing.delete(tournamentId)
+    refreshingAttendanceLists.value = updatedRefreshing
   }
 }
 

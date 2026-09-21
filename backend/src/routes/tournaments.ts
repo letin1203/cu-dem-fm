@@ -916,7 +916,7 @@ router.get('/:id/swap-candidates', authenticate, async (req: AuthenticatedReques
   try {
     const [user, tournament] = await Promise.all([
       prisma.user.findUnique({ where: { id: req.user!.id }, select: { playerId: true } }),
-      prisma.tournament.findUnique({ where: { id: req.params.id }, select: { id: true, status: true, startDate: true, cancellationDeadline: true, teams: { select: { teamId: true } } } }),
+      prisma.tournament.findUnique({ where: { id: req.params.id }, select: { id: true, status: true, pitchType: true, startDate: true, cancellationDeadline: true, teams: { select: { teamId: true } } } }),
     ]);
     if (!user?.playerId || !tournament) {
       res.status(404).json({ success: false, error: 'Không tìm thấy cầu thủ hoặc giải đấu' });
@@ -927,7 +927,8 @@ router.get('/:id/swap-candidates', authenticate, async (req: AuthenticatedReques
       return;
     }
     const requesterAttendance = await prisma.tournamentPlayerAttendance.findUnique({ where: { tournamentId_playerId: { tournamentId: tournament.id, playerId: user.playerId } } });
-    if (requesterAttendance?.status !== 'ATTEND') {
+    const requesterHasSelectedField = requesterAttendance?.status === 'ATTEND' && (!tournament.pitchType || (tournament.pitchType === 'FIELD_5' ? requesterAttendance.field5 : requesterAttendance.field7));
+    if (!requesterHasSelectedField) {
       res.status(400).json({ success: false, error: 'Bạn cần đăng ký tham gia trước khi yêu cầu swap' });
       return;
     }
@@ -1045,7 +1046,10 @@ router.post('/:id/swap-waitlist', authenticate, async (req: AuthenticatedRequest
 
 router.get('/:id/swap-requests/mine', authenticate, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   try {
-    const user = await prisma.user.findUnique({ where: { id: req.user!.id }, select: { playerId: true } });
+    const [user, tournament] = await Promise.all([
+      prisma.user.findUnique({ where: { id: req.user!.id }, select: { playerId: true } }),
+      prisma.tournament.findUnique({ where: { id: req.params.id }, select: { pitchType: true } }),
+    ]);
     if (!user?.playerId) {
       res.json({ success: true, data: [] });
       return;
@@ -1061,7 +1065,8 @@ router.get('/:id/swap-requests/mine', authenticate, async (req: AuthenticatedReq
       prisma.tournamentSwapRequest.findMany({ where: { tournamentId: req.params.id, status: 'WAITING' }, orderBy: { createdAt: 'asc' }, select: { requesterPlayerId: true } }),
     ]);
     const waitingPosition = waitlistEntries.findIndex((entry) => entry.requesterPlayerId === user.playerId) + 1;
-    res.json({ success: true, data: { requests: ownAttendance?.status === 'ATTEND' ? [] : requests, myPending: Boolean(myPending), waitingPosition } });
+    const isRegisteredForSelectedField = ownAttendance?.status === 'ATTEND' && (!tournament?.pitchType || (tournament.pitchType === 'FIELD_5' ? ownAttendance.field5 : ownAttendance.field7));
+    res.json({ success: true, data: { requests: isRegisteredForSelectedField ? [] : requests, myPending: Boolean(myPending), waitingPosition } });
   } catch (_error) {
     res.status(500).json({ success: false, error: 'Không thể tải yêu cầu swap' });
   }
@@ -1082,7 +1087,7 @@ router.put('/:id/swap-requests/:requestId/accept', authenticate, async (req: Aut
     }
     const attendance = await prisma.$transaction(async (tx) => {
       const request = await tx.tournamentSwapRequest.findUnique({ where: { id: req.params.requestId } });
-      const tournament = await tx.tournament.findUnique({ where: { id: req.params.id }, select: { id: true, status: true, selfFunded: true, startDate: true, cancellationDeadline: true, teams: { select: { teamId: true } } } });
+      const tournament = await tx.tournament.findUnique({ where: { id: req.params.id }, select: { id: true, status: true, selfFunded: true, pitchType: true, startDate: true, cancellationDeadline: true, teams: { select: { teamId: true } } } });
       if (!request || request.tournamentId !== req.params.id || request.status !== 'PENDING' || request.requesterPlayerId === user.player!.id) throw new Error('Yêu cầu swap không hợp lệ');
       if (!tournament || tournament.status !== 'UPCOMING' || tournament.teams.length > 0 || Date.now() <= getTournamentCancellationDeadline(tournament).getTime()) throw new Error('Yêu cầu swap đã hết hiệu lực');
       if (!tournament.selfFunded && user.player!.money < 0) throw new Error('Số dư của bạn đang âm, vui lòng thanh toán trước khi tham gia');
@@ -1090,13 +1095,21 @@ router.put('/:id/swap-requests/:requestId/accept', authenticate, async (req: Aut
         tx.tournamentPlayerAttendance.findUnique({ where: { tournamentId_playerId: { tournamentId: tournament.id, playerId: request.requesterPlayerId } } }),
         tx.tournamentPlayerAttendance.findUnique({ where: { tournamentId_playerId: { tournamentId: tournament.id, playerId: user.player!.id } } }),
       ]);
-      if (requesterAttendance?.status !== 'ATTEND' || targetAttendance?.status === 'ATTEND') throw new Error('Không thể thực hiện swap vì trạng thái điểm danh đã thay đổi');
+      const selectedField = tournament.pitchType;
+      const requesterHasSelectedField = requesterAttendance?.status === 'ATTEND' && (!selectedField || (selectedField === 'FIELD_5' ? requesterAttendance.field5 : requesterAttendance.field7));
+      const targetHasSelectedField = targetAttendance?.status === 'ATTEND' && (!selectedField || (selectedField === 'FIELD_5' ? targetAttendance.field5 : targetAttendance.field7));
+      if (!requesterHasSelectedField || targetHasSelectedField) throw new Error('Không thể thực hiện swap vì trạng thái điểm danh đã thay đổi');
+      const replacementField5 = selectedField === 'FIELD_5' ? true : (targetAttendance?.field5 ?? field5);
+      const replacementField7 = selectedField === 'FIELD_7' ? true : (targetAttendance?.field7 ?? field7);
+      const requesterField5 = selectedField === 'FIELD_5' ? false : requesterAttendance!.field5;
+      const requesterField7 = selectedField === 'FIELD_7' ? false : requesterAttendance!.field7;
+      const requesterRemainsRegistered = requesterField5 || requesterField7;
       const replacementAttendance = await tx.tournamentPlayerAttendance.upsert({
         where: { tournamentId_playerId: { tournamentId: tournament.id, playerId: user.player!.id } },
-        update: { status: 'ATTEND', field5, field7, withWater: false, bet: false, registeredAt: new Date() },
-        create: { tournamentId: tournament.id, playerId: user.player!.id, status: 'ATTEND', field5, field7, registeredAt: new Date() },
+        update: { status: 'ATTEND', field5: replacementField5, field7: replacementField7, withWater: false, bet: false, registeredAt: new Date() },
+        create: { tournamentId: tournament.id, playerId: user.player!.id, status: 'ATTEND', field5: replacementField5, field7: replacementField7, registeredAt: new Date() },
       });
-      await tx.tournamentPlayerAttendance.update({ where: { tournamentId_playerId: { tournamentId: tournament.id, playerId: request.requesterPlayerId } }, data: { status: 'NULL', field5: false, field7: false, withWater: false, bet: false } });
+      await tx.tournamentPlayerAttendance.update({ where: { tournamentId_playerId: { tournamentId: tournament.id, playerId: request.requesterPlayerId } }, data: { status: requesterRemainsRegistered ? 'ATTEND' : 'NULL', field5: requesterField5, field7: requesterField7, withWater: requesterRemainsRegistered ? requesterAttendance!.withWater : false, bet: requesterRemainsRegistered ? requesterAttendance!.bet : false } });
       await tx.tournamentSwapRequest.update({ where: { id: request.id }, data: { targetPlayerId: user.player!.id, status: 'ACCEPTED', resolvedAt: new Date() } });
       await tx.tournamentSwapRequest.updateMany({ where: { tournamentId: tournament.id, requesterPlayerId: request.requesterPlayerId, status: 'PENDING', id: { not: request.id } }, data: { status: 'CANCELLED', resolvedAt: new Date() } });
       return replacementAttendance;

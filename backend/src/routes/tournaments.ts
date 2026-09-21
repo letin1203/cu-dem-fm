@@ -1166,7 +1166,7 @@ router.put('/:id/swap-requests/:requestId/accept', authenticate, async (req: Aut
         update: { status: 'ATTEND', field5: replacementField5, field7: replacementField7, withWater: false, bet: false, registeredAt: new Date() },
         create: { tournamentId: tournament.id, playerId: targetPlayerId, status: 'ATTEND', field5: replacementField5, field7: replacementField7, registeredAt: new Date() },
       });
-      await tx.tournamentPlayerAttendance.update({ where: { tournamentId_playerId: { tournamentId: tournament.id, playerId: request.requesterPlayerId } }, data: { status: requesterRemainsRegistered ? 'ATTEND' : 'NULL', field5: requesterField5, field7: requesterField7, withWater: requesterRemainsRegistered ? requesterAttendance!.withWater : false, bet: requesterRemainsRegistered ? requesterAttendance!.bet : false } });
+      await tx.tournamentPlayerAttendance.update({ where: { tournamentId_playerId: { tournamentId: tournament.id, playerId: request.requesterPlayerId } }, data: { status: requesterRemainsRegistered ? 'ATTEND' : 'NULL', field5: requesterField5, field7: requesterField7, withWater: false, bet: false } });
       await tx.tournamentSwapRequest.update({ where: { id: request.id }, data: { targetPlayerId, status: 'ACCEPTED', resolvedAt: new Date() } });
       await tx.tournamentSwapRequest.updateMany({ where: { tournamentId: tournament.id, requesterPlayerId: request.requesterPlayerId, status: 'PENDING', id: { not: request.id } }, data: { status: 'CANCELLED', resolvedAt: new Date() } });
       return replacementAttendance;

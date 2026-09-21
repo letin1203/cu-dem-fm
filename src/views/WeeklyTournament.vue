@@ -2770,9 +2770,8 @@ const getFilteredModalData = (): TournamentAttendanceDetails[] => {
       .sort(sortPlayers)
   }
   if (attendanceModalType.value === 'betting') {
-    // Filter by bet field for betting players
     return attendanceModalData.value
-      .filter(item => item.bet === true)
+      .filter(item => item.bet === true && isAttendingSelectedPitch(attendanceModalTournamentId.value || '', item))
       .filter(matchesName)
       .sort(sortPlayers)
   } else if (attendanceModalType.value === 'water') {
@@ -3855,12 +3854,16 @@ const getLowestScoreTeam = (teams: any[]): any | null => {
 
 // Helper function to calculate betting win amount based on number of teams
 // Helper function to get betting count from attendance details
+const isAttendingSelectedPitch = (tournamentId: string, attendance: Pick<TournamentAttendanceDetails, 'status' | 'field5' | 'field7'>): boolean => {
+  if (attendance.status !== 'ATTEND') return false
+  const pitchType = getTournamentById(tournamentId)?.pitchType
+  return pitchType === 'FIELD_5' ? Boolean(attendance.field5) : pitchType === 'FIELD_7' ? Boolean(attendance.field7) : true
+}
+
 const getBettingCount = (tournamentId: string): number => {
   const details = attendanceDetailsMap.value.get(tournamentId)
   if (!details || !Array.isArray(details) || !details.length) return 0
-  
-  // Count players who are betting (regardless of attendance status for now)
-  return details.filter((detail: any) => detail.bet === true).length
+  return details.filter((detail: any) => detail.bet === true && isAttendingSelectedPitch(tournamentId, detail)).length
 }
 
 const getWaterCount = (tournamentId: string): number => {

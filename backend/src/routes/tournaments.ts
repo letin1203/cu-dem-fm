@@ -1056,8 +1056,20 @@ router.post('/:id/swap-waitlist', authenticate, async (req: AuthenticatedRequest
     }
     const attendance = await prisma.tournamentPlayerAttendance.findUnique({ where: { tournamentId_playerId: { tournamentId: tournament.id, playerId: user.playerId } } });
     if (attendance?.status === 'ATTEND') { res.status(400).json({ success: false, error: 'Bạn đã tham gia giải đấu' }); return; }
-    const existing = await prisma.tournamentSwapRequest.findFirst({ where: { tournamentId: tournament.id, requesterPlayerId: user.playerId, status: 'WAITING' } });
+    const [existing, lastCancelled] = await Promise.all([
+      prisma.tournamentSwapRequest.findFirst({ where: { tournamentId: tournament.id, requesterPlayerId: user.playerId, status: 'WAITING' } }),
+      prisma.tournamentSwapRequest.findFirst({
+        where: { tournamentId: tournament.id, requesterPlayerId: user.playerId, targetPlayerId: user.playerId, status: 'WAITLIST_CANCELLED' },
+        orderBy: { resolvedAt: 'desc' },
+        select: { resolvedAt: true },
+      }),
+    ]);
     if (existing) { res.status(409).json({ success: false, error: 'Bạn đã ở trong hàng chờ' }); return; }
+    const retryAt = lastCancelled?.resolvedAt ? new Date(lastCancelled.resolvedAt.getTime() + 5 * 60 * 1000) : null;
+    if (retryAt && retryAt.getTime() > Date.now()) {
+      res.status(429).json({ success: false, error: `Vui lòng đợi ${Math.ceil((retryAt.getTime() - Date.now()) / 60000)} phút trước khi đăng ký hàng chờ lại`, data: { retryAt } });
+      return;
+    }
     const position = await prisma.tournamentSwapRequest.count({ where: { tournamentId: tournament.id, status: 'WAITING' } }) + 1;
     await prisma.tournamentSwapRequest.upsert({
       where: { tournamentId_requesterPlayerId_targetPlayerId: { tournamentId: tournament.id, requesterPlayerId: user.playerId, targetPlayerId: user.playerId } },
@@ -1066,6 +1078,19 @@ router.post('/:id/swap-waitlist', authenticate, async (req: AuthenticatedRequest
     });
     res.status(201).json({ success: true, data: { position }, message: `Bạn đã vào hàng chờ thứ ${position}` });
   } catch (_error) { res.status(500).json({ success: false, error: 'Không thể đăng ký hàng chờ' }); }
+});
+
+router.delete('/:id/swap-waitlist', authenticate, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  try {
+    const user = await prisma.user.findUnique({ where: { id: req.user!.id }, select: { playerId: true } });
+    if (!user?.playerId) { res.status(400).json({ success: false, error: 'Tài khoản chưa liên kết cầu thủ' }); return; }
+    const cancelled = await prisma.tournamentSwapRequest.updateMany({
+      where: { tournamentId: req.params.id, requesterPlayerId: user.playerId, status: 'WAITING' },
+      data: { status: 'WAITLIST_CANCELLED', resolvedAt: new Date() },
+    });
+    if (!cancelled.count) { res.status(404).json({ success: false, error: 'Không tìm thấy đăng ký hàng chờ' }); return; }
+    res.json({ success: true, data: { retryAt: new Date(Date.now() + 5 * 60 * 1000) }, message: 'Đã hủy đăng ký hàng chờ. Bạn có thể đăng ký lại sau 5 phút.' });
+  } catch (_error) { res.status(500).json({ success: false, error: 'Không thể hủy đăng ký hàng chờ' }); }
 });
 
 router.get('/:id/swap-requests/mine', authenticate, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
@@ -1079,7 +1104,7 @@ router.get('/:id/swap-requests/mine', authenticate, async (req: AuthenticatedReq
       return;
     }
     const ownAttendance = await prisma.tournamentPlayerAttendance.findUnique({ where: { tournamentId_playerId: { tournamentId: req.params.id, playerId: user.playerId } } });
-    const [requests, myPending, waitlistEntries] = await Promise.all([
+    const [requests, myPending, waitlistEntries, lastWaitlistCancellation] = await Promise.all([
       prisma.tournamentSwapRequest.findMany({
       where: { tournamentId: req.params.id, requesterPlayerId: { not: user.playerId }, status: 'PENDING' },
       include: { requester: { select: { id: true, name: true, position: true, tier: true, avatar: true } } },
@@ -1087,10 +1112,16 @@ router.get('/:id/swap-requests/mine', authenticate, async (req: AuthenticatedReq
       }),
       prisma.tournamentSwapRequest.findFirst({ where: { tournamentId: req.params.id, requesterPlayerId: user.playerId, status: 'PENDING' }, select: { id: true } }),
       prisma.tournamentSwapRequest.findMany({ where: { tournamentId: req.params.id, status: 'WAITING' }, orderBy: { createdAt: 'asc' }, select: { requesterPlayerId: true } }),
+      prisma.tournamentSwapRequest.findFirst({
+        where: { tournamentId: req.params.id, requesterPlayerId: user.playerId, targetPlayerId: user.playerId, status: 'WAITLIST_CANCELLED' },
+        orderBy: { resolvedAt: 'desc' },
+        select: { resolvedAt: true },
+      }),
     ]);
     const waitingPosition = waitlistEntries.findIndex((entry) => entry.requesterPlayerId === user.playerId) + 1;
     const isRegisteredForSelectedField = ownAttendance?.status === 'ATTEND' && (!tournament?.pitchType || (tournament.pitchType === 'FIELD_5' ? ownAttendance.field5 : ownAttendance.field7));
-    res.json({ success: true, data: { requests: isRegisteredForSelectedField ? [] : requests, myPending: Boolean(myPending), waitingPosition } });
+    const waitlistRetryAt = lastWaitlistCancellation?.resolvedAt ? new Date(lastWaitlistCancellation.resolvedAt.getTime() + 5 * 60 * 1000) : null;
+    res.json({ success: true, data: { requests: isRegisteredForSelectedField ? [] : requests, myPending: Boolean(myPending), waitingPosition, waitlistRetryAt: waitlistRetryAt && waitlistRetryAt.getTime() > Date.now() ? waitlistRetryAt : null } });
   } catch (_error) {
     res.status(500).json({ success: false, error: 'Không thể tải yêu cầu swap' });
   }

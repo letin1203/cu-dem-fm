@@ -332,8 +332,8 @@
                   class="bg-blue-600 px-4 py-2 text-center rounded-lg font-medium text-white transition-colors hover:bg-blue-700"
                   @click="openSwapAcceptance(request)"
                 >Swap với {{ request.requester.name }}</button>
-                <button v-if="canJoinSwapWaitlist(ongoingTournament) && !getIncomingSwapRequests(ongoingTournament.id).length && !getSwapWaitlistPosition(ongoingTournament.id)" type="button" class="bg-blue-600 px-4 py-2 text-center rounded-lg font-medium text-white transition-colors hover:bg-blue-700" @click="joinSwapWaitlist(ongoingTournament)">Đăng ký hàng chờ</button>
-                <span v-else-if="getSwapWaitlistPosition(ongoingTournament.id)" class="rounded-lg bg-amber-100 px-4 py-2 text-sm font-medium text-amber-800">Hàng chờ thứ {{ getSwapWaitlistPosition(ongoingTournament.id) }}</span>
+                <button v-if="getSwapWaitlistPosition(ongoingTournament.id)" type="button" class="bg-red-600 px-4 py-2 text-center rounded-lg font-medium text-white transition-colors hover:bg-red-700" @click="cancelSwapWaitlist(ongoingTournament)">Hủy đăng ký hàng chờ</button>
+                <button v-else-if="canJoinSwapWaitlist(ongoingTournament) && !getIncomingSwapRequests(ongoingTournament.id).length" type="button" class="bg-blue-600 px-4 py-2 text-center rounded-lg font-medium text-white transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-gray-400" :disabled="isSwapWaitlistCooldownActive(ongoingTournament.id)" @click="joinSwapWaitlist(ongoingTournament)">{{ swapWaitlistCooldownLabel(ongoingTournament.id) }}</button>
                 <p v-if="ongoingTournament.status === 'UPCOMING' && isAttendanceLimitReached(ongoingTournament)" class="w-full text-center text-xs font-medium text-orange-700">{{ attendanceLimitMessage(ongoingTournament) }}. Không thể đăng ký thêm. Chỉ có thể swap.</p>
                 
                 <!-- Water Button -->
@@ -1710,6 +1710,8 @@ const pendingSwapTargetName = ref<string | null>(null)
 const incomingSwapRequests = ref<Map<string, IncomingSwapRequest[]>>(new Map())
 const pendingSwapRequestTournamentIds = ref<Set<string>>(new Set())
 const swapWaitlistPositions = ref<Map<string, number>>(new Map())
+const swapWaitlistRetryAt = ref<Map<string, number>>(new Map())
+const swapWaitlistClock = ref(Date.now())
 const pendingSwapRequest = ref<IncomingSwapRequest | null>(null)
 const batchAttendanceSaving = ref(false)
 const attendanceDetailsLoadingIds = ref<Set<string>>(new Set())
@@ -2365,6 +2367,11 @@ const getIncomingSwapRequests = (tournamentId: string): IncomingSwapRequest[] =>
 }
 const hasPendingSwapRequest = (tournamentId: string): boolean => pendingSwapRequestTournamentIds.value.has(tournamentId)
 const getSwapWaitlistPosition = (tournamentId: string): number => swapWaitlistPositions.value.get(tournamentId) || 0
+const isSwapWaitlistCooldownActive = (tournamentId: string): boolean => (swapWaitlistRetryAt.value.get(tournamentId) || 0) > swapWaitlistClock.value
+const swapWaitlistCooldownLabel = (tournamentId: string): string => {
+  const remainingMs = (swapWaitlistRetryAt.value.get(tournamentId) || 0) - swapWaitlistClock.value
+  return remainingMs > 0 ? `Đăng ký hàng chờ (${Math.ceil(remainingMs / 60000)} phút)` : 'Đăng ký hàng chờ'
+}
 const isUserRegisteredForSelectedField = (tournament: Tournament): boolean => {
   const attendance = attendanceMap.value.get(tournament.id)
   if (attendance?.status !== 'ATTEND') return false
@@ -2392,7 +2399,7 @@ const fetchIncomingSwapRequests = async (tournamentId: string): Promise<void> =>
   try {
     const response = await apiClient.getMySwapRequests(tournamentId)
     if (!response.success) return
-    const data = (response.data || {}) as { requests?: IncomingSwapRequest[]; myPending?: boolean; waitingPosition?: number }
+    const data = (response.data || {}) as { requests?: IncomingSwapRequest[]; myPending?: boolean; waitingPosition?: number; waitlistRetryAt?: string | null }
     const updatedRequests = new Map(incomingSwapRequests.value)
     updatedRequests.set(tournamentId, data.requests || [])
     incomingSwapRequests.value = updatedRequests
@@ -2404,6 +2411,13 @@ const fetchIncomingSwapRequests = async (tournamentId: string): Promise<void> =>
     if (data.waitingPosition) waitlistPositions.set(tournamentId, data.waitingPosition)
     else waitlistPositions.delete(tournamentId)
     swapWaitlistPositions.value = waitlistPositions
+    const retryAt = new Map(swapWaitlistRetryAt.value)
+    const retryAtTime = data.waitlistRetryAt ? new Date(data.waitlistRetryAt).getTime() : 0
+    if (retryAtTime > Date.now()) {
+      retryAt.set(tournamentId, retryAtTime)
+      window.setTimeout(() => { swapWaitlistClock.value = Date.now() }, retryAtTime - Date.now() + 50)
+    } else retryAt.delete(tournamentId)
+    swapWaitlistRetryAt.value = retryAt
   } catch {
     // Swap requests are optional UI data; attendance remains available if loading them fails.
   }
@@ -2507,6 +2521,20 @@ const joinSwapWaitlist = async (tournament: Tournament): Promise<void> => {
     await fetchIncomingSwapRequests(tournament.id)
   } catch (error: any) {
     toast.error(error.response?.data?.error || error.message || 'Không thể đăng ký hàng chờ')
+  }
+}
+
+const cancelSwapWaitlist = async (tournament: Tournament): Promise<void> => {
+  try {
+    const response = await apiClient.cancelSwapWaitlist(tournament.id)
+    if (!response.success) throw new Error(response.error || 'Không thể hủy đăng ký hàng chờ')
+    const positions = new Map(swapWaitlistPositions.value)
+    positions.delete(tournament.id)
+    swapWaitlistPositions.value = positions
+    await fetchIncomingSwapRequests(tournament.id)
+    toast.success('Đã hủy đăng ký hàng chờ. Bạn có thể đăng ký lại sau 5 phút.')
+  } catch (error: any) {
+    toast.error(error.response?.data?.error || error.message || 'Không thể hủy đăng ký hàng chờ')
   }
 }
 

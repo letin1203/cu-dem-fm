@@ -324,7 +324,7 @@
                   :disabled="swapRequestSavingId === ongoingTournament.id"
                   @click="hasPendingSwapRequest(ongoingTournament.id) ? cancelSwapRequest(ongoingTournament) : requestSwap(ongoingTournament)"
                 >{{ swapRequestSavingId === ongoingTournament.id ? 'Đang xử lý...' : hasPendingSwapRequest(ongoingTournament.id) ? 'Hủy đăng ký swap' : 'Yêu cầu swap' }}</button>
-                <button v-if="ongoingTournament.status === 'UPCOMING' && getTournamentTeams(ongoingTournament).length === 0 && authStore.currentUser?.player" type="button" class="bg-blue-600 px-4 py-2 text-center rounded-lg font-medium text-white hover:bg-blue-700" @click="openFriendSwap(ongoingTournament.id)">Swap dùm bạn</button>
+                <button v-if="ongoingTournament.status === 'UPCOMING' && getTournamentTeams(ongoingTournament).length === 0 && isCancellationDeadlinePassed(ongoingTournament) && authStore.currentUser?.player" type="button" class="bg-blue-600 px-4 py-2 text-center rounded-lg font-medium text-white hover:bg-blue-700" @click="openFriendSwap(ongoingTournament.id)">Swap dùm bạn</button>
                 <button
                   v-for="request in getIncomingSwapRequests(ongoingTournament.id)"
                   :key="request.id"
@@ -2149,9 +2149,12 @@ const getCancellationDeadlineBadgeText = (tournament: Tournament): string => {
 }
 
 const isUserCancellationLocked = (tournament: Tournament): boolean => {
+  return authStore.hasRole('user') && isCancellationDeadlinePassed(tournament)
+}
+
+const isCancellationDeadlinePassed = (tournament: Tournament): boolean => {
   currentTimestamp.value
-  return authStore.hasRole('user')
-    && new Date(tournament.cancellationDeadline || getDefaultCancellationDeadline(tournament.startDate)).getTime() < Date.now()
+  return new Date(tournament.cancellationDeadline || getDefaultCancellationDeadline(tournament.startDate)).getTime() < Date.now()
 }
 
 const formatRegistrationTime = (date: string | Date): string => {

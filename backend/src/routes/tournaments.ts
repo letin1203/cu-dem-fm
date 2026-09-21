@@ -1020,6 +1020,26 @@ router.post('/:id/swap-requests', authenticate, async (req: AuthenticatedRequest
   }
 });
 
+router.delete('/:id/swap-requests', authenticate, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  try {
+    const user = await prisma.user.findUnique({ where: { id: req.user!.id }, select: { playerId: true } });
+    if (!user?.playerId) {
+      res.status(400).json({ success: false, error: 'Tài khoản chưa liên kết cầu thủ' });
+      return;
+    }
+    const deleted = await prisma.tournamentSwapRequest.deleteMany({
+      where: { tournamentId: req.params.id, requesterPlayerId: user.playerId, status: 'PENDING' },
+    });
+    if (deleted.count === 0) {
+      res.status(404).json({ success: false, error: 'Không tìm thấy yêu cầu swap đang chờ' });
+      return;
+    }
+    res.json({ success: true, message: 'Đã hủy đăng ký swap' });
+  } catch (_error) {
+    res.status(500).json({ success: false, error: 'Không thể hủy đăng ký swap' });
+  }
+});
+
 router.post('/:id/swap-waitlist', authenticate, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   try {
     const [user, tournament] = await Promise.all([

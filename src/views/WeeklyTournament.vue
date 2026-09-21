@@ -319,11 +319,11 @@
                 <button
                   v-if="canRequestSwap(ongoingTournament)"
                   type="button"
-                  class="bg-blue-600 px-4 py-2 text-center rounded-lg font-medium text-white transition-colors hover:bg-blue-700"
-                  :disabled="swapRequestSavingId === ongoingTournament.id || hasPendingSwapRequest(ongoingTournament.id)"
-                  :class="{ 'opacity-50 cursor-not-allowed': swapRequestSavingId === ongoingTournament.id || hasPendingSwapRequest(ongoingTournament.id) }"
-                  @click="requestSwap(ongoingTournament)"
-                >{{ swapRequestSavingId === ongoingTournament.id ? 'Đang gửi...' : hasPendingSwapRequest(ongoingTournament.id) ? 'Đang chờ swap' : 'Yêu cầu swap' }}</button>
+                  class="px-4 py-2 text-center rounded-lg font-medium text-white transition-colors"
+                  :class="hasPendingSwapRequest(ongoingTournament.id) ? 'bg-red-600 hover:bg-red-700' : 'bg-blue-600 hover:bg-blue-700'"
+                  :disabled="swapRequestSavingId === ongoingTournament.id"
+                  @click="hasPendingSwapRequest(ongoingTournament.id) ? cancelSwapRequest(ongoingTournament) : requestSwap(ongoingTournament)"
+                >{{ swapRequestSavingId === ongoingTournament.id ? 'Đang xử lý...' : hasPendingSwapRequest(ongoingTournament.id) ? 'Hủy đăng ký swap' : 'Yêu cầu swap' }}</button>
                 <button
                   v-for="request in getIncomingSwapRequests(ongoingTournament.id)"
                   :key="request.id"
@@ -2386,6 +2386,24 @@ const requestSwap = async (tournament: Tournament): Promise<void> => {
     await fetchIncomingSwapRequests(tournament.id)
   } catch (error: any) {
     toast.error(error.response?.data?.error || error.message || 'Không thể gửi yêu cầu swap')
+  } finally {
+    swapRequestSavingId.value = null
+  }
+}
+
+const cancelSwapRequest = async (tournament: Tournament): Promise<void> => {
+  if (swapRequestSavingId.value) return
+  try {
+    swapRequestSavingId.value = tournament.id
+    const response = await apiClient.cancelSwapRequest(tournament.id)
+    if (!response.success) throw new Error(response.error || 'Không thể hủy đăng ký swap')
+    const pendingTournamentIds = new Set(pendingSwapRequestTournamentIds.value)
+    pendingTournamentIds.delete(tournament.id)
+    pendingSwapRequestTournamentIds.value = pendingTournamentIds
+    await Promise.all([fetchIncomingSwapRequests(tournament.id), fetchAttendanceDetails(tournament.id)])
+    toast.success('Đã hủy đăng ký swap')
+  } catch (error: any) {
+    toast.error(error.response?.data?.error || error.message || 'Không thể hủy đăng ký swap')
   } finally {
     swapRequestSavingId.value = null
   }

@@ -385,6 +385,10 @@ class ApiClient {
     return this.post(`/tournaments/${tournamentId}/swap-requests`);
   }
 
+  async cancelSwapRequest(tournamentId: string) {
+    return this.delete(`/tournaments/${tournamentId}/swap-requests`);
+  }
+
   async joinSwapWaitlist(tournamentId: string) {
     return this.post(`/tournaments/${tournamentId}/swap-waitlist`);
   }

@@ -2482,7 +2482,7 @@ const requestSwap = async (tournament: Tournament): Promise<void> => {
     const pendingTournamentIds = new Set(pendingSwapRequestTournamentIds.value)
     pendingTournamentIds.add(tournament.id)
     pendingSwapRequestTournamentIds.value = pendingTournamentIds
-    await fetchIncomingSwapRequests(tournament.id)
+    await Promise.all([fetchIncomingSwapRequests(tournament.id), fetchAttendanceDetails(tournament.id)])
   } catch (error: any) {
     toast.error(error.response?.data?.error || error.message || 'Không thể gửi yêu cầu swap')
   } finally {
@@ -2518,7 +2518,7 @@ const joinSwapWaitlist = async (tournament: Tournament): Promise<void> => {
     waitlistPositions.set(tournament.id, position)
     swapWaitlistPositions.value = waitlistPositions
     toast.success(`Bạn sẽ vào hàng chờ thứ ${position}, nếu đủ người hủy sẽ tự động vào danh sách.`)
-    await fetchIncomingSwapRequests(tournament.id)
+    await Promise.all([fetchIncomingSwapRequests(tournament.id), fetchAttendanceDetails(tournament.id)])
   } catch (error: any) {
     toast.error(error.response?.data?.error || error.message || 'Không thể đăng ký hàng chờ')
   }
@@ -2531,7 +2531,7 @@ const cancelSwapWaitlist = async (tournament: Tournament): Promise<void> => {
     const positions = new Map(swapWaitlistPositions.value)
     positions.delete(tournament.id)
     swapWaitlistPositions.value = positions
-    await fetchIncomingSwapRequests(tournament.id)
+    await Promise.all([fetchIncomingSwapRequests(tournament.id), fetchAttendanceDetails(tournament.id)])
     toast.success('Đã hủy đăng ký hàng chờ. Bạn có thể đăng ký lại sau 5 phút.')
   } catch (error: any) {
     toast.error(error.response?.data?.error || error.message || 'Không thể hủy đăng ký hàng chờ')

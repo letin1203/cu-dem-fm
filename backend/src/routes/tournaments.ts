@@ -2344,9 +2344,12 @@ router.put('/:id/end', authenticate, authorize(['ADMIN', 'MOD']), async (req: Au
       return;
     }
 
-    // Get all attending players
+    // Only players actually assigned to a tournament team take part in this
+    // match's financial settlement. Attendance can retain a player on another
+    // pitch after a swap, so it is not a reliable source of match participants.
+    const assignedPlayerIds = new Set(tournament.tournamentTeamPlayers.map(assignment => assignment.playerId));
     const attendingPlayers = tournament.playerAttendances
-      .filter(att => att.status === 'ATTEND' || att.status === 'ATTENDING')
+      .filter(att => assignedPlayerIds.has(att.playerId) && (att.status === 'ATTEND' || att.status === 'ATTENDING'))
       .map(att => att.player);
 
     // Calculate money changes

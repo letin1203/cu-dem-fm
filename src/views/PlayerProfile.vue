@@ -660,6 +660,12 @@ const avatarOptions = [
   '/avatars/07-bandana.png', '/avatars/07-gesture.png', '/avatars/08-crying.png', '/avatars/08-smirk.png',
   '/avatars/09-annoyed.png', '/avatars/09-laughing-tears.png', '/avatars/10-cool.png', '/avatars/10-sunglasses.png',
   '/avatars/11-kiss.png', '/avatars/11-score-10.png', '/avatars/12-confused.png', '/avatars/12-loser.png',
+  '/avatars/photo_6156896139660169801_y.jpg', '/avatars/photo_6156896139660169802_x.jpg',
+  '/avatars/photo_6156896139660169803_x.jpg', '/avatars/photo_6156896139660169804_x.jpg',
+  '/avatars/photo_6156896139660169805_x.jpg', '/avatars/photo_6156896139660169806_x.jpg',
+  '/avatars/photo_6156896139660169807_x.jpg', '/avatars/photo_6156896139660169809_x.jpg',
+  '/avatars/photo_6156896139660169810_x.jpg', '/avatars/photo_6156896139660169811_x.jpg',
+  '/avatars/photo_6156896139660169812_m.jpg', '/avatars/photo_6156896139660169813_x.jpg',
 ];
 const currentAge = computed(() =>
   playerProfile.value

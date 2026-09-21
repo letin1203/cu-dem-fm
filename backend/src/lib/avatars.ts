@@ -25,6 +25,10 @@ export const AVATAR_PATHS = [
   '/avatars/photo_6156896139660169811_x.jpg',
   '/avatars/photo_6156896139660169812_m.jpg',
   '/avatars/photo_6156896139660169813_x.jpg',
+  '/avatars/duy.jpg',
+  '/avatars/photo_6165615567516144543_y.jpg',
+  '/avatars/quan.jpg',
+  '/avatars/tuan.jpg',
 ] as const;
 
 export const getRandomAvatar = (): string =>

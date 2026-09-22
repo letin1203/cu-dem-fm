@@ -1272,6 +1272,20 @@ router.post('/:id/challenges', authenticate, async (req: AuthenticatedRequest, r
         },
       },
     });
+    if (
+      previousChallenge?.status === 'DECLINED' &&
+      previousChallenge.respondedAt &&
+      Date.now() - previousChallenge.respondedAt.getTime() < 60 * 60 * 1000
+    ) {
+      const remainingMinutes = Math.ceil(
+        (60 * 60 * 1000 - (Date.now() - previousChallenge.respondedAt.getTime())) / 60_000,
+      );
+      res.status(400).json({
+        success: false,
+        error: `Cầu thủ đã từ chối lời mời. Vui lòng gửi lại sau ${remainingMinutes} phút`,
+      });
+      return;
+    }
     const challenge = previousChallenge
       ? await prisma.tournamentChallenge.update({
           where: { id: previousChallenge.id },
@@ -1290,6 +1304,19 @@ router.post('/:id/challenges', authenticate, async (req: AuthenticatedRequest, r
 router.delete('/:id/challenges', authenticate, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   const user = await prisma.user.findUnique({ where: { id: req.user!.id }, select: { playerId: true } });
   if (!user?.playerId) { res.status(400).json({ success: false, error: 'Tài khoản chưa liên kết cầu thủ' }); return; }
+  // A recipient cancelling a pending invitation is a decline. Preserve that
+  // distinction so the requester cannot immediately send the same invite again.
+  const incomingChallenge = await prisma.tournamentChallenge.findFirst({
+    where: { tournamentId: req.params.id, targetPlayerId: user.playerId, status: 'PENDING' },
+  });
+  if (incomingChallenge) {
+    await prisma.tournamentChallenge.update({
+      where: { id: incomingChallenge.id },
+      data: { status: 'DECLINED', respondedAt: new Date() },
+    });
+    res.json({ success: true });
+    return;
+  }
   await prisma.tournamentChallenge.updateMany({ where: { tournamentId: req.params.id, status: { in: ['PENDING', 'ACCEPTED'] }, OR: [{ requesterPlayerId: user.playerId }, { targetPlayerId: user.playerId }] }, data: { status: 'CANCELLED', respondedAt: new Date() } });
   res.json({ success: true });
 });

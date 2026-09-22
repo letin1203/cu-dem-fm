@@ -317,23 +317,26 @@
                   </div>
                 </div>
                 <button
-                  v-if="canRequestSwap(ongoingTournament)"
+                  v-if="canRequestSwap(ongoingTournament) || hasPendingSwapRequest(ongoingTournament.id)"
                   type="button"
                   class="px-4 py-2 text-center rounded-lg font-medium text-white transition-colors"
                   :class="hasPendingSwapRequest(ongoingTournament.id) ? 'bg-red-600 hover:bg-red-700' : 'bg-blue-600 hover:bg-blue-700'"
                   :disabled="swapRequestSavingId === ongoingTournament.id"
                   @click="hasPendingSwapRequest(ongoingTournament.id) ? cancelSwapRequest(ongoingTournament) : requestSwap(ongoingTournament)"
                 >{{ swapRequestSavingId === ongoingTournament.id ? 'Đang xử lý...' : hasPendingSwapRequest(ongoingTournament.id) ? 'Hủy đăng ký swap' : 'Yêu cầu swap' }}</button>
-                <button v-if="ongoingTournament.status === 'UPCOMING' && getTournamentTeams(ongoingTournament).length === 0 && isCancellationDeadlinePassed(ongoingTournament) && authStore.currentUser?.player" type="button" class="bg-blue-600 px-4 py-2 text-center rounded-lg font-medium text-white hover:bg-blue-700" @click="openFriendSwap(ongoingTournament.id)">Swap dùm bạn</button>
-                <button
-                  v-for="request in getIncomingSwapRequests(ongoingTournament.id)"
-                  :key="request.id"
-                  type="button"
-                  class="bg-blue-600 px-4 py-2 text-center rounded-lg font-medium text-white transition-colors hover:bg-blue-700"
-                  @click="openSwapAcceptance(request)"
-                >Swap với {{ request.requester.name }}</button>
+                <button v-if="ongoingTournament.status === 'UPCOMING' && getTournamentTeams(ongoingTournament).length === 0 && isCancellationDeadlinePassed(ongoingTournament) && authStore.currentUser?.player && !cannotSelfRegisterDueToDebt" type="button" class="bg-blue-600 px-4 py-2 text-center rounded-lg font-medium text-white hover:bg-blue-700" @click="openFriendSwap(ongoingTournament.id)">Swap dùm bạn</button>
+                <template v-if="!cannotSelfRegisterDueToDebt">
+                  <button
+                    v-for="request in getIncomingSwapRequests(ongoingTournament.id)"
+                    :key="request.id"
+                    type="button"
+                    class="bg-blue-600 px-4 py-2 text-center rounded-lg font-medium text-white transition-colors hover:bg-blue-700"
+                    @click="openSwapAcceptance(request)"
+                  >Swap với {{ request.requester.name }}</button>
+                </template>
                 <button v-if="getSwapWaitlistPosition(ongoingTournament.id)" type="button" class="bg-red-600 px-4 py-2 text-center rounded-lg font-medium text-white transition-colors hover:bg-red-700" @click="cancelSwapWaitlist(ongoingTournament)">Hủy đăng ký hàng chờ</button>
                 <button v-else-if="canJoinSwapWaitlist(ongoingTournament) && !getIncomingSwapRequests(ongoingTournament.id).length" type="button" class="bg-blue-600 px-4 py-2 text-center rounded-lg font-medium text-white transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-gray-400" :disabled="isSwapWaitlistCooldownActive(ongoingTournament.id)" @click="joinSwapWaitlist(ongoingTournament)">{{ swapWaitlistCooldownLabel(ongoingTournament.id) }}</button>
+                <p v-if="isCancellationDeadlinePassed(ongoingTournament) && cannotSelfRegisterDueToDebt" class="w-full text-center text-xs font-medium text-red-600">Bạn không thể swap hoặc swap dùm bạn vì số dư đang âm.</p>
                 <p v-if="ongoingTournament.status === 'UPCOMING' && isAttendanceLimitReached(ongoingTournament)" class="w-full text-center text-xs font-medium text-orange-700">{{ attendanceLimitMessage(ongoingTournament) }}. Không thể đăng ký thêm. Chỉ có thể swap.</p>
                 
                 <!-- Water Button -->
@@ -2236,6 +2239,10 @@ const openFriendRegistration = async (tournamentId: string): Promise<void> => {
 }
 
 const openFriendSwap = async (tournamentId: string): Promise<void> => {
+  if (cannotSelfRegisterDueToDebt.value) {
+    toast.error('Số dư đang âm, vui lòng thanh toán trước khi swap dùm bạn')
+    return
+  }
   friendTournamentId.value = tournamentId
   friendSelectedIds.value = []
   friendSwapRequest.value = null
@@ -2325,6 +2332,10 @@ const registerFriends = async (): Promise<void> => {
 
 const requestFriendSwap = async (): Promise<void> => {
   if (!friendTournamentId.value || !friendSelectedIds.value.length) return
+  if (cannotSelfRegisterDueToDebt.value) {
+    toast.error('Số dư đang âm, vui lòng thanh toán trước khi swap dùm bạn')
+    return
+  }
   friendRegistrationSaving.value = true
   try {
     for (const playerId of friendSelectedIds.value) {
@@ -2340,6 +2351,10 @@ const requestFriendSwap = async (): Promise<void> => {
 
 const acceptSwapForFriend = async (): Promise<void> => {
   if (!friendTournamentId.value || !friendSwapRequest.value || friendSelectedIds.value.length !== 1) return
+  if (cannotSelfRegisterDueToDebt.value) {
+    toast.error('Số dư đang âm, vui lòng thanh toán trước khi swap dùm bạn')
+    return
+  }
   friendRegistrationSaving.value = true
   try {
     const response = await apiClient.acceptSwapRequest(friendTournamentId.value, friendSwapRequest.value.id, true, true, friendSelectedIds.value[0])
@@ -2389,6 +2404,7 @@ const canRequestSwap = (tournament: Tournament): boolean => (
   && getTournamentTeams(tournament).length === 0
   && isUserRegisteredForSelectedField(tournament)
   && isUserCancellationLocked(tournament)
+  && !cannotSelfRegisterDueToDebt.value
 )
 
 const canJoinSwapWaitlist = (tournament: Tournament): boolean => (
@@ -2397,6 +2413,7 @@ const canJoinSwapWaitlist = (tournament: Tournament): boolean => (
   && getUserAttendanceStatus(tournament.id) !== 'ATTEND'
   && isUserCancellationLocked(tournament)
   && Boolean(authStore.currentUser?.player)
+  && !cannotSelfRegisterDueToDebt.value
 )
 
 const fetchIncomingSwapRequests = async (tournamentId: string): Promise<void> => {
@@ -2478,6 +2495,10 @@ const closeSwapModal = (): void => {
 
 const requestSwap = async (tournament: Tournament): Promise<void> => {
   if (swapRequestSavingId.value || hasPendingSwapRequest(tournament.id)) return
+  if (cannotSelfRegisterDueToDebt.value) {
+    toast.error('Số dư đang âm, vui lòng thanh toán trước khi swap')
+    return
+  }
   try {
     swapRequestSavingId.value = tournament.id
     const response = await apiClient.createSwapRequest(tournament.id)
@@ -2513,6 +2534,10 @@ const cancelSwapRequest = async (tournament: Tournament): Promise<void> => {
 }
 
 const joinSwapWaitlist = async (tournament: Tournament): Promise<void> => {
+  if (cannotSelfRegisterDueToDebt.value) {
+    toast.error('Số dư đang âm, vui lòng thanh toán trước khi đăng ký hàng chờ')
+    return
+  }
   try {
     swapTournament.value = tournament
     const response = await apiClient.joinSwapWaitlist(tournament.id)
@@ -2543,6 +2568,10 @@ const cancelSwapWaitlist = async (tournament: Tournament): Promise<void> => {
 }
 
 const openSwapAcceptance = (request: IncomingSwapRequest): void => {
+  if (cannotSelfRegisterDueToDebt.value) {
+    toast.error('Số dư đang âm, vui lòng thanh toán trước khi swap')
+    return
+  }
   pendingSwapRequest.value = request
   fieldRegistrationTournamentId.value = request.tournamentId
   registrationField5.value = true

@@ -915,11 +915,15 @@ router.put('/:id/friend-attendance', authenticate, async (req: AuthenticatedRequ
 router.get('/:id/swap-candidates', authenticate, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   try {
     const [user, tournament] = await Promise.all([
-      prisma.user.findUnique({ where: { id: req.user!.id }, select: { playerId: true } }),
+      prisma.user.findUnique({ where: { id: req.user!.id }, select: { playerId: true, player: { select: { money: true } } } }),
       prisma.tournament.findUnique({ where: { id: req.params.id }, select: { id: true, status: true, pitchType: true, startDate: true, cancellationDeadline: true, teams: { select: { teamId: true } } } }),
     ]);
     if (!user?.playerId || !tournament) {
       res.status(404).json({ success: false, error: 'Không tìm thấy cầu thủ hoặc giải đấu' });
+      return;
+    }
+    if ((user.player?.money ?? 0) < 0) {
+      res.status(400).json({ success: false, error: 'Số dư của bạn đang âm, vui lòng thanh toán trước khi swap' });
       return;
     }
     if (tournament.status !== 'UPCOMING' || tournament.teams.length > 0 || Date.now() <= getTournamentCancellationDeadline(tournament).getTime()) {
@@ -962,13 +966,17 @@ router.post('/:id/swap-requests', authenticate, async (req: AuthenticatedRequest
   try {
     const requestedPlayerId = typeof req.body?.playerId === 'string' ? req.body.playerId : null;
     const [user, tournament] = await Promise.all([
-      prisma.user.findUnique({ where: { id: req.user!.id }, select: { playerId: true } }),
+      prisma.user.findUnique({ where: { id: req.user!.id }, select: { playerId: true, player: { select: { money: true } } } }),
       prisma.tournament.findUnique({ where: { id: req.params.id }, select: { id: true, status: true, pitchType: true, startDate: true, cancellationDeadline: true, teams: { select: { teamId: true } } } }),
     ]);
     const requesterPlayerId = requestedPlayerId || user?.playerId;
     const controlledPlayer = requesterPlayerId && await prisma.player.findFirst({ where: { id: requesterPlayerId, OR: [{ id: user?.playerId || '' }, { friendOwnerId: req.user!.id }] }, select: { id: true } });
     if (!user?.playerId || !tournament || !controlledPlayer) {
       res.status(400).json({ success: false, error: 'Thông tin yêu cầu swap không hợp lệ' });
+      return;
+    }
+    if ((user.player?.money ?? 0) < 0) {
+      res.status(400).json({ success: false, error: 'Số dư của bạn đang âm, vui lòng thanh toán trước khi swap' });
       return;
     }
     if (tournament.status !== 'UPCOMING' || tournament.teams.length > 0 || Date.now() <= getTournamentCancellationDeadline(tournament).getTime()) {
@@ -1047,11 +1055,15 @@ router.delete('/:id/swap-requests', authenticate, async (req: AuthenticatedReque
 router.post('/:id/swap-waitlist', authenticate, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   try {
     const [user, tournament] = await Promise.all([
-      prisma.user.findUnique({ where: { id: req.user!.id }, select: { playerId: true } }),
+      prisma.user.findUnique({ where: { id: req.user!.id }, select: { playerId: true, player: { select: { money: true } } } }),
       prisma.tournament.findUnique({ where: { id: req.params.id }, select: { id: true, status: true, cancellationDeadline: true, startDate: true, teams: { select: { teamId: true } } } }),
     ]);
     if (!user?.playerId || !tournament || tournament.status !== 'UPCOMING' || tournament.teams.length > 0 || Date.now() <= getTournamentCancellationDeadline(tournament).getTime()) {
       res.status(400).json({ success: false, error: 'Chỉ có thể đăng ký hàng chờ sau thời gian chốt hủy và trước khi chia đội' });
+      return;
+    }
+    if ((user.player?.money ?? 0) < 0) {
+      res.status(400).json({ success: false, error: 'Số dư của bạn đang âm, vui lòng thanh toán trước khi swap' });
       return;
     }
     const attendance = await prisma.tournamentPlayerAttendance.findUnique({ where: { tournamentId_playerId: { tournamentId: tournament.id, playerId: user.playerId } } });
@@ -1147,7 +1159,7 @@ router.put('/:id/swap-requests/:requestId/accept', authenticate, async (req: Aut
       const tournament = await tx.tournament.findUnique({ where: { id: req.params.id }, select: { id: true, status: true, selfFunded: true, pitchType: true, startDate: true, cancellationDeadline: true, teams: { select: { teamId: true } } } });
       if (!request || request.tournamentId !== req.params.id || request.status !== 'PENDING' || request.requesterPlayerId === targetPlayerId) throw new Error('Yêu cầu swap không hợp lệ');
       if (!tournament || tournament.status !== 'UPCOMING' || tournament.teams.length > 0 || Date.now() <= getTournamentCancellationDeadline(tournament).getTime()) throw new Error('Yêu cầu swap đã hết hiệu lực');
-      if (!tournament.selfFunded && user.player!.money < 0) throw new Error('Số dư của bạn đang âm, vui lòng thanh toán trước khi tham gia');
+      if (user.player!.money < 0) throw new Error('Số dư của bạn đang âm, vui lòng thanh toán trước khi swap');
       const [requesterAttendance, targetAttendance] = await Promise.all([
         tx.tournamentPlayerAttendance.findUnique({ where: { tournamentId_playerId: { tournamentId: tournament.id, playerId: request.requesterPlayerId } } }),
         tx.tournamentPlayerAttendance.findUnique({ where: { tournamentId_playerId: { tournamentId: tournament.id, playerId: targetPlayerId } } }),

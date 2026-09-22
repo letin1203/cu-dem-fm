@@ -104,7 +104,7 @@
         </div>
       </form>
 
-      <div v-if="showForgotPasswordModal" class="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto overscroll-contain bg-black/50 p-4" @click.self="closeForgotPasswordModal">
+      <div v-if="showForgotPasswordModal" class="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto overscroll-contain bg-black/50 p-4">
         <div class="w-full max-w-md rounded-lg bg-white p-6 shadow-xl" role="dialog" aria-modal="true" aria-labelledby="forgot-password-title">
           <div class="flex items-start justify-between gap-4">
             <div><h3 id="forgot-password-title" class="text-lg font-semibold text-gray-900">Quên mật khẩu</h3><p class="mt-1 text-sm text-gray-600">Nhập email để gửi yêu cầu đổi mật khẩu đến quản trị viên.</p></div>

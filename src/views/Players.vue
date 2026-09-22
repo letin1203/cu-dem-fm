@@ -284,7 +284,7 @@
       </div>
     </div>
 
-    <div v-if="showPlayerProfileModal" class="fixed inset-0 z-[70] flex items-center justify-center overflow-y-auto overscroll-contain bg-black/50 p-4" @click.self="closePlayerProfileModal">
+    <div v-if="showPlayerProfileModal" class="fixed inset-0 z-[70] flex items-center justify-center overflow-y-auto overscroll-contain bg-black/50 p-4">
       <div class="flex max-h-[90vh] w-full max-w-5xl flex-col overflow-hidden rounded-lg bg-white shadow-xl">
         <div class="flex items-start justify-between border-b p-5">
           <div><h2 class="text-lg font-semibold text-gray-900">Hồ sơ cầu thủ</h2><p class="mt-1 text-sm text-gray-500">Thông tin, lịch sử tiền và các giải đấu đã tham gia.</p></div>
@@ -315,7 +315,7 @@
       </div>
     </div>
 
-    <div v-if="showSelfProfileTopUpModal" class="fixed inset-0 z-[80] flex items-center justify-center overflow-y-auto overscroll-contain bg-black/50 p-4" @click.self="showSelfProfileTopUpModal = false"><div class="my-auto max-h-[90vh] w-full max-w-md overflow-y-auto rounded-lg bg-white p-6 shadow-xl"><h2 class="text-lg font-semibold text-gray-900">Nạp tiền</h2><p class="mt-1 text-sm text-gray-500">Yêu cầu sẽ chờ quản trị viên duyệt.</p><img src="/quy-momo.jpg" alt="Mã QR MoMo nạp quỹ" class="mx-auto my-5 w-full max-w-xs rounded-lg border border-gray-200"><div class="grid grid-cols-2 gap-3"><button v-for="amount in selfProfileTopUpOptions" :key="amount" type="button" class="rounded-lg border px-4 py-3 font-medium" :class="selfProfileTopUpAmount === amount ? 'border-primary-600 bg-primary-600 text-white' : 'border-gray-200'" @click="selfProfileTopUpAmount = amount">{{ formatMoney(amount) }}</button></div><label class="form-label mt-5 block">Hoặc nhập số tiền khác</label><input v-model.number="selfProfileTopUpAmount" type="number" min="1" class="form-input mt-1"><div class="mt-6 flex justify-end gap-3"><button type="button" class="btn-secondary" @click="showSelfProfileTopUpModal = false">Hủy</button><button type="button" class="btn-primary" :disabled="selfProfileTopUpSaving" @click="submitSelfProfileTopUp">{{ selfProfileTopUpSaving ? 'Đang gửi...' : 'Xác nhận' }}</button></div></div></div>
+    <div v-if="showSelfProfileTopUpModal" class="fixed inset-0 z-[80] flex items-center justify-center overflow-y-auto overscroll-contain bg-black/50 p-4"><div class="my-auto max-h-[90vh] w-full max-w-md overflow-y-auto rounded-lg bg-white p-6 shadow-xl"><h2 class="text-lg font-semibold text-gray-900">Nạp tiền</h2><p class="mt-1 text-sm text-gray-500">Yêu cầu sẽ chờ quản trị viên duyệt.</p><img src="/quy-momo.jpg" alt="Mã QR MoMo nạp quỹ" class="mx-auto my-5 w-full max-w-xs rounded-lg border border-gray-200"><div class="grid grid-cols-2 gap-3"><button v-for="amount in selfProfileTopUpOptions" :key="amount" type="button" class="rounded-lg border px-4 py-3 font-medium" :class="selfProfileTopUpAmount === amount ? 'border-primary-600 bg-primary-600 text-white' : 'border-gray-200'" @click="selfProfileTopUpAmount = amount">{{ formatMoney(amount) }}</button></div><label class="form-label mt-5 block">Hoặc nhập số tiền khác</label><input v-model.number="selfProfileTopUpAmount" type="number" min="1" class="form-input mt-1"><div class="mt-6 flex justify-end gap-3"><button type="button" class="btn-secondary" @click="showSelfProfileTopUpModal = false">Hủy</button><button type="button" class="btn-primary" :disabled="selfProfileTopUpSaving" @click="submitSelfProfileTopUp">{{ selfProfileTopUpSaving ? 'Đang gửi...' : 'Xác nhận' }}</button></div></div></div>
 
     <PlayerMoneyDetailModal
       :is-open="showMoneyHistory"
@@ -431,7 +431,7 @@
       </div>
     </div>
 
-    <div v-if="showAdminTopUpModal" class="fixed inset-0 z-[70] flex items-center justify-center overflow-y-auto overscroll-contain bg-gray-900/50 p-4" @click.self="showAdminTopUpModal = false">
+    <div v-if="showAdminTopUpModal" class="fixed inset-0 z-[70] flex items-center justify-center overflow-y-auto overscroll-contain bg-gray-900/50 p-4">
       <div class="my-auto max-h-[90vh] w-full max-w-md overflow-y-auto rounded-lg bg-white p-6 shadow-xl">
         <h2 class="text-lg font-semibold text-gray-900">Nạp tiền cho {{ editingPlayer?.name }}</h2>
         <p class="text-sm text-gray-500 mt-1 mb-4">Khoản nạp của Admin/Mod được duyệt tự động.</p>
@@ -442,7 +442,7 @@
       </div>
     </div>
 
-    <div v-if="showFriendsModal" class="fixed inset-0 z-[70] flex items-center justify-center overflow-y-auto overscroll-contain bg-black/50 p-4" @click.self="showFriendsModal = false">
+    <div v-if="showFriendsModal" class="fixed inset-0 z-[70] flex items-center justify-center overflow-y-auto overscroll-contain bg-black/50 p-4">
       <div class="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-lg bg-white p-6 shadow-xl">
         <div class="flex items-center justify-between"><h2 class="text-lg font-semibold">Danh sách bạn</h2><button class="text-2xl text-gray-400" @click="showFriendsModal = false">×</button></div>
         <p v-if="friendsListLoading" class="py-8 text-center text-gray-500">Đang tải...</p>

@@ -14,7 +14,7 @@
       </button>
     </div>
 
-    <div v-if="showCreateTournamentModal" class="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto overscroll-contain bg-black/50 p-4" @click.self="closeCreateTournamentModal">
+    <div v-if="showCreateTournamentModal" class="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto overscroll-contain bg-black/50 p-4">
       <div class="w-full max-w-md rounded-lg bg-white p-6 shadow-xl">
         <h2 class="text-lg font-semibold text-gray-900">Chọn ngày tạo giải đấu</h2>
         <p class="mt-2 text-sm text-gray-600">Tuần này đã có giải đấu kết thúc. Vui lòng chọn ngày cho giải đấu mới.</p>
@@ -241,16 +241,17 @@
                 <div
                   v-for="team in getTournamentTeams(ongoingTournament)"
                   :key="team.id"
-                  class="bg-white/80 backdrop-blur-sm rounded-lg p-4 border border-primary-200 hover:shadow-md transition-shadow flex flex-col"
+                  class="bg-white/80 backdrop-blur-sm rounded-lg p-4 border hover:shadow-md transition-shadow flex flex-col"
+                  :class="getTeamCardClass(team.name)"
                 >
                   <!-- Team Header -->
                   <div class="flex items-center mb-3">
-                    <div class="w-10 h-10 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full flex items-center justify-center mr-3">
+                    <div class="w-10 h-10 rounded-full flex items-center justify-center mr-3" :class="getTeamNumberClass(team.name)">
                       <span class="text-white font-bold text-lg">{{ getTeamNumber(team.name) }}</span>
                     </div>
                     <div class="flex-1">
                       <div class="flex items-center justify-between">
-                        <h5 class="font-semibold text-gray-900">{{ team.name }}</h5>
+                        <h5 class="font-semibold text-gray-900">{{ displayTeamName(team.name) }} <span class="text-sm font-medium" :class="getTeamTextClass(team.name)">- {{ getTeamJerseyLabel(team.name) }}</span></h5>
                       </div>
                       <p class="text-sm text-gray-600">{{ team.players?.length || 0 }} cầu thủ</p>
                     </div>
@@ -658,16 +659,17 @@
                   <div
                     v-for="team in getTournamentTeams(tournament)"
                     :key="team.id"
-                    class="bg-white rounded-lg p-4 border border-gray-200 hover:shadow-md transition-shadow flex flex-col"
+                    class="bg-white rounded-lg p-4 border hover:shadow-md transition-shadow flex flex-col"
+                    :class="getTeamCardClass(team.name)"
                   >
                     <!-- Team Header -->
                     <div class="flex items-center mb-3">
-                      <div class="w-10 h-10 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full flex items-center justify-center mr-3">
+                      <div class="w-10 h-10 rounded-full flex items-center justify-center mr-3" :class="getTeamNumberClass(team.name)">
                         <span class="text-white font-bold text-lg">{{ getTeamNumber(team.name) }}</span>
                       </div>
                       <div class="flex-1">
                         <div class="flex items-center">
-                          <h5 class="font-semibold text-gray-900">{{ team.name }}</h5>
+                          <h5 class="font-semibold text-gray-900">{{ displayTeamName(team.name) }} <span class="text-sm font-medium" :class="getTeamTextClass(team.name)">- {{ getTeamJerseyLabel(team.name) }}</span></h5>
                         </div>
                         <p class="text-sm text-gray-600">{{ team.players?.length || 0 }} cầu thủ</p>
                       </div>
@@ -742,7 +744,7 @@
     </div>
   </div>
 
-  <div v-if="showOldTournamentDateModal" class="fixed inset-0 z-[60] flex items-center justify-center overflow-y-auto overscroll-contain bg-black/50 p-4" @click.self="showOldTournamentDateModal = false">
+  <div v-if="showOldTournamentDateModal" class="fixed inset-0 z-[60] flex items-center justify-center overflow-y-auto overscroll-contain bg-black/50 p-4">
     <div class="w-full max-w-md rounded-lg bg-white p-6 shadow-xl">
       <div class="flex items-center justify-between border-b pb-4">
         <h3 class="text-lg font-semibold text-gray-900">Lọc giải đấu theo ngày</h3>
@@ -786,7 +788,7 @@
     </div>
   </div>
 
-  <div v-if="showTournamentCalculationInfoModal && ongoingTournament" class="fixed inset-0 z-[60] flex items-center justify-center overflow-y-auto overscroll-contain bg-black/50 p-4" @click.self="showTournamentCalculationInfoModal = false">
+  <div v-if="showTournamentCalculationInfoModal && ongoingTournament" class="fixed inset-0 z-[60] flex items-center justify-center overflow-y-auto overscroll-contain bg-black/50 p-4">
     <div class="flex max-h-[90vh] w-full max-w-lg flex-col overflow-hidden rounded-lg bg-white shadow-xl" role="dialog" aria-modal="true" aria-labelledby="tournament-calculation-title">
       <div class="flex items-center justify-between border-b p-5">
         <div>
@@ -863,7 +865,7 @@
     </div>
   </div>
 
-  <div v-if="showTournamentMoneyHistoryModal" class="fixed inset-0 z-[60] flex items-center justify-center overflow-y-auto overscroll-contain bg-black/50 p-4" @click.self="showTournamentMoneyHistoryModal = false">
+  <div v-if="showTournamentMoneyHistoryModal" class="fixed inset-0 z-[60] flex items-center justify-center overflow-y-auto overscroll-contain bg-black/50 p-4">
     <div class="flex max-h-[90vh] w-full max-w-2xl flex-col overflow-hidden rounded-lg bg-white shadow-xl">
       <div class="flex items-center justify-between border-b p-5"><div><h3 class="text-lg font-semibold text-gray-900">Biến động tiền cầu thủ</h3><p class="text-sm text-gray-500">{{ selectedMoneyHistoryTournament?.name }}</p></div><button @click="showTournamentMoneyHistoryModal = false" class="text-2xl text-gray-400 hover:text-gray-700">×</button></div>
       <div class="overflow-y-auto p-5"><div v-if="tournamentMoneyHistoryLoading" class="py-8 text-center text-gray-500">Đang tải...</div><div v-else-if="!tournamentMoneyHistory.length" class="py-8 text-center text-gray-500">Chưa có lịch sử biến động tiền.</div><div v-else class="space-y-3"><div v-for="item in tournamentMoneyHistory" :key="item.id" class="rounded-lg border p-4" :class="isCurrentUserPlayer(item.player.id) ? 'border-red-500 bg-red-50' : 'border-gray-200'"><div class="flex justify-between gap-3"><div class="min-w-0"><p class="font-medium text-gray-900">{{ item.player.name }}</p><p class="text-xs text-gray-500">{{ item.description }}</p></div><span class="shrink-0 whitespace-nowrap font-semibold" :class="item.amount >= 0 ? 'text-green-600' : 'text-red-600'">{{ item.amount >= 0 ? '+' : '' }}{{ item.amount.toLocaleString('vi-VN') }} ₫</span></div><div v-if="item.details?.length" class="mt-3 space-y-1 border-t pt-3 text-xs"><div v-for="detail in item.details" :key="`${detail.description}-${detail.amount}`" class="flex justify-between gap-3 text-gray-600"><span class="min-w-0">{{ detail.description }}</span><span class="shrink-0 whitespace-nowrap text-gray-900">{{ detail.amount >= 0 ? '+' : '' }}{{ detail.amount.toLocaleString('vi-VN') }} ₫</span></div></div><div class="mt-3 flex flex-wrap items-center justify-between gap-3 border-t pt-3 text-xs text-gray-500"><span>Trước: <strong>{{ item.balanceBefore.toLocaleString('vi-VN') }} ₫</strong></span><div class="flex items-center gap-2"><span>Sau: <strong :class="item.balanceAfter < 0 ? 'text-red-600' : 'text-gray-900'">{{ item.balanceAfter.toLocaleString('vi-VN') }} ₫</strong></span><button v-if="isCurrentUserPlayer(item.player.id) && item.balanceAfter < 0" type="button" class="rounded bg-red-600 px-2 py-1 font-medium text-white hover:bg-red-700" @click="openTournamentDebtTopUp(item)">Thanh toán</button></div></div></div></div></div>
@@ -871,7 +873,7 @@
     </div>
   </div>
 
-  <div v-if="showTournamentDebtTopUpModal" class="fixed inset-0 z-[70] flex items-center justify-center overflow-y-auto overscroll-contain bg-gray-900/50 p-4" @click.self="showTournamentDebtTopUpModal = false">
+  <div v-if="showTournamentDebtTopUpModal" class="fixed inset-0 z-[70] flex items-center justify-center overflow-y-auto overscroll-contain bg-gray-900/50 p-4">
     <div class="my-auto max-h-[90vh] w-full max-w-md overflow-y-auto rounded-lg bg-white p-6 shadow-xl">
       <h2 class="text-lg font-semibold text-gray-900">Nạp tiền</h2>
       <p class="mb-4 mt-1 text-sm text-gray-500">Quét mã MoMo để nạp quỹ, sau đó chọn số tiền đã nạp. Yêu cầu sẽ chờ quản trị viên duyệt.</p>
@@ -881,7 +883,7 @@
     </div>
   </div>
 
-  <div v-if="showFieldRegistrationModal" class="fixed inset-0 z-[70] flex items-center justify-center overflow-y-auto overscroll-contain bg-black/50 p-4" @click.self="closeFieldRegistrationModal">
+  <div v-if="showFieldRegistrationModal" class="fixed inset-0 z-[70] flex items-center justify-center overflow-y-auto overscroll-contain bg-black/50 p-4">
     <div class="my-auto max-h-[90vh] w-full max-w-md overflow-y-auto rounded-lg bg-white p-6 shadow-xl">
       <h3 class="text-lg font-semibold text-gray-900">{{ pendingSwapRequest ? `Xác nhận swap với ${pendingSwapRequest.requester.name}` : fieldRegistrationAddOnly ? 'Thêm sân đăng ký' : 'Chọn sân đăng ký' }}</h3>
       <p class="mt-1 text-sm text-gray-600">{{ pendingSwapRequest ? 'Chọn sân trước khi xác nhận thay thế cầu thủ.' : fieldRegistrationAddOnly ? 'Bạn chỉ có thể thêm sân chưa đăng ký sau thời gian chốt hủy.' : 'Bạn có thể đăng ký một hoặc cả hai sân.' }}</p>
@@ -895,7 +897,7 @@
     </div>
   </div>
 
-  <div v-if="showSwapModal" class="fixed inset-0 z-[70] flex items-center justify-center overflow-y-auto overscroll-contain bg-black/50 p-4" @click.self="closeSwapModal">
+  <div v-if="showSwapModal" class="fixed inset-0 z-[70] flex items-center justify-center overflow-y-auto overscroll-contain bg-black/50 p-4">
     <div class="flex max-h-[90vh] w-full max-w-2xl flex-col overflow-hidden rounded-lg bg-white shadow-xl">
       <div class="flex items-center justify-between border-b p-5"><div><h3 class="text-lg font-semibold text-gray-900">Đăng ký hàng chờ</h3><p class="mt-1 text-sm text-gray-500">Bạn sẽ vào hàng chờ thứ {{ getSwapWaitlistPosition(swapTournament?.id || '') }}.</p></div><button type="button" class="text-2xl text-gray-400 hover:text-gray-700" @click="closeSwapModal">×</button></div>
       <div class="min-h-0 overflow-y-auto p-5"><p class="rounded-lg bg-amber-50 p-3 text-sm text-amber-800">Bạn sẽ vào hàng chờ thứ {{ getSwapWaitlistPosition(swapTournament?.id || '') }}, nếu đủ người hủy sẽ tự động vào danh sách.</p></div>
@@ -904,7 +906,7 @@
   </div>
 
   <!-- Attendance Details Modal -->
-  <div v-if="showAttendanceModal" class="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto overscroll-contain bg-black bg-opacity-50 p-4" @click="closeAttendanceModal">
+  <div v-if="showAttendanceModal" class="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto overscroll-contain bg-black bg-opacity-50 p-4">
     <div class="bg-white rounded-lg shadow-xl max-w-5xl w-full mx-4 max-h-[85vh] overflow-hidden" @click.stop>
       <!-- Modal Header -->
       <div class="flex items-center justify-between p-6 border-b border-gray-200">
@@ -1071,7 +1073,7 @@
     </div>
   </div>
 
-  <div v-if="showStadiumCostModal" class="fixed inset-0 z-[60] flex items-center justify-center overflow-y-auto overscroll-contain bg-black/50 p-4" @click.self="closeStadiumCostModal">
+  <div v-if="showStadiumCostModal" class="fixed inset-0 z-[60] flex items-center justify-center overflow-y-auto overscroll-contain bg-black/50 p-4">
     <form class="w-full max-w-md rounded-lg bg-white p-6 shadow-xl" @submit.prevent="saveStadiumCost">
       <div class="flex items-center justify-between border-b pb-4">
         <div><h3 class="text-lg font-semibold text-gray-900">Chỉnh sửa chi phí sân</h3><p class="text-sm text-gray-500">{{ stadiumCostTournament?.name }}</p></div>
@@ -1087,7 +1089,7 @@
     </form>
   </div>
 
-  <div v-if="showSponsorMoneyModal" class="fixed inset-0 z-[60] flex items-center justify-center overflow-y-auto overscroll-contain bg-black/50 p-4" @click.self="closeSponsorMoneyModal">
+  <div v-if="showSponsorMoneyModal" class="fixed inset-0 z-[60] flex items-center justify-center overflow-y-auto overscroll-contain bg-black/50 p-4">
     <div class="w-full max-w-md rounded-lg bg-white p-6 shadow-xl">
       <div class="flex items-center justify-between border-b pb-4"><div><h3 class="text-lg font-semibold text-gray-900">Chỉnh sửa tiền tài trợ</h3><p class="text-sm text-gray-500">{{ sponsorMoneyTournament?.name }}</p></div><button type="button" @click="closeSponsorMoneyModal" class="text-2xl text-gray-400 hover:text-gray-700">×</button></div>
       <div class="py-5"><div class="grid grid-cols-2 gap-3"><button v-for="amount in sponsorMoneyOptions" :key="amount" type="button" @click="selectedSponsorMoney = amount" class="rounded-lg border-2 px-4 py-4 font-semibold transition-colors" :class="selectedSponsorMoney === amount ? 'border-primary-600 bg-primary-600 text-white' : 'border-gray-200 text-gray-700 hover:border-primary-400'">{{ amount.toLocaleString('vi-VN') }} ₫</button></div><label for="sponsor-money" class="form-label mt-5 block">Hoặc nhập số tiền khác</label><div class="mt-1 flex items-center gap-2"><button type="button" class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-gray-100 text-xl font-semibold text-gray-700 transition-colors hover:bg-gray-200" title="Giảm 100.000 ₫" @click="selectedSponsorMoney = Math.max(0, selectedSponsorMoney - 100000)">−</button><div class="relative flex-1"><span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">₫</span><input id="sponsor-money" v-model.number="selectedSponsorMoney" type="number" min="0" class="form-input pl-8" placeholder="Nhập tiền tài trợ"></div><button type="button" class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary-100 text-xl font-semibold text-primary-700 transition-colors hover:bg-primary-200" title="Tăng 100.000 ₫" @click="selectedSponsorMoney += 100000">+</button></div></div>
@@ -1095,7 +1097,7 @@
     </div>
   </div>
 
-  <div v-if="showTournamentTimeModal" class="fixed inset-0 z-[60] flex items-center justify-center overflow-y-auto overscroll-contain bg-black/50 p-4" @click.self="closeTournamentTimeModal">
+  <div v-if="showTournamentTimeModal" class="fixed inset-0 z-[60] flex items-center justify-center overflow-y-auto overscroll-contain bg-black/50 p-4">
     <div class="w-full max-w-md rounded-lg bg-white p-6 shadow-xl">
       <div class="flex items-center justify-between border-b pb-4">
         <div><h3 class="text-lg font-semibold text-gray-900">Chỉnh sửa giờ thi đấu</h3><p class="text-sm text-gray-500">{{ timeTournament?.name }}</p></div>
@@ -1106,7 +1108,7 @@
     </div>
   </div>
 
-  <div v-if="showCancellationDeadlineModal" class="fixed inset-0 z-[60] flex items-center justify-center overflow-y-auto overscroll-contain bg-black/50 p-4" @click.self="closeCancellationDeadlineModal">
+  <div v-if="showCancellationDeadlineModal" class="fixed inset-0 z-[60] flex items-center justify-center overflow-y-auto overscroll-contain bg-black/50 p-4">
     <div class="w-full max-w-md rounded-lg bg-white p-6 shadow-xl">
       <div class="flex items-center justify-between border-b pb-4"><div><h3 class="text-lg font-semibold text-gray-900">Chốt hủy tham gia</h3><p class="text-sm text-gray-500">{{ cancellationDeadlineTournament?.name }}</p></div><button type="button" class="text-2xl text-gray-400 hover:text-gray-700" @click="closeCancellationDeadlineModal">×</button></div>
       <div class="py-5"><label for="cancellation-deadline" class="form-label block">Chọn ngày giờ chốt hủy</label><input id="cancellation-deadline" v-model="selectedCancellationDeadline" type="datetime-local" class="form-input mt-1" :min="cancellationDeadlineMin" :max="cancellationDeadlineMax"><p class="mt-2 text-xs text-gray-500">Chỉ có thể chọn từ thời điểm hiện tại đến trước giờ diễn ra giải đấu.</p></div>
@@ -1114,7 +1116,7 @@
     </div>
   </div>
 
-  <div v-if="showFundContributionModal" class="fixed inset-0 z-[60] flex items-center justify-center overflow-y-auto overscroll-contain bg-black/50 p-4" @click.self="closeFundContributionModal">
+  <div v-if="showFundContributionModal" class="fixed inset-0 z-[60] flex items-center justify-center overflow-y-auto overscroll-contain bg-black/50 p-4">
     <form class="w-full max-w-md rounded-lg bg-white p-6 shadow-xl" @submit.prevent="saveFundContribution">
       <div class="flex items-center justify-between border-b pb-4"><div><h3 class="text-lg font-semibold text-gray-900">Trích quỹ</h3><p class="text-sm text-gray-500">{{ fundContributionTournament?.name }}</p></div><button type="button" @click="closeFundContributionModal" class="text-2xl text-gray-400 hover:text-gray-700">×</button></div>
       <div class="py-5"><p class="form-label mb-3">Chọn số tiền trích quỹ</p><div class="grid grid-cols-2 gap-3"><button v-for="amount in fundContributionOptions" :key="amount" type="button" @click="fundContributionForm = amount" class="rounded-lg border px-4 py-3 font-medium transition-colors" :class="fundContributionForm === amount ? 'border-primary-600 bg-primary-600 text-white' : 'border-gray-200 text-gray-700 hover:bg-gray-50'">{{ amount.toLocaleString('vi-VN') }} ₫</button></div><label for="fund-contribution" class="form-label mt-5 block">Hoặc nhập số tiền khác</label><div class="mt-1 flex items-center gap-2"><button type="button" class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-gray-100 text-xl font-semibold text-gray-700 transition-colors hover:bg-gray-200" title="Giảm 100.000 ₫" @click="fundContributionForm = Math.max(0, (fundContributionForm || 0) - 100000)">−</button><div class="relative flex-1"><span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">₫</span><input id="fund-contribution" v-model.number="fundContributionForm" type="number" min="0" required class="form-input pl-8" placeholder="Nhập số tiền trích quỹ"></div><button type="button" class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary-100 text-xl font-semibold text-primary-700 transition-colors hover:bg-primary-200" title="Tăng 100.000 ₫" @click="fundContributionForm = (fundContributionForm || 0) + 100000">+</button></div></div>
@@ -1122,9 +1124,9 @@
     </form>
   </div>
 
-  <div v-if="showPitchTypeModal" class="fixed inset-0 z-[60] flex items-center justify-center overflow-y-auto overscroll-contain bg-black/50 p-4" @click.self="showPitchTypeModal = false"><div class="w-full max-w-md rounded-lg bg-white p-6 shadow-xl"><h3 class="text-lg font-semibold">Chọn sân</h3><p class="mt-2 text-sm text-primary-700">Đang chọn: <strong>{{ selectedPitchType === 'FIELD_5' ? 'Sân 5' : 'Sân 7' }}</strong></p><div class="mt-5 grid grid-cols-2 gap-3"><button v-for="field in [{ value: 'FIELD_5', label: 'Sân 5' }, { value: 'FIELD_7', label: 'Sân 7' }]" :key="field.value" class="rounded-lg border-2 px-4 py-4 font-semibold" :class="selectedPitchType === field.value ? 'border-primary-600 bg-primary-600 text-white' : 'border-gray-200'" @click="selectedPitchType = field.value as 'FIELD_5' | 'FIELD_7'">{{ field.label }}</button></div><div class="mt-6 flex justify-end gap-3"><button class="btn-secondary" @click="showPitchTypeModal = false">Hủy</button><button class="btn-primary" @click="savePitchType">Lưu</button></div></div></div>
+  <div v-if="showPitchTypeModal" class="fixed inset-0 z-[60] flex items-center justify-center overflow-y-auto overscroll-contain bg-black/50 p-4"><div class="w-full max-w-md rounded-lg bg-white p-6 shadow-xl"><h3 class="text-lg font-semibold">Chọn sân</h3><p class="mt-2 text-sm text-primary-700">Đang chọn: <strong>{{ selectedPitchType === 'FIELD_5' ? 'Sân 5' : 'Sân 7' }}</strong></p><div class="mt-5 grid grid-cols-2 gap-3"><button v-for="field in [{ value: 'FIELD_5', label: 'Sân 5' }, { value: 'FIELD_7', label: 'Sân 7' }]" :key="field.value" class="rounded-lg border-2 px-4 py-4 font-semibold" :class="selectedPitchType === field.value ? 'border-primary-600 bg-primary-600 text-white' : 'border-gray-200'" @click="selectedPitchType = field.value as 'FIELD_5' | 'FIELD_7'">{{ field.label }}</button></div><div class="mt-6 flex justify-end gap-3"><button class="btn-secondary" @click="showPitchTypeModal = false">Hủy</button><button class="btn-primary" @click="savePitchType">Lưu</button></div></div></div>
 
-  <div v-if="showMaxAttendanceModal" class="fixed inset-0 z-[60] flex items-center justify-center overflow-y-auto overscroll-contain bg-black/50 p-4" @click.self="closeMaxAttendanceModal">
+  <div v-if="showMaxAttendanceModal" class="fixed inset-0 z-[60] flex items-center justify-center overflow-y-auto overscroll-contain bg-black/50 p-4">
     <div class="w-full max-w-md rounded-lg bg-white p-6 shadow-xl"><div class="flex items-center justify-between border-b pb-4"><div><h3 class="text-lg font-semibold text-gray-900">Số lượng cầu thủ</h3><p class="text-sm text-gray-500">{{ maxAttendanceTournament?.name }}</p></div><button type="button" class="text-2xl text-gray-400" @click="closeMaxAttendanceModal">×</button></div><p class="mt-4 text-sm text-gray-600">Chọn số lượng tối đa có thể điểm danh. Không chọn là không giới hạn.</p><div class="mt-4 grid grid-cols-2 gap-3"><button v-for="amount in maxAttendanceOptions" :key="amount" type="button" @click="selectedMaxAttendance = selectedMaxAttendance === amount ? null : amount" class="rounded-lg border-2 px-4 py-4 font-semibold" :class="selectedMaxAttendance === amount ? 'border-primary-600 bg-primary-600 text-white' : 'border-gray-200 text-gray-700 hover:border-primary-400'">{{ amount }}{{ selectedMaxAttendance === amount ? ' ✓' : '' }}</button></div><label for="max-attendance" class="form-label mt-5 block">Hoặc nhập số lượng khác</label><div class="mt-1 flex items-center gap-2"><button type="button" class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-gray-100 text-xl font-semibold text-gray-700 hover:bg-gray-200" @click="selectedMaxAttendance = Math.max(1, (selectedMaxAttendance || 1) - 1)">−</button><input id="max-attendance" v-model.number="selectedMaxAttendance" type="number" min="1" step="1" class="form-input flex-1 text-center" placeholder="Nhập số lượng"><button type="button" class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary-100 text-xl font-semibold text-primary-700 hover:bg-primary-200" @click="selectedMaxAttendance = (selectedMaxAttendance || 0) + 1">+</button></div><button v-if="selectedMaxAttendance !== null" type="button" class="mt-3 text-sm font-medium text-primary-600 hover:underline" @click="selectedMaxAttendance = null">Bỏ giới hạn</button><div class="mt-6 flex justify-end gap-3 border-t pt-4"><button class="btn-secondary" @click="closeMaxAttendanceModal">Hủy</button><button class="btn-primary" :disabled="maxAttendanceSaving" @click="saveMaxAttendance">{{ maxAttendanceSaving ? 'Đang lưu...' : 'Lưu' }}</button></div></div>
   </div>
 
@@ -1242,7 +1244,7 @@
   </div>
 
   <!-- Tournament Score Modal -->
-  <div v-if="showScoresModal" class="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto overscroll-contain bg-black bg-opacity-50 p-4" @click="showScoresModal = false">
+  <div v-if="showScoresModal" class="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto overscroll-contain bg-black bg-opacity-50 p-4">
     <div class="bg-white rounded-lg p-6 max-w-4xl w-full max-h-[90vh] overflow-y-auto" @click.stop>
       <h3 class="text-lg font-semibold text-gray-900 mb-4">Điểm số giải đấu</h3>
       
@@ -1256,16 +1258,17 @@
           <div
             v-for="team in getTournamentTeams(weeklyTournaments.find(t => t.id === scoresTournamentId) || {} as Tournament)"
             :key="team.id"
-            class="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow"
+            class="bg-white border rounded-lg p-4 hover:shadow-md transition-shadow"
+            :class="getTeamCardClass(team.name)"
           >
             <!-- Team Header -->
             <div class="flex items-center justify-between mb-3">
               <div class="flex items-center">
-                <div class="w-10 h-10 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full flex items-center justify-center mr-3">
+                <div class="w-10 h-10 rounded-full flex items-center justify-center mr-3" :class="getTeamNumberClass(team.name)">
                   <span class="text-white font-bold text-lg">{{ getTeamNumber(team.name) }}</span>
                 </div>
                 <div>
-                  <h5 class="font-semibold text-gray-900">{{ team.name }}</h5>
+                  <h5 class="font-semibold text-gray-900">{{ displayTeamName(team.name) }} <span class="text-sm font-medium" :class="getTeamTextClass(team.name)">- {{ getTeamJerseyLabel(team.name) }}</span></h5>
                   <p class="text-sm text-gray-600">{{ team.players?.length || 0 }} cầu thủ</p>
                 </div>
               </div>
@@ -1328,7 +1331,7 @@
   </div>
 
   <!-- End Tournament Modal -->
-  <div v-if="showEndTournamentModal" class="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto overscroll-contain bg-black bg-opacity-50 p-4" @click="showEndTournamentModal = false">
+  <div v-if="showEndTournamentModal" class="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto overscroll-contain bg-black bg-opacity-50 p-4">
     <div class="bg-white rounded-lg p-6 max-w-4xl w-full max-h-[90vh] overflow-y-auto" @click.stop>
       <h3 class="text-lg font-semibold text-gray-900 mb-4">Kết thúc giải đấu</h3>
       
@@ -1383,7 +1386,7 @@
         <div class="bg-gray-50 border border-gray-200 rounded-lg p-4 mb-4">
           <h5 class="font-semibold text-gray-800 mb-2">🔎 Xem trước biến động tiền</h5>
           <div v-for="team in getTournamentTeams(weeklyTournaments.find(t => t.id === endTournamentId) || {} as Tournament)" :key="team.id" class="mb-4">
-            <div class="font-semibold text-primary-700 mb-2">{{ team.name }}</div>
+            <div class="font-semibold mb-2" :class="getTeamTextClass(team.name)">{{ displayTeamName(team.name) }} - {{ getTeamJerseyLabel(team.name) }}</div>
             <div v-for="player in team.players.filter((p: any) => endTournamentId && getAttendanceStatus(endTournamentId, p.id) === 'ATTEND')" :key="player.id" class="bg-white rounded-lg p-3 mb-2 border border-gray-100">
               <!-- Player Header -->
               <div class="flex items-center justify-between mb-2">
@@ -1454,7 +1457,7 @@
   </div>
 
   <!-- Delete Tournament Confirmation Modal -->
-  <div v-if="showDeleteTournamentModal" class="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto overscroll-contain bg-black bg-opacity-50 p-4" @click="showDeleteTournamentModal = false">
+  <div v-if="showDeleteTournamentModal" class="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto overscroll-contain bg-black bg-opacity-50 p-4">
     <div class="bg-white rounded-lg p-6 max-w-lg w-full" @click.stop>
       <h3 class="text-lg font-semibold text-gray-900 mb-4">Xóa giải đấu</h3>
       <div class="text-gray-600 mb-6">
@@ -1487,7 +1490,7 @@
   </div>
 
   <!-- Team Count Selection Modal -->
-  <div v-if="showTeamCountModal" class="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto overscroll-contain bg-black bg-opacity-50 p-4" @click.self="closeTeamCountModal">
+  <div v-if="showTeamCountModal" class="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto overscroll-contain bg-black bg-opacity-50 p-4">
     <div class="bg-white rounded-lg p-6 max-w-md w-full">
       <h3 class="text-lg font-semibold text-gray-900 mb-2">Chọn số lượng đội</h3>
       <p class="text-sm text-gray-600 mb-5">Chọn một số lượng đội để hệ thống chia cầu thủ cân bằng.</p>
@@ -1513,7 +1516,7 @@
   </div>
 
   <!-- Clear Teams Confirmation Modal -->
-  <div v-if="showClearTeamsModal" class="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto overscroll-contain bg-black bg-opacity-50 p-4" @click="showClearTeamsModal = false">
+  <div v-if="showClearTeamsModal" class="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto overscroll-contain bg-black bg-opacity-50 p-4">
     <div class="bg-white rounded-lg p-6 max-w-lg w-full" @click.stop>
       <h3 class="text-lg font-semibold text-gray-900 mb-4">Xóa đội</h3>
       <div class="text-gray-600 mb-6">
@@ -1540,7 +1543,7 @@
   </div>
 
   <!-- Delete Additional Cost Confirmation Modal -->
-  <div v-if="showDeleteCostModal" class="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto overscroll-contain bg-black bg-opacity-50 p-4" @click="showDeleteCostModal = false">
+  <div v-if="showDeleteCostModal" class="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto overscroll-contain bg-black bg-opacity-50 p-4">
     <div class="bg-white rounded-lg p-6 max-w-md w-full" @click.stop>
       <h3 class="text-lg font-semibold text-gray-900 mb-4">Xóa chi phí phát sinh</h3>
       <p class="text-gray-600 mb-6">
@@ -1563,7 +1566,7 @@
     </div>
   </div>
 
-  <div v-if="showFriendSwapModal" class="fixed inset-0 z-[80] flex items-center justify-center overflow-y-auto overscroll-contain bg-black/50 p-4" @click.self="showFriendSwapModal = false">
+  <div v-if="showFriendSwapModal" class="fixed inset-0 z-[80] flex items-center justify-center overflow-y-auto overscroll-contain bg-black/50 p-4">
     <div class="max-h-[90vh] w-full max-w-md overflow-y-auto rounded-lg bg-white p-6 shadow-xl">
       <h3 class="text-lg font-semibold">Swap dùm bạn</h3>
       <p class="mt-1 text-sm text-gray-600">Chọn một bạn, sau đó chọn cầu thủ đang chờ swap.</p>
@@ -1585,7 +1588,7 @@
     </div>
   </div>
 
-  <div v-if="showFriendRegistrationModal" class="fixed inset-0 z-[70] flex items-center justify-center overflow-y-auto overscroll-contain bg-black/50 p-4" @click.self="showFriendRegistrationModal = false">
+  <div v-if="showFriendRegistrationModal" class="fixed inset-0 z-[70] flex items-center justify-center overflow-y-auto overscroll-contain bg-black/50 p-4">
     <div class="max-h-[90vh] w-full max-w-md overflow-y-auto rounded-lg bg-white p-6 shadow-xl">
       <div class="flex items-center gap-1"><h3 class="text-lg font-semibold">Chọn sân đăng ký</h3><button type="button" class="inline-flex h-6 w-6 items-center justify-center rounded-full text-primary-600 transition-colors hover:bg-primary-50" title="Hướng dẫn đăng ký dùm bạn" aria-label="Hướng dẫn đăng ký dùm bạn" @click="showFriendRegistrationGuideModal = true"><svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9" stroke-width="2"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0-9h.01"/></svg></button></div>
       <p class="mt-1 text-sm text-gray-600">Chọn bạn và sân muốn đăng ký.</p>
@@ -1604,7 +1607,7 @@
     </div>
   </div>
 
-  <div v-if="showFriendRegistrationGuideModal" class="fixed inset-0 z-[80] flex items-center justify-center overflow-y-auto overscroll-contain bg-black/50 p-4" @click.self="showFriendRegistrationGuideModal = false">
+  <div v-if="showFriendRegistrationGuideModal" class="fixed inset-0 z-[80] flex items-center justify-center overflow-y-auto overscroll-contain bg-black/50 p-4">
     <div class="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-lg bg-white shadow-xl">
       <div class="flex items-center justify-between border-b p-5"><div><h3 class="text-lg font-semibold">Hướng dẫn đăng ký dùm bạn</h3><p class="text-sm text-gray-500">Quy định và cách tính tiền</p></div><button type="button" class="text-2xl text-gray-400 hover:text-gray-700" @click="showFriendRegistrationGuideModal = false">×</button></div>
       <div class="space-y-5 p-5 text-sm leading-6 text-gray-700">
@@ -1616,7 +1619,7 @@
     </div>
   </div>
 
-  <div v-if="showCreateFriendModal" class="fixed inset-0 z-[80] flex items-center justify-center overflow-y-auto overscroll-contain bg-black/50 p-4" @click.self="showCreateFriendModal = false">
+  <div v-if="showCreateFriendModal" class="fixed inset-0 z-[80] flex items-center justify-center overflow-y-auto overscroll-contain bg-black/50 p-4">
     <form class="max-h-[90vh] w-full max-w-md overflow-y-auto rounded-lg bg-white p-6 shadow-xl" @submit.prevent="saveFriend">
       <h3 class="text-lg font-semibold">{{ editingFriendId ? 'Chỉnh sửa cầu thủ' : 'Thêm cầu thủ' }}</h3><p class="mt-1 text-sm text-gray-600">Cầu thủ này sẽ là bạn của bạn và dùng tiền của bạn.</p>
       <div class="mt-4 space-y-3"><input v-model="friendForm.name" required class="form-input" placeholder="Tên cầu thủ"><select v-model="friendForm.position" required class="form-input"><option value="">Chọn vị trí</option><option value="GK">GK</option><option value="DEF">DEF</option><option value="MID">MID</option><option value="FWD">FWD</option></select><input v-model.number="friendForm.yearOfBirth" required min="1950" :max="new Date().getFullYear()" type="number" class="form-input" placeholder="Năm sinh"><select v-model.number="friendForm.tier" required class="form-input"><option :value="0">Chọn Tier</option><option v-for="tier in 6" :key="tier" :value="tier">Tier {{ tier }}</option></select></div>
@@ -3886,6 +3889,39 @@ const getTeamNumber = (teamName: string): string => {
   const match = teamName.match(/Team (\d+)/)
   return match ? match[1] : teamName.charAt(teamName.length - 1)
 }
+
+const displayTeamName = (teamName: string): string => {
+  const generatedTeamName = teamName.match(/^(Team\s+\d+)/i)
+  return generatedTeamName?.[1] || teamName.replace(/\s*\([^)]*\)\s*$/, '')
+}
+
+const getTeamJerseyLabel = (teamName: string): string => ({
+  '1': 'Áo xanh lá',
+  '2': 'Áo cam',
+  '3': 'Áo xanh dương',
+  '4': 'Áo trắng',
+}[getTeamNumber(teamName)] || '')
+
+const getTeamNumberClass = (teamName: string): string => ({
+  '1': 'bg-green-600 text-white',
+  '2': 'bg-orange-500 text-white',
+  '3': 'bg-blue-600 text-white',
+  '4': 'border border-gray-300 bg-white text-gray-900',
+}[getTeamNumber(teamName)] || 'bg-primary-600 text-white')
+
+const getTeamCardClass = (teamName: string): string => ({
+  '1': 'border-green-300',
+  '2': 'border-orange-300',
+  '3': 'border-blue-300',
+  '4': 'border-gray-300',
+}[getTeamNumber(teamName)] || 'border-primary-200')
+
+const getTeamTextClass = (teamName: string): string => ({
+  '1': 'text-green-700',
+  '2': 'text-orange-700',
+  '3': 'text-blue-700',
+  '4': 'text-gray-700',
+}[getTeamNumber(teamName)] || 'text-primary-700')
 
 // Helper function to get the team with the highest score
 const getHighestScoreTeam = (teams: any[]): any | null => {

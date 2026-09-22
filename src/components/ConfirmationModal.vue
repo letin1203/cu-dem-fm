@@ -1,5 +1,5 @@
 <template>
-  <div v-if="isOpen" class="fixed inset-0 z-[100] flex items-center justify-center overflow-y-auto overscroll-contain bg-black/50 p-4" @click.self="$emit('cancel')">
+  <div v-if="isOpen" class="fixed inset-0 z-[100] flex items-center justify-center overflow-y-auto overscroll-contain bg-black/50 p-4">
     <div class="my-auto max-h-[90vh] w-full max-w-md overflow-y-auto rounded-lg bg-white p-6 shadow-xl" role="dialog" aria-modal="true">
       <h2 class="text-lg font-semibold text-gray-900">{{ title }}</h2>
       <p class="mt-3 text-sm leading-6 text-gray-600">{{ message }}</p>

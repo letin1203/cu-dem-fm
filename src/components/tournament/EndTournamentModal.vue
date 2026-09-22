@@ -2,7 +2,6 @@
   <div 
     v-if="isOpen"
     class="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto overscroll-contain bg-black bg-opacity-50 p-4"
-    @click.self="$emit('close')"
   >
     <div class="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-hidden">
       <div class="flex items-center justify-between p-6 border-b border-gray-200">

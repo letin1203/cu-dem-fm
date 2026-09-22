@@ -1,5 +1,5 @@
 <template>
-  <div v-if="isOpen" class="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto overscroll-contain bg-black/50 p-4" @click.self="emit('close')">
+  <div v-if="isOpen" class="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto overscroll-contain bg-black/50 p-4">
     <div class="flex max-h-[90vh] w-full max-w-3xl flex-col overflow-hidden rounded-lg bg-white shadow-xl">
       <div class="flex items-center justify-between border-b p-5">
         <div>
@@ -53,7 +53,7 @@
         <button class="btn-primary" @click="emit('close')">Đóng</button>
       </div>
 
-      <div v-if="showDeductModal" class="absolute inset-0 z-10 flex items-center justify-center bg-black/40 p-4" @click.self="showDeductModal = false">
+      <div v-if="showDeductModal" class="absolute inset-0 z-10 flex items-center justify-center bg-black/40 p-4">
         <div class="w-full max-w-md rounded-lg bg-white p-5 shadow-xl">
           <h3 class="text-lg font-semibold text-gray-900">Trừ tiền cầu thủ</h3>
           <p class="mt-1 text-sm text-gray-500">{{ player?.name }}</p>

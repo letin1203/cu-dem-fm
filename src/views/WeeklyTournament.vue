@@ -4976,6 +4976,10 @@
         </p>
         <p class="font-semibold">Luật thách đấu</p>
         <p>
+          Chỉ cầu thủ cùng nhóm Tier (Tier 1–2, Tier 3–4 hoặc Tier 5–6) mới
+          được thách đấu nhau.
+        </p>
+        <p>
           Hai cầu thủ thách đấu sẽ luôn được xếp ở hai đội khác nhau khi chia
           đội.
         </p>

@@ -129,9 +129,10 @@
                     v-if="authStore.hasAnyRole(['admin', 'mod'])"
                     type="button"
                     :aria-pressed="Boolean(ongoingTournament.selfFunded)"
-                    :disabled="selfFundedSaving"
+                    :disabled="selfFundedSaving || ongoingTournament.isProtected"
+                    :title="ongoingTournament.isProtected ? 'Giải đấu đã Protect, không thể thay đổi chế độ quỹ' : undefined"
                     @click="toggleSelfFunded(ongoingTournament)"
-                    class="inline-flex items-center gap-2 rounded-full px-3 py-0.5 text-[10px] font-semibold uppercase transition-colors sm:py-1 sm:text-xs"
+                    class="inline-flex items-center gap-2 rounded-full px-3 py-0.5 text-[10px] font-semibold uppercase transition-colors disabled:cursor-not-allowed disabled:opacity-50 sm:py-1 sm:text-xs"
                     :class="ongoingTournament.selfFunded ? 'bg-violet-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'"
                   >
                     <span class="h-3 w-3 rounded-full" :class="ongoingTournament.selfFunded ? 'bg-white' : 'bg-gray-400'"></span>
@@ -3748,7 +3749,10 @@ const openAdditionalCostModal = async (tournament: Tournament) => {
 }
 
 const toggleSelfFunded = async (tournament: Tournament) => {
-  if (selfFundedSaving.value) return
+  if (selfFundedSaving.value || tournament.isProtected) {
+    if (tournament.isProtected) toast.error('Giải đấu đã Protect, không thể thay đổi chế độ quỹ')
+    return
+  }
 
   try {
     selfFundedSaving.value = true

@@ -402,6 +402,14 @@ router.put('/:id', authenticate, authorize(['ADMIN', 'MOD']), async (req: Authen
       return;
     }
 
+    if (updateData.selfFunded !== undefined && existingTournament.isProtected) {
+      res.status(403).json({
+        success: false,
+        error: 'Giải đấu đã Protect, không thể thay đổi chế độ quỹ',
+      });
+      return;
+    }
+
     if (
       updateData.startDate
       && existingTournament.cancellationDeadline

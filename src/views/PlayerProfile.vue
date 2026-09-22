@@ -668,6 +668,7 @@ const avatarOptions = [
   '/avatars/photo_6156896139660169812_m.jpg', '/avatars/photo_6156896139660169813_x.jpg',
   '/avatars/duy.jpg', '/avatars/photo_6165615567516144543_y.jpg',
   '/avatars/quan.jpg', '/avatars/tuan.jpg',
+  ...Array.from({ length: 30 }, (_, index) => `/avatars/ami-${String(index + 1).padStart(2, '0')}.png`),
 ];
 const currentAge = computed(() =>
   playerProfile.value

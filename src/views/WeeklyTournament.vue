@@ -195,7 +195,7 @@
                 >
                   <div class="font-semibold text-green-800">
                     <template v-if="ongoingTournament.pitchType">{{ ongoingTournament.pitchType === 'FIELD_5' ? 'Sân 5' : 'Sân 7' }}: {{ getDisplayedAttendanceCount(ongoingTournament) }}</template>
-                    <template v-else><span class="block sm:inline">Sân 5: {{ getAttendanceStats(ongoingTournament.id)?.field5Count || 0 }}</span><span class="block sm:inline"> <span class="hidden sm:inline">/ </span>Sân 7: {{ getAttendanceStats(ongoingTournament.id)?.field7Count || 0 }}</span></template>
+                    <template v-else><span class="block sm:inline">Sân 5: {{ getAttendanceStats(ongoingTournament.id)?.field5Count || 0 }}</span><span class="block sm:inline"> <span class="hidden sm:inline"> | </span>Sân 7: {{ getAttendanceStats(ongoingTournament.id)?.field7Count || 0 }}</span></template>
                   </div>
                   <div class="text-green-600">Tham gia</div>
                 </button>
@@ -874,6 +874,7 @@
         <button type="button" :disabled="fieldRegistrationAddOnly && fieldRegistrationExistingField5" class="rounded-lg border-2 px-4 py-4 font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-60" :class="registrationField5 ? 'border-primary-600 bg-primary-600 text-white' : 'border-gray-200 text-gray-700 hover:border-primary-400'" @click="registrationField5 = !registrationField5">Sân 5 {{ registrationField5 ? '✓' : '' }}</button>
         <button type="button" :disabled="fieldRegistrationAddOnly && fieldRegistrationExistingField7" class="rounded-lg border-2 px-4 py-4 font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-60" :class="registrationField7 ? 'border-primary-600 bg-primary-600 text-white' : 'border-gray-200 text-gray-700 hover:border-primary-400'" @click="registrationField7 = !registrationField7">Sân 7 {{ registrationField7 ? '✓' : '' }}</button>
       </div>
+      <p class="mt-3 text-center text-sm font-medium text-primary-700">Bạn đang chọn: {{ registrationField5 && registrationField7 ? 'Sân 5 và Sân 7' : registrationField5 ? 'Sân 5' : registrationField7 ? 'Sân 7' : 'chưa chọn sân' }}</p>
       <p v-if="!registrationField5 && !registrationField7" class="mt-3 text-sm text-red-600">Vui lòng chọn ít nhất một sân.</p>
       <div class="mt-6 flex justify-end gap-3"><button type="button" class="btn-secondary" @click="closeFieldRegistrationModal">Hủy</button><button type="button" class="btn-primary" :disabled="!canConfirmFieldRegistration" @click="confirmFieldRegistration">{{ pendingSwapRequest ? 'Xác nhận swap' : 'Xác nhận' }}</button></div>
     </div>
@@ -1582,7 +1583,7 @@
         </div>
         <p v-else class="mt-5 rounded-lg bg-gray-50 p-4 text-sm text-gray-600">Bạn chưa có cầu thủ bạn bè nào.</p>
         <button v-if="friends.length < 2" type="button" class="mt-4 w-full rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 font-semibold text-blue-700 hover:bg-blue-100" @click="showCreateFriendModal = true">+ Tạo bạn mới</button>
-        <div class="mt-5"><p class="form-label">Chọn sân</p><div class="grid grid-cols-2 gap-3"><button type="button" @click="friendField5 = !friendField5" class="rounded-lg border-2 px-4 py-3 font-semibold" :class="friendField5 ? 'border-primary-600 bg-primary-600 text-white' : 'border-gray-200'">Sân 5{{ friendField5 ? ' ✓' : '' }}</button><button type="button" @click="friendField7 = !friendField7" class="rounded-lg border-2 px-4 py-3 font-semibold" :class="friendField7 ? 'border-primary-600 bg-primary-600 text-white' : 'border-gray-200'">Sân 7{{ friendField7 ? ' ✓' : '' }}</button></div></div>
+        <div class="mt-5"><p class="form-label">Chọn sân</p><div class="grid grid-cols-2 gap-3"><button type="button" @click="friendField5 = !friendField5" class="rounded-lg border-2 px-4 py-3 font-semibold" :class="friendField5 ? 'border-primary-600 bg-primary-600 text-white' : 'border-gray-200'">Sân 5{{ friendField5 ? ' ✓' : '' }}</button><button type="button" @click="friendField7 = !friendField7" class="rounded-lg border-2 px-4 py-3 font-semibold" :class="friendField7 ? 'border-primary-600 bg-primary-600 text-white' : 'border-gray-200'">Sân 7{{ friendField7 ? ' ✓' : '' }}</button></div><p class="mt-3 text-center text-sm font-medium text-primary-700">Bạn đang chọn: {{ friendField5 && friendField7 ? 'Sân 5 và Sân 7' : friendField5 ? 'Sân 5' : friendField7 ? 'Sân 7' : 'chưa chọn sân' }}</p></div>
       </template>
       <div class="mt-6 flex justify-end gap-3 border-t pt-4"><button class="btn-secondary" @click="showFriendRegistrationModal = false">Hủy</button><button class="btn-primary" :disabled="friendRegistrationSaving || !friendSelectedIds.length || (!friendSwapMode && !friendField5 && !friendField7)" @click="friendSwapRequest ? acceptSwapForFriend() : (friendSwapMode ? requestFriendSwap() : registerFriends())">{{ friendRegistrationSaving ? 'Đang xử lý...' : (friendSwapRequest ? 'Xác nhận swap' : (friendSwapMode ? 'Gửi yêu cầu swap' : 'Đăng ký')) }}</button></div>
     </div>

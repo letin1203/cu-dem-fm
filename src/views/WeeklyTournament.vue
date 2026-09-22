@@ -5201,6 +5201,7 @@ const challengeReceived = ref(false);
 const challengePendingOutgoing = ref(false);
 const challengeAccepted = ref(false);
 const challengeSaving = ref(false);
+const autoOpenedIncomingChallengeIds = new Set<string>();
 const friendsLoading = ref(false);
 const friendRegistrationSaving = ref(false);
 const friendSwapMode = ref(false);
@@ -6671,6 +6672,29 @@ const fetchAttendanceDetails = async (tournamentId: string): Promise<void> => {
       attendanceModalData.value = response.data;
       // Store in map for betting count calculation
       attendanceDetailsMap.value.set(tournamentId, response.data);
+      const currentPlayerId = getCurrentPlayerId();
+      const incomingChallenge = response.data.find(
+        (attendance: any) =>
+          attendance.playerId === currentPlayerId &&
+          attendance.challenge?.direction === "RECEIVED" &&
+          attendance.challenge?.status === "PENDING",
+      );
+      const incomingChallengeData = incomingChallenge?.challenge;
+      const challengeKey = incomingChallengeData
+        ? `${tournamentId}:${incomingChallengeData.id}`
+        : null;
+      if (
+        incomingChallenge &&
+        challengeKey &&
+        !showChallengeModal.value &&
+        !autoOpenedIncomingChallengeIds.has(challengeKey)
+      ) {
+        autoOpenedIncomingChallengeIds.add(challengeKey);
+        openChallengeModal(tournamentId, {
+          ...incomingChallenge.player,
+          challenge: incomingChallengeData,
+        });
+      }
     }
   } catch (err: any) {
     console.error("Fetch attendance details error:", err);
@@ -7023,10 +7047,19 @@ const canShowChallengeIcon = (
 
 const openChallengeModal = (tournamentId: string, player: any): void => {
   challengeTournamentId.value = tournamentId;
-  challengeTarget.value = player;
+  const currentPlayerId = getCurrentPlayerId();
+  const details = attendanceDetailsMap.value.get(tournamentId) || [];
+  const self = details.find((item: any) => item.playerId === currentPlayerId);
+  const currentChallenge = self?.challenge;
+  const opponent = currentChallenge?.opponentPlayerId
+    ? details.find(
+        (item: any) => item.playerId === currentChallenge.opponentPlayerId,
+      )?.player
+    : null;
+  challengeTarget.value = opponent || player;
   challengeReceived.value =
-    player.id === getCurrentPlayerId() &&
-    player.challenge?.direction === "RECEIVED";
+    currentChallenge?.direction === "RECEIVED" &&
+    currentChallenge.status === "PENDING";
   challengePendingOutgoing.value = isPendingOutgoingChallengeTarget(
     tournamentId,
     player,

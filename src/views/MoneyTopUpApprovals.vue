@@ -90,6 +90,7 @@ const approve = async (id: string) => {
     const response = await apiClient.approveMoneyTopUp(id)
     if (!response.success) throw new Error(response.error || 'Không thể duyệt yêu cầu')
     requests.value = requests.value.filter(request => request.id !== id)
+    window.dispatchEvent(new Event('pending-money-top-ups-changed'))
     toast.success('Đã duyệt và cộng tiền cho cầu thủ')
   } catch (err) { toast.error(err instanceof Error ? err.message : 'Không thể duyệt yêu cầu') }
   finally { approvingId.value = null }
@@ -114,6 +115,7 @@ const deleteTopUpRequest = async () => {
     if (!response.success) throw new Error(response.error || 'Không thể xóa yêu cầu nạp tiền')
     requests.value = requests.value.filter(request => request.id !== id)
     deleteRequestId.value = null
+    window.dispatchEvent(new Event('pending-money-top-ups-changed'))
     toast.success('Đã xóa yêu cầu nạp tiền')
   } catch (err) { toast.error(err instanceof Error ? err.message : 'Không thể xóa yêu cầu nạp tiền') }
   finally { deletingId.value = null }

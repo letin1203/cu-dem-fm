@@ -797,13 +797,17 @@ async function loadPendingTopUpCount() {
   }
 }
 
+const refreshPendingTopUpCount = () => void loadPendingTopUpCount();
+
 onMounted(() => {
   void loadPendingTopUpCount();
   pendingTopUpRefreshTimer = setInterval(() => void loadPendingTopUpCount(), 60000);
+  window.addEventListener("pending-money-top-ups-changed", refreshPendingTopUpCount);
 });
 
 onBeforeUnmount(() => {
   if (pendingTopUpRefreshTimer) clearInterval(pendingTopUpRefreshTimer);
+  window.removeEventListener("pending-money-top-ups-changed", refreshPendingTopUpCount);
 });
 
 async function handleLogout() {

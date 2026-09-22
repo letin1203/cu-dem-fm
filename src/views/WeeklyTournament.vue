@@ -1575,6 +1575,72 @@
                   }"
                 >
                   <div class="flex min-w-0 items-center">
+                    <button
+                      v-if="
+                        canShowChallengeIcon(
+                          ongoingTournament.id,
+                          (ongoingTournament.pitchType || mobileTeamPreviewField) as 'FIELD_5' | 'FIELD_7',
+                          player,
+                        )
+                      "
+                      type="button"
+                      class="mr-1 text-sm"
+                      :class="
+                        isPendingOutgoingChallengeTarget(
+                          ongoingTournament.id,
+                          player,
+                        )
+                          ? 'inline-flex h-5 w-5 shrink-0 animate-pulse items-center justify-center rounded-full bg-red-500 text-xs font-bold text-white'
+                          : player.challenge?.status === 'PENDING'
+                            ? 'animate-pulse'
+                            : ''
+                      "
+                      @click="openChallengeModal(ongoingTournament.id, player)"
+                    >
+                      {{
+                        isPendingOutgoingChallengeTarget(
+                          ongoingTournament.id,
+                          player,
+                        )
+                          ? '!'
+                          : '⚔️'
+                      }}
+                    </button>
+                    <button
+                      v-if="isCurrentUsersFriend(player)"
+                      type="button"
+                      class="mr-1 inline-flex h-6 w-6 shrink-0 items-center justify-center rounded text-sm font-bold text-red-700 hover:bg-red-100"
+                      title="Hủy tham gia cho bạn"
+                      @click="cancelFriendAttendanceByPlayer(ongoingTournament.id, player)"
+                    >
+                      ✕
+                    </button>
+                    <button
+                      v-if="
+                        isCurrentUserPlayer(player.id) &&
+                        !canShowChallengeIcon(
+                          ongoingTournament.id,
+                          (ongoingTournament.pitchType || mobileTeamPreviewField) as 'FIELD_5' | 'FIELD_7',
+                          player,
+                        ) &&
+                        canCancelOwnField(
+                          ongoingTournament,
+                          (ongoingTournament.pitchType || mobileTeamPreviewField) as 'FIELD_5' | 'FIELD_7',
+                        )
+                      "
+                      type="button"
+                      class="mr-1 inline-flex h-6 w-6 shrink-0 items-center justify-center rounded text-sm font-bold text-red-700 hover:bg-red-100"
+                      :disabled="attendanceLoading.has(ongoingTournament.id)"
+                      title="Hủy đăng ký sân"
+                      @click="
+                        cancelOwnField(
+                          ongoingTournament,
+                          (ongoingTournament.pitchType || mobileTeamPreviewField) as 'FIELD_5' | 'FIELD_7',
+                        )
+                      "
+                    >
+                      ✕
+                    </button>
                     <div
                       class="mr-2 flex h-6 w-6 shrink-0 items-center justify-center overflow-hidden rounded-full bg-gray-300 text-xs font-medium"
                     >
@@ -1590,6 +1656,28 @@
                     <div class="min-w-0">
                       <div class="truncate font-medium text-gray-900">
                         {{ player.name }}
+                        <button
+                          v-if="player.challenge?.status === 'ACCEPTED'"
+                          type="button"
+                          class="ml-1 inline-flex animate-pulse align-middle text-sm"
+                          :class="
+                            isCurrentUsersAcceptedChallenge(
+                              ongoingTournament.id,
+                              player,
+                            )
+                              ? 'cursor-pointer'
+                              : 'cursor-default'
+                          "
+                          title="Đang thách đấu"
+                          @click="
+                            isCurrentUsersAcceptedChallenge(
+                              ongoingTournament.id,
+                              player,
+                            ) && openChallengeModal(ongoingTournament.id, player)
+                          "
+                        >
+                          ⚔️
+                        </button>
                       </div>
                       <div
                         v-if="player.swapPending"

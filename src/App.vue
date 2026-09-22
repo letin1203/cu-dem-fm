@@ -1,7 +1,7 @@
 <template>
   <div class="min-h-screen bg-gradient-to-br from-primary-50 via-secondary-50 to-primary-100">
     <div v-if="isWakingBackend" class="fixed inset-0 z-[100] flex items-center justify-center bg-white/85 p-6 backdrop-blur-sm">
-      <div class="w-full max-w-sm text-center"><div class="mx-auto h-10 w-10 animate-spin rounded-full border-4 border-primary-200 border-t-primary-600"></div><p class="mt-4 break-words font-semibold leading-6 text-gray-900">Đang kết nối lại máy chủ, quá trình có thể tốn khoảng 10s...</p><p class="mt-1 text-sm leading-5 text-gray-600">Dữ liệu sẽ tự làm mới sau ít phút.</p></div>
+      <div class="w-full max-w-sm text-center"><div class="mx-auto h-10 w-10 animate-spin rounded-full border-4 border-primary-200 border-t-primary-600"></div><p class="mt-4 break-words font-semibold leading-6 text-gray-900">Đang kết nối lại máy chủ, quá trình có thể tốn khoảng 10s-20s...</p><p class="mt-1 text-sm leading-5 text-gray-600">Dữ liệu sẽ tự làm mới.</p></div>
     </div>
     <Navigation v-if="isAuthenticated && $route.name !== 'login'" />
     <main 

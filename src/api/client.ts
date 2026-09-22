@@ -417,6 +417,10 @@ class ApiClient {
     return this.put(`/tournaments/${id}`, data);
   }
 
+  async setTournamentProtection(id: string, isProtected: boolean) {
+    return this.put(`/tournaments/${id}/protection`, { isProtected });
+  }
+
   async deleteTournament(id: string) {
     return this.delete(`/tournaments/${id}`);
   }

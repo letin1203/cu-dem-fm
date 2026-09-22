@@ -99,6 +99,7 @@ export interface Tournament {
   fundContribution?: number
   pitchType?: 'FIELD_5' | 'FIELD_7' | null
   selfFunded?: boolean
+  isProtected?: boolean
   maxAttendance?: number | null
   cancellationDeadline?: string | Date | null
   teams: Team[]

@@ -135,6 +135,7 @@ model Tournament {
   fundContribution Int @default(0)
   pitchType String?
   selfFunded Boolean @default(false)
+  isProtected Boolean @default(false)
   maxAttendance Int?
   cancellationDeadline DateTime?
   createdAt DateTime @default(now())

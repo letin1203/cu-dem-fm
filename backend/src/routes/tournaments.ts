@@ -486,6 +486,20 @@ router.put('/:id', authenticate, authorize(['ADMIN', 'MOD']), async (req: Authen
   }
 });
 
+// Only admins can protect a tournament from deletion.
+router.put('/:id/protection', authenticate, authorize(['ADMIN']), async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  try {
+    const tournament = await prisma.tournament.update({
+      where: { id: req.params.id },
+      data: { isProtected: req.body?.isProtected === true },
+      select: { id: true, isProtected: true },
+    });
+    res.json({ success: true, data: tournament, message: tournament.isProtected ? 'Đã Protect giải đấu' : 'Đã bỏ Protect giải đấu' });
+  } catch {
+    res.status(404).json({ success: false, error: 'Không tìm thấy giải đấu' });
+  }
+});
+
 // Delete tournament
 router.delete('/:id', authenticate, authorize(['ADMIN']), async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   try {
@@ -506,6 +520,11 @@ router.delete('/:id', authenticate, authorize(['ADMIN']), async (req: Authentica
         success: false,
         error: 'Tournament not found',
       });
+      return;
+    }
+
+    if (existingTournament.isProtected) {
+      res.status(403).json({ success: false, error: 'Giải đấu đang được Protect và không thể xóa' });
       return;
     }
 
@@ -877,6 +896,7 @@ router.put('/:id/friend-attendance', authenticate, async (req: AuthenticatedRequ
       res.status(400).json({ success: false, error: 'Vui lòng chọn bạn và ít nhất một sân' });
       return;
     }
+
     const [tournament, owner, friends] = await Promise.all([
       prisma.tournament.findUnique({ where: { id: tournamentId }, select: { id: true, status: true, selfFunded: true, maxAttendance: true } }),
       prisma.user.findUnique({ where: { id: req.user!.id }, include: { player: true } }),

@@ -79,6 +79,18 @@
                     >
                       <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9" stroke-width="2"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0-9h.01"/></svg>
                     </button>
+                    <button
+                      v-if="authStore.hasRole('admin')"
+                      type="button"
+                      class="inline-flex h-6 w-6 items-center justify-center rounded-full transition-colors"
+                      :class="ongoingTournament.isProtected ? 'text-amber-700 hover:bg-amber-50' : 'text-gray-500 hover:bg-gray-100 hover:text-gray-700'"
+                      :disabled="tournamentProtectionSaving"
+                      :title="ongoingTournament.isProtected ? 'Bỏ Protect giải đấu' : 'Protect giải đấu'"
+                      :aria-label="ongoingTournament.isProtected ? 'Bỏ Protect giải đấu' : 'Protect giải đấu'"
+                      @click="toggleTournamentProtection(ongoingTournament)"
+                    >
+                      <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="10" width="14" height="10" rx="2" stroke-width="2"/><path v-if="ongoingTournament.isProtected" stroke-linecap="round" stroke-width="2" d="M8 10V7a4 4 0 0 1 8 0v3"/><path v-else stroke-linecap="round" stroke-width="2" d="M8 10V7a4 4 0 0 1 7.2-2.4"/></svg>
+                    </button>
                   </div>
                 </div>
                 <!-- Badge and Date/Time moved below title -->
@@ -481,7 +493,7 @@
               <button v-if="authStore.hasAnyRole(['admin', 'mod']) && ongoingTournament.status === 'UPCOMING'" @click="openPitchTypeModal(ongoingTournament)" class="btn-secondary">Chọn sân</button>
               <button v-if="authStore.hasAnyRole(['admin', 'mod']) && ongoingTournament.status === 'UPCOMING'" @click="openMaxAttendanceModal(ongoingTournament)" class="btn-secondary">Số lượng cầu thủ</button>
               <button
-                v-if="authStore.hasPermission('canDeleteTournaments') && ongoingTournament.status !== 'COMPLETED' && getTournamentTeams(ongoingTournament).length === 0"
+                v-if="authStore.hasPermission('canDeleteTournaments') && ongoingTournament.status !== 'COMPLETED' && !ongoingTournament.isProtected && getTournamentTeams(ongoingTournament).length === 0"
                 @click="deleteTournament(ongoingTournament.id)"
                 class="px-4 py-2 rounded-lg font-medium bg-red-600 text-white hover:bg-red-700 transition-colors"
               >
@@ -539,7 +551,7 @@
                     <!-- Action buttons moved to top right - hide money icon if no teams -->
                     <div class="flex items-center space-x-2 mt-2 sm:mt-0">
                       <button
-                        v-if="authStore.hasPermission('canDeleteTournaments') && tournament.status !== 'COMPLETED'"
+                        v-if="authStore.hasPermission('canDeleteTournaments') && tournament.status !== 'COMPLETED' && !tournament.isProtected"
                         @click="deleteTournament(tournament.id)"
                         class="text-red-600 hover:text-red-800"
                       >
@@ -1774,6 +1786,7 @@ const selectedSponsorMoney = ref(400000)
 const sponsorMoneySaving = ref(false)
 const sponsorMoneyOptions = [0, 400000]
 const selfFundedSaving = ref(false)
+const tournamentProtectionSaving = ref(false)
 
 const showTournamentTimeModal = ref(false)
 const timeTournament = ref<Tournament | null>(null)
@@ -3321,6 +3334,21 @@ const confirmEndTournament = async () => {
     selectedWinningTeam.value = null
     selectedLosingTeam.value = null
     cancelledGkDiscountPlayerIds.value = new Set()
+  }
+}
+
+const toggleTournamentProtection = async (tournament: Tournament) => {
+  if (tournamentProtectionSaving.value) return
+  tournamentProtectionSaving.value = true
+  try {
+    const response = await apiClient.setTournamentProtection(tournament.id, !tournament.isProtected)
+    if (!response.success) throw new Error(response.error || 'Không thể cập nhật Protect giải đấu')
+    tournament.isProtected = !tournament.isProtected
+    toast.success(tournament.isProtected ? 'Đã Protect giải đấu' : 'Đã bỏ Protect giải đấu')
+  } catch (error: any) {
+    toast.error(error.message || 'Không thể cập nhật Protect giải đấu')
+  } finally {
+    tournamentProtectionSaving.value = false
   }
 }
 

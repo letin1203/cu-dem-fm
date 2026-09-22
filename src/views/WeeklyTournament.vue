@@ -5285,6 +5285,7 @@ const showCreateFriendModal = ref(false);
 const showChallengeModal = ref(false);
 const challengeTarget = ref<any | null>(null);
 const challengeTournamentId = ref<string | null>(null);
+const challengeId = ref<string | null>(null);
 const challengeReceived = ref(false);
 const challengePendingOutgoing = ref(false);
 const challengeAccepted = ref(false);
@@ -7145,6 +7146,7 @@ const openChallengeModal = (tournamentId: string, player: any): void => {
       )?.player
     : null;
   challengeTarget.value = opponent || player;
+  challengeId.value = currentChallenge?.id || player.challenge?.id || null;
   challengeReceived.value =
     currentChallenge?.direction === "RECEIVED" &&
     currentChallenge.status === "PENDING";
@@ -7163,6 +7165,7 @@ const submitChallenge = async (): Promise<void> => {
   if (
     !challengeTournamentId.value ||
     !challengeTarget.value ||
+    (challengeReceived.value && !challengeId.value) ||
     challengeSaving.value
   )
     return;
@@ -7171,7 +7174,7 @@ const submitChallenge = async (): Promise<void> => {
     const response = challengeReceived.value
       ? await apiClient.acceptTournamentChallenge(
           challengeTournamentId.value,
-          challengeTarget.value.challenge.id,
+          challengeId.value || "",
         )
       : await apiClient.createTournamentChallenge(
           challengeTournamentId.value,

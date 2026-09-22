@@ -47,6 +47,27 @@ router.get('/mine', authenticate, async (req: AuthenticatedRequest, res: Respons
   }
 });
 
+// A player can cancel only their own request while it is still pending.
+router.delete('/mine/:id', authenticate, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  try {
+    const user = await prisma.user.findUnique({ where: { id: req.user!.id }, select: { playerId: true } });
+    if (!user?.playerId) {
+      res.status(400).json({ success: false, error: 'Tài khoản chưa liên kết cầu thủ' });
+      return;
+    }
+    const deleted = await prisma.playerMoneyTopUp.deleteMany({
+      where: { id: req.params.id, playerId: user.playerId, status: 'PENDING' },
+    });
+    if (!deleted.count) {
+      res.status(404).json({ success: false, error: 'Không tìm thấy yêu cầu nạp tiền đang chờ duyệt' });
+      return;
+    }
+    res.json({ success: true, message: 'Đã hủy yêu cầu nạp tiền' });
+  } catch (error) {
+    res.status(500).json({ success: false, error: 'Không thể hủy yêu cầu nạp tiền' });
+  }
+});
+
 // Staff can add money on a player's behalf. These requests are approved immediately.
 router.post('/admin', authenticate, authorize(['ADMIN', 'MOD']), async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   try {

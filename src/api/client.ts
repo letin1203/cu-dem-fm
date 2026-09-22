@@ -275,6 +275,10 @@ class ApiClient {
     return this.get('/money-top-ups/pending');
   }
 
+  async cancelMyMoneyTopUp(id: string) {
+    return this.delete(`/money-top-ups/mine/${id}`);
+  }
+
   async approveMoneyTopUp(id: string) {
     return this.put(`/money-top-ups/${id}/approve`);
   }

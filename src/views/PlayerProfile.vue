@@ -125,13 +125,11 @@
                   >{{ formatMoney(pendingTopUpTotal) }}</span
                 >
               </div>
-              <div
-                v-for="request in pendingTopUps"
-                :key="request.id"
-                class="mt-1 text-xs text-yellow-700"
-              >
-                +{{ formatMoney(request.amount) }} · Nạp lúc
-                {{ formatDateTime(request.requestedAt) }}
+              <div v-for="request in pendingTopUps" :key="request.id" class="mt-1 flex items-center justify-between gap-2 text-xs text-yellow-700">
+                <span>+{{ formatMoney(request.amount) }} · Nạp lúc {{ formatDateTime(request.requestedAt) }}</span>
+                <button type="button" class="inline-flex shrink-0 items-center justify-center rounded p-0.5 text-yellow-700 hover:bg-yellow-200 disabled:cursor-not-allowed disabled:opacity-50" :disabled="cancellingTopUpId === request.id" title="Hủy yêu cầu nạp tiền" aria-label="Hủy yêu cầu nạp tiền" @click="cancelPendingTopUp(request.id)">
+                  <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 6l12 12M18 6 6 18" /></svg>
+                </button>
               </div>
             </div>
             <button
@@ -632,6 +630,7 @@ const pendingTopUpTotal = ref(0);
 const pendingTopUps = ref<
   Array<{ id: string; amount: number; requestedAt: string | Date }>
 >([]);
+const cancellingTopUpId = ref<string | null>(null);
 const showTopUpModal = ref(false);
 const submittingTopUp = ref(false);
 const selectedTopUpAmount = ref(100000);
@@ -788,6 +787,20 @@ const loadPendingTopUps = async () => {
   };
   pendingTopUpTotal.value = Number(data?.totalPending || 0);
   pendingTopUps.value = data?.requests || [];
+};
+const cancelPendingTopUp = async (id: string): Promise<void> => {
+  if (cancellingTopUpId.value) return;
+  try {
+    cancellingTopUpId.value = id;
+    const response = await apiClient.cancelMyMoneyTopUp(id);
+    if (!response.success) throw new Error(response.error || 'Không thể hủy yêu cầu nạp tiền');
+    await loadPendingTopUps();
+    toast.success('Đã hủy yêu cầu nạp tiền');
+  } catch (error) {
+    toast.error(error instanceof Error ? error.message : 'Không thể hủy yêu cầu nạp tiền');
+  } finally {
+    cancellingTopUpId.value = null;
+  }
 };
 const fetchPlayerProfile = async () => {
   loading.value = true;

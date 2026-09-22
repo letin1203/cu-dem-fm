@@ -62,6 +62,8 @@ model Player {
   friendOwnerId           String?
   swapRequestsSent        TournamentSwapRequest[] @relation("TournamentSwapRequester")
   swapRequestsReceived    TournamentSwapRequest[] @relation("TournamentSwapTarget")
+  challengesSent          TournamentChallenge[] @relation("TournamentChallengeRequester")
+  challengesReceived      TournamentChallenge[] @relation("TournamentChallengeTarget")
 
   @@map("players")
 }
@@ -153,6 +155,7 @@ model Tournament {
   additionalCosts    AdditionalCost[]
   moneyHistory       PlayerMoneyHistory[]
   swapRequests       TournamentSwapRequest[]
+  challenges         TournamentChallenge[]
 
   @@map("tournaments")
 }
@@ -164,6 +167,7 @@ model TournamentPlayerAttendance {
   bet          Boolean  @default(false) // Whether player placed a bet
   field5       Boolean  @default(true) // Registered to play on a 5-a-side pitch
   field7       Boolean  @default(true) // Registered to play on a 7-a-side pitch
+  notOnField   Boolean  @default(false) // Attended the tournament but did not play on the pitch
   registeredAt DateTime? // Time the player most recently registered as attending
   addedBy     User?     @relation("TournamentAttendanceAddedBy", fields: [addedById], references: [id], onDelete: SetNull)
   addedById   String?
@@ -249,6 +253,7 @@ model SystemSettings {
   id           String @id @default(cuid())
   stadiumCost  Int    @default(10000) // Default stadium cost for weekly tournaments
   sponsorMoney Int    @default(50000) // Default sponsor money for weekly tournaments
+  noShowPenalty Int   @default(0)     // Penalty for checked-in players who do not take the pitch
   clubFund     Int    @default(0)     // Total club fund money
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
@@ -332,6 +337,23 @@ model TournamentSwapRequest {
   @@unique([tournamentId, requesterPlayerId, targetPlayerId])
   @@index([tournamentId, targetPlayerId, status])
   @@map("tournament_swap_requests")
+}
+
+model TournamentChallenge {
+  id                String     @id @default(cuid())
+  tournament        Tournament @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+  tournamentId      String
+  requester         Player     @relation("TournamentChallengeRequester", fields: [requesterPlayerId], references: [id], onDelete: Cascade)
+  requesterPlayerId String
+  target            Player     @relation("TournamentChallengeTarget", fields: [targetPlayerId], references: [id], onDelete: Cascade)
+  targetPlayerId    String
+  status            String     @default("PENDING")
+  createdAt         DateTime   @default(now())
+  respondedAt       DateTime?
+
+  @@unique([tournamentId, requesterPlayerId, targetPlayerId])
+  @@index([tournamentId, status])
+  @@map("tournament_challenges")
 }
 
 

@@ -377,6 +377,10 @@ class ApiClient {
     return this.put(`/tournaments/${tournamentId}/friend-attendance`, { playerIds, field5, field7 });
   }
 
+  async cancelFriendTournamentAttendance(tournamentId: string, playerId: string) {
+    return this.put(`/tournaments/${tournamentId}/friend-attendance/${playerId}/cancel`, {});
+  }
+
   async getTournamentMoneyHistory(id: string) {
     return this.get(`/tournaments/${id}/money-history`);
   }
@@ -399,6 +403,18 @@ class ApiClient {
 
   async cancelSwapWaitlist(tournamentId: string) {
     return this.delete(`/tournaments/${tournamentId}/swap-waitlist`);
+  }
+
+  async createTournamentChallenge(tournamentId: string, targetPlayerId: string) {
+    return this.post(`/tournaments/${tournamentId}/challenges`, { targetPlayerId });
+  }
+
+  async cancelTournamentChallenge(tournamentId: string) {
+    return this.delete(`/tournaments/${tournamentId}/challenges`);
+  }
+
+  async acceptTournamentChallenge(tournamentId: string, challengeId: string) {
+    return this.put(`/tournaments/${tournamentId}/challenges/${challengeId}/accept`, {});
   }
 
   async getMySwapRequests(tournamentId: string) {

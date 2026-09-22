@@ -161,6 +161,7 @@ export const updateAttendanceSchema = z.object({
   bet: z.boolean().optional(),
   field5: z.boolean().optional(),
   field7: z.boolean().optional(),
+  notOnField: z.boolean().optional(),
 });
 
 // Team Score Management schemas

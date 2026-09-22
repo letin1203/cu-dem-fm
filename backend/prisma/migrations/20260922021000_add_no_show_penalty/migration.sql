@@ -1,0 +1,2 @@
+ALTER TABLE "system_settings"
+ADD COLUMN "noShowPenalty" INTEGER NOT NULL DEFAULT 0;

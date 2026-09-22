@@ -68,6 +68,22 @@
               Khoản tài trợ mặc định cho mỗi giải hằng tuần
             </p>
           </div>
+
+          <div>
+            <label class="form-label">Tiền phạt không lên sân</label>
+            <div class="relative">
+              <span class="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">₫</span>
+              <input
+                v-model.number="formData.noShowPenalty"
+                type="number"
+                required
+                min="0"
+                class="form-input pl-8"
+                placeholder="0"
+              >
+            </div>
+            <p class="text-xs text-gray-500 mt-1">Áp dụng cho cầu thủ đã điểm danh nhưng được đánh dấu không lên sân.</p>
+          </div>
           
         </div>
         
@@ -117,7 +133,8 @@ const systemStore = useSystemStore()
 
 const formData = ref({
   stadiumCost: 10000,
-  sponsorMoney: 50000
+  sponsorMoney: 50000,
+  noShowPenalty: 0,
 })
 
 // Computed
@@ -132,7 +149,8 @@ watch(
     if (settings) {
       formData.value = {
         stadiumCost: settings.stadiumCost,
-        sponsorMoney: settings.sponsorMoney
+        sponsorMoney: settings.sponsorMoney,
+        noShowPenalty: settings.noShowPenalty ?? 0,
       }
     }
   },

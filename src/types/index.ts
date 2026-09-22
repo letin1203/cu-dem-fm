@@ -26,6 +26,8 @@ export interface TournamentAttendanceDetails {
   bet?: boolean
   field5?: boolean
   field7?: boolean
+  notOnField?: boolean
+  challenge?: { id: string; status: string; opponentPlayerId: string; direction: 'SENT' | 'RECEIVED' } | null
   registeredAt?: string | Date | null
   addedBy?: { username: string } | null
   tournamentId: string
@@ -129,6 +131,8 @@ export interface TournamentPlayerAttendance {
   bet: boolean
   field5?: boolean
   field7?: boolean
+  notOnField?: boolean
+  challenge?: { id: string; status: string; opponentPlayerId: string; direction: 'SENT' | 'RECEIVED' } | null
   registeredAt?: string | Date | null
   tournamentId: string
   playerId: string
@@ -140,6 +144,7 @@ export interface SystemSettings {
   id: string
   stadiumCost: number
   sponsorMoney: number
+  noShowPenalty: number
   clubFund: number
   waterCost?: number
   createdAt: string | Date
@@ -266,6 +271,7 @@ export interface TournamentAttendanceDetails {
   bet?: boolean
   field5?: boolean
   field7?: boolean
+  notOnField?: boolean
   registeredAt?: string | Date | null
   addedBy?: { username: string } | null
   tournamentId: string

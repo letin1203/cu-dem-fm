@@ -939,6 +939,26 @@ router.put('/:id/friend-attendance', authenticate, async (req: AuthenticatedRequ
   }
 });
 
+// A user may cancel attendance for a player registered as their friend.
+router.put('/:id/friend-attendance/:playerId/cancel', authenticate, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  try {
+    const [tournament, friend] = await Promise.all([
+      prisma.tournament.findUnique({ where: { id: req.params.id }, select: { status: true, teams: { select: { teamId: true } } } }),
+      prisma.player.findUnique({ where: { id: req.params.playerId }, select: { id: true, friendOwnerId: true } }),
+    ]);
+    if (!tournament || tournament.status !== 'UPCOMING' || tournament.teams.length || friend?.friendOwnerId !== req.user!.id) {
+      res.status(400).json({ success: false, error: 'Không thể hủy tham gia cho cầu thủ này' });
+      return;
+    }
+    const attendance = await prisma.tournamentPlayerAttendance.update({
+      where: { tournamentId_playerId: { tournamentId: req.params.id, playerId: friend.id } },
+      data: { status: 'NULL', field5: false, field7: false, withWater: false, bet: false },
+    });
+    await prisma.tournamentChallenge.updateMany({ where: { tournamentId: req.params.id, status: { in: ['PENDING', 'ACCEPTED'] }, OR: [{ requesterPlayerId: friend.id }, { targetPlayerId: friend.id }] }, data: { status: 'CANCELLED', respondedAt: new Date() } });
+    res.json({ success: true, data: attendance });
+  } catch (_error) { res.status(500).json({ success: false, error: 'Không thể hủy tham gia cho bạn' }); }
+});
+
 // Swap requests are available only after the cancellation deadline and before teams are generated.
 router.get('/:id/swap-candidates', authenticate, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   try {
@@ -1219,6 +1239,70 @@ router.put('/:id/swap-requests/:requestId/accept', authenticate, async (req: Aut
 });
 
 // Update player attendance for a tournament
+const isChallengeEligible = (attendance: { status: string; field5: boolean; field7: boolean } | null, field: string | null): boolean =>
+  attendance?.status === 'ATTEND' && (field === 'FIELD_5' ? attendance.field5 : field === 'FIELD_7' ? attendance.field7 : false);
+
+// Create a player-to-player challenge. Both players must share at least one
+// registered pitch and belong to the same two-tier range.
+router.post('/:id/challenges', authenticate, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  try {
+    const targetPlayerId = typeof req.body?.targetPlayerId === 'string' ? req.body.targetPlayerId : '';
+    const user = await prisma.user.findUnique({ where: { id: req.user!.id }, select: { playerId: true } });
+    if (!user?.playerId || !targetPlayerId || targetPlayerId === user.playerId) { res.status(400).json({ success: false, error: 'Lời mời thách đấu không hợp lệ' }); return; }
+    const tournament = await prisma.tournament.findUnique({ where: { id: req.params.id }, select: { id: true, status: true, pitchType: true, teams: { select: { teamId: true } } } });
+    if (!tournament || tournament.status !== 'UPCOMING' || tournament.teams.length) { res.status(400).json({ success: false, error: 'Chỉ có thể thách đấu trước khi chia đội' }); return; }
+    const [requester, target, requesterAttendance, targetAttendance] = await Promise.all([
+      prisma.player.findUnique({ where: { id: user.playerId }, select: { id: true, tier: true } }),
+      prisma.player.findUnique({ where: { id: targetPlayerId }, select: { id: true, tier: true } }),
+      prisma.tournamentPlayerAttendance.findUnique({ where: { tournamentId_playerId: { tournamentId: tournament.id, playerId: user.playerId } } }),
+      prisma.tournamentPlayerAttendance.findUnique({ where: { tournamentId_playerId: { tournamentId: tournament.id, playerId: targetPlayerId } } }),
+    ]);
+    const shareAField = requesterAttendance?.status === 'ATTEND' && targetAttendance?.status === 'ATTEND' && ((requesterAttendance.field5 && targetAttendance.field5) || (requesterAttendance.field7 && targetAttendance.field7));
+    if (!requester || !target || Math.ceil(requester.tier / 2) !== Math.ceil(target.tier / 2) || !shareAField) { res.status(400).json({ success: false, error: 'Hai cầu thủ phải cùng nhóm Tier và cùng đăng ký ít nhất một sân' }); return; }
+    const active = await prisma.tournamentChallenge.findFirst({ where: { tournamentId: tournament.id, status: { in: ['PENDING', 'ACCEPTED'] }, OR: [{ requesterPlayerId: user.playerId }, { targetPlayerId: user.playerId }, { requesterPlayerId: targetPlayerId }, { targetPlayerId: targetPlayerId }] } });
+    if (active) { res.status(400).json({ success: false, error: 'Một trong hai cầu thủ đã có lời mời thách đấu' }); return; }
+    // A cancelled request is retained for history, so revive it instead of
+    // inserting the same unique requester/target pair again.
+    const previousChallenge = await prisma.tournamentChallenge.findUnique({
+      where: {
+        tournamentId_requesterPlayerId_targetPlayerId: {
+          tournamentId: tournament.id,
+          requesterPlayerId: user.playerId,
+          targetPlayerId,
+        },
+      },
+    });
+    const challenge = previousChallenge
+      ? await prisma.tournamentChallenge.update({
+          where: { id: previousChallenge.id },
+          data: { status: 'PENDING', createdAt: new Date(), respondedAt: null },
+        })
+      : await prisma.tournamentChallenge.create({
+          data: { tournamentId: tournament.id, requesterPlayerId: user.playerId, targetPlayerId },
+        });
+    res.json({ success: true, data: challenge });
+  } catch (error) {
+    console.error('Create challenge error:', error);
+    res.status(500).json({ success: false, error: 'Không thể gửi lời mời thách đấu' });
+  }
+});
+
+router.delete('/:id/challenges', authenticate, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  const user = await prisma.user.findUnique({ where: { id: req.user!.id }, select: { playerId: true } });
+  if (!user?.playerId) { res.status(400).json({ success: false, error: 'Tài khoản chưa liên kết cầu thủ' }); return; }
+  await prisma.tournamentChallenge.updateMany({ where: { tournamentId: req.params.id, status: { in: ['PENDING', 'ACCEPTED'] }, OR: [{ requesterPlayerId: user.playerId }, { targetPlayerId: user.playerId }] }, data: { status: 'CANCELLED', respondedAt: new Date() } });
+  res.json({ success: true });
+});
+
+router.put('/:id/challenges/:challengeId/accept', authenticate, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  const user = await prisma.user.findUnique({ where: { id: req.user!.id }, select: { playerId: true } });
+  if (!user?.playerId) { res.status(400).json({ success: false, error: 'Tài khoản chưa liên kết cầu thủ' }); return; }
+  const challenge = await prisma.tournamentChallenge.findFirst({ where: { id: req.params.challengeId, tournamentId: req.params.id, targetPlayerId: user.playerId, status: 'PENDING' } });
+  if (!challenge) { res.status(400).json({ success: false, error: 'Lời mời thách đấu không còn hiệu lực' }); return; }
+  const updated = await prisma.tournamentChallenge.update({ where: { id: challenge.id }, data: { status: 'ACCEPTED', respondedAt: new Date() } });
+  res.json({ success: true, data: updated });
+});
+
 router.put('/:id/attendance', authenticate, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   try {
     const { id: tournamentId } = req.params;
@@ -1443,6 +1527,18 @@ router.put('/:id/attendance', authenticate, async (req: AuthenticatedRequest, re
       },
     });
 
+    // A player who leaves the tournament can no longer keep an open challenge.
+    if (status !== 'ATTEND') {
+      await prisma.tournamentChallenge.updateMany({
+        where: {
+          tournamentId,
+          status: { in: ['PENDING', 'ACCEPTED'] },
+          OR: [{ requesterPlayerId: player.id }, { targetPlayerId: player.id }],
+        },
+        data: { status: 'CANCELLED', respondedAt: new Date() },
+      });
+    }
+
     res.json({
       success: true,
       data: attendance,
@@ -1522,7 +1618,7 @@ router.put('/:id/attendance/batch', authenticate, authorize(['ADMIN', 'MOD']), a
 router.put('/:id/attendance/:playerId', authenticate, authorize(['ADMIN', 'MOD']), async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   try {
     const { id: tournamentId, playerId } = req.params;
-    const { status, withWater, bet, field5, field7 } = updateAttendanceSchema.parse(req.body);
+    const { status, withWater, bet, field5, field7, notOnField } = updateAttendanceSchema.parse(req.body);
 
     // Verify tournament exists
     const tournament = await prisma.tournament.findUnique({
@@ -1579,6 +1675,7 @@ router.put('/:id/attendance/:playerId', authenticate, authorize(['ADMIN', 'MOD']
     }
     if (field5 !== undefined) updateData.field5 = field5;
     if (field7 !== undefined) updateData.field7 = field7;
+    if (notOnField !== undefined) updateData.notOnField = notOnField;
 
     // Update or create attendance
     const attendance = await prisma.tournamentPlayerAttendance.upsert({
@@ -1597,10 +1694,23 @@ router.put('/:id/attendance/:playerId', authenticate, authorize(['ADMIN', 'MOD']
         bet: bet ?? false,
         field5: field5 ?? true,
         field7: field7 ?? true,
+        notOnField: notOnField ?? false,
         registeredAt: status === 'ATTEND' ? new Date() : null,
         addedById: status === 'ATTEND' ? req.user!.id : null,
       },
     });
+
+    // Staff cancelling a player's attendance must also cancel that player's open challenges.
+    if (status !== 'ATTEND') {
+      await prisma.tournamentChallenge.updateMany({
+        where: {
+          tournamentId,
+          status: { in: ['PENDING', 'ACCEPTED'] },
+          OR: [{ requesterPlayerId: playerId }, { targetPlayerId: playerId }],
+        },
+        data: { status: 'CANCELLED', respondedAt: new Date() },
+      });
+    }
 
     res.json({
       success: true,
@@ -1639,7 +1749,7 @@ router.get('/:id/attendance-stats', async (req: AuthenticatedRequest, res: Respo
     // Get attendance statistics
     const attendanceStats = await prisma.tournamentPlayerAttendance.findMany({
       where: { tournamentId },
-      select: { status: true, bet: true, field5: true, field7: true },
+      select: { status: true, bet: true, field5: true, field7: true, notOnField: true },
     });
 
     const attendingCount = attendanceStats.filter((a: any) => a.status === 'ATTEND').length;
@@ -1693,11 +1803,11 @@ router.get('/:id/attendance-details', async (req: AuthenticatedRequest, res: Res
 
     // Return every player, including those without an attendance record yet.
     // Missing records are represented as NULL so staff can mark them as ATTEND.
-    const [players, attendanceRecords, swapRequests] = await Promise.all([
+    const [players, attendanceRecords, swapRequests, challenges] = await Promise.all([
       prisma.player.findMany({
         where: { isActive: true },
         select: {
-          id: true, name: true, position: true, positionSecond: true, tier: true, avatar: true,
+          id: true, name: true, position: true, positionSecond: true, tier: true, avatar: true, friendOwnerId: true,
           friendOwner: { select: { player: { select: { name: true } } } },
         },
         orderBy: { name: 'asc' },
@@ -1718,6 +1828,10 @@ router.get('/:id/attendance-details', async (req: AuthenticatedRequest, res: Res
         },
         orderBy: { createdAt: 'asc' },
       }),
+      prisma.tournamentChallenge.findMany({
+        where: { tournamentId, status: { in: ['PENDING', 'ACCEPTED'] } },
+        select: { id: true, requesterPlayerId: true, targetPlayerId: true, status: true },
+      }),
     ]);
     const attendanceByPlayerId = new Map(attendanceRecords.map(record => [record.playerId, record]));
     const pendingSwapPlayerIds = new Set(swapRequests.filter(request => request.status === 'PENDING').map(request => request.requesterPlayerId));
@@ -1728,6 +1842,11 @@ router.get('/:id/attendance-details', async (req: AuthenticatedRequest, res: Res
         .map((request, index) => [request.requesterPlayerId, index + 1]),
     );
     const swappedWithByPlayerId = new Map<string, string>();
+    const challengeByPlayerId = new Map<string, { id: string; status: string; opponentPlayerId: string; direction: 'SENT' | 'RECEIVED' }>();
+    for (const challenge of challenges) {
+      challengeByPlayerId.set(challenge.requesterPlayerId, { id: challenge.id, status: challenge.status, opponentPlayerId: challenge.targetPlayerId, direction: 'SENT' });
+      challengeByPlayerId.set(challenge.targetPlayerId, { id: challenge.id, status: challenge.status, opponentPlayerId: challenge.requesterPlayerId, direction: 'RECEIVED' });
+    }
     for (const request of swapRequests.filter(request => request.status === 'ACCEPTED')) {
       const requesterAttendance = attendanceByPlayerId.get(request.requesterPlayerId);
       const targetAttendance = attendanceByPlayerId.get(request.targetPlayerId);
@@ -1759,6 +1878,7 @@ router.get('/:id/attendance-details', async (req: AuthenticatedRequest, res: Res
         swapRequestId: pendingSwapRequestIds.get(player.id) || null,
         swapWaitlistPosition: waitlistPositions.get(player.id) || null,
         swappedWithName: swappedWithByPlayerId.get(player.id) || null,
+        challenge: challengeByPlayerId.get(player.id) || null,
       };
     }).map((attendance: any) => attendance.player ? attendance : {
       ...attendance,
@@ -2249,6 +2369,38 @@ router.post('/:id/generate-teams', authenticate, authorize(['ADMIN', 'MOD']), as
       teamB.totalTier += playerA.tier - playerB.tier;
     }
 
+    // Accepted challenges must always be on opposing teams. Resolve any pair
+    // that landed together after the balancing pass by swapping the target
+    // with a compatible player from another team.
+    const acceptedChallenges = await prisma.tournamentChallenge.findMany({
+      where: { tournamentId, status: 'ACCEPTED' },
+      select: { requesterPlayerId: true, targetPlayerId: true },
+    });
+    for (const challenge of acceptedChallenges) {
+      const requesterTeamIndex = teams.findIndex(team => team.players.some(player => player.id === challenge.requesterPlayerId));
+      const targetTeamIndex = teams.findIndex(team => team.players.some(player => player.id === challenge.targetPlayerId));
+      if (requesterTeamIndex < 0 || targetTeamIndex < 0 || requesterTeamIndex !== targetTeamIndex) continue;
+      const sourceTeam = teams[targetTeamIndex];
+      const targetIndex = sourceTeam.players.findIndex(player => player.id === challenge.targetPlayerId);
+      const target = sourceTeam.players[targetIndex];
+      const targetIsGk = target.position === 'GK' || target.position === 'Goalkeeper';
+      const destinationIndex = teams.findIndex((team, index) => index !== targetTeamIndex && team.players.some(player => {
+        const playerIsGk = player.position === 'GK' || player.position === 'Goalkeeper';
+        return playerIsGk === targetIsGk && player.id !== challenge.requesterPlayerId && player.id !== challenge.targetPlayerId;
+      }));
+      if (destinationIndex < 0) throw new Error('Không thể tách hai cầu thủ thách đấu sang hai đội khác nhau');
+      const destination = teams[destinationIndex];
+      const replacementIndex = destination.players.findIndex(player => {
+        const playerIsGk = player.position === 'GK' || player.position === 'Goalkeeper';
+        return playerIsGk === targetIsGk && player.id !== challenge.requesterPlayerId && player.id !== challenge.targetPlayerId;
+      });
+      const replacement = destination.players[replacementIndex];
+      sourceTeam.players[targetIndex] = replacement;
+      destination.players[replacementIndex] = target;
+      sourceTeam.totalTier += replacement.tier - target.tier;
+      destination.totalTier += target.tier - replacement.tier;
+    }
+
     // Create teams in database
     const createdTeams = [];
     
@@ -2396,7 +2548,15 @@ router.put('/:id/end', authenticate, authorize(['ADMIN', 'MOD']), async (req: Au
     let totalAdded = 0;
     let totalDeducted = 0;
     const moneyUpdates: Array<{ playerId: string; oldMoney: number; newMoney: number; change: number }> = [];
-    const systemSettings = await prisma.systemSettings.findFirst();
+    const [systemSettings, acceptedChallenges] = await Promise.all([
+      prisma.systemSettings.findFirst(),
+      prisma.tournamentChallenge.findMany({ where: { tournamentId: id, status: 'ACCEPTED' } }),
+    ]);
+    const challengeOpponentByPlayerId = new Map<string, string>();
+    for (const challenge of acceptedChallenges) {
+      challengeOpponentByPlayerId.set(challenge.requesterPlayerId, challenge.targetPlayerId);
+      challengeOpponentByPlayerId.set(challenge.targetPlayerId, challenge.requesterPlayerId);
+    }
 
     // Get tournament settings
     const loserPenalty = 50000; // Default loser penalty
@@ -2406,6 +2566,7 @@ router.put('/:id/end', authenticate, authorize(['ADMIN', 'MOD']), async (req: Au
     const teamLoserPenalty = 10000; // Team loser penalty
 
     const bettingWinBonus = bettingWinAmount;
+    const noShowPenalty = Math.max(0, systemSettings?.noShowPenalty ?? 0);
 
     // Calculate additional costs total
     const totalAdditionalCosts = tournament.selfFunded ? 0 : tournament.additionalCosts.reduce((sum, cost) => sum + cost.amount, 0);
@@ -2441,6 +2602,21 @@ router.put('/:id/end', authenticate, authorize(['ADMIN', 'MOD']), async (req: Au
           description: hasGkDiscount ? 'Chi phí giải đấu mỗi cầu thủ (GK giảm 50%)' : 'Chi phí giải đấu mỗi cầu thủ',
           amount: -tournamentCost,
         });
+      }
+
+      if (attendance.notOnField && noShowPenalty > 0) {
+        moneyChangeDetails.push({ description: 'Phạt không lên sân', amount: -noShowPenalty });
+      }
+
+      const opponentId = challengeOpponentByPlayerId.get(player.id);
+      if (opponentId) {
+        const opponentTeam = tournament.tournamentTeamPlayers.find(assignment => assignment.playerId === opponentId)?.team;
+        if (playerTeam && opponentTeam && playerTeam.score !== opponentTeam.score) {
+          moneyChangeDetails.push({
+            description: playerTeam.score > opponentTeam.score ? 'Thắng thách đấu' : 'Thua thách đấu',
+            amount: playerTeam.score > opponentTeam.score ? 10000 : -10000,
+          });
+        }
       }
 
       // Betting calculations

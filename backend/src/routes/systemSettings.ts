@@ -134,6 +134,7 @@ router.get('/', authenticate, async (req: AuthenticatedRequest, res: Response): 
           stadiumCost: 10000,
           sponsorMoney: 50000,
           clubFund: 0,
+          noShowPenalty: 0,
         },
       });
     }
@@ -185,7 +186,7 @@ router.get('/', authenticate, async (req: AuthenticatedRequest, res: Response): 
 // Update system settings (Admin only)
 router.put('/', authenticate, authorize(['ADMIN']), async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   try {
-    const { stadiumCost, sponsorMoney, clubFund } = req.body;
+    const { stadiumCost, sponsorMoney, noShowPenalty, clubFund } = req.body;
 
     // Get existing settings or create if none exist
     let settings = await prisma.systemSettings.findFirst();
@@ -195,6 +196,7 @@ router.put('/', authenticate, authorize(['ADMIN']), async (req: AuthenticatedReq
         data: {
           stadiumCost: stadiumCost || 10000,
           sponsorMoney: sponsorMoney || 50000,
+          noShowPenalty: noShowPenalty || 0,
           clubFund: clubFund || 0,
         },
       });
@@ -204,6 +206,7 @@ router.put('/', authenticate, authorize(['ADMIN']), async (req: AuthenticatedReq
         data: {
           ...(stadiumCost !== undefined && { stadiumCost }),
           ...(sponsorMoney !== undefined && { sponsorMoney }),
+          ...(noShowPenalty !== undefined && { noShowPenalty }),
           ...(clubFund !== undefined && { clubFund }),
         },
       });

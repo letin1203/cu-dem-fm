@@ -1,31 +1,59 @@
 <template>
   <div class="space-y-4 sm:space-y-6">
     <!-- Header -->
-    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-3 sm:space-y-0">
+    <div
+      class="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-3 sm:space-y-0"
+    >
       <h1 class="text-2xl sm:text-3xl font-bold text-gray-900">Đá hằng tuần</h1>
-      <button 
+      <button
         v-if="authStore.hasPermission('canEditTournaments')"
-        @click="handleCreateNew" 
+        @click="handleCreateNew"
         :disabled="loading || !canCreateNew"
         class="btn-primary w-full sm:w-auto"
         :class="{ 'opacity-50 cursor-not-allowed': loading || !canCreateNew }"
       >
-        {{ loading ? 'Đang tạo...' : 'Tạo mới' }}
+        {{ loading ? "Đang tạo..." : "Tạo mới" }}
       </button>
     </div>
 
-    <div v-if="showCreateTournamentModal" class="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto overscroll-contain bg-black/50 p-4">
+    <div
+      v-if="showCreateTournamentModal"
+      class="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto overscroll-contain bg-black/50 p-4"
+    >
       <div class="w-full max-w-md rounded-lg bg-white p-6 shadow-xl">
-        <h2 class="text-lg font-semibold text-gray-900">Chọn ngày tạo giải đấu</h2>
-        <p class="mt-2 text-sm text-gray-600">Tuần này đã có giải đấu kết thúc. Vui lòng chọn ngày cho giải đấu mới.</p>
+        <h2 class="text-lg font-semibold text-gray-900">
+          Chọn ngày tạo giải đấu
+        </h2>
+        <p class="mt-2 text-sm text-gray-600">
+          Tuần này đã có giải đấu kết thúc. Vui lòng chọn ngày cho giải đấu mới.
+        </p>
         <div class="mt-5">
-          <label for="new-tournament-date" class="form-label">Ngày thi đấu</label>
-          <input id="new-tournament-date" v-model="newTournamentDate" type="date" class="form-input" :min="minimumSelectableDate">
+          <label for="new-tournament-date" class="form-label"
+            >Ngày thi đấu</label
+          >
+          <input
+            id="new-tournament-date"
+            v-model="newTournamentDate"
+            type="date"
+            class="form-input"
+            :min="minimumSelectableDate"
+          />
         </div>
         <div class="mt-6 flex justify-end gap-3">
-          <button type="button" class="btn-secondary" @click="closeCreateTournamentModal">Hủy</button>
-          <button type="button" class="btn-primary" :disabled="loading || !newTournamentDate" @click="createWeeklyTournamentFromSelectedDate">
-            {{ loading ? 'Đang tạo...' : 'Tạo giải đấu' }}
+          <button
+            type="button"
+            class="btn-secondary"
+            @click="closeCreateTournamentModal"
+          >
+            Hủy
+          </button>
+          <button
+            type="button"
+            class="btn-primary"
+            :disabled="loading || !newTournamentDate"
+            @click="createWeeklyTournamentFromSelectedDate"
+          >
+            {{ loading ? "Đang tạo..." : "Tạo giải đấu" }}
           </button>
         </div>
       </div>
@@ -42,7 +70,7 @@
             'whitespace-nowrap py-2 px-1 border-b-2 font-medium text-sm flex-shrink-0',
             activeFilter === filter
               ? 'border-primary-500 text-primary-600'
-              : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300',
           ]"
         >
           {{ filter }}
@@ -52,7 +80,9 @@
 
     <!-- Loading State -->
     <div v-if="tournamentsStore.loading" class="text-center py-8">
-      <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600 mx-auto"></div>
+      <div
+        class="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600 mx-auto"
+      ></div>
       <p class="mt-2 text-gray-600">Đang tải giải đấu...</p>
     </div>
 
@@ -60,16 +90,29 @@
     <div v-else>
       <!-- Ongoing Tournament Tab -->
       <div v-if="activeFilter === 'Đang diễn ra'">
-        <div v-if="ongoingTournament" 
-             class="card transition-colors duration-200"
-             :class="getCardBackgroundClass(ongoingTournament.id)">
+        <div
+          v-if="ongoingTournament"
+          class="card transition-colors duration-200"
+          :class="getCardBackgroundClass(ongoingTournament.id)"
+        >
           <div class="flex flex-col space-y-4">
             <!-- Tournament Info -->
-            <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between space-y-3 sm:space-y-0">
+            <div
+              class="flex flex-col sm:flex-row sm:items-start sm:justify-between space-y-3 sm:space-y-0"
+            >
               <div class="flex-1">
-                <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between">
+                <div
+                  class="flex flex-col sm:flex-row sm:items-center sm:justify-between"
+                >
                   <div class="flex items-center gap-2">
-                    <h3 class="text-lg font-semibold text-gray-900">{{ ongoingTournament.name.replace(/^Giải hằng tuần\s*-\s*/i, '') }}</h3>
+                    <h3 class="text-lg font-semibold text-gray-900">
+                      {{
+                        ongoingTournament.name.replace(
+                          /^Giải hằng tuần\s*-\s*/i,
+                          "",
+                        )
+                      }}
+                    </h3>
                     <button
                       type="button"
                       class="inline-flex h-6 w-6 items-center justify-center rounded-full text-primary-600 transition-colors hover:bg-primary-50 hover:text-primary-800"
@@ -77,24 +120,79 @@
                       aria-label="Luật chơi"
                       @click="showTournamentCalculationInfoModal = true"
                     >
-                      <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9" stroke-width="2"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0-9h.01"/></svg>
+                      <svg
+                        class="h-5 w-5"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                        aria-hidden="true"
+                      >
+                        <circle cx="12" cy="12" r="9" stroke-width="2" />
+                        <path
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          stroke-width="2"
+                          d="M12 10v6m0-9h.01"
+                        />
+                      </svg>
                     </button>
                     <button
                       v-if="authStore.hasRole('admin')"
                       type="button"
                       class="inline-flex h-6 w-6 items-center justify-center rounded-full transition-colors"
-                      :class="ongoingTournament.isProtected ? 'text-amber-700 hover:bg-amber-50' : 'text-gray-500 hover:bg-gray-100 hover:text-gray-700'"
+                      :class="
+                        ongoingTournament.isProtected
+                          ? 'text-amber-700 hover:bg-amber-50'
+                          : 'text-gray-500 hover:bg-gray-100 hover:text-gray-700'
+                      "
                       :disabled="tournamentProtectionSaving"
-                      :title="ongoingTournament.isProtected ? 'Bỏ Protect giải đấu' : 'Protect giải đấu'"
-                      :aria-label="ongoingTournament.isProtected ? 'Bỏ Protect giải đấu' : 'Protect giải đấu'"
+                      :title="
+                        ongoingTournament.isProtected
+                          ? 'Bỏ Protect giải đấu'
+                          : 'Protect giải đấu'
+                      "
+                      :aria-label="
+                        ongoingTournament.isProtected
+                          ? 'Bỏ Protect giải đấu'
+                          : 'Protect giải đấu'
+                      "
                       @click="toggleTournamentProtection(ongoingTournament)"
                     >
-                      <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="10" width="14" height="10" rx="2" stroke-width="2"/><path v-if="ongoingTournament.isProtected" stroke-linecap="round" stroke-width="2" d="M8 10V7a4 4 0 0 1 8 0v3"/><path v-else stroke-linecap="round" stroke-width="2" d="M8 10V7a4 4 0 0 1 7.2-2.4"/></svg>
+                      <svg
+                        class="h-5 w-5"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                        aria-hidden="true"
+                      >
+                        <rect
+                          x="5"
+                          y="10"
+                          width="14"
+                          height="10"
+                          rx="2"
+                          stroke-width="2"
+                        />
+                        <path
+                          v-if="ongoingTournament.isProtected"
+                          stroke-linecap="round"
+                          stroke-width="2"
+                          d="M8 10V7a4 4 0 0 1 8 0v3"
+                        />
+                        <path
+                          v-else
+                          stroke-linecap="round"
+                          stroke-width="2"
+                          d="M8 10V7a4 4 0 0 1 7.2-2.4"
+                        />
+                      </svg>
                     </button>
                   </div>
                 </div>
                 <!-- Badge and Date/Time moved below title -->
-                <div class="flex flex-wrap items-center gap-2 mt-2 text-sm text-gray-600">
+                <div
+                  class="flex flex-wrap items-center gap-2 mt-2 text-sm text-gray-600"
+                >
                   <button
                     v-if="authStore.hasRole('admin')"
                     @click="openTournamentTimeModal(ongoingTournament)"
@@ -103,18 +201,43 @@
                   >
                     {{ formatTime(ongoingTournament.startDate) }}
                   </button>
-                  <span v-else class="inline-flex items-center rounded-full bg-primary-100 px-2 py-0.5 text-[10px] font-semibold text-primary-800 sm:py-1 sm:text-xs">{{ formatTime(ongoingTournament.startDate) }}</span>
-                  <span v-if="ongoingTournament.pitchType" class="inline-flex items-center rounded-full bg-primary-100 px-2 py-0.5 text-[10px] font-semibold uppercase text-primary-800 sm:py-1 sm:text-xs">{{ ongoingTournament.pitchType === 'FIELD_5' ? 'Sân 5' : 'Sân 7' }}</span>
+                  <span
+                    v-else
+                    class="inline-flex items-center rounded-full bg-primary-100 px-2 py-0.5 text-[10px] font-semibold text-primary-800 sm:py-1 sm:text-xs"
+                    >{{ formatTime(ongoingTournament.startDate) }}</span
+                  >
+                  <span
+                    v-if="ongoingTournament.pitchType"
+                    class="inline-flex items-center rounded-full bg-primary-100 px-2 py-0.5 text-[10px] font-semibold uppercase text-primary-800 sm:py-1 sm:text-xs"
+                    >{{
+                      ongoingTournament.pitchType === "FIELD_5"
+                        ? "Sân 5"
+                        : "Sân 7"
+                    }}</span
+                  >
                   <button
-                    v-if="ongoingTournament.status !== 'ONGOING' && authStore.hasAnyRole(['admin', 'mod'])"
+                    v-if="
+                      ongoingTournament.status !== 'ONGOING' &&
+                      authStore.hasAnyRole(['admin', 'mod'])
+                    "
                     type="button"
                     class="inline-flex items-center rounded-full bg-rose-100 px-2 py-0.5 text-[10px] font-semibold uppercase text-rose-800 transition-colors hover:bg-rose-200 sm:py-1 sm:text-xs"
                     title="Chỉnh sửa thời gian chốt hủy"
                     @click="openCancellationDeadlineModal(ongoingTournament)"
-                  >{{ getCancellationDeadlineBadgeText(ongoingTournament) }}</button>
-                  <span v-else-if="ongoingTournament.status !== 'ONGOING'" class="inline-flex items-center rounded-full bg-rose-100 px-2 py-0.5 text-[10px] font-semibold uppercase text-rose-800 sm:py-1 sm:text-xs">{{ getCancellationDeadlineBadgeText(ongoingTournament) }}</span>
-                  <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium sm:py-1 sm:text-xs"
-                        :class="getStatusBadge(ongoingTournament.status)">
+                  >
+                    {{ getCancellationDeadlineBadgeText(ongoingTournament) }}
+                  </button>
+                  <span
+                    v-else-if="ongoingTournament.status !== 'ONGOING'"
+                    class="inline-flex items-center rounded-full bg-rose-100 px-2 py-0.5 text-[10px] font-semibold uppercase text-rose-800 sm:py-1 sm:text-xs"
+                    >{{
+                      getCancellationDeadlineBadgeText(ongoingTournament)
+                    }}</span
+                  >
+                  <span
+                    class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium sm:py-1 sm:text-xs"
+                    :class="getStatusBadge(ongoingTournament.status)"
+                  >
                     {{ ongoingTournament.status }}
                   </span>
                   <button
@@ -123,122 +246,321 @@
                     class="inline-flex items-center rounded-full bg-orange-100 px-2 py-0.5 text-[10px] font-semibold uppercase text-orange-800 transition-colors hover:bg-orange-200 sm:py-1 sm:text-xs"
                     title="Chỉnh sửa số lượng cầu thủ tối đa"
                     @click="openMaxAttendanceModal(ongoingTournament)"
-                  >Max: {{ ongoingTournament.maxAttendance ? `${ongoingTournament.maxAttendance} cháu` : 'Không giới hạn' }}</button>
-                  <span v-else-if="ongoingTournament.maxAttendance" class="inline-flex items-center rounded-full bg-orange-100 px-2 py-0.5 text-[10px] font-semibold uppercase text-orange-800 sm:py-1 sm:text-xs">Max: {{ ongoingTournament.maxAttendance }} cháu</span>
+                  >
+                    Max:
+                    {{
+                      ongoingTournament.maxAttendance
+                        ? `${ongoingTournament.maxAttendance} cháu`
+                        : "Không giới hạn"
+                    }}
+                  </button>
+                  <span
+                    v-else-if="ongoingTournament.maxAttendance"
+                    class="inline-flex items-center rounded-full bg-orange-100 px-2 py-0.5 text-[10px] font-semibold uppercase text-orange-800 sm:py-1 sm:text-xs"
+                    >Max: {{ ongoingTournament.maxAttendance }} cháu</span
+                  >
                   <button
                     v-if="authStore.hasAnyRole(['admin', 'mod'])"
                     type="button"
                     :aria-pressed="Boolean(ongoingTournament.selfFunded)"
-                    :disabled="selfFundedSaving || ongoingTournament.isProtected"
-                    :title="ongoingTournament.isProtected ? 'Giải đấu đã Protect, không thể thay đổi chế độ quỹ' : undefined"
+                    :disabled="
+                      selfFundedSaving || ongoingTournament.isProtected
+                    "
+                    :title="
+                      ongoingTournament.isProtected
+                        ? 'Giải đấu đã Protect, không thể thay đổi chế độ quỹ'
+                        : undefined
+                    "
                     @click="toggleSelfFunded(ongoingTournament)"
                     class="inline-flex items-center gap-2 rounded-full px-3 py-0.5 text-[10px] font-semibold uppercase transition-colors disabled:cursor-not-allowed disabled:opacity-50 sm:py-1 sm:text-xs"
-                    :class="ongoingTournament.selfFunded ? 'bg-violet-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'"
+                    :class="
+                      ongoingTournament.selfFunded
+                        ? 'bg-violet-600 text-white'
+                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    "
                   >
-                    <span class="h-3 w-3 rounded-full" :class="ongoingTournament.selfFunded ? 'bg-white' : 'bg-gray-400'"></span>
-                    {{ ongoingTournament.selfFunded ? 'Tự túc' : 'Dùng quỹ' }}
+                    <span
+                      class="h-3 w-3 rounded-full"
+                      :class="
+                        ongoingTournament.selfFunded
+                          ? 'bg-white'
+                          : 'bg-gray-400'
+                      "
+                    ></span>
+                    {{ ongoingTournament.selfFunded ? "Tự túc" : "Dùng quỹ" }}
                   </button>
-                  <span v-else-if="ongoingTournament.selfFunded" class="inline-flex items-center rounded-full bg-violet-100 px-3 py-0.5 text-[10px] font-semibold uppercase text-violet-700 sm:py-1 sm:text-xs">🤝 Tự túc</span>
+                  <span
+                    v-else-if="ongoingTournament.selfFunded"
+                    class="inline-flex items-center rounded-full bg-violet-100 px-3 py-0.5 text-[10px] font-semibold uppercase text-violet-700 sm:py-1 sm:text-xs"
+                    >🤝 Tự túc</span
+                  >
                 </div>
                 <!-- Financial Information -->
-                <div v-if="systemStore.currentSettings" class="flex flex-wrap items-center gap-4 mt-2 text-sm">
+                <div
+                  v-if="systemStore.currentSettings"
+                  class="flex flex-wrap items-center gap-4 mt-2 text-sm"
+                >
                   <button
-                    v-if="authStore.hasAnyRole(['admin', 'mod']) && !ongoingTournament.selfFunded"
+                    v-if="
+                      authStore.hasAnyRole(['admin', 'mod']) &&
+                      !ongoingTournament.selfFunded
+                    "
                     @click="openSponsorMoneyModal(ongoingTournament)"
                     class="text-green-600 font-medium hover:underline"
                     title="Chỉnh sửa tiền tài trợ"
                   >
-                    💰 Sponsor: {{ formatMoney(getTournamentSponsorMoney(ongoingTournament)) }}
+                    💰 Sponsor:
+                    {{
+                      formatMoney(getTournamentSponsorMoney(ongoingTournament))
+                    }}
                   </button>
-                  <span v-else-if="!ongoingTournament.selfFunded" class="text-green-600 font-medium">💰 Sponsor: {{ formatMoney(getTournamentSponsorMoney(ongoingTournament)) }}</span>
+                  <span
+                    v-else-if="!ongoingTournament.selfFunded"
+                    class="text-green-600 font-medium"
+                    >💰 Sponsor:
+                    {{
+                      formatMoney(getTournamentSponsorMoney(ongoingTournament))
+                    }}</span
+                  >
                   <button
                     v-if="authStore.hasAnyRole(['admin', 'mod'])"
                     @click="openStadiumCostModal(ongoingTournament)"
                     class="text-red-600 font-medium hover:underline"
                     title="Chỉnh sửa chi phí sân"
                   >
-                    🏟️ Sân: {{ formatMoney(getTournamentStadiumCost(ongoingTournament)) }}
+                    🏟️ Sân:
+                    {{
+                      formatMoney(getTournamentStadiumCost(ongoingTournament))
+                    }}
                   </button>
                   <span v-else class="text-red-600 font-medium">
-                    🏟️ Sân: {{ formatMoney(getTournamentStadiumCost(ongoingTournament)) }}
+                    🏟️ Sân:
+                    {{
+                      formatMoney(getTournamentStadiumCost(ongoingTournament))
+                    }}
                   </span>
-                  <span v-for="cost in getTournamentAdditionalCosts(ongoingTournament.id)" :key="cost.id" class="text-orange-600 font-medium">
+                  <span
+                    v-for="cost in getTournamentAdditionalCosts(
+                      ongoingTournament.id,
+                    )"
+                    :key="cost.id"
+                    class="text-orange-600 font-medium"
+                  >
                     💸 {{ cost.description }}: {{ formatMoney(cost.amount) }}
                   </span>
-                  <span v-if="getTournamentFundContribution(ongoingTournament) > 0" class="text-indigo-600 font-medium">
-                    🏦 Trích quỹ: {{ formatMoney(getTournamentFundContribution(ongoingTournament)) }}
+                  <span
+                    v-if="getTournamentFundContribution(ongoingTournament) > 0"
+                    class="text-indigo-600 font-medium"
+                  >
+                    🏦 Trích quỹ:
+                    {{
+                      formatMoney(
+                        getTournamentFundContribution(ongoingTournament),
+                      )
+                    }}
                   </span>
                   <span class="text-blue-600 font-medium">
-                    📊 Tổng: {{ formatMoney(calculateTournamentNet(ongoingTournament.id)) }}
+                    📊 Tổng:
+                    {{
+                      formatMoney(calculateTournamentNet(ongoingTournament.id))
+                    }}
                   </span>
-                  <span v-if="getAttendanceStats(ongoingTournament.id)?.attendingCount" class="text-purple-600 font-medium">
+                  <span
+                    v-if="
+                      getAttendanceStats(ongoingTournament.id)?.attendingCount
+                    "
+                    class="text-purple-600 font-medium"
+                  >
                     👥 Est:
                     <template v-if="shouldShowMaxCostRange(ongoingTournament)">
-                      {{ getCostEstimateInfo(ongoingTournament.id).divisor }} cháu: {{ formatMoney(calculateDisplayEstimateCost(ongoingTournament.id)) }} · {{ ongoingTournament.maxAttendance }} cháu: {{ formatMoney(calculateDisplayEstimateCostForCount(ongoingTournament.id, ongoingTournament.maxAttendance || 0)) }}
+                      {{
+                        getCostEstimateInfo(ongoingTournament.id).divisor
+                      }}
+                      cháu:
+                      {{
+                        formatMoney(
+                          calculateDisplayEstimateCost(ongoingTournament.id),
+                        )
+                      }}
+                      · {{ ongoingTournament.maxAttendance }} cháu:
+                      {{
+                        formatMoney(
+                          calculateDisplayEstimateCostForCount(
+                            ongoingTournament.id,
+                            ongoingTournament.maxAttendance || 0,
+                          ),
+                        )
+                      }}
                     </template>
-                    <template v-else>{{ formatMoney(calculateDisplayEstimateCost(ongoingTournament.id)) }}</template>
+                    <template v-else>{{
+                      formatMoney(
+                        calculateDisplayEstimateCost(ongoingTournament.id),
+                      )
+                    }}</template>
                   </span>
-                  <span v-if="getEstimateAdditionalCost(ongoingTournament.id) > 0" class="text-xs text-purple-500">(đã tạm cộng {{ formatMoney(getEstimateAdditionalCost(ongoingTournament.id)) }} chi phí phát sinh)</span>
+                  <span
+                    v-if="getEstimateAdditionalCost(ongoingTournament.id) > 0"
+                    class="text-xs text-purple-500"
+                    >(đã tạm cộng
+                    {{
+                      formatMoney(
+                        getEstimateAdditionalCost(ongoingTournament.id),
+                      )
+                    }}
+                    chi phí phát sinh)</span
+                  >
                 </div>
               </div>
             </div>
-            
+
             <!-- Attendance Progress Bar -->
-            <div v-if="attendanceStats.has(ongoingTournament.id)" class="mt-4 p-4 bg-gradient-to-r from-blue-50 to-green-50 rounded-lg border border-gray-200">
+            <div
+              v-if="attendanceStats.has(ongoingTournament.id)"
+              class="mt-4 p-4 bg-gradient-to-r from-blue-50 to-green-50 rounded-lg border border-gray-200"
+            >
               <div class="flex justify-between items-center mb-3">
-                <span class="text-sm font-semibold text-gray-800">Điểm danh cầu thủ</span>
-                <span class="text-sm font-medium text-gray-700 bg-white px-2 py-1 rounded-full">
-                  {{ getDisplayedAttendanceCount(ongoingTournament) }} / {{ ongoingTournament.maxAttendance || getAttendanceStats(ongoingTournament.id)?.totalPlayers || 0 }}
+                <span class="text-sm font-semibold text-gray-800"
+                  >Điểm danh cầu thủ</span
+                >
+                <span
+                  class="text-sm font-medium text-gray-700 bg-white px-2 py-1 rounded-full"
+                >
+                  {{ getDisplayedAttendanceCount(ongoingTournament) }} /
+                  {{
+                    ongoingTournament.maxAttendance ||
+                    getAttendanceStats(ongoingTournament.id)?.totalPlayers ||
+                    0
+                  }}
                 </span>
               </div>
-              <div class="w-full bg-gray-200 rounded-full h-4 mb-3 shadow-inner">
-                <div 
+              <div
+                class="w-full bg-gray-200 rounded-full h-4 mb-3 shadow-inner"
+              >
+                <div
                   class="h-4 rounded-full transition-all duration-700 ease-out shadow-sm relative overflow-hidden"
-                  :class="isDisplayedAttendanceFull(ongoingTournament) ? 'bg-gradient-to-r from-red-600 via-orange-500 to-red-600 animate-pulse' : 'bg-gradient-to-r from-green-500 to-green-600'"
-                  :style="{ width: `${getDisplayedAttendancePercentage(ongoingTournament)}%` }"
+                  :class="
+                    isDisplayedAttendanceFull(ongoingTournament)
+                      ? 'bg-gradient-to-r from-red-600 via-orange-500 to-red-600 animate-pulse'
+                      : 'bg-gradient-to-r from-green-500 to-green-600'
+                  "
+                  :style="{
+                    width: `${getDisplayedAttendancePercentage(ongoingTournament)}%`,
+                  }"
                 >
-                  <div v-if="isDisplayedAttendanceFull(ongoingTournament)" class="absolute inset-0 flex items-center justify-between px-1 text-[10px] leading-none"><span v-for="fire in getAttendanceFireCount(ongoingTournament)" :key="fire">🔥</span></div>
-                  <div v-else class="absolute inset-0 bg-white/20 animate-pulse"></div>
+                  <div
+                    v-if="isDisplayedAttendanceFull(ongoingTournament)"
+                    class="absolute inset-0 flex items-center justify-between px-1 text-[10px] leading-none"
+                  >
+                    <span
+                      v-for="fire in getAttendanceFireCount(ongoingTournament)"
+                      :key="fire"
+                      >🔥</span
+                    >
+                  </div>
+                  <div
+                    v-else
+                    class="absolute inset-0 bg-white/20 animate-pulse"
+                  ></div>
                 </div>
               </div>
-              <div class="grid gap-2 text-xs" :class="ongoingTournament.selfFunded ? 'grid-cols-1' : 'grid-cols-3'">
-                <button 
-                  @click="openAttendanceModal(ongoingTournament.id, 'attending', ongoingTournament.pitchType || 'FIELD_5')"
+              <div
+                class="grid gap-2 text-xs"
+                :class="
+                  ongoingTournament.selfFunded ? 'grid-cols-1' : 'grid-cols-3'
+                "
+              >
+                <button
+                  @click="
+                    openAttendanceModal(
+                      ongoingTournament.id,
+                      'attending',
+                      ongoingTournament.pitchType || 'FIELD_5',
+                    )
+                  "
                   class="text-center p-2 bg-green-100 rounded-lg hover:bg-green-200 transition-colors cursor-pointer"
                 >
                   <div class="font-semibold text-green-800">
-                    <template v-if="ongoingTournament.pitchType">{{ ongoingTournament.pitchType === 'FIELD_5' ? 'Sân 5' : 'Sân 7' }}: {{ getDisplayedAttendanceCount(ongoingTournament) }}</template>
-                    <template v-else><span class="block sm:inline">Sân 5: {{ getAttendanceStats(ongoingTournament.id)?.field5Count || 0 }}</span><span class="block sm:inline"> <span class="hidden sm:inline"> | </span>Sân 7: {{ getAttendanceStats(ongoingTournament.id)?.field7Count || 0 }}</span></template>
+                    <template v-if="ongoingTournament.pitchType"
+                      >{{
+                        ongoingTournament.pitchType === "FIELD_5"
+                          ? "Sân 5"
+                          : "Sân 7"
+                      }}:
+                      {{
+                        getDisplayedAttendanceCount(ongoingTournament)
+                      }}</template
+                    >
+                    <template v-else
+                      ><span class="block sm:inline"
+                        >Sân 5:
+                        {{
+                          getAttendanceStats(ongoingTournament.id)
+                            ?.field5Count || 0
+                        }}</span
+                      ><span class="block sm:inline">
+                        <span class="hidden sm:inline"> | </span>Sân 7:
+                        {{
+                          getAttendanceStats(ongoingTournament.id)
+                            ?.field7Count || 0
+                        }}</span
+                      ></template
+                    >
                   </div>
                   <div class="text-green-600">Tham gia</div>
                 </button>
-                <button v-if="!ongoingTournament.selfFunded"
+                <button
+                  v-if="!ongoingTournament.selfFunded"
                   @click="openAttendanceModal(ongoingTournament.id, 'water')"
                   class="text-center p-2 bg-blue-100 rounded-lg hover:bg-blue-200 transition-colors cursor-pointer"
                 >
-                  <div class="font-semibold text-blue-800">{{ getWaterCount(ongoingTournament.id) }}</div>
+                  <div class="font-semibold text-blue-800">
+                    {{ getWaterCount(ongoingTournament.id) }}
+                  </div>
                   <div class="text-blue-600">Uống nước</div>
                 </button>
-                <button v-if="!ongoingTournament.selfFunded"
+                <button
+                  v-if="!ongoingTournament.selfFunded"
                   @click="openAttendanceModal(ongoingTournament.id, 'betting')"
                   class="text-center p-2 bg-yellow-100 rounded-lg hover:bg-yellow-200 transition-colors cursor-pointer"
                 >
-                  <div class="font-semibold text-yellow-800">{{ getBettingCount(ongoingTournament.id) }}</div>
+                  <div class="font-semibold text-yellow-800">
+                    {{ getBettingCount(ongoingTournament.id) }}
+                  </div>
                   <div class="text-yellow-600">Ngôi sao hy vọng</div>
                 </button>
               </div>
             </div>
 
             <!-- Tournament Teams Display -->
-            <div v-if="getTournamentTeams(ongoingTournament).length > 0" class="mt-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
-              <h4 class="text-lg font-semibold text-gray-800 mb-3 flex items-center">
-                <svg class="w-5 h-5 mr-2 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.196-2.196M5 20h5v-2a3 3 0 015.196-2.196M12 4v.01M12 4a7 7 0 018 7c0 2-1 3-1 3s-1 1-1 3v2H8v-2s-1-1-1-3c0-2 1-3 1-3a7 7 0 018-7z" />
+            <div
+              v-if="getTournamentTeams(ongoingTournament).length > 0"
+              class="mt-4 p-4 bg-gray-50 rounded-lg border border-gray-200"
+            >
+              <h4
+                class="text-lg font-semibold text-gray-800 mb-3 flex items-center"
+              >
+                <svg
+                  class="w-5 h-5 mr-2 text-blue-600"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M17 20h5v-2a3 3 0 00-5.196-2.196M5 20h5v-2a3 3 0 015.196-2.196M12 4v.01M12 4a7 7 0 018 7c0 2-1 3-1 3s-1 1-1 3v2H8v-2s-1-1-1-3c0-2 1-3 1-3a7 7 0 018-7z"
+                  />
                 </svg>
                 Đội thi đấu ({{ getTournamentTeams(ongoingTournament).length }})
               </h4>
-              
-              <div class="grid gap-4" :class="teamGridClass(getTournamentTeams(ongoingTournament).length)">
+
+              <div
+                class="grid gap-4"
+                :class="
+                  teamGridClass(getTournamentTeams(ongoingTournament).length)
+                "
+              >
                 <div
                   v-for="team in getTournamentTeams(ongoingTournament)"
                   :key="team.id"
@@ -247,38 +569,91 @@
                 >
                   <!-- Team Header -->
                   <div class="flex items-center mb-3">
-                    <div class="w-10 h-10 rounded-full flex items-center justify-center mr-3" :class="getTeamNumberClass(team.name)">
-                      <span class="text-white font-bold text-lg">{{ getTeamNumber(team.name) }}</span>
+                    <div
+                      class="w-10 h-10 rounded-full flex items-center justify-center mr-3"
+                      :class="getTeamNumberClass(team.name)"
+                    >
+                      <span class="text-white font-bold text-lg">{{
+                        getTeamNumber(team.name)
+                      }}</span>
                     </div>
                     <div class="flex-1">
                       <div class="flex items-center justify-between">
-                        <h5 class="font-semibold text-gray-900">{{ displayTeamName(team.name) }} <span class="text-sm font-medium" :class="getTeamTextClass(team.name)">- {{ getTeamJerseyLabel(team.name) }}</span></h5>
+                        <h5 class="font-semibold text-gray-900">
+                          {{ displayTeamName(team.name) }}
+                          <span
+                            class="text-sm font-medium"
+                            :class="getTeamTextClass(team.name)"
+                            >- {{ getTeamJerseyLabel(team.name) }}</span
+                          >
+                        </h5>
                       </div>
-                      <p class="text-sm text-gray-600">{{ team.players?.length || 0 }} cầu thủ</p>
+                      <p class="text-sm text-gray-600">
+                        {{ team.players?.length || 0 }} cầu thủ
+                      </p>
                     </div>
                   </div>
 
                   <!-- Team Players -->
-                  <div v-if="team.players && team.players.length > 0" class="space-y-2">
+                  <div
+                    v-if="team.players && team.players.length > 0"
+                    class="space-y-2"
+                  >
                     <div
                       v-for="player in team.players"
                       :key="player.id"
                       class="flex items-center justify-between p-2 bg-gray-50 rounded text-sm"
                       :class="{
-                        'bg-yellow-100': isPlayerBetting(ongoingTournament.id, player.id),
-                        'border-2 border-red-500': isCurrentUserPlayer(player.id),
+                        'bg-yellow-100': isPlayerBetting(
+                          ongoingTournament.id,
+                          player.id,
+                        ),
+                        'border-2 border-red-500': isCurrentUserPlayer(
+                          player.id,
+                        ),
                       }"
                     >
                       <div class="flex items-center">
-                        <div class="w-6 h-6 shrink-0 overflow-hidden bg-gray-300 rounded-full flex items-center justify-center mr-2 text-xs font-medium">
-                          <img v-if="player.avatar" :src="player.avatar" :alt="player.name" class="h-full w-full object-cover">
-                          <span v-else>{{ player.name.charAt(0).toUpperCase() }}</span>
+                        <div
+                          class="w-6 h-6 shrink-0 overflow-hidden bg-gray-300 rounded-full flex items-center justify-center mr-2 text-xs font-medium"
+                        >
+                          <img
+                            v-if="player.avatar"
+                            :src="player.avatar"
+                            :alt="player.name"
+                            class="h-full w-full object-cover"
+                          />
+                          <span v-else>{{
+                            player.name.charAt(0).toUpperCase()
+                          }}</span>
                         </div>
-                        <span class="font-medium text-gray-900">{{ player.name }}</span>
-                        <span v-if="isPlayerWithWater(ongoingTournament.id, player.id)" class="ml-1" title="Đã đăng ký uống nước">💧</span>
+                        <span class="font-medium text-gray-900">{{
+                          player.name
+                        }}</span>
+                        <span
+                          v-if="
+                            isPlayerWithWater(ongoingTournament.id, player.id)
+                          "
+                          class="ml-1"
+                          title="Đã đăng ký uống nước"
+                          >💧</span
+                        >
                       </div>
                       <div class="flex items-center text-gray-600">
-                        <span class="text-xs mr-1 px-1.5 py-0.5 rounded" :class="isTeamGoalkeeper(team.players, player) ? 'bg-green-100 text-green-700 font-semibold' : ''">{{ getPositionLabel(player.position) }}<template v-if="player.positionSecond">-{{ getPositionLabel(player.positionSecond) }}</template></span>
+                        <span
+                          class="text-xs mr-1 px-1.5 py-0.5 rounded"
+                          :class="
+                            isTeamGoalkeeper(team.players, player)
+                              ? 'bg-green-100 text-green-700 font-semibold'
+                              : ''
+                          "
+                          >{{ getPositionLabel(player.position)
+                          }}<template v-if="player.positionSecond"
+                            >-{{
+                              getPositionLabel(player.positionSecond)
+                            }}</template
+                          ></span
+                        >
                         <span class="text-xs">T{{ player.tier }}</span>
                       </div>
                     </div>
@@ -286,216 +661,1057 @@
 
                   <div class="mt-auto">
                     <!-- Team Stats -->
-                    <div v-if="team.players && team.players.length > 0" class="pt-3 border-t border-gray-200">
+                    <div
+                      v-if="team.players && team.players.length > 0"
+                      class="pt-3 border-t border-gray-200"
+                    >
                       <div class="flex justify-between text-xs text-gray-600">
-                        <span>Tổng tier: {{ team.players.reduce((sum: number, p: any) => sum + p.tier, 0) }}</span>
-                        <span>Trung bình: <strong>{{ (team.players.reduce((sum: number, p: any) => sum + p.tier, 0) / team.players.length).toFixed(1) }}</strong></span>
+                        <span
+                          >Tổng tier:
+                          {{
+                            team.players.reduce(
+                              (sum: number, p: any) => sum + p.tier,
+                              0,
+                            )
+                          }}</span
+                        >
+                        <span
+                          >Trung bình:
+                          <strong>{{
+                            (
+                              team.players.reduce(
+                                (sum: number, p: any) => sum + p.tier,
+                                0,
+                              ) / team.players.length
+                            ).toFixed(1)
+                          }}</strong></span
+                        >
                       </div>
                     </div>
-                    <div v-if="ongoingTournament.status === 'ONGOING'" class="mt-3 pt-3 border-t border-gray-200 text-right">
-                      <span class="text-lg font-bold text-blue-600">⚽: {{ team.score || 0 }}</span>
+                    <div
+                      v-if="ongoingTournament.status === 'ONGOING'"
+                      class="mt-3 pt-3 border-t border-gray-200 text-right"
+                    >
+                      <span class="text-lg font-bold text-blue-600"
+                        >⚽: {{ team.score || 0 }}</span
+                      >
                     </div>
                   </div>
                 </div>
               </div>
             </div>
-            
+
             <!-- Attendance Toggle Button -->
-            <div v-if="(ongoingTournament.status === 'UPCOMING' && getTournamentTeams(ongoingTournament).length === 0 && getAttendanceButtonText(ongoingTournament.id) !== 'Không có cầu thủ') || canUserToggleBet(ongoingTournament)" class="flex justify-center pt-2 border-t border-gray-200">
-              <div class="flex w-full flex-col items-stretch gap-3 sm:w-auto sm:flex-row sm:flex-wrap sm:justify-center [&>button]:w-full sm:[&>button]:w-auto">
-                <div v-if="ongoingTournament.status === 'UPCOMING' && getTournamentTeams(ongoingTournament).length === 0 && getAttendanceButtonText(ongoingTournament.id) !== 'Không có cầu thủ'" class="flex flex-col items-center" :class="getUserAttendanceStatus(ongoingTournament.id) === 'ATTEND' ? 'w-full sm:w-auto' : 'w-auto self-center'">
+            <div
+              v-if="
+                (ongoingTournament.status === 'UPCOMING' &&
+                  getTournamentTeams(ongoingTournament).length === 0 &&
+                  getAttendanceButtonText(ongoingTournament.id) !==
+                    'Không có cầu thủ') ||
+                canUserToggleBet(ongoingTournament)
+              "
+              class="flex justify-center pt-2 border-t border-gray-200"
+            >
+              <div
+                class="flex w-full flex-col items-stretch gap-3 sm:w-auto sm:flex-row sm:flex-wrap sm:justify-center [&>button]:w-full sm:[&>button]:w-auto"
+              >
+                <div
+                  v-if="
+                    ongoingTournament.status === 'UPCOMING' &&
+                    getTournamentTeams(ongoingTournament).length === 0 &&
+                    getAttendanceButtonText(ongoingTournament.id) !==
+                      'Không có cầu thủ'
+                  "
+                  class="flex flex-col items-center"
+                  :class="
+                    getUserAttendanceStatus(ongoingTournament.id) === 'ATTEND'
+                      ? 'w-full sm:w-auto'
+                      : 'w-auto self-center'
+                  "
+                >
                   <button
                     @click="toggleAttendance(ongoingTournament.id)"
-                    :disabled="attendanceLoading.has(ongoingTournament.id) || (getAttendanceButtonText(ongoingTournament.id) === 'Đã tham gia' && isUserCancellationLocked(ongoingTournament) && !canAddAnotherField(ongoingTournament.id)) || (getAttendanceButtonText(ongoingTournament.id) === 'Tham gia' && (isAttendanceLimitReached(ongoingTournament) || (cannotSelfRegisterDueToDebt && !ongoingTournament.selfFunded)))"
-                    :title="getAttendanceButtonText(ongoingTournament.id) === 'Đã tham gia' && isUserCancellationLocked(ongoingTournament) && !canAddAnotherField(ongoingTournament.id) ? 'Đã quá thời gian chốt hủy' : (getAttendanceButtonText(ongoingTournament.id) === 'Tham gia' && isAttendanceLimitReached(ongoingTournament) ? attendanceLimitMessage(ongoingTournament) : (cannotSelfRegisterDueToDebt && !ongoingTournament.selfFunded ? 'Vui lòng thanh toán số dư âm trước khi đăng ký' : undefined))"
+                    :disabled="
+                      attendanceLoading.has(ongoingTournament.id) ||
+                      (getAttendanceButtonText(ongoingTournament.id) ===
+                        'Đã tham gia' &&
+                        isUserCancellationLocked(ongoingTournament) &&
+                        !canAddAnotherField(ongoingTournament.id)) ||
+                      (getAttendanceButtonText(ongoingTournament.id) ===
+                        'Tham gia' &&
+                        (isAttendanceLimitReached(ongoingTournament) ||
+                          (cannotSelfRegisterDueToDebt &&
+                            !ongoingTournament.selfFunded)))
+                    "
+                    :title="
+                      getAttendanceButtonText(ongoingTournament.id) ===
+                        'Đã tham gia' &&
+                      isUserCancellationLocked(ongoingTournament) &&
+                      !canAddAnotherField(ongoingTournament.id)
+                        ? 'Đã quá thời gian chốt hủy'
+                        : getAttendanceButtonText(ongoingTournament.id) ===
+                              'Tham gia' &&
+                            isAttendanceLimitReached(ongoingTournament)
+                          ? attendanceLimitMessage(ongoingTournament)
+                          : cannotSelfRegisterDueToDebt &&
+                              !ongoingTournament.selfFunded
+                            ? 'Vui lòng thanh toán số dư âm trước khi đăng ký'
+                            : undefined
+                    "
                     class="px-6 py-2 rounded-lg font-medium transition-colors duration-200"
                     :class="[
-                      getUserAttendanceStatus(ongoingTournament.id) === 'ATTEND' ? 'w-full sm:w-auto' : 'w-auto',
-                      attendanceLoading.has(ongoingTournament.id) || (getAttendanceButtonText(ongoingTournament.id) === 'Đã tham gia' && isUserCancellationLocked(ongoingTournament) && !canAddAnotherField(ongoingTournament.id)) || (getAttendanceButtonText(ongoingTournament.id) === 'Tham gia' && (isAttendanceLimitReached(ongoingTournament) || (cannotSelfRegisterDueToDebt && !ongoingTournament.selfFunded)))
-                        ? 'opacity-50 cursor-not-allowed' 
+                      getUserAttendanceStatus(ongoingTournament.id) === 'ATTEND'
+                        ? 'w-full sm:w-auto'
+                        : 'w-auto',
+                      attendanceLoading.has(ongoingTournament.id) ||
+                      (getAttendanceButtonText(ongoingTournament.id) ===
+                        'Đã tham gia' &&
+                        isUserCancellationLocked(ongoingTournament) &&
+                        !canAddAnotherField(ongoingTournament.id)) ||
+                      (getAttendanceButtonText(ongoingTournament.id) ===
+                        'Tham gia' &&
+                        (isAttendanceLimitReached(ongoingTournament) ||
+                          (cannotSelfRegisterDueToDebt &&
+                            !ongoingTournament.selfFunded)))
+                        ? 'opacity-50 cursor-not-allowed'
                         : 'hover:shadow-md',
-                        getAttendanceButtonText(ongoingTournament.id) === 'Tham gia'
+                      getAttendanceButtonText(ongoingTournament.id) ===
+                      'Tham gia'
                         ? 'bg-green-600 text-white hover:bg-green-700'
-                        : getAttendanceButtonText(ongoingTournament.id) === 'Đã tham gia'
-                        ? 'bg-green-600 text-white hover:bg-green-700'
-                        : 'bg-red-600 text-white hover:bg-red-700'
+                        : getAttendanceButtonText(ongoingTournament.id) ===
+                            'Đã tham gia'
+                          ? 'bg-green-600 text-white hover:bg-green-700'
+                          : 'bg-red-600 text-white hover:bg-red-700',
                     ]"
                   >
                     <div class="flex items-center justify-center space-x-1">
-                      <span>{{ attendanceLoading.has(ongoingTournament.id) ? 'Đang tải...' : `${getAttendanceButtonText(ongoingTournament.id)}${getAttendanceButtonText(ongoingTournament.id) === 'Đã tham gia' ? ' ✓' : ''}` }}</span>
+                      <span>{{
+                        attendanceLoading.has(ongoingTournament.id)
+                          ? "Đang tải..."
+                          : `${getAttendanceButtonText(ongoingTournament.id)}${getAttendanceButtonText(ongoingTournament.id) === "Đã tham gia" ? " ✓" : ""}`
+                      }}</span>
                     </div>
                   </button>
-                  <div v-if="getAttendanceButtonText(ongoingTournament.id) === 'Tham gia' && cannotSelfRegisterDueToDebt && !ongoingTournament.selfFunded" class="mt-2 text-center text-xs font-medium text-red-600">
-                    <p>Bạn không thể tham gia vì số dư: <strong>{{ (authStore.currentUser?.player?.money || 0).toLocaleString('vi-VN') }} ₫</strong>.</p>
-                    <button type="button" class="mt-2 rounded bg-red-600 px-3 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-red-700" @click="openCurrentUserDebtTopUp">Thanh toán</button>
+                  <div
+                    v-if="
+                      getAttendanceButtonText(ongoingTournament.id) ===
+                        'Tham gia' &&
+                      cannotSelfRegisterDueToDebt &&
+                      !ongoingTournament.selfFunded
+                    "
+                    class="mt-2 text-center text-xs font-medium text-red-600"
+                  >
+                    <p>
+                      Bạn không thể tham gia vì số dư:
+                      <strong
+                        >{{
+                          (
+                            authStore.currentUser?.player?.money || 0
+                          ).toLocaleString("vi-VN")
+                        }}
+                        ₫</strong
+                      >.
+                    </p>
+                    <button
+                      type="button"
+                      class="mt-2 rounded bg-red-600 px-3 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-red-700"
+                      @click="openCurrentUserDebtTopUp"
+                    >
+                      Thanh toán
+                    </button>
                   </div>
                 </div>
                 <button
-                  v-if="canRequestSwap(ongoingTournament) || hasPendingSwapRequest(ongoingTournament.id)"
+                  v-if="
+                    canRequestSwap(ongoingTournament) ||
+                    hasPendingSwapRequest(ongoingTournament.id)
+                  "
                   type="button"
                   class="px-4 py-2 text-center rounded-lg font-medium text-white transition-colors"
-                  :class="hasPendingSwapRequest(ongoingTournament.id) ? 'bg-red-600 hover:bg-red-700' : 'bg-blue-600 hover:bg-blue-700'"
+                  :class="
+                    hasPendingSwapRequest(ongoingTournament.id)
+                      ? 'bg-red-600 hover:bg-red-700'
+                      : 'bg-blue-600 hover:bg-blue-700'
+                  "
                   :disabled="swapRequestSavingId === ongoingTournament.id"
-                  @click="hasPendingSwapRequest(ongoingTournament.id) ? cancelSwapRequest(ongoingTournament) : requestSwap(ongoingTournament)"
-                >{{ swapRequestSavingId === ongoingTournament.id ? 'Đang xử lý...' : hasPendingSwapRequest(ongoingTournament.id) ? 'Hủy đăng ký swap' : 'Yêu cầu swap' }}</button>
-                <button v-if="ongoingTournament.status === 'UPCOMING' && getTournamentTeams(ongoingTournament).length === 0 && isCancellationDeadlinePassed(ongoingTournament) && authStore.currentUser?.player && !cannotSelfRegisterDueToDebt" type="button" class="bg-blue-600 px-4 py-2 text-center rounded-lg font-medium text-white hover:bg-blue-700" @click="openFriendSwap(ongoingTournament.id)">Swap dùm bạn</button>
+                  @click="
+                    hasPendingSwapRequest(ongoingTournament.id)
+                      ? cancelSwapRequest(ongoingTournament)
+                      : requestSwap(ongoingTournament)
+                  "
+                >
+                  {{
+                    swapRequestSavingId === ongoingTournament.id
+                      ? "Đang xử lý..."
+                      : hasPendingSwapRequest(ongoingTournament.id)
+                        ? "Hủy đăng ký swap"
+                        : "Yêu cầu swap"
+                  }}
+                </button>
+                <button
+                  v-if="
+                    ongoingTournament.status === 'UPCOMING' &&
+                    getTournamentTeams(ongoingTournament).length === 0 &&
+                    isCancellationDeadlinePassed(ongoingTournament) &&
+                    authStore.currentUser?.player &&
+                    !cannotSelfRegisterDueToDebt
+                  "
+                  type="button"
+                  class="bg-blue-600 px-4 py-2 text-center rounded-lg font-medium text-white hover:bg-blue-700"
+                  @click="openFriendSwap(ongoingTournament.id)"
+                >
+                  Swap dùm bạn
+                </button>
                 <template v-if="!cannotSelfRegisterDueToDebt">
                   <button
-                    v-for="request in getIncomingSwapRequests(ongoingTournament.id)"
+                    v-for="request in getIncomingSwapRequests(
+                      ongoingTournament.id,
+                    )"
                     :key="request.id"
                     type="button"
                     class="bg-blue-600 px-4 py-2 text-center rounded-lg font-medium text-white transition-colors hover:bg-blue-700"
                     @click="openSwapAcceptance(request)"
-                  >Swap với {{ request.requester.name }}</button>
+                  >
+                    Swap với {{ request.requester.name }}
+                  </button>
                 </template>
-                <button v-if="getSwapWaitlistPosition(ongoingTournament.id)" type="button" class="bg-red-600 px-4 py-2 text-center rounded-lg font-medium text-white transition-colors hover:bg-red-700" @click="cancelSwapWaitlist(ongoingTournament)">Hủy đăng ký hàng chờ</button>
-                <button v-else-if="canJoinSwapWaitlist(ongoingTournament) && !getIncomingSwapRequests(ongoingTournament.id).length" type="button" class="bg-blue-600 px-4 py-2 text-center rounded-lg font-medium text-white transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-gray-400" :disabled="isSwapWaitlistCooldownActive(ongoingTournament.id)" @click="joinSwapWaitlist(ongoingTournament)">{{ swapWaitlistCooldownLabel(ongoingTournament.id) }}</button>
-                <p v-if="isCancellationDeadlinePassed(ongoingTournament) && cannotSelfRegisterDueToDebt" class="w-full text-center text-xs font-medium text-red-600">Bạn không thể swap hoặc swap dùm bạn vì số dư đang âm.</p>
-                <p v-if="ongoingTournament.status === 'UPCOMING' && isAttendanceLimitReached(ongoingTournament)" class="w-full text-center text-xs font-medium text-orange-700">{{ attendanceLimitMessage(ongoingTournament) }}. Không thể đăng ký thêm. Chỉ có thể swap.</p>
-                
+                <button
+                  v-if="getSwapWaitlistPosition(ongoingTournament.id)"
+                  type="button"
+                  class="bg-red-600 px-4 py-2 text-center rounded-lg font-medium text-white transition-colors hover:bg-red-700"
+                  @click="cancelSwapWaitlist(ongoingTournament)"
+                >
+                  Hủy đăng ký hàng chờ
+                </button>
+                <button
+                  v-else-if="
+                    canJoinSwapWaitlist(ongoingTournament) &&
+                    !getIncomingSwapRequests(ongoingTournament.id).length
+                  "
+                  type="button"
+                  class="bg-blue-600 px-4 py-2 text-center rounded-lg font-medium text-white transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-gray-400"
+                  :disabled="isSwapWaitlistCooldownActive(ongoingTournament.id)"
+                  @click="joinSwapWaitlist(ongoingTournament)"
+                >
+                  {{ swapWaitlistCooldownLabel(ongoingTournament.id) }}
+                </button>
+                <p
+                  v-if="
+                    isCancellationDeadlinePassed(ongoingTournament) &&
+                    cannotSelfRegisterDueToDebt
+                  "
+                  class="w-full text-center text-xs font-medium text-red-600"
+                >
+                  Bạn không thể swap hoặc swap dùm bạn vì số dư đang âm.
+                </p>
+                <p
+                  v-if="
+                    ongoingTournament.status === 'UPCOMING' &&
+                    isAttendanceLimitReached(ongoingTournament)
+                  "
+                  class="w-full text-center text-xs font-medium text-orange-700"
+                >
+                  {{ attendanceLimitMessage(ongoingTournament) }}. Không thể
+                  đăng ký thêm. Chỉ có thể swap.
+                </p>
+
                 <!-- Water Button -->
                 <button
-                  v-if="!ongoingTournament.selfFunded && authStore.currentUser?.role !== 'guest'"
+                  v-if="
+                    !ongoingTournament.selfFunded &&
+                    authStore.currentUser?.role !== 'guest'
+                  "
                   @click="toggleWater(ongoingTournament.id)"
-                  :disabled="waterLoading.has(ongoingTournament.id) || getUserAttendanceStatus(ongoingTournament.id) !== 'ATTEND'"
+                  :disabled="
+                    waterLoading.has(ongoingTournament.id) ||
+                    getUserAttendanceStatus(ongoingTournament.id) !== 'ATTEND'
+                  "
                   class="px-4 py-2 rounded-lg font-medium transition-colors duration-200"
                   :class="[
-                    waterLoading.has(ongoingTournament.id) || getUserAttendanceStatus(ongoingTournament.id) !== 'ATTEND'
-                      ? 'opacity-50 cursor-not-allowed' 
+                    waterLoading.has(ongoingTournament.id) ||
+                    getUserAttendanceStatus(ongoingTournament.id) !== 'ATTEND'
+                      ? 'opacity-50 cursor-not-allowed'
                       : 'hover:shadow-md',
                     getUserWaterStatus(ongoingTournament.id)
                       ? 'bg-primary-600 text-white hover:bg-primary-700'
-                      : 'bg-gray-300 text-gray-700 hover:bg-gray-400'
+                      : 'bg-gray-300 text-gray-700 hover:bg-gray-400',
                   ]"
                 >
                   <div class="flex items-center justify-center space-x-1">
-                    <span>{{ waterLoading.has(ongoingTournament.id) ? 'Đang tải...' : (getUserWaterStatus(ongoingTournament.id) ? 'Đăng ký uống nước ✓' : 'Đăng ký uống nước') }}</span>
+                    <span>{{
+                      waterLoading.has(ongoingTournament.id)
+                        ? "Đang tải..."
+                        : getUserWaterStatus(ongoingTournament.id)
+                          ? "Đăng ký uống nước ✓"
+                          : "Đăng ký uống nước"
+                    }}</span>
                   </div>
                 </button>
 
                 <!-- Bet Button: available before the scheduled start time -->
                 <button
-                  v-if="!ongoingTournament.selfFunded && authStore.currentUser?.role !== 'guest' && canUserToggleBet(ongoingTournament)"
+                  v-if="
+                    !ongoingTournament.selfFunded &&
+                    authStore.currentUser?.role !== 'guest' &&
+                    canUserToggleBet(ongoingTournament)
+                  "
                   @click="toggleBet(ongoingTournament.id)"
-                  :disabled="betLoading.has(ongoingTournament.id) || getUserAttendanceStatus(ongoingTournament.id) !== 'ATTEND'"
+                  :disabled="
+                    betLoading.has(ongoingTournament.id) ||
+                    getUserAttendanceStatus(ongoingTournament.id) !== 'ATTEND'
+                  "
                   class="px-4 py-2 text-center rounded-lg font-medium transition-colors duration-200"
-                  :class="[betLoading.has(ongoingTournament.id) || getUserAttendanceStatus(ongoingTournament.id) !== 'ATTEND' ? 'opacity-50 cursor-not-allowed' : 'hover:shadow-md', getUserBetStatus(ongoingTournament.id) ? 'bg-yellow-600 text-white hover:bg-yellow-700' : 'bg-gray-300 text-gray-700 hover:bg-gray-400']"
+                  :class="[
+                    betLoading.has(ongoingTournament.id) ||
+                    getUserAttendanceStatus(ongoingTournament.id) !== 'ATTEND'
+                      ? 'opacity-50 cursor-not-allowed'
+                      : 'hover:shadow-md',
+                    getUserBetStatus(ongoingTournament.id)
+                      ? 'bg-yellow-600 text-white hover:bg-yellow-700'
+                      : 'bg-gray-300 text-gray-700 hover:bg-gray-400',
+                  ]"
                 >
-                  {{ betLoading.has(ongoingTournament.id) ? 'Đang tải...' : (getUserBetStatus(ongoingTournament.id) ? 'Ngôi sao hy vọng đội mình thắng ✓' : 'Ngôi sao hy vọng đội mình thắng') }}
+                  {{
+                    betLoading.has(ongoingTournament.id)
+                      ? "Đang tải..."
+                      : getUserBetStatus(ongoingTournament.id)
+                        ? "Ngôi sao hy vọng đội mình thắng ✓"
+                        : "Ngôi sao hy vọng đội mình thắng"
+                  }}
                 </button>
                 <button
-                  v-if="ongoingTournament.status === 'UPCOMING' && getTournamentTeams(ongoingTournament).length === 0 && authStore.currentUser?.player"
+                  v-if="
+                    ongoingTournament.status === 'UPCOMING' &&
+                    getTournamentTeams(ongoingTournament).length === 0 &&
+                    authStore.currentUser?.player
+                  "
                   type="button"
                   :disabled="isAttendanceLimitReached(ongoingTournament)"
                   class="rounded-lg bg-blue-600 px-6 py-2 font-medium text-white transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
                   @click="openFriendRegistration(ongoingTournament.id)"
-                >Đăng ký dùm bạn</button>
-                
+                >
+                  Đăng ký dùm bạn
+                </button>
               </div>
             </div>
 
             <!-- Random Team Button (Admin/Mod only) -->
-            <div class="flex flex-col items-center pt-2 border-t border-gray-200">
-              <div class="flex w-full flex-col gap-3 sm:w-auto sm:flex-row sm:[&>button]:w-auto [&>button]:w-full">
+            <div
+              class="flex flex-col items-center pt-2 border-t border-gray-200"
+            >
+              <div
+                class="flex w-full flex-col gap-3 sm:w-auto sm:flex-row sm:[&>button]:w-auto [&>button]:w-full"
+              >
                 <button
-                  v-if="authStore.hasPermission('canEditTournaments') && getTournamentTeams(ongoingTournament).length === 0" 
+                  v-if="
+                    authStore.hasPermission('canEditTournaments') &&
+                    getTournamentTeams(ongoingTournament).length === 0
+                  "
                   @click="openTeamCountModal(ongoingTournament.id)"
-                  :disabled="!canGenerateTeams(ongoingTournament.id) || teamGenerationLoading"
+                  :disabled="
+                    !canGenerateTeams(ongoingTournament.id) ||
+                    teamGenerationLoading
+                  "
                   class="px-6 py-2 rounded-lg font-medium transition-colors duration-200"
                   :class="[
-                    !canGenerateTeams(ongoingTournament.id) || teamGenerationLoading
-                      ? 'opacity-50 cursor-not-allowed bg-gray-400 text-white' 
-                      : 'bg-purple-600 text-white hover:bg-purple-700 hover:shadow-md'
+                    !canGenerateTeams(ongoingTournament.id) ||
+                    teamGenerationLoading
+                      ? 'opacity-50 cursor-not-allowed bg-gray-400 text-white'
+                      : 'bg-purple-600 text-white hover:bg-purple-700 hover:shadow-md',
                   ]"
                 >
-                  {{ teamGenerationLoading ? 'Đang chia...' : 'Chia đội ngẫu nhiên' }}
+                  {{
+                    teamGenerationLoading
+                      ? "Đang chia..."
+                      : "Chia đội ngẫu nhiên"
+                  }}
                 </button>
                 <button
-                  v-if="authStore.hasAnyRole(['admin', 'mod']) && ongoingTournament.status === 'UPCOMING' && getTournamentTeams(ongoingTournament).length === 0"
+                  v-if="
+                    authStore.hasAnyRole(['admin', 'mod']) &&
+                    ongoingTournament.status === 'UPCOMING' &&
+                    getTournamentTeams(ongoingTournament).length === 0
+                  "
                   @click="openAttendanceModal(ongoingTournament.id, 'pending')"
                   class="px-6 py-2 rounded-lg font-medium bg-blue-600 text-white hover:bg-blue-700 hover:shadow-md transition-colors duration-200"
                 >
                   Admin/Mod đăng ký dùm
                 </button>
                 <button
-                  v-if="authStore.hasPermission('canEditTournaments') && ongoingTournament.status === 'UPCOMING' && getTournamentTeams(ongoingTournament).length > 0"
+                  v-if="
+                    authStore.hasPermission('canEditTournaments') &&
+                    ongoingTournament.status === 'UPCOMING' &&
+                    getTournamentTeams(ongoingTournament).length > 0
+                  "
                   @click="openClearTeamsModal(ongoingTournament.id)"
                   class="px-6 py-2 rounded-lg font-medium bg-red-600 text-white hover:bg-red-700 hover:shadow-md transition-colors duration-200"
                 >
                   Xóa đội
                 </button>
                 <button
-                  v-if="authStore.hasPermission('canEditTournaments') && ongoingTournament.status === 'UPCOMING' && getTournamentTeams(ongoingTournament).length > 0"
+                  v-if="
+                    authStore.hasPermission('canEditTournaments') &&
+                    ongoingTournament.status === 'UPCOMING' &&
+                    getTournamentTeams(ongoingTournament).length > 0
+                  "
                   @click="startTournament(ongoingTournament.id)"
                   class="px-6 py-2 rounded-lg font-medium bg-green-600 text-white hover:bg-green-700 hover:shadow-md transition-colors duration-200"
                 >
                   Bắt đầu giải đấu
                 </button>
                 <button
-                  v-if="authStore.hasPermission('canEditTournaments') && ongoingTournament.status === 'ONGOING' && getTournamentTeams(ongoingTournament).length > 0"
+                  v-if="
+                    authStore.hasPermission('canEditTournaments') &&
+                    ongoingTournament.status === 'ONGOING' &&
+                    getTournamentTeams(ongoingTournament).length > 0
+                  "
                   @click="openScoresModal(ongoingTournament.id)"
                   class="px-6 py-2 rounded-lg font-medium bg-primary-600 text-white hover:bg-primary-700 hover:shadow-md transition-colors duration-200"
                 >
                   Điểm số
                 </button>
                 <button
-                  v-if="authStore.hasRole('admin') && ongoingTournament.status === 'ONGOING'"
+                  v-if="
+                    authStore.hasRole('admin') &&
+                    ongoingTournament.status === 'ONGOING'
+                  "
                   @click="endTournament(ongoingTournament.id)"
-                  :disabled="!canEndTournament(ongoingTournament.id) || endTournamentSaving"
+                  :disabled="
+                    !canEndTournament(ongoingTournament.id) ||
+                    endTournamentSaving
+                  "
                   :class="[
                     'px-6 py-2 rounded-lg font-medium transition-colors duration-200',
-                    canEndTournament(ongoingTournament.id) && !endTournamentSaving
-                      ? 'bg-red-600 text-white hover:bg-red-700 hover:shadow-md' 
-                      : 'bg-gray-400 text-gray-200 cursor-not-allowed'
+                    canEndTournament(ongoingTournament.id) &&
+                    !endTournamentSaving
+                      ? 'bg-red-600 text-white hover:bg-red-700 hover:shadow-md'
+                      : 'bg-gray-400 text-gray-200 cursor-not-allowed',
                   ]"
                 >
-                  {{ endTournamentSaving ? 'Đang lưu...' : 'Kết thúc giải đấu' }}
+                  {{
+                    endTournamentSaving ? "Đang lưu..." : "Kết thúc giải đấu"
+                  }}
                 </button>
               </div>
               <div class="text-xs text-gray-500 mt-1 text-center">
                 <span v-if="!canGenerateTeams(ongoingTournament.id)">
-                  Cần tối thiểu 12 cầu thủ Sân 5 hoặc 16 cầu thủ Sân 7 để chia đội
+                  Cần tối thiểu 12 cầu thủ Sân 5 hoặc 16 cầu thủ Sân 7 để chia
+                  đội
                 </span>
-                <span v-if="authStore.hasPermission('canEditTournaments') && getTournamentTeams(ongoingTournament).length === 0">
+                <span
+                  v-if="
+                    authStore.hasPermission('canEditTournaments') &&
+                    getTournamentTeams(ongoingTournament).length === 0
+                  "
+                >
                   Chọn số đội để chia cân bằng
                 </span>
-                <span v-if="authStore.hasRole('admin') && ongoingTournament.status === 'ONGOING' && !canEndTournament(ongoingTournament.id)" class="text-orange-600">
-                  Không thể kết thúc giải đấu vì đang có {{ getTournamentEndStatusMessage(ongoingTournament.id) }}
+                <span
+                  v-if="
+                    authStore.hasRole('admin') &&
+                    ongoingTournament.status === 'ONGOING' &&
+                    !canEndTournament(ongoingTournament.id)
+                  "
+                  class="text-orange-600"
+                >
+                  Không thể kết thúc giải đấu vì đang có
+                  {{ getTournamentEndStatusMessage(ongoingTournament.id) }}
                 </span>
               </div>
             </div>
-            <div v-if="ongoingTournament.status === 'UPCOMING' && getTournamentTeams(ongoingTournament).length === 0" class="mt-4 hidden rounded-lg border border-gray-200 bg-gray-50 p-4 lg:block">
-              <div class="mb-3 flex items-center justify-between"><div class="flex items-center gap-2"><h4 class="text-lg font-semibold text-gray-800">Cầu thủ tham gia</h4><button v-if="authStore.hasAnyRole(['admin', 'mod'])" type="button" class="rounded p-1 text-primary-600 hover:bg-primary-100 disabled:opacity-50" title="Làm mới danh sách cầu thủ" :disabled="refreshingAttendanceLists.has(ongoingTournament.id)" @click="refreshAttendanceList(ongoingTournament.id)"><svg class="h-4 w-4" :class="{ 'animate-spin': refreshingAttendanceLists.has(ongoingTournament.id) }" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0A8.003 8.003 0 014.582 15m15.356 0H15" /></svg></button></div><span class="text-sm text-gray-500">Chưa chia đội</span></div>
-              <div class="grid gap-4" :class="ongoingTournament.pitchType ? 'grid-cols-1' : 'grid-cols-2'">
-                <div v-for="field in [{ value: 'FIELD_5', label: 'Sân 5' }, { value: 'FIELD_7', label: 'Sân 7' }]" v-show="!ongoingTournament.pitchType || ongoingTournament.pitchType === field.value" :key="field.value" class="rounded-lg border border-primary-200 bg-white/80 p-3"><h5 class="mb-3 flex items-center justify-between border-b pb-2 font-semibold text-gray-900"><span>{{ field.label }} ({{ getFieldAttendanceCount(ongoingTournament.id, field.value as 'FIELD_5' | 'FIELD_7') }})</span><button type="button" class="inline-flex h-5 w-5 items-center justify-center rounded-full bg-primary-100 text-xs text-primary-700 hover:bg-primary-200" :title="`Xem cầu thủ chỉ đăng ký ${field.label}`" @click="openAttendanceModal(ongoingTournament.id, 'attending', field.value as 'FIELD_5' | 'FIELD_7', true)">!</button></h5><div v-if="getTeamPreviewPlayers(ongoingTournament.id, field.value as 'FIELD_5' | 'FIELD_7').length" class="gap-2" :class="ongoingTournament.pitchType ? 'grid grid-cols-2' : 'space-y-2'"><div v-for="player in getTeamPreviewPlayers(ongoingTournament.id, field.value as 'FIELD_5' | 'FIELD_7')" :key="player.id" class="flex items-center justify-between rounded bg-gray-50 p-2 text-sm" :class="{ 'bg-yellow-100': isPlayerBetting(ongoingTournament.id, player.id), 'border-2 border-red-500': isCurrentUserPlayer(player.id) }"><div class="flex min-w-0 items-center"><div class="mr-2 flex h-6 w-6 shrink-0 items-center justify-center overflow-hidden rounded-full bg-gray-300 text-xs font-medium"><img v-if="player.avatar" :src="player.avatar" :alt="player.name" class="h-full w-full object-cover"><span v-else>{{ player.name.charAt(0).toUpperCase() }}</span></div><div class="min-w-0"><div class="truncate font-medium text-gray-900">{{ player.name }}</div><div v-if="player.swapPending" class="truncate text-[10px] font-medium leading-4 text-amber-700">Đang chờ swap</div><div v-if="player.swapWaitlistPosition" class="truncate text-[10px] font-medium leading-4 text-violet-700">Đang trong hàng chờ {{ player.swapWaitlistPosition }}</div><div v-if="player.swappedWithName" class="truncate text-[10px] font-medium leading-4 text-emerald-700">Đã swap với {{ player.swappedWithName }}</div><div v-if="player.addedByUsername" class="truncate text-[10px] leading-4 text-gray-500">Được thêm bởi {{ player.addedByUsername }}</div><div v-if="player.friendOwnerName" class="truncate text-[10px] leading-4 text-blue-600">Bạn của {{ player.friendOwnerName }}</div></div><span v-if="isPlayerWithWater(ongoingTournament.id, player.id)" class="ml-1">💧</span></div><div class="ml-2 flex shrink-0 items-center text-gray-600"><span class="mr-1 rounded px-1.5 py-0.5 text-xs" :class="isGoalkeeper(player.position) ? 'bg-green-100 font-semibold text-green-700' : ''">{{ getPositionLabel(player.position) }}<template v-if="player.positionSecond">-{{ getPositionLabel(player.positionSecond) }}</template></span><span class="text-xs">T{{ player.tier }}</span></div></div></div><p v-else class="py-5 text-center text-sm text-gray-500">Chưa có cầu thủ.</p></div>
+            <div
+              v-if="
+                ongoingTournament.status === 'UPCOMING' &&
+                getTournamentTeams(ongoingTournament).length === 0
+              "
+              class="mt-4 hidden rounded-lg border border-gray-200 bg-gray-50 p-4 lg:block"
+            >
+              <div class="mb-3 flex items-center justify-between">
+                <div class="flex items-center gap-2">
+                  <h4 class="text-lg font-semibold text-gray-800">
+                    Cầu thủ tham gia
+                  </h4>
+                  <button
+                    v-if="authStore.hasAnyRole(['admin', 'mod'])"
+                    type="button"
+                    class="rounded p-1 text-primary-600 hover:bg-primary-100 disabled:opacity-50"
+                    title="Làm mới danh sách cầu thủ"
+                    :disabled="
+                      refreshingAttendanceLists.has(ongoingTournament.id)
+                    "
+                    @click="refreshAttendanceList(ongoingTournament.id)"
+                  >
+                    <svg
+                      class="h-4 w-4"
+                      :class="{
+                        'animate-spin': refreshingAttendanceLists.has(
+                          ongoingTournament.id,
+                        ),
+                      }"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0A8.003 8.003 0 014.582 15m15.356 0H15"
+                      />
+                    </svg>
+                  </button>
+                </div>
+                <span class="text-sm text-gray-500">Chưa chia đội</span>
+              </div>
+              <div
+                class="grid gap-4"
+                :class="
+                  ongoingTournament.pitchType ? 'grid-cols-1' : 'grid-cols-2'
+                "
+              >
+                <div
+                  v-for="field in [
+                    { value: 'FIELD_5', label: 'Sân 5' },
+                    { value: 'FIELD_7', label: 'Sân 7' },
+                  ]"
+                  v-show="
+                    !ongoingTournament.pitchType ||
+                    ongoingTournament.pitchType === field.value
+                  "
+                  :key="field.value"
+                  class="rounded-lg border border-primary-200 bg-white/80 p-3"
+                >
+                  <h5
+                    class="mb-3 flex items-center justify-between border-b pb-2 font-semibold text-gray-900"
+                  >
+                    <span
+                      >{{ field.label }} ({{
+                        getFieldAttendanceCount(
+                          ongoingTournament.id,
+                          field.value as "FIELD_5" | "FIELD_7",
+                        )
+                      }})</span
+                    ><button
+                      type="button"
+                      class="inline-flex h-5 w-5 items-center justify-center rounded-full bg-primary-100 text-xs text-primary-700 hover:bg-primary-200"
+                      :title="`Xem cầu thủ chỉ đăng ký ${field.label}`"
+                      @click="
+                        openAttendanceModal(
+                          ongoingTournament.id,
+                          'attending',
+                          field.value as 'FIELD_5' | 'FIELD_7',
+                          true,
+                        )
+                      "
+                    >
+                      !
+                    </button>
+                  </h5>
+                  <div
+                    v-if="
+                      getTeamPreviewPlayers(
+                        ongoingTournament.id,
+                        field.value as 'FIELD_5' | 'FIELD_7',
+                      ).length
+                    "
+                    class="gap-2"
+                    :class="
+                      ongoingTournament.pitchType
+                        ? 'grid grid-cols-2'
+                        : 'space-y-2'
+                    "
+                  >
+                    <div
+                      v-for="player in getTeamPreviewPlayers(
+                        ongoingTournament.id,
+                        field.value as 'FIELD_5' | 'FIELD_7',
+                      )"
+                      :key="player.id"
+                      class="flex items-center justify-between rounded bg-gray-50 p-2 text-sm"
+                      :class="{
+                        'bg-yellow-100': isPlayerBetting(
+                          ongoingTournament.id,
+                          player.id,
+                        ),
+                        'border-2 border-red-500': isCurrentUserPlayer(
+                          player.id,
+                        ),
+                      }"
+                    >
+                      <div class="flex min-w-0 items-center">
+                        <button
+                          v-if="
+                            canShowChallengeIcon(
+                              ongoingTournament.id,
+                              field.value as 'FIELD_5' | 'FIELD_7',
+                              player,
+                            )
+                          "
+                          type="button"
+                          class="mr-1 text-sm"
+                          :class="
+                            isPendingOutgoingChallengeTarget(
+                              ongoingTournament.id,
+                              player,
+                            )
+                              ? 'inline-flex h-5 w-5 shrink-0 animate-pulse items-center justify-center rounded-full bg-red-500 text-xs font-bold text-white'
+                              : player.challenge?.status === 'PENDING'
+                                ? 'animate-pulse'
+                                : ''
+                          "
+                          :title="
+                            isPendingOutgoingChallengeTarget(
+                              ongoingTournament.id,
+                              player,
+                            )
+                              ? 'Lời mời thách đấu đang chờ'
+                              : 'Thách đấu'
+                          "
+                          @click="
+                            openChallengeModal(ongoingTournament.id, player)
+                          "
+                        >
+                          {{
+                            isPendingOutgoingChallengeTarget(
+                              ongoingTournament.id,
+                              player,
+                            )
+                              ? '!'
+                              : '⚔️'
+                          }}
+                        </button>
+                        <button
+                          v-if="isCurrentUsersFriend(player)"
+                          type="button"
+                          class="mr-1 inline-flex h-6 w-6 shrink-0 items-center justify-center rounded text-sm font-bold text-red-700 hover:bg-red-100"
+                          title="Hủy tham gia cho bạn"
+                          @click="cancelFriendAttendanceByPlayer(ongoingTournament.id, player)"
+                        >
+                          ✕
+                        </button>
+                        <button
+                          v-if="
+                            isCurrentUserPlayer(player.id) &&
+                            !canShowChallengeIcon(
+                              ongoingTournament.id,
+                              field.value as 'FIELD_5' | 'FIELD_7',
+                              player,
+                            ) &&
+                            canCancelOwnField(
+                              ongoingTournament,
+                              field.value as 'FIELD_5' | 'FIELD_7',
+                            )
+                          "
+                          type="button"
+                          class="mr-1 inline-flex h-6 w-6 shrink-0 items-center justify-center rounded text-sm font-bold text-red-700 hover:bg-red-100"
+                          :disabled="attendanceLoading.has(ongoingTournament.id)"
+                          :title="`Hủy ${field.label}`"
+                          @click="
+                            cancelOwnField(
+                              ongoingTournament,
+                              field.value as 'FIELD_5' | 'FIELD_7',
+                            )
+                          "
+                        >
+                          ✕
+                        </button>
+                        <div
+                          class="mr-2 flex h-6 w-6 shrink-0 items-center justify-center overflow-hidden rounded-full bg-gray-300 text-xs font-medium"
+                        >
+                          <img
+                            v-if="player.avatar"
+                            :src="player.avatar"
+                            :alt="player.name"
+                            class="h-full w-full object-cover"
+                          /><span v-else>{{
+                            player.name.charAt(0).toUpperCase()
+                          }}</span>
+                        </div>
+                        <div class="min-w-0">
+                          <div class="truncate font-medium text-gray-900">
+                            {{ player.name }}
+                            <button
+                              v-if="player.challenge?.status === 'ACCEPTED'"
+                              type="button"
+                              class="ml-1 inline-flex animate-pulse align-middle text-sm"
+                              :class="
+                                isCurrentUsersAcceptedChallenge(
+                                  ongoingTournament.id,
+                                  player,
+                                )
+                                  ? 'cursor-pointer'
+                                  : 'cursor-default'
+                              "
+                              title="Đang thách đấu"
+                              @click="
+                                isCurrentUsersAcceptedChallenge(
+                                  ongoingTournament.id,
+                                  player,
+                                ) && openChallengeModal(ongoingTournament.id, player)
+                              "
+                            >
+                              ⚔️
+                            </button>
+                          </div>
+                          <div
+                            v-if="player.swapPending"
+                            class="truncate text-[10px] font-medium leading-4 text-amber-700"
+                          >
+                            Đang chờ swap
+                          </div>
+                          <div
+                            v-if="player.swapWaitlistPosition"
+                            class="truncate text-[10px] font-medium leading-4 text-violet-700"
+                          >
+                            Đang trong hàng chờ
+                            {{ player.swapWaitlistPosition }}
+                          </div>
+                          <div
+                            v-if="player.swappedWithName"
+                            class="truncate text-[10px] font-medium leading-4 text-emerald-700"
+                          >
+                            Đã swap với {{ player.swappedWithName }}
+                          </div>
+                          <div
+                            v-if="player.addedByUsername"
+                            class="truncate text-[10px] leading-4 text-gray-500"
+                          >
+                            Được thêm bởi {{ player.addedByUsername }}
+                          </div>
+                          <div
+                            v-if="player.friendOwnerName"
+                            class="truncate text-[10px] leading-4 text-blue-600"
+                          >
+                            Bạn của {{ player.friendOwnerName }}
+                          </div>
+                        </div>
+                        <span
+                          v-if="
+                            isPlayerWithWater(ongoingTournament.id, player.id)
+                          "
+                          class="ml-1"
+                          >💧</span
+                        >
+                      </div>
+                      <div
+                        class="ml-2 flex shrink-0 items-center text-gray-600"
+                      >
+                        <span
+                          class="mr-1 rounded px-1.5 py-0.5 text-xs"
+                          :class="
+                            isGoalkeeper(player.position)
+                              ? 'bg-green-100 font-semibold text-green-700'
+                              : ''
+                          "
+                          >{{ getPositionLabel(player.position)
+                          }}<template v-if="player.positionSecond"
+                            >-{{
+                              getPositionLabel(player.positionSecond)
+                            }}</template
+                          ></span
+                        ><span class="text-xs">T{{ player.tier }}</span>
+                      </div>
+                    </div>
+                  </div>
+                  <p v-else class="py-5 text-center text-sm text-gray-500">
+                    Chưa có cầu thủ.
+                  </p>
+                </div>
               </div>
             </div>
-            <div v-if="ongoingTournament.status === 'UPCOMING' && getTournamentTeams(ongoingTournament).length === 0" class="mt-4 rounded-lg border border-gray-200 bg-gray-50 p-4 lg:hidden">
-              <div class="mb-3 flex items-center justify-between"><div class="flex items-center gap-2"><h4 class="font-semibold text-gray-800">Cầu thủ tham gia</h4><button v-if="authStore.hasAnyRole(['admin', 'mod'])" type="button" class="rounded p-1 text-primary-600 hover:bg-primary-100 disabled:opacity-50" title="Làm mới danh sách cầu thủ" :disabled="refreshingAttendanceLists.has(ongoingTournament.id)" @click="refreshAttendanceList(ongoingTournament.id)"><svg class="h-4 w-4" :class="{ 'animate-spin': refreshingAttendanceLists.has(ongoingTournament.id) }" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0A8.003 8.003 0 014.582 15m15.356 0H15" /></svg></button></div><span class="text-xs text-gray-500">Chưa chia đội</span></div>
-              <div v-if="ongoingTournament.pitchType" class="mb-3 flex items-center justify-between border-b border-primary-600 px-3 py-2 text-sm font-medium text-primary-600"><span>{{ ongoingTournament.pitchType === 'FIELD_5' ? 'Sân 5' : 'Sân 7' }} ({{ getFieldAttendanceCount(ongoingTournament.id, ongoingTournament.pitchType) }})</span><button type="button" class="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary-100 text-xs text-primary-700" :title="`Xem cầu thủ chỉ đăng ký ${ongoingTournament.pitchType === 'FIELD_5' ? 'Sân 5' : 'Sân 7'}`" @click="openAttendanceModal(ongoingTournament.id, 'attending', ongoingTournament.pitchType, true)">!</button></div>
-              <div v-else class="mb-3 flex border-b border-gray-200"><button type="button" class="flex-1 border-b-2 px-3 py-2 text-sm font-medium" :class="mobileTeamPreviewField === 'FIELD_5' ? 'border-primary-600 text-primary-600' : 'border-transparent text-gray-500'" @click="mobileTeamPreviewField = 'FIELD_5'">Sân 5 ({{ getFieldAttendanceCount(ongoingTournament.id, 'FIELD_5') }})</button><button type="button" class="mr-2 inline-flex h-5 w-5 shrink-0 items-center justify-center self-center rounded-full bg-primary-100 text-xs text-primary-700" title="Xem cầu thủ chỉ đăng ký Sân 5" @click="openAttendanceModal(ongoingTournament.id, 'attending', 'FIELD_5', true)">!</button><button type="button" class="flex-1 border-b-2 px-3 py-2 text-sm font-medium" :class="mobileTeamPreviewField === 'FIELD_7' ? 'border-primary-600 text-primary-600' : 'border-transparent text-gray-500'" @click="mobileTeamPreviewField = 'FIELD_7'">Sân 7 ({{ getFieldAttendanceCount(ongoingTournament.id, 'FIELD_7') }})</button><button type="button" class="inline-flex h-5 w-5 shrink-0 items-center justify-center self-center rounded-full bg-primary-100 text-xs text-primary-700" title="Xem cầu thủ chỉ đăng ký Sân 7" @click="openAttendanceModal(ongoingTournament.id, 'attending', 'FIELD_7', true)">!</button></div>
-              <div v-if="getTeamPreviewPlayers(ongoingTournament.id, ongoingTournament.pitchType || mobileTeamPreviewField).length" class="space-y-2"><div v-for="player in getTeamPreviewPlayers(ongoingTournament.id, ongoingTournament.pitchType || mobileTeamPreviewField)" :key="player.id" class="flex items-center justify-between rounded bg-white p-2 text-sm" :class="{ 'bg-yellow-100': isPlayerBetting(ongoingTournament.id, player.id), 'border-2 border-red-500': isCurrentUserPlayer(player.id) }"><div class="flex min-w-0 items-center"><div class="mr-2 flex h-6 w-6 shrink-0 items-center justify-center overflow-hidden rounded-full bg-gray-300 text-xs font-medium"><img v-if="player.avatar" :src="player.avatar" :alt="player.name" class="h-full w-full object-cover"><span v-else>{{ player.name.charAt(0).toUpperCase() }}</span></div><div class="min-w-0"><div class="truncate font-medium text-gray-900">{{ player.name }}</div><div v-if="player.swapPending" class="truncate text-[10px] font-medium leading-4 text-amber-700">Đang chờ swap</div><div v-if="player.swapWaitlistPosition" class="truncate text-[10px] font-medium leading-4 text-violet-700">Đang trong hàng chờ {{ player.swapWaitlistPosition }}</div><div v-if="player.swappedWithName" class="truncate text-[10px] font-medium leading-4 text-emerald-700">Đã swap với {{ player.swappedWithName }}</div><div v-if="player.addedByUsername" class="truncate text-[10px] leading-4 text-gray-500">Được thêm bởi {{ player.addedByUsername }}</div><div v-if="player.friendOwnerName" class="truncate text-[10px] leading-4 text-blue-600">Bạn của {{ player.friendOwnerName }}</div></div><span v-if="isPlayerWithWater(ongoingTournament.id, player.id)" class="ml-1">💧</span></div><div class="ml-2 flex shrink-0 items-center text-gray-600"><span class="mr-1 rounded px-1.5 py-0.5 text-xs" :class="isGoalkeeper(player.position) ? 'bg-green-100 font-semibold text-green-700' : ''">{{ getPositionLabel(player.position) }}</span><span class="text-xs">T{{ player.tier }}</span></div></div></div><p v-else class="py-5 text-center text-sm text-gray-500">Chưa có cầu thủ.</p>
+            <div
+              v-if="
+                ongoingTournament.status === 'UPCOMING' &&
+                getTournamentTeams(ongoingTournament).length === 0
+              "
+              class="mt-4 rounded-lg border border-gray-200 bg-gray-50 p-4 lg:hidden"
+            >
+              <div class="mb-3 flex items-center justify-between">
+                <div class="flex items-center gap-2">
+                  <h4 class="font-semibold text-gray-800">Cầu thủ tham gia</h4>
+                  <button
+                    v-if="authStore.hasAnyRole(['admin', 'mod'])"
+                    type="button"
+                    class="rounded p-1 text-primary-600 hover:bg-primary-100 disabled:opacity-50"
+                    title="Làm mới danh sách cầu thủ"
+                    :disabled="
+                      refreshingAttendanceLists.has(ongoingTournament.id)
+                    "
+                    @click="refreshAttendanceList(ongoingTournament.id)"
+                  >
+                    <svg
+                      class="h-4 w-4"
+                      :class="{
+                        'animate-spin': refreshingAttendanceLists.has(
+                          ongoingTournament.id,
+                        ),
+                      }"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0A8.003 8.003 0 014.582 15m15.356 0H15"
+                      />
+                    </svg>
+                  </button>
+                </div>
+                <span class="text-xs text-gray-500">Chưa chia đội</span>
+              </div>
+              <div
+                v-if="ongoingTournament.pitchType"
+                class="mb-3 flex items-center justify-between border-b border-primary-600 px-3 py-2 text-sm font-medium text-primary-600"
+              >
+                <span
+                  >{{
+                    ongoingTournament.pitchType === "FIELD_5"
+                      ? "Sân 5"
+                      : "Sân 7"
+                  }}
+                  ({{
+                    getFieldAttendanceCount(
+                      ongoingTournament.id,
+                      ongoingTournament.pitchType,
+                    )
+                  }})</span
+                ><button
+                  type="button"
+                  class="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary-100 text-xs text-primary-700"
+                  :title="`Xem cầu thủ chỉ đăng ký ${ongoingTournament.pitchType === 'FIELD_5' ? 'Sân 5' : 'Sân 7'}`"
+                  @click="
+                    openAttendanceModal(
+                      ongoingTournament.id,
+                      'attending',
+                      ongoingTournament.pitchType,
+                      true,
+                    )
+                  "
+                >
+                  !
+                </button>
+              </div>
+              <div v-else class="mb-3 flex border-b border-gray-200">
+                <button
+                  type="button"
+                  class="flex-1 border-b-2 px-3 py-2 text-sm font-medium"
+                  :class="
+                    mobileTeamPreviewField === 'FIELD_5'
+                      ? 'border-primary-600 text-primary-600'
+                      : 'border-transparent text-gray-500'
+                  "
+                  @click="mobileTeamPreviewField = 'FIELD_5'"
+                >
+                  Sân 5 ({{
+                    getFieldAttendanceCount(ongoingTournament.id, "FIELD_5")
+                  }})</button
+                ><button
+                  type="button"
+                  class="mr-2 inline-flex h-5 w-5 shrink-0 items-center justify-center self-center rounded-full bg-primary-100 text-xs text-primary-700"
+                  title="Xem cầu thủ chỉ đăng ký Sân 5"
+                  @click="
+                    openAttendanceModal(
+                      ongoingTournament.id,
+                      'attending',
+                      'FIELD_5',
+                      true,
+                    )
+                  "
+                >
+                  !</button
+                ><button
+                  type="button"
+                  class="flex-1 border-b-2 px-3 py-2 text-sm font-medium"
+                  :class="
+                    mobileTeamPreviewField === 'FIELD_7'
+                      ? 'border-primary-600 text-primary-600'
+                      : 'border-transparent text-gray-500'
+                  "
+                  @click="mobileTeamPreviewField = 'FIELD_7'"
+                >
+                  Sân 7 ({{
+                    getFieldAttendanceCount(ongoingTournament.id, "FIELD_7")
+                  }})</button
+                ><button
+                  type="button"
+                  class="inline-flex h-5 w-5 shrink-0 items-center justify-center self-center rounded-full bg-primary-100 text-xs text-primary-700"
+                  title="Xem cầu thủ chỉ đăng ký Sân 7"
+                  @click="
+                    openAttendanceModal(
+                      ongoingTournament.id,
+                      'attending',
+                      'FIELD_7',
+                      true,
+                    )
+                  "
+                >
+                  !
+                </button>
+              </div>
+              <div
+                v-if="
+                  getTeamPreviewPlayers(
+                    ongoingTournament.id,
+                    ongoingTournament.pitchType || mobileTeamPreviewField,
+                  ).length
+                "
+                class="space-y-2"
+              >
+                <div
+                  v-for="player in getTeamPreviewPlayers(
+                    ongoingTournament.id,
+                    ongoingTournament.pitchType || mobileTeamPreviewField,
+                  )"
+                  :key="player.id"
+                  class="flex items-center justify-between rounded bg-white p-2 text-sm"
+                  :class="{
+                    'bg-yellow-100': isPlayerBetting(
+                      ongoingTournament.id,
+                      player.id,
+                    ),
+                    'border-2 border-red-500': isCurrentUserPlayer(player.id),
+                  }"
+                >
+                  <div class="flex min-w-0 items-center">
+                    <div
+                      class="mr-2 flex h-6 w-6 shrink-0 items-center justify-center overflow-hidden rounded-full bg-gray-300 text-xs font-medium"
+                    >
+                      <img
+                        v-if="player.avatar"
+                        :src="player.avatar"
+                        :alt="player.name"
+                        class="h-full w-full object-cover"
+                      /><span v-else>{{
+                        player.name.charAt(0).toUpperCase()
+                      }}</span>
+                    </div>
+                    <div class="min-w-0">
+                      <div class="truncate font-medium text-gray-900">
+                        {{ player.name }}
+                      </div>
+                      <div
+                        v-if="player.swapPending"
+                        class="truncate text-[10px] font-medium leading-4 text-amber-700"
+                      >
+                        Đang chờ swap
+                      </div>
+                      <div
+                        v-if="player.swapWaitlistPosition"
+                        class="truncate text-[10px] font-medium leading-4 text-violet-700"
+                      >
+                        Đang trong hàng chờ {{ player.swapWaitlistPosition }}
+                      </div>
+                      <div
+                        v-if="player.swappedWithName"
+                        class="truncate text-[10px] font-medium leading-4 text-emerald-700"
+                      >
+                        Đã swap với {{ player.swappedWithName }}
+                      </div>
+                      <div
+                        v-if="player.addedByUsername"
+                        class="truncate text-[10px] leading-4 text-gray-500"
+                      >
+                        Được thêm bởi {{ player.addedByUsername }}
+                      </div>
+                      <div
+                        v-if="player.friendOwnerName"
+                        class="truncate text-[10px] leading-4 text-blue-600"
+                      >
+                        Bạn của {{ player.friendOwnerName }}
+                      </div>
+                    </div>
+                    <span
+                      v-if="isPlayerWithWater(ongoingTournament.id, player.id)"
+                      class="ml-1"
+                      >💧</span
+                    >
+                  </div>
+                  <div class="ml-2 flex shrink-0 items-center text-gray-600">
+                    <span
+                      class="mr-1 rounded px-1.5 py-0.5 text-xs"
+                      :class="
+                        isGoalkeeper(player.position)
+                          ? 'bg-green-100 font-semibold text-green-700'
+                          : ''
+                      "
+                      >{{ getPositionLabel(player.position) }}</span
+                    ><span class="text-xs">T{{ player.tier }}</span>
+                  </div>
+                </div>
+              </div>
+              <p v-else class="py-5 text-center text-sm text-gray-500">
+                Chưa có cầu thủ.
+              </p>
             </div>
-            <p v-if="ongoingTournament.selfFunded" class="mt-3 border-t border-violet-100 pt-3 text-center text-sm font-medium text-violet-700">
+            <p
+              v-if="ongoingTournament.selfFunded"
+              class="mt-3 border-t border-violet-100 pt-3 text-center text-sm font-medium text-violet-700"
+            >
               Giải này không ảnh hưởng đến Tiền Quỹ và không trừ tiền của user.
             </p>
 
             <div
-              v-if="(authStore.hasRole('admin') && getTournamentTeams(ongoingTournament).length > 0) || (authStore.hasAnyRole(['admin', 'mod']) && ongoingTournament.status !== 'COMPLETED') || (authStore.hasPermission('canDeleteTournaments') && ongoingTournament.status !== 'COMPLETED')"
+              v-if="
+                (authStore.hasRole('admin') &&
+                  getTournamentTeams(ongoingTournament).length > 0) ||
+                (authStore.hasAnyRole(['admin', 'mod']) &&
+                  ongoingTournament.status !== 'COMPLETED') ||
+                (authStore.hasPermission('canDeleteTournaments') &&
+                  ongoingTournament.status !== 'COMPLETED')
+              "
               class="flex flex-col items-stretch gap-3 pt-2 border-t border-gray-200 sm:flex-row sm:flex-wrap sm:justify-end sm:[&>button]:w-auto [&>button]:w-full"
             >
-              <button v-if="authStore.hasRole('admin') && !ongoingTournament.selfFunded && getTournamentTeams(ongoingTournament).length > 0" @click="openAdditionalCostModal(ongoingTournament)" class="btn-secondary">Chi phí phát sinh</button>
               <button
-                v-if="authStore.hasAnyRole(['admin', 'mod']) && ongoingTournament.status !== 'COMPLETED' && !ongoingTournament.selfFunded"
+                v-if="
+                  authStore.hasRole('admin') &&
+                  !ongoingTournament.selfFunded &&
+                  getTournamentTeams(ongoingTournament).length > 0
+                "
+                @click="openAdditionalCostModal(ongoingTournament)"
+                class="btn-secondary"
+              >
+                Chi phí phát sinh
+              </button>
+              <button
+                v-if="
+                  authStore.hasAnyRole(['admin', 'mod']) &&
+                  ongoingTournament.status !== 'COMPLETED' &&
+                  !ongoingTournament.selfFunded
+                "
                 @click="openFundContributionModal(ongoingTournament)"
                 class="btn-secondary"
               >
                 Trích quỹ
               </button>
-              <button v-if="authStore.hasAnyRole(['admin', 'mod']) && ongoingTournament.status === 'UPCOMING'" @click="openPitchTypeModal(ongoingTournament)" class="btn-secondary">Chọn sân</button>
-              <button v-if="authStore.hasAnyRole(['admin', 'mod']) && ongoingTournament.status === 'UPCOMING'" @click="openMaxAttendanceModal(ongoingTournament)" class="btn-secondary">Số lượng cầu thủ</button>
               <button
-                v-if="authStore.hasPermission('canDeleteTournaments') && ongoingTournament.status !== 'COMPLETED' && !ongoingTournament.isProtected && getTournamentTeams(ongoingTournament).length === 0"
+                v-if="
+                  authStore.hasAnyRole(['admin', 'mod']) &&
+                  ongoingTournament.status === 'UPCOMING'
+                "
+                @click="openPitchTypeModal(ongoingTournament)"
+                class="btn-secondary"
+              >
+                Chọn sân
+              </button>
+              <button
+                v-if="
+                  authStore.hasAnyRole(['admin', 'mod']) &&
+                  ongoingTournament.status === 'UPCOMING'
+                "
+                @click="openMaxAttendanceModal(ongoingTournament)"
+                class="btn-secondary"
+              >
+                Số lượng cầu thủ
+              </button>
+              <button
+                v-if="
+                  authStore.hasPermission('canDeleteTournaments') &&
+                  ongoingTournament.status !== 'COMPLETED' &&
+                  !ongoingTournament.isProtected &&
+                  getTournamentTeams(ongoingTournament).length === 0
+                "
                 @click="deleteTournament(ongoingTournament.id)"
                 class="px-4 py-2 rounded-lg font-medium bg-red-600 text-white hover:bg-red-700 transition-colors"
               >
@@ -506,157 +1722,321 @@
         </div>
         <div v-else class="text-center py-8">
           <p class="text-gray-600">Không có giải hằng tuần đang diễn ra</p>
-          <p class="text-sm text-gray-500 mt-1">Giải tiếp theo: {{ formatNextMonday(nextMonday) }}</p>
+          <p class="text-sm text-gray-500 mt-1">
+            Giải tiếp theo: {{ formatNextMonday(nextMonday) }}
+          </p>
         </div>
 
         <div class="card mt-4 sm:mt-6">
           <div class="flex items-start gap-3">
-            <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-purple-100 text-purple-700">⚖️</div>
+            <div
+              class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-purple-100 text-purple-700"
+            >
+              ⚖️
+            </div>
             <div>
-              <h3 class="text-lg font-semibold text-gray-900">Logic chia đội</h3>
-              <p class="mt-1 text-sm text-gray-600">Hệ thống ưu tiên số lượng cầu thủ, vị trí thủ môn và sức mạnh đội hình để tạo các đội cân bằng nhất có thể.</p>
+              <h3 class="text-lg font-semibold text-gray-900">
+                Logic chia đội
+              </h3>
+              <p class="mt-1 text-sm text-gray-600">
+                Hệ thống ưu tiên số lượng cầu thủ, vị trí thủ môn và sức mạnh
+                đội hình để tạo các đội cân bằng nhất có thể.
+              </p>
             </div>
           </div>
           <div class="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <div class="rounded-lg border border-gray-200 bg-gray-50 p-4"><h4 class="font-semibold text-gray-900">1. Điều kiện và số đội</h4><p class="mt-1 text-sm text-gray-600">Cần ít nhất 12 cầu thủ đăng ký Sân 5 hoặc 16 cầu thủ đăng ký Sân 7. Admin/mod chọn 2, 3 hoặc 4 đội; số cầu thủ giữa các đội được phân bổ chênh lệch tối đa 1 người.</p></div>
-            <div class="rounded-lg border border-gray-200 bg-gray-50 p-4"><h4 class="font-semibold text-gray-900">2. Phân bổ thủ môn</h4><p class="mt-1 text-sm text-gray-600">Thủ môn được xếp trước, ưu tiên mỗi đội một GK. GK còn lại được đưa vào đội có ít GK nhất để giữ cân bằng vị trí.</p></div>
-            <div class="rounded-lg border border-gray-200 bg-gray-50 p-4"><h4 class="font-semibold text-gray-900">3. Ưu tiên Tier 1 và Tier 2</h4><p class="mt-1 text-sm text-gray-600">Tier 1 và Tier 2 là cầu thủ mạnh, được chia trước theo thứ tự Tier 1 rồi Tier 2. Khi chia Tier 2, đội có ít Tier 1 hơn sẽ được ưu tiên trước.</p></div>
-            <div class="rounded-lg border border-gray-200 bg-gray-50 p-4"><h4 class="font-semibold text-gray-900">4. Cân bằng cuối cùng</h4><p class="mt-1 text-sm text-gray-600">Các Tier 3–6 được xếp theo sức chứa và tổng Tier. Sau đó hệ thống đổi tối đa 100 cặp cầu thủ phù hợp để giảm chênh lệch Tier trung bình; Tier 1/2 và GK chính được giữ ổn định.</p></div>
+            <div class="rounded-lg border border-gray-200 bg-gray-50 p-4">
+              <h4 class="font-semibold text-gray-900">
+                1. Điều kiện và số đội
+              </h4>
+              <p class="mt-1 text-sm text-gray-600">
+                Cần ít nhất 12 cầu thủ đăng ký Sân 5 hoặc 16 cầu thủ đăng ký Sân
+                7. Admin/mod chọn 2, 3 hoặc 4 đội; số cầu thủ giữa các đội được
+                phân bổ chênh lệch tối đa 1 người.
+              </p>
+            </div>
+            <div class="rounded-lg border border-gray-200 bg-gray-50 p-4">
+              <h4 class="font-semibold text-gray-900">2. Phân bổ thủ môn</h4>
+              <p class="mt-1 text-sm text-gray-600">
+                Thủ môn được xếp trước, ưu tiên mỗi đội một GK. GK còn lại được
+                đưa vào đội có ít GK nhất để giữ cân bằng vị trí.
+              </p>
+            </div>
+            <div class="rounded-lg border border-gray-200 bg-gray-50 p-4">
+              <h4 class="font-semibold text-gray-900">
+                3. Ưu tiên Tier 1 và Tier 2
+              </h4>
+              <p class="mt-1 text-sm text-gray-600">
+                Tier 1 và Tier 2 là cầu thủ mạnh, được chia trước theo thứ tự
+                Tier 1 rồi Tier 2. Khi chia Tier 2, đội có ít Tier 1 hơn sẽ được
+                ưu tiên trước.
+              </p>
+            </div>
+            <div class="rounded-lg border border-gray-200 bg-gray-50 p-4">
+              <h4 class="font-semibold text-gray-900">4. Cân bằng cuối cùng</h4>
+              <p class="mt-1 text-sm text-gray-600">
+                Các Tier 3–6 được xếp theo sức chứa và tổng Tier. Sau đó hệ
+                thống đổi tối đa 100 cặp cầu thủ phù hợp để giảm chênh lệch Tier
+                trung bình; Tier 1/2 và GK chính được giữ ổn định.
+              </p>
+            </div>
           </div>
-          <p class="mt-4 text-xs text-gray-500">Trong cùng một Tier, thứ tự cầu thủ được xáo trộn để kết quả mỗi lần chia đội không hoàn toàn giống nhau.</p>
+          <p class="mt-4 text-xs text-gray-500">
+            Trong cùng một Tier, thứ tự cầu thủ được xáo trộn để kết quả mỗi lần
+            chia đội không hoàn toàn giống nhau.
+          </p>
         </div>
       </div>
 
       <!-- Old Tournaments Tab -->
       <div v-else-if="activeFilter === 'Giải đấu cũ'">
         <div class="mb-4 flex justify-end">
-          <button type="button" class="btn-secondary" @click="openOldTournamentDateModal">
-            {{ oldTournamentDateFilter ? `Ngày: ${formatOldTournamentFilterDate(oldTournamentDateFilter)}` : 'Lọc theo ngày' }}
+          <button
+            type="button"
+            class="btn-secondary"
+            @click="openOldTournamentDateModal"
+          >
+            {{
+              oldTournamentDateFilter
+                ? `Ngày: ${formatOldTournamentFilterDate(oldTournamentDateFilter)}`
+                : "Lọc theo ngày"
+            }}
           </button>
         </div>
         <div class="space-y-3 sm:space-y-4">
           <div
-            v-for="tournament in selectedOldTournament ? [selectedOldTournament] : []"
+            v-for="tournament in selectedOldTournament
+              ? [selectedOldTournament]
+              : []"
             :key="tournament.id"
             class="card transition-colors duration-200"
             :class="getCardBackgroundClass(tournament.id)"
           >
             <div class="flex flex-col space-y-4">
               <!-- Tournament Info -->
-              <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between space-y-3 sm:space-y-0">
+              <div
+                class="flex flex-col sm:flex-row sm:items-start sm:justify-between space-y-3 sm:space-y-0"
+              >
                 <div class="flex-1">
-                  <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between">
+                  <div
+                    class="flex flex-col sm:flex-row sm:items-center sm:justify-between"
+                  >
                     <div class="flex min-w-0 flex-wrap items-center gap-2">
-                      <h3 class="text-lg font-semibold text-gray-900">{{ tournament.name }}</h3>
-                      <span class="inline-flex shrink-0 whitespace-nowrap rounded-full bg-primary-100 px-2 py-0.5 text-xs font-medium text-primary-700">{{ tournament.pitchType === 'FIELD_5' ? 'Sân 5' : 'Sân 7' }}</span>
+                      <h3 class="text-lg font-semibold text-gray-900">
+                        {{ tournament.name }}
+                      </h3>
+                      <span
+                        class="inline-flex shrink-0 whitespace-nowrap rounded-full bg-primary-100 px-2 py-0.5 text-xs font-medium text-primary-700"
+                        >{{
+                          tournament.pitchType === "FIELD_5" ? "Sân 5" : "Sân 7"
+                        }}</span
+                      >
                     </div>
                     <!-- Action buttons moved to top right - hide money icon if no teams -->
                     <div class="flex items-center space-x-2 mt-2 sm:mt-0">
                       <button
-                        v-if="authStore.hasPermission('canDeleteTournaments') && tournament.status !== 'COMPLETED' && !tournament.isProtected"
+                        v-if="
+                          authStore.hasPermission('canDeleteTournaments') &&
+                          tournament.status !== 'COMPLETED' &&
+                          !tournament.isProtected
+                        "
                         @click="deleteTournament(tournament.id)"
                         class="text-red-600 hover:text-red-800"
                       >
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        <svg
+                          class="w-5 h-5"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            stroke-width="2"
+                            d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                          />
                         </svg>
                       </button>
                     </div>
                   </div>
                   <!-- Badge and Date/Time moved below title -->
-                  <div class="flex flex-wrap items-center gap-2 mt-2 text-sm text-gray-600">
-                    <span class="inline-flex items-center rounded-full bg-primary-100 px-2 py-1 text-xs font-semibold text-primary-800">{{ formatTime(tournament.startDate) }}</span>
-                    <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium"
-                          :class="getStatusBadge(tournament.status)">
+                  <div
+                    class="flex flex-wrap items-center gap-2 mt-2 text-sm text-gray-600"
+                  >
+                    <span
+                      class="inline-flex items-center rounded-full bg-primary-100 px-2 py-1 text-xs font-semibold text-primary-800"
+                      >{{ formatTime(tournament.startDate) }}</span
+                    >
+                    <span
+                      class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium"
+                      :class="getStatusBadge(tournament.status)"
+                    >
                       {{ tournament.status }}
                     </span>
-                    <span v-if="tournament.selfFunded" class="inline-flex items-center rounded-full bg-violet-100 px-3 py-1 text-xs font-semibold uppercase text-violet-700">🤝 Tự túc</span>
-                    <span v-if="tournament.winner" class="text-yellow-600 font-medium">
+                    <span
+                      v-if="tournament.selfFunded"
+                      class="inline-flex items-center rounded-full bg-violet-100 px-3 py-1 text-xs font-semibold uppercase text-violet-700"
+                      >🤝 Tự túc</span
+                    >
+                    <span
+                      v-if="tournament.winner"
+                      class="text-yellow-600 font-medium"
+                    >
                       🏆 {{ tournament.winner.name }}
                     </span>
                   </div>
                   <!-- Financial Information or Postponed Status -->
-                  <div v-if="getTournamentTeams(tournament).length > 0" class="mt-2">
-                    <div v-if="systemStore.currentSettings" class="flex flex-wrap items-center gap-4 text-sm">
-                      <span v-if="!tournament.selfFunded" class="text-green-600 font-medium">
-                        💰 Sponsor: {{ formatMoney(getTournamentSponsorMoney(tournament)) }}
+                  <div
+                    v-if="getTournamentTeams(tournament).length > 0"
+                    class="mt-2"
+                  >
+                    <div
+                      v-if="systemStore.currentSettings"
+                      class="flex flex-wrap items-center gap-4 text-sm"
+                    >
+                      <span
+                        v-if="!tournament.selfFunded"
+                        class="text-green-600 font-medium"
+                      >
+                        💰 Sponsor:
+                        {{ formatMoney(getTournamentSponsorMoney(tournament)) }}
                       </span>
                       <span class="text-red-600 font-medium">
-                        🏟️ Sân: {{ formatMoney(getTournamentStadiumCost(tournament)) }}
+                        🏟️ Sân:
+                        {{ formatMoney(getTournamentStadiumCost(tournament)) }}
                       </span>
-                    <span v-for="cost in getTournamentAdditionalCosts(tournament.id)" :key="cost.id" class="text-orange-600 font-medium">
-                      💸 {{ cost.description }}: {{ formatMoney(cost.amount) }}
-                    </span>
-                      <span v-if="getTournamentFundContribution(tournament) > 0" class="text-indigo-600 font-medium">
-                        🏦 Trích quỹ: {{ formatMoney(getTournamentFundContribution(tournament)) }}
+                      <span
+                        v-for="cost in getTournamentAdditionalCosts(
+                          tournament.id,
+                        )"
+                        :key="cost.id"
+                        class="text-orange-600 font-medium"
+                      >
+                        💸 {{ cost.description }}:
+                        {{ formatMoney(cost.amount) }}
+                      </span>
+                      <span
+                        v-if="getTournamentFundContribution(tournament) > 0"
+                        class="text-indigo-600 font-medium"
+                      >
+                        🏦 Trích quỹ:
+                        {{
+                          formatMoney(getTournamentFundContribution(tournament))
+                        }}
                       </span>
                       <span class="text-blue-600 font-medium">
-                        📊 Tổng: {{ formatMoney(calculateTournamentNet(tournament.id)) }}
+                        📊 Tổng:
+                        {{ formatMoney(calculateTournamentNet(tournament.id)) }}
                       </span>
-                      <span v-if="getAttendanceStats(tournament.id)?.attendingCount" class="text-purple-600 font-medium">
-                        👥 Chi phí mỗi cháu: {{ formatMoney(calculateCostPerPlayer(tournament.id)) }}
+                      <span
+                        v-if="getAttendanceStats(tournament.id)?.attendingCount"
+                        class="text-purple-600 font-medium"
+                      >
+                        👥 Chi phí mỗi cháu:
+                        {{ formatMoney(calculateCostPerPlayer(tournament.id)) }}
                       </span>
                     </div>
                   </div>
                   <div v-else class="mt-2">
-                    <div class="text-red-600 font-bold text-2xl">
-                      POSTPONED
-                    </div>
+                    <div class="text-red-600 font-bold text-2xl">POSTPONED</div>
                   </div>
                 </div>
               </div>
-              
+
               <!-- Attendance Progress Bar -->
-              <div v-if="attendanceStats.has(tournament.id)" class="mt-4 p-4 bg-gradient-to-r from-blue-50 to-green-50 rounded-lg border border-gray-200">
+              <div
+                v-if="attendanceStats.has(tournament.id)"
+                class="mt-4 p-4 bg-gradient-to-r from-blue-50 to-green-50 rounded-lg border border-gray-200"
+              >
                 <div class="flex justify-between items-center mb-3">
-                  <span class="text-sm font-semibold text-gray-800">Điểm danh cầu thủ</span>
-                  <span class="text-sm font-medium text-gray-700 bg-white px-2 py-1 rounded-full">
-                    {{ getHighestFieldAttendanceCount(tournament.id) }} / {{ getAttendanceStats(tournament.id)?.totalPlayers || 0 }}
+                  <span class="text-sm font-semibold text-gray-800"
+                    >Điểm danh cầu thủ</span
+                  >
+                  <span
+                    class="text-sm font-medium text-gray-700 bg-white px-2 py-1 rounded-full"
+                  >
+                    {{ getHighestFieldAttendanceCount(tournament.id) }} /
+                    {{ getAttendanceStats(tournament.id)?.totalPlayers || 0 }}
                   </span>
                 </div>
-                <div class="w-full bg-gray-200 rounded-full h-4 mb-3 shadow-inner">
-                  <div 
+                <div
+                  class="w-full bg-gray-200 rounded-full h-4 mb-3 shadow-inner"
+                >
+                  <div
                     class="bg-gradient-to-r from-green-500 to-green-600 h-4 rounded-full transition-all duration-700 ease-out shadow-sm relative overflow-hidden"
-                    :style="{ width: `${getAttendancePercentage(tournament.id)}%` }"
+                    :style="{
+                      width: `${getAttendancePercentage(tournament.id)}%`,
+                    }"
                   >
-                    <div class="absolute inset-0 bg-white/20 animate-pulse"></div>
+                    <div
+                      class="absolute inset-0 bg-white/20 animate-pulse"
+                    ></div>
                   </div>
                 </div>
-                <div class="grid gap-2 text-xs" :class="tournament.selfFunded ? 'grid-cols-1' : 'grid-cols-3'">
-                  <button 
+                <div
+                  class="grid gap-2 text-xs"
+                  :class="tournament.selfFunded ? 'grid-cols-1' : 'grid-cols-3'"
+                >
+                  <button
                     @click="openAttendanceModal(tournament.id, 'attending')"
                     class="text-center p-2 bg-green-100 rounded-lg hover:bg-green-200 transition-colors cursor-pointer"
                   >
-                    <div class="font-semibold text-green-800">{{ getHighestFieldAttendanceCount(tournament.id) }}</div>
+                    <div class="font-semibold text-green-800">
+                      {{ getHighestFieldAttendanceCount(tournament.id) }}
+                    </div>
                     <div class="text-green-600">Tham gia</div>
                   </button>
-                <button v-if="!tournament.selfFunded"
-                  @click="openAttendanceModal(tournament.id, 'water')"
-                  class="text-center p-2 bg-blue-100 rounded-lg hover:bg-blue-200 transition-colors cursor-pointer"
-                >
-                  <div class="font-semibold text-blue-800">{{ getWaterCount(tournament.id) }}</div>
-                  <div class="text-blue-600">Uống nước</div>
-                </button>
-                  <button v-if="!tournament.selfFunded"
+                  <button
+                    v-if="!tournament.selfFunded"
+                    @click="openAttendanceModal(tournament.id, 'water')"
+                    class="text-center p-2 bg-blue-100 rounded-lg hover:bg-blue-200 transition-colors cursor-pointer"
+                  >
+                    <div class="font-semibold text-blue-800">
+                      {{ getWaterCount(tournament.id) }}
+                    </div>
+                    <div class="text-blue-600">Uống nước</div>
+                  </button>
+                  <button
+                    v-if="!tournament.selfFunded"
                     @click="openAttendanceModal(tournament.id, 'betting')"
                     class="text-center p-2 bg-yellow-100 rounded-lg hover:bg-yellow-200 transition-colors cursor-pointer"
                   >
-                    <div class="font-semibold text-yellow-800">{{ getBettingCount(tournament.id) }}</div>
+                    <div class="font-semibold text-yellow-800">
+                      {{ getBettingCount(tournament.id) }}
+                    </div>
                     <div class="text-yellow-600">Ngôi sao hy vọng</div>
                   </button>
                 </div>
               </div>
 
               <!-- Tournament Teams Display -->
-              <div v-if="getTournamentTeams(tournament).length > 0" class="mt-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
-                <h4 class="text-lg font-semibold text-gray-800 mb-3 flex items-center">
-                  <svg class="w-5 h-5 mr-2 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.196-2.196M5 20h5v-2a3 3 0 015.196-2.196M12 4v.01M12 4a7 7 0 018 7c0 2-1 3-1 3s-1 1-1 3v2H8v-2s-1-1-1-3c0-2 1-3 1-3a7 7 0 018-7z" />
+              <div
+                v-if="getTournamentTeams(tournament).length > 0"
+                class="mt-4 p-4 bg-gray-50 rounded-lg border border-gray-200"
+              >
+                <h4
+                  class="text-lg font-semibold text-gray-800 mb-3 flex items-center"
+                >
+                  <svg
+                    class="w-5 h-5 mr-2 text-blue-600"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M17 20h5v-2a3 3 0 00-5.196-2.196M5 20h5v-2a3 3 0 015.196-2.196M12 4v.01M12 4a7 7 0 018 7c0 2-1 3-1 3s-1 1-1 3v2H8v-2s-1-1-1-3c0-2 1-3 1-3a7 7 0 018-7z"
+                    />
                   </svg>
                   Đội thi đấu ({{ getTournamentTeams(tournament).length }})
                 </h4>
-                
-                <div class="grid gap-4" :class="teamGridClass(getTournamentTeams(tournament).length)">
+
+                <div
+                  class="grid gap-4"
+                  :class="teamGridClass(getTournamentTeams(tournament).length)"
+                >
                   <div
                     v-for="team in getTournamentTeams(tournament)"
                     :key="team.id"
@@ -665,38 +2045,89 @@
                   >
                     <!-- Team Header -->
                     <div class="flex items-center mb-3">
-                      <div class="w-10 h-10 rounded-full flex items-center justify-center mr-3" :class="getTeamNumberClass(team.name)">
-                        <span class="text-white font-bold text-lg">{{ getTeamNumber(team.name) }}</span>
+                      <div
+                        class="w-10 h-10 rounded-full flex items-center justify-center mr-3"
+                        :class="getTeamNumberClass(team.name)"
+                      >
+                        <span class="text-white font-bold text-lg">{{
+                          getTeamNumber(team.name)
+                        }}</span>
                       </div>
                       <div class="flex-1">
                         <div class="flex items-center">
-                          <h5 class="font-semibold text-gray-900">{{ displayTeamName(team.name) }} <span class="text-sm font-medium" :class="getTeamTextClass(team.name)">- {{ getTeamJerseyLabel(team.name) }}</span></h5>
+                          <h5 class="font-semibold text-gray-900">
+                            {{ displayTeamName(team.name) }}
+                            <span
+                              class="text-sm font-medium"
+                              :class="getTeamTextClass(team.name)"
+                              >- {{ getTeamJerseyLabel(team.name) }}</span
+                            >
+                          </h5>
                         </div>
-                        <p class="text-sm text-gray-600">{{ team.players?.length || 0 }} cầu thủ</p>
+                        <p class="text-sm text-gray-600">
+                          {{ team.players?.length || 0 }} cầu thủ
+                        </p>
                       </div>
                     </div>
 
                     <!-- Team Players -->
-                    <div v-if="team.players && team.players.length > 0" class="space-y-2">
+                    <div
+                      v-if="team.players && team.players.length > 0"
+                      class="space-y-2"
+                    >
                       <div
                         v-for="player in team.players"
                         :key="player.id"
                         class="flex items-center justify-between p-2 bg-gray-50 rounded text-sm"
                         :class="{
-                          'bg-yellow-100': isPlayerBetting(tournament.id, player.id),
-                          'border-2 border-red-500': isCurrentUserPlayer(player.id),
+                          'bg-yellow-100': isPlayerBetting(
+                            tournament.id,
+                            player.id,
+                          ),
+                          'border-2 border-red-500': isCurrentUserPlayer(
+                            player.id,
+                          ),
                         }"
                       >
                         <div class="flex items-center">
-                          <div class="w-6 h-6 shrink-0 overflow-hidden bg-gray-300 rounded-full flex items-center justify-center mr-2 text-xs font-medium">
-                            <img v-if="player.avatar" :src="player.avatar" :alt="player.name" class="h-full w-full object-cover">
-                            <span v-else>{{ player.name.charAt(0).toUpperCase() }}</span>
+                          <div
+                            class="w-6 h-6 shrink-0 overflow-hidden bg-gray-300 rounded-full flex items-center justify-center mr-2 text-xs font-medium"
+                          >
+                            <img
+                              v-if="player.avatar"
+                              :src="player.avatar"
+                              :alt="player.name"
+                              class="h-full w-full object-cover"
+                            />
+                            <span v-else>{{
+                              player.name.charAt(0).toUpperCase()
+                            }}</span>
                           </div>
-                          <span class="font-medium text-gray-900">{{ player.name }}</span>
-                          <span v-if="isPlayerWithWater(tournament.id, player.id)" class="ml-1" title="Đã đăng ký uống nước">💧</span>
+                          <span class="font-medium text-gray-900">{{
+                            player.name
+                          }}</span>
+                          <span
+                            v-if="isPlayerWithWater(tournament.id, player.id)"
+                            class="ml-1"
+                            title="Đã đăng ký uống nước"
+                            >💧</span
+                          >
                         </div>
                         <div class="flex items-center text-gray-600">
-                          <span class="text-xs mr-1 px-1.5 py-0.5 rounded" :class="isTeamGoalkeeper(team.players, player) ? 'bg-green-100 text-green-700 font-semibold' : ''">{{ getPositionLabel(player.position) }}<template v-if="player.positionSecond">-{{ getPositionLabel(player.positionSecond) }}</template></span>
+                          <span
+                            class="text-xs mr-1 px-1.5 py-0.5 rounded"
+                            :class="
+                              isTeamGoalkeeper(team.players, player)
+                                ? 'bg-green-100 text-green-700 font-semibold'
+                                : ''
+                            "
+                            >{{ getPositionLabel(player.position)
+                            }}<template v-if="player.positionSecond"
+                              >-{{
+                                getPositionLabel(player.positionSecond)
+                              }}</template
+                            ></span
+                          >
                           <span class="text-xs">T{{ player.tier }}</span>
                         </div>
                       </div>
@@ -704,14 +2135,40 @@
 
                     <div class="mt-auto">
                       <!-- Team Stats -->
-                      <div v-if="team.players && team.players.length > 0" class="pt-3 border-t border-gray-200">
+                      <div
+                        v-if="team.players && team.players.length > 0"
+                        class="pt-3 border-t border-gray-200"
+                      >
                         <div class="flex justify-between text-xs text-gray-600">
-                          <span>Tổng tier: {{ team.players.reduce((sum: number, p: any) => sum + p.tier, 0) }}</span>
-                          <span>Trung bình: <strong>{{ (team.players.reduce((sum: number, p: any) => sum + p.tier, 0) / team.players.length).toFixed(1) }}</strong></span>
+                          <span
+                            >Tổng tier:
+                            {{
+                              team.players.reduce(
+                                (sum: number, p: any) => sum + p.tier,
+                                0,
+                              )
+                            }}</span
+                          >
+                          <span
+                            >Trung bình:
+                            <strong>{{
+                              (
+                                team.players.reduce(
+                                  (sum: number, p: any) => sum + p.tier,
+                                  0,
+                                ) / team.players.length
+                              ).toFixed(1)
+                            }}</strong></span
+                          >
                         </div>
                       </div>
-                      <div v-if="tournament.status === 'COMPLETED'" class="mt-3 pt-3 border-t border-gray-200 text-right">
-                        <span class="text-lg font-bold text-gray-600">⚽: {{ team.score || 0 }}</span>
+                      <div
+                        v-if="tournament.status === 'COMPLETED'"
+                        class="mt-3 pt-3 border-t border-gray-200 text-right"
+                      >
+                        <span class="text-lg font-bold text-gray-600"
+                          >⚽: {{ team.score || 0 }}</span
+                        >
                       </div>
                     </div>
                   </div>
@@ -719,206 +2176,796 @@
               </div>
               <div class="flex justify-end gap-3 pt-2 border-t border-gray-200">
                 <button
-                  v-if="authStore.hasRole('admin') && !tournament.selfFunded && getTournamentTeams(tournament).length > 0"
+                  v-if="
+                    authStore.hasRole('admin') &&
+                    !tournament.selfFunded &&
+                    getTournamentTeams(tournament).length > 0
+                  "
                   @click="openAdditionalCostModal(tournament)"
                   class="btn-secondary"
                 >
                   Xem chi phí phát sinh
                 </button>
-                <button v-if="!tournament.selfFunded" @click="openTournamentMoneyHistory(tournament)" class="btn-secondary">Xem biến động tiền</button>
+                <button
+                  v-if="!tournament.selfFunded"
+                  @click="openTournamentMoneyHistory(tournament)"
+                  class="btn-secondary"
+                >
+                  Xem biến động tiền
+                </button>
               </div>
             </div>
           </div>
         </div>
 
-        <div v-if="filteredOldTournaments.length > 0" class="mt-6 flex items-center justify-center gap-3">
-          <button type="button" class="btn-secondary" :disabled="oldTournamentIndex === 0" @click="navigateOldTournament(-1)">Trước</button>
-          <span class="text-sm text-gray-600">{{ oldTournamentIndex + 1 }} / {{ filteredOldTournaments.length }}</span>
-          <button type="button" class="btn-secondary" :disabled="oldTournamentIndex >= filteredOldTournaments.length - 1" @click="navigateOldTournament(1)">Sau</button>
+        <div
+          v-if="filteredOldTournaments.length > 0"
+          class="mt-6 flex items-center justify-center gap-3"
+        >
+          <button
+            type="button"
+            class="btn-secondary"
+            :disabled="oldTournamentIndex === 0"
+            @click="navigateOldTournament(-1)"
+          >
+            Trước
+          </button>
+          <span class="text-sm text-gray-600"
+            >{{ oldTournamentIndex + 1 }} /
+            {{ filteredOldTournaments.length }}</span
+          >
+          <button
+            type="button"
+            class="btn-secondary"
+            :disabled="oldTournamentIndex >= filteredOldTournaments.length - 1"
+            @click="navigateOldTournament(1)"
+          >
+            Sau
+          </button>
         </div>
 
         <!-- No tournaments message -->
-        <div v-if="filteredOldTournaments.length === 0 && !tournamentsStore.loading" class="text-center py-8">
-          <p class="text-gray-600">Không có giải hằng tuần hoàn thành trong ngày đã chọn</p>
+        <div
+          v-if="
+            filteredOldTournaments.length === 0 && !tournamentsStore.loading
+          "
+          class="text-center py-8"
+        >
+          <p class="text-gray-600">
+            Không có giải hằng tuần hoàn thành trong ngày đã chọn
+          </p>
         </div>
       </div>
     </div>
   </div>
 
-  <div v-if="showOldTournamentDateModal" class="fixed inset-0 z-[60] flex items-center justify-center overflow-y-auto overscroll-contain bg-black/50 p-4">
+  <div
+    v-if="showOldTournamentDateModal"
+    class="fixed inset-0 z-[60] flex items-center justify-center overflow-y-auto overscroll-contain bg-black/50 p-4"
+  >
     <div class="w-full max-w-md rounded-lg bg-white p-6 shadow-xl">
       <div class="flex items-center justify-between border-b pb-4">
-        <h3 class="text-lg font-semibold text-gray-900">Lọc giải đấu theo ngày</h3>
-        <button type="button" class="text-2xl leading-none text-gray-400 hover:text-gray-700" @click="showOldTournamentDateModal = false">×</button>
+        <h3 class="text-lg font-semibold text-gray-900">
+          Lọc giải đấu theo ngày
+        </h3>
+        <button
+          type="button"
+          class="text-2xl leading-none text-gray-400 hover:text-gray-700"
+          @click="showOldTournamentDateModal = false"
+        >
+          ×
+        </button>
       </div>
       <div class="py-5">
         <div class="mb-4 flex items-center justify-between">
-          <button type="button" class="rounded p-2 text-lg hover:bg-gray-100" aria-label="Tháng trước" @click="changeOldTournamentCalendarMonth(-1)">‹</button>
+          <button
+            type="button"
+            class="rounded p-2 text-lg hover:bg-gray-100"
+            aria-label="Tháng trước"
+            @click="changeOldTournamentCalendarMonth(-1)"
+          >
+            ‹
+          </button>
           <div class="text-center">
-            <p class="font-semibold capitalize text-gray-900">{{ oldTournamentCalendarLabel }}</p>
-            <p v-if="oldTournamentCalendarLoading" class="text-xs text-gray-500">Đang tải lịch giải...</p>
+            <p class="font-semibold capitalize text-gray-900">
+              {{ oldTournamentCalendarLabel }}
+            </p>
+            <p
+              v-if="oldTournamentCalendarLoading"
+              class="text-xs text-gray-500"
+            >
+              Đang tải lịch giải...
+            </p>
           </div>
-          <button type="button" class="rounded p-2 text-lg hover:bg-gray-100" aria-label="Tháng sau" @click="changeOldTournamentCalendarMonth(1)">›</button>
+          <button
+            type="button"
+            class="rounded p-2 text-lg hover:bg-gray-100"
+            aria-label="Tháng sau"
+            @click="changeOldTournamentCalendarMonth(1)"
+          >
+            ›
+          </button>
         </div>
-        <div class="grid grid-cols-7 gap-1 text-center text-xs font-medium text-gray-500">
-          <span v-for="weekday in oldTournamentWeekdays" :key="weekday" class="py-1">{{ weekday }}</span>
+        <div
+          class="grid grid-cols-7 gap-1 text-center text-xs font-medium text-gray-500"
+        >
+          <span
+            v-for="weekday in oldTournamentWeekdays"
+            :key="weekday"
+            class="py-1"
+            >{{ weekday }}</span
+          >
         </div>
         <div class="mt-1 grid grid-cols-7 gap-1">
-          <div v-for="(day, index) in oldTournamentCalendarDays" :key="day ? toLocalDateKey(day) : `empty-${index}`" class="aspect-square">
+          <div
+            v-for="(day, index) in oldTournamentCalendarDays"
+            :key="day ? toLocalDateKey(day) : `empty-${index}`"
+            class="aspect-square"
+          >
             <button
               v-if="day"
               type="button"
               class="h-full w-full rounded-md text-sm transition-colors"
               :class="[
-                oldTournamentDateDraft === toLocalDateKey(day) ? 'bg-primary-600 font-bold text-white' : 'hover:bg-primary-50',
-                completedTournamentDates.has(toLocalDateKey(day)) && oldTournamentDateDraft !== toLocalDateKey(day) ? 'font-bold text-primary-700' : 'text-gray-700'
+                oldTournamentDateDraft === toLocalDateKey(day)
+                  ? 'bg-primary-600 font-bold text-white'
+                  : 'hover:bg-primary-50',
+                completedTournamentDates.has(toLocalDateKey(day)) &&
+                oldTournamentDateDraft !== toLocalDateKey(day)
+                  ? 'font-bold text-primary-700'
+                  : 'text-gray-700',
               ]"
-              :title="completedTournamentDates.has(toLocalDateKey(day)) ? 'Có giải đấu đã hoàn thành' : undefined"
+              :title="
+                completedTournamentDates.has(toLocalDateKey(day))
+                  ? 'Có giải đấu đã hoàn thành'
+                  : undefined
+              "
               @click="oldTournamentDateDraft = toLocalDateKey(day)"
             >
               {{ day.getDate() }}
             </button>
           </div>
         </div>
-        <p class="mt-3 text-xs text-gray-500"><strong class="text-primary-700">Ngày in đậm</strong> có giải đấu đã hoàn thành.</p>
+        <p class="mt-3 text-xs text-gray-500">
+          <strong class="text-primary-700">Ngày in đậm</strong> có giải đấu đã
+          hoàn thành.
+        </p>
       </div>
       <div class="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
-        <button type="button" class="btn-secondary" @click="clearOldTournamentDateFilter">Xóa lọc</button>
-        <button type="button" class="btn-primary" @click="applyOldTournamentDateFilter">Áp dụng</button>
+        <button
+          type="button"
+          class="btn-secondary"
+          @click="clearOldTournamentDateFilter"
+        >
+          Xóa lọc
+        </button>
+        <button
+          type="button"
+          class="btn-primary"
+          @click="applyOldTournamentDateFilter"
+        >
+          Áp dụng
+        </button>
       </div>
     </div>
   </div>
 
-  <div v-if="showTournamentCalculationInfoModal && ongoingTournament" class="fixed inset-0 z-[60] flex items-center justify-center overflow-y-auto overscroll-contain bg-black/50 p-4">
-    <div class="flex max-h-[90vh] w-full max-w-lg flex-col overflow-hidden rounded-lg bg-white shadow-xl" role="dialog" aria-modal="true" aria-labelledby="tournament-calculation-title">
+  <div
+    v-if="showTournamentCalculationInfoModal && ongoingTournament"
+    class="fixed inset-0 z-[60] flex items-center justify-center overflow-y-auto overscroll-contain bg-black/50 p-4"
+  >
+    <div
+      class="flex max-h-[90vh] w-full max-w-lg flex-col overflow-hidden rounded-lg bg-white shadow-xl"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="tournament-calculation-title"
+    >
       <div class="flex items-center justify-between border-b p-5">
         <div>
-          <h3 id="tournament-calculation-title" class="text-lg font-semibold text-gray-900">Luật chơi</h3>
+          <h3
+            id="tournament-calculation-title"
+            class="text-lg font-semibold text-gray-900"
+          >
+            Luật chơi
+          </h3>
           <p class="text-sm text-gray-500">{{ ongoingTournament.name }}</p>
         </div>
-        <button type="button" class="text-2xl text-gray-400 hover:text-gray-700" aria-label="Đóng" @click="showTournamentCalculationInfoModal = false">×</button>
+        <button
+          type="button"
+          class="text-2xl text-gray-400 hover:text-gray-700"
+          aria-label="Đóng"
+          @click="showTournamentCalculationInfoModal = false"
+        >
+          ×
+        </button>
       </div>
       <div class="overflow-y-auto p-5 space-y-5 text-sm text-gray-700">
         <section>
           <h4 class="font-semibold text-gray-900">1. Đăng ký tham gia</h4>
           <ul class="mt-2 space-y-1 leading-6">
-            <li>• Chọn <strong>Tham gia</strong> khi giải đang mở đăng ký; hệ thống sẽ lưu thời điểm đăng ký.</li>
-            <li v-if="!ongoingTournament.selfFunded">• Cầu thủ có số dư âm cần thanh toán trước khi tự đăng ký tham gia.</li>
+            <li>
+              • Chọn <strong>Tham gia</strong> khi giải đang mở đăng ký; hệ
+              thống sẽ lưu thời điểm đăng ký.
+            </li>
+            <li v-if="!ongoingTournament.selfFunded">
+              • Cầu thủ có số dư âm cần thanh toán trước khi tự đăng ký tham
+              gia.
+            </li>
             <li>• Admin/mod chia đội lúc <strong>17:00</strong>.</li>
-            <li>• User chỉ được hủy tham gia trước <strong>Chốt hủy: {{ formatCancellationDeadline(ongoingTournament.cancellationDeadline || getDefaultCancellationDeadline(ongoingTournament.startDate)) }}</strong>. Sau thời điểm này, user không được hủy đăng ký.</li>
-            <li>• Tại thời điểm chốt hủy: đủ tối thiểu 12 cầu thủ Sân 5 hoặc 16 cầu thủ Sân 7 sẽ book sân 1 giờ 30 phút; đủ 18 cầu thủ Sân 5 hoặc 24 cầu thủ Sân 7 sẽ book sân 2 giờ.</li>
-            <li>• Sau khi đã chia đội, không thể hủy tham gia. Admin/mod có thể đăng ký giúp trước khi chia đội.</li>
+            <li>
+              • User chỉ được hủy tham gia trước
+              <strong
+                >Chốt hủy:
+                {{
+                  formatCancellationDeadline(
+                    ongoingTournament.cancellationDeadline ||
+                      getDefaultCancellationDeadline(
+                        ongoingTournament.startDate,
+                      ),
+                  )
+                }}</strong
+              >. Sau thời điểm này, user không được hủy đăng ký.
+            </li>
+            <li>
+              • Tại thời điểm chốt hủy: đủ tối thiểu 12 cầu thủ Sân 5 hoặc 16
+              cầu thủ Sân 7 sẽ book sân 1 giờ 30 phút; đủ 18 cầu thủ Sân 5 hoặc
+              24 cầu thủ Sân 7 sẽ book sân 2 giờ.
+            </li>
+            <li>
+              • Sau khi đã chia đội, không thể hủy tham gia. Admin/mod có thể
+              đăng ký giúp trước khi chia đội.
+            </li>
           </ul>
         </section>
-        <section v-if="ongoingTournament.selfFunded" class="rounded-lg border border-violet-200 bg-violet-50 p-4">
+        <section
+          v-if="ongoingTournament.selfFunded"
+          class="rounded-lg border border-violet-200 bg-violet-50 p-4"
+        >
           <h4 class="font-semibold text-violet-900">2. Giải tự túc</h4>
           <ul class="mt-2 space-y-1 leading-6 text-violet-900">
-            <li>• Giải tự túc không dùng tiền tài trợ, không có chi phí phát sinh và không trích quỹ.</li>
-            <li>• Cầu thủ không bị trừ tiền, không có thưởng/phạt Ngôi sao hy vọng và không tính chi phí nước.</li>
+            <li>
+              • Giải tự túc không dùng tiền tài trợ, không có chi phí phát sinh
+              và không trích quỹ.
+            </li>
+            <li>
+              • Cầu thủ không bị trừ tiền, không có thưởng/phạt Ngôi sao hy vọng
+              và không tính chi phí nước.
+            </li>
             <li>• Kết quả giải không ảnh hưởng đến Tiền Quỹ.</li>
           </ul>
         </section>
         <section v-if="!ongoingTournament.selfFunded">
-          <h4 class="font-semibold text-gray-900">2. Ngôi sao hy vọng đội mình thắng</h4>
+          <h4 class="font-semibold text-gray-900">
+            2. Ngôi sao hy vọng đội mình thắng
+          </h4>
           <ul class="mt-2 space-y-1 leading-6">
-            <li>• Chỉ cầu thủ đã tham gia mới có thể chọn Ngôi sao hy vọng trước giờ bắt đầu giải đấu.</li>
-            <li>• Khi đã chọn, nút hiển thị dấu ✓ và dòng cầu thủ trong danh sách đội được tô vàng nhạt.</li>
-            <li>• Ngôi sao hy vọng thắng: +10.000 ₫; Ngôi sao hy vọng thua: -10.000 ₫.</li>
+            <li>
+              • Chỉ cầu thủ đã tham gia mới có thể chọn Ngôi sao hy vọng trước
+              giờ bắt đầu giải đấu.
+            </li>
+            <li>
+              • Khi đã chọn, nút hiển thị dấu ✓ và dòng cầu thủ trong danh sách
+              đội được tô vàng nhạt.
+            </li>
+            <li>
+              • Ngôi sao hy vọng thắng: +10.000 ₫; Ngôi sao hy vọng thua:
+              -10.000 ₫.
+            </li>
           </ul>
         </section>
         <section v-if="!ongoingTournament.selfFunded">
           <h4 class="font-semibold text-gray-900">3. Uống nước</h4>
           <ul class="mt-2 space-y-1 leading-6">
-            <li>• Cầu thủ đã tham gia có thể bật hoặc tắt lựa chọn <strong>Nước</strong> trước giờ thi đấu.</li>
-            <li>• Lựa chọn đã bật hiển thị dấu ✓ ở nút Nước và icon 💧 cạnh tên cầu thủ trong danh sách đội.</li>
-            <li>• Chi phí nước là -10.000 ₫; cầu thủ thuộc đội thắng được miễn phí nước.</li>
+            <li>
+              • Cầu thủ đã tham gia có thể bật hoặc tắt lựa chọn
+              <strong>Nước</strong> trước giờ thi đấu.
+            </li>
+            <li>
+              • Lựa chọn đã bật hiển thị dấu ✓ ở nút Nước và icon 💧 cạnh tên
+              cầu thủ trong danh sách đội.
+            </li>
+            <li>
+              • Chi phí nước là -10.000 ₫; cầu thủ thuộc đội thắng được miễn phí
+              nước.
+            </li>
           </ul>
         </section>
         <section v-if="!ongoingTournament.selfFunded">
           <h4 class="font-semibold text-gray-900">4. Chi phí cơ bản</h4>
           <div class="mt-2 space-y-1 rounded-lg bg-gray-50 p-3">
-            <div class="flex justify-between gap-3"><span>Chi phí sân</span><strong>{{ formatMoney(getTournamentStadiumCost(ongoingTournament)) }}</strong></div>
-            <div class="flex justify-between gap-3"><span>Chi phí phát sinh</span><strong>{{ formatMoney(getTournamentAdditionalCostsTotal(ongoingTournament.id)) }}</strong></div>
-            <div v-if="getEstimateAdditionalCost(ongoingTournament.id) > 0" class="flex justify-between gap-3 text-purple-700"><span>Tạm tính chi phí phát sinh</span><strong>+{{ formatMoney(getEstimateAdditionalCost(ongoingTournament.id)) }}</strong></div>
-            <div class="flex justify-between gap-3 text-green-700"><span>Trừ tiền tài trợ</span><strong>-{{ formatMoney(getTournamentSponsorMoney(ongoingTournament)) }}</strong></div>
-            <div v-if="getTournamentFundContribution(ongoingTournament) > 0" class="flex justify-between gap-3 text-indigo-700"><span>Trừ phần trích quỹ</span><strong>-{{ formatMoney(getTournamentFundContribution(ongoingTournament)) }}</strong></div>
-            <div class="flex justify-between gap-3 border-t pt-2 font-semibold text-gray-900"><span>Tổng cần chia tạm tính</span><span>{{ formatMoney(calculateDisplayEstimateNet(ongoingTournament.id)) }}</span></div>
+            <div class="flex justify-between gap-3">
+              <span>Chi phí sân</span
+              ><strong>{{
+                formatMoney(getTournamentStadiumCost(ongoingTournament))
+              }}</strong>
+            </div>
+            <div class="flex justify-between gap-3">
+              <span>Chi phí phát sinh</span
+              ><strong>{{
+                formatMoney(
+                  getTournamentAdditionalCostsTotal(ongoingTournament.id),
+                )
+              }}</strong>
+            </div>
+            <div
+              v-if="getEstimateAdditionalCost(ongoingTournament.id) > 0"
+              class="flex justify-between gap-3 text-purple-700"
+            >
+              <span>Tạm tính chi phí phát sinh</span
+              ><strong
+                >+{{
+                  formatMoney(getEstimateAdditionalCost(ongoingTournament.id))
+                }}</strong
+              >
+            </div>
+            <div class="flex justify-between gap-3 text-green-700">
+              <span>Trừ tiền tài trợ</span
+              ><strong
+                >-{{
+                  formatMoney(getTournamentSponsorMoney(ongoingTournament))
+                }}</strong
+              >
+            </div>
+            <div
+              v-if="getTournamentFundContribution(ongoingTournament) > 0"
+              class="flex justify-between gap-3 text-indigo-700"
+            >
+              <span>Trừ phần trích quỹ</span
+              ><strong
+                >-{{
+                  formatMoney(getTournamentFundContribution(ongoingTournament))
+                }}</strong
+              >
+            </div>
+            <div
+              class="flex justify-between gap-3 border-t pt-2 font-semibold text-gray-900"
+            >
+              <span>Tổng cần chia tạm tính</span
+              ><span>{{
+                formatMoney(calculateDisplayEstimateNet(ongoingTournament.id))
+              }}</span>
+            </div>
           </div>
         </section>
         <section v-if="!ongoingTournament.selfFunded">
           <h4 class="font-semibold text-gray-900">5. Số tiền mỗi cầu thủ</h4>
-          <p class="mt-1 leading-6">Tổng cần chia được chia cho số cầu thủ tham gia và làm tròn lên bội số 5.000 ₫.</p>
-          <p v-if="getCostEstimateInfo(ongoingTournament.id).registered" class="mt-2 rounded-lg bg-primary-50 p-3 font-medium text-primary-800">Tạm tính {{ getCostEstimateInfo(ongoingTournament.id).divisor }} cầu thủ: {{ formatMoney(calculateDisplayEstimateCost(ongoingTournament.id)) }}/người.</p>
-          <p class="mt-2">Thủ môn (GK) được giảm 50% chi phí cơ bản, trừ khi admin/mod hủy ưu đãi này lúc kết thúc giải.</p>
+          <p class="mt-1 leading-6">
+            Tổng cần chia được chia cho số cầu thủ tham gia và làm tròn lên bội
+            số 5.000 ₫.
+          </p>
+          <p
+            v-if="getCostEstimateInfo(ongoingTournament.id).registered"
+            class="mt-2 rounded-lg bg-primary-50 p-3 font-medium text-primary-800"
+          >
+            Tạm tính {{ getCostEstimateInfo(ongoingTournament.id).divisor }} cầu
+            thủ:
+            {{
+              formatMoney(calculateDisplayEstimateCost(ongoingTournament.id))
+            }}/người.
+          </p>
+          <p class="mt-2">
+            Thủ môn (GK) được giảm 50% chi phí cơ bản, trừ khi admin/mod hủy ưu
+            đãi này lúc kết thúc giải.
+          </p>
         </section>
         <section v-if="!ongoingTournament.selfFunded">
-          <h4 class="font-semibold text-gray-900">6. Điều chỉnh khi kết thúc giải</h4>
+          <h4 class="font-semibold text-gray-900">
+            6. Điều chỉnh khi kết thúc giải
+          </h4>
           <ul class="mt-2 space-y-1 leading-6">
-            <li>• Ngôi sao hy vọng thắng: +10.000 ₫; Ngôi sao hy vọng thua: -10.000 ₫.</li>
+            <li>
+              • Ngôi sao hy vọng thắng: +10.000 ₫; Ngôi sao hy vọng thua:
+              -10.000 ₫.
+            </li>
             <li>• Cầu thủ đội thua: -10.000 ₫.</li>
             <li>• Người chọn nước: -10.000 ₫; đội thắng được miễn phí nước.</li>
-            <li>• Giải chỉ có thể kết thúc khi xác định được đúng một đội thắng và đúng một đội thua; không thể có hai đội thắng hoặc hai đội thua.</li>
-            <li>• Nếu hai đội đồng điểm sau trận, hai đội phải đá Penalty 3 quả để phân định thắng thua.</li>
-            <li>• Nếu vẫn hòa sau 3 quả Penalty, hai đội oẳn tù tì để phân định thắng thua.</li>
+            <li>
+              • Cầu thủ đã điểm danh nhưng không lên sân bị phạt
+              {{
+                formatMoney(systemStore.currentSettings?.noShowPenalty ?? 0)
+              }}. Nếu vì lý do bất khả kháng, cần nói trước trong group.
+            </li>
+            <li>
+              • Giải chỉ có thể kết thúc khi xác định được đúng một đội thắng và
+              đúng một đội thua; không thể có hai đội thắng hoặc hai đội thua.
+            </li>
+            <li>
+              • Nếu hai đội đồng điểm sau trận, hai đội phải đá Penalty 3 quả để
+              phân định thắng thua.
+            </li>
+            <li>
+              • Nếu vẫn hòa sau 3 quả Penalty, hai đội oẳn tù tì để phân định
+              thắng thua.
+            </li>
           </ul>
         </section>
       </div>
-      <div class="flex justify-end border-t p-4"><button type="button" class="btn-primary" @click="showTournamentCalculationInfoModal = false">Đóng</button></div>
-    </div>
-  </div>
-
-  <div v-if="showTournamentMoneyHistoryModal" class="fixed inset-0 z-[60] flex items-center justify-center overflow-y-auto overscroll-contain bg-black/50 p-4">
-    <div class="flex max-h-[90vh] w-full max-w-2xl flex-col overflow-hidden rounded-lg bg-white shadow-xl">
-      <div class="flex items-center justify-between border-b p-5"><div><h3 class="text-lg font-semibold text-gray-900">Biến động tiền cầu thủ</h3><p class="text-sm text-gray-500">{{ selectedMoneyHistoryTournament?.name }}</p></div><button @click="showTournamentMoneyHistoryModal = false" class="text-2xl text-gray-400 hover:text-gray-700">×</button></div>
-      <div class="overflow-y-auto p-5"><div v-if="tournamentMoneyHistoryLoading" class="py-8 text-center text-gray-500">Đang tải...</div><div v-else-if="!tournamentMoneyHistory.length" class="py-8 text-center text-gray-500">Chưa có lịch sử biến động tiền.</div><div v-else class="space-y-3"><div v-for="item in tournamentMoneyHistory" :key="item.id" class="rounded-lg border p-4" :class="isCurrentUserPlayer(item.player.id) ? 'border-red-500 bg-red-50' : 'border-gray-200'"><div class="flex justify-between gap-3"><div class="min-w-0"><p class="font-medium text-gray-900">{{ item.player.name }}</p><p class="text-xs text-gray-500">{{ item.description }}</p></div><span class="shrink-0 whitespace-nowrap font-semibold" :class="item.amount >= 0 ? 'text-green-600' : 'text-red-600'">{{ item.amount >= 0 ? '+' : '' }}{{ item.amount.toLocaleString('vi-VN') }} ₫</span></div><div v-if="item.details?.length" class="mt-3 space-y-1 border-t pt-3 text-xs"><div v-for="detail in item.details" :key="`${detail.description}-${detail.amount}`" class="flex justify-between gap-3 text-gray-600"><span class="min-w-0">{{ detail.description }}</span><span class="shrink-0 whitespace-nowrap text-gray-900">{{ detail.amount >= 0 ? '+' : '' }}{{ detail.amount.toLocaleString('vi-VN') }} ₫</span></div></div><div class="mt-3 flex flex-wrap items-center justify-between gap-3 border-t pt-3 text-xs text-gray-500"><span>Trước: <strong>{{ item.balanceBefore.toLocaleString('vi-VN') }} ₫</strong></span><div class="flex items-center gap-2"><span>Sau: <strong :class="item.balanceAfter < 0 ? 'text-red-600' : 'text-gray-900'">{{ item.balanceAfter.toLocaleString('vi-VN') }} ₫</strong></span><button v-if="isCurrentUserPlayer(item.player.id) && item.balanceAfter < 0" type="button" class="rounded bg-red-600 px-2 py-1 font-medium text-white hover:bg-red-700" @click="openTournamentDebtTopUp(item)">Thanh toán</button></div></div></div></div></div>
-      <div class="flex justify-end border-t p-4"><button @click="showTournamentMoneyHistoryModal = false" class="btn-primary">Đóng</button></div>
-    </div>
-  </div>
-
-  <div v-if="showTournamentDebtTopUpModal" class="fixed inset-0 z-[70] flex items-center justify-center overflow-y-auto overscroll-contain bg-gray-900/50 p-4">
-    <div class="my-auto max-h-[90vh] w-full max-w-md overflow-y-auto rounded-lg bg-white p-6 shadow-xl">
-      <h2 class="text-lg font-semibold text-gray-900">Nạp tiền</h2>
-      <p class="mb-4 mt-1 text-sm text-gray-500">Quét mã MoMo để nạp quỹ, sau đó chọn số tiền đã nạp. Yêu cầu sẽ chờ quản trị viên duyệt.</p>
-      <img src="/quy-momo.jpg" alt="Mã QR MoMo nạp quỹ" class="mx-auto mb-5 w-full max-w-xs rounded-lg border border-gray-200">
-      <div class="grid grid-cols-2 gap-3"><button v-for="amount in tournamentDebtTopUpAmounts" :key="amount" type="button" class="rounded-lg border px-4 py-3 font-medium transition-colors" :class="selectedTournamentDebtTopUpAmount === amount ? 'border-primary-600 bg-primary-600 text-white' : 'border-gray-200 text-gray-700 hover:bg-gray-50'" @click="selectedTournamentDebtTopUpAmount = amount">{{ amount.toLocaleString('vi-VN') }} ₫</button></div><label for="tournament-top-up" class="form-label mt-5 block">Hoặc nhập số tiền khác</label><div class="mt-1 flex items-center gap-2"><button type="button" class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-gray-100 text-xl font-semibold text-gray-700 hover:bg-gray-200" @click="selectedTournamentDebtTopUpAmount = Math.max(0, selectedTournamentDebtTopUpAmount - 100000)">−</button><div class="relative flex-1"><span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">₫</span><input id="tournament-top-up" v-model.number="selectedTournamentDebtTopUpAmount" type="number" min="0" class="form-input pl-8" placeholder="Nhập số tiền"></div><button type="button" class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary-100 text-xl font-semibold text-primary-700 hover:bg-primary-200" @click="selectedTournamentDebtTopUpAmount += 100000">+</button></div>
-      <p class="mt-2 text-center text-xs text-gray-500">Đang nhập: {{ formatMoney(selectedTournamentDebtTopUpAmount) }}</p><div class="mt-6 flex justify-end gap-3"><button type="button" class="btn-secondary" @click="showTournamentDebtTopUpModal = false">Hủy</button><button type="button" class="btn-primary" :disabled="tournamentDebtTopUpSubmitting" @click="submitTournamentDebtTopUp">{{ tournamentDebtTopUpSubmitting ? 'Đang gửi...' : 'Xác nhận' }}</button></div>
-    </div>
-  </div>
-
-  <div v-if="showFieldRegistrationModal" class="fixed inset-0 z-[70] flex items-center justify-center overflow-y-auto overscroll-contain bg-black/50 p-4">
-    <div class="my-auto max-h-[90vh] w-full max-w-md overflow-y-auto rounded-lg bg-white p-6 shadow-xl">
-      <h3 class="text-lg font-semibold text-gray-900">{{ pendingSwapRequest ? `Xác nhận swap với ${pendingSwapRequest.requester.name}` : fieldRegistrationAddOnly ? 'Thêm sân đăng ký' : 'Chọn sân đăng ký' }}</h3>
-      <p class="mt-1 text-sm text-gray-600">{{ pendingSwapRequest ? 'Chọn sân trước khi xác nhận thay thế cầu thủ.' : fieldRegistrationAddOnly ? 'Bạn chỉ có thể thêm sân chưa đăng ký sau thời gian chốt hủy.' : 'Bạn có thể đăng ký một hoặc cả hai sân.' }}</p>
-      <div class="mt-5 grid grid-cols-2 gap-3">
-        <button type="button" :disabled="fieldRegistrationAddOnly && fieldRegistrationExistingField5" class="rounded-lg border-2 px-4 py-4 font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-60" :class="registrationField5 ? 'border-primary-600 bg-primary-600 text-white' : 'border-gray-200 text-gray-700 hover:border-primary-400'" @click="registrationField5 = !registrationField5">Sân 5 {{ registrationField5 ? '✓' : '' }}</button>
-        <button type="button" :disabled="fieldRegistrationAddOnly && fieldRegistrationExistingField7" class="rounded-lg border-2 px-4 py-4 font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-60" :class="registrationField7 ? 'border-primary-600 bg-primary-600 text-white' : 'border-gray-200 text-gray-700 hover:border-primary-400'" @click="registrationField7 = !registrationField7">Sân 7 {{ registrationField7 ? '✓' : '' }}</button>
+      <div class="flex justify-end border-t p-4">
+        <button
+          type="button"
+          class="btn-primary"
+          @click="showTournamentCalculationInfoModal = false"
+        >
+          Đóng
+        </button>
       </div>
-      <p class="mt-3 text-center text-sm font-medium text-primary-700">Bạn đang chọn: {{ registrationField5 && registrationField7 ? 'Sân 5 và Sân 7' : registrationField5 ? 'Sân 5' : registrationField7 ? 'Sân 7' : 'chưa chọn sân' }}</p>
-      <p v-if="!registrationField5 && !registrationField7" class="mt-3 text-sm text-red-600">Vui lòng chọn ít nhất một sân.</p>
-      <div class="mt-6 flex justify-end gap-3"><button type="button" class="btn-secondary" @click="closeFieldRegistrationModal">Hủy</button><button type="button" class="btn-primary" :disabled="!canConfirmFieldRegistration" @click="confirmFieldRegistration">{{ pendingSwapRequest ? 'Xác nhận swap' : 'Xác nhận' }}</button></div>
     </div>
   </div>
 
-  <div v-if="showSwapModal" class="fixed inset-0 z-[70] flex items-center justify-center overflow-y-auto overscroll-contain bg-black/50 p-4">
-    <div class="flex max-h-[90vh] w-full max-w-2xl flex-col overflow-hidden rounded-lg bg-white shadow-xl">
-      <div class="flex items-center justify-between border-b p-5"><div><h3 class="text-lg font-semibold text-gray-900">Đăng ký hàng chờ</h3><p class="mt-1 text-sm text-gray-500">Bạn sẽ vào hàng chờ thứ {{ getSwapWaitlistPosition(swapTournament?.id || '') }}.</p></div><button type="button" class="text-2xl text-gray-400 hover:text-gray-700" @click="closeSwapModal">×</button></div>
-      <div class="min-h-0 overflow-y-auto p-5"><p class="rounded-lg bg-amber-50 p-3 text-sm text-amber-800">Bạn sẽ vào hàng chờ thứ {{ getSwapWaitlistPosition(swapTournament?.id || '') }}, nếu đủ người hủy sẽ tự động vào danh sách.</p></div>
-      <div class="flex justify-end border-t p-4"><button type="button" class="btn-secondary" @click="closeSwapModal">Đóng</button></div>
+  <div
+    v-if="showTournamentMoneyHistoryModal"
+    class="fixed inset-0 z-[60] flex items-center justify-center overflow-y-auto overscroll-contain bg-black/50 p-4"
+  >
+    <div
+      class="flex max-h-[90vh] w-full max-w-2xl flex-col overflow-hidden rounded-lg bg-white shadow-xl"
+    >
+      <div class="flex items-center justify-between border-b p-5">
+        <div>
+          <h3 class="text-lg font-semibold text-gray-900">
+            Biến động tiền cầu thủ
+          </h3>
+          <p class="text-sm text-gray-500">
+            {{ selectedMoneyHistoryTournament?.name }}
+          </p>
+        </div>
+        <button
+          @click="showTournamentMoneyHistoryModal = false"
+          class="text-2xl text-gray-400 hover:text-gray-700"
+        >
+          ×
+        </button>
+      </div>
+      <div class="overflow-y-auto p-5">
+        <div
+          v-if="tournamentMoneyHistoryLoading"
+          class="py-8 text-center text-gray-500"
+        >
+          Đang tải...
+        </div>
+        <div
+          v-else-if="!tournamentMoneyHistory.length"
+          class="py-8 text-center text-gray-500"
+        >
+          Chưa có lịch sử biến động tiền.
+        </div>
+        <div v-else class="space-y-3">
+          <div
+            v-for="item in tournamentMoneyHistory"
+            :key="item.id"
+            class="rounded-lg border p-4"
+            :class="
+              isCurrentUserPlayer(item.player.id)
+                ? 'border-red-500 bg-red-50'
+                : 'border-gray-200'
+            "
+          >
+            <div class="flex justify-between gap-3">
+              <div class="min-w-0">
+                <p class="font-medium text-gray-900">{{ item.player.name }}</p>
+                <p class="text-xs text-gray-500">{{ item.description }}</p>
+              </div>
+              <span
+                class="shrink-0 whitespace-nowrap font-semibold"
+                :class="item.amount >= 0 ? 'text-green-600' : 'text-red-600'"
+                >{{ item.amount >= 0 ? "+" : ""
+                }}{{ item.amount.toLocaleString("vi-VN") }} ₫</span
+              >
+            </div>
+            <div
+              v-if="item.details?.length"
+              class="mt-3 space-y-1 border-t pt-3 text-xs"
+            >
+              <div
+                v-for="detail in item.details"
+                :key="`${detail.description}-${detail.amount}`"
+                class="flex justify-between gap-3 text-gray-600"
+              >
+                <span class="min-w-0">{{ detail.description }}</span
+                ><span class="shrink-0 whitespace-nowrap text-gray-900"
+                  >{{ detail.amount >= 0 ? "+" : ""
+                  }}{{ detail.amount.toLocaleString("vi-VN") }} ₫</span
+                >
+              </div>
+            </div>
+            <div
+              class="mt-3 flex flex-wrap items-center justify-between gap-3 border-t pt-3 text-xs text-gray-500"
+            >
+              <span
+                >Trước:
+                <strong
+                  >{{ item.balanceBefore.toLocaleString("vi-VN") }} ₫</strong
+                ></span
+              >
+              <div class="flex items-center gap-2">
+                <span
+                  >Sau:
+                  <strong
+                    :class="
+                      item.balanceAfter < 0 ? 'text-red-600' : 'text-gray-900'
+                    "
+                    >{{ item.balanceAfter.toLocaleString("vi-VN") }} ₫</strong
+                  ></span
+                ><button
+                  v-if="
+                    isCurrentUserPlayer(item.player.id) && item.balanceAfter < 0
+                  "
+                  type="button"
+                  class="rounded bg-red-600 px-2 py-1 font-medium text-white hover:bg-red-700"
+                  @click="openTournamentDebtTopUp(item)"
+                >
+                  Thanh toán
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="flex justify-end border-t p-4">
+        <button
+          @click="showTournamentMoneyHistoryModal = false"
+          class="btn-primary"
+        >
+          Đóng
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div
+    v-if="showTournamentDebtTopUpModal"
+    class="fixed inset-0 z-[70] flex items-center justify-center overflow-y-auto overscroll-contain bg-gray-900/50 p-4"
+  >
+    <div
+      class="my-auto max-h-[90vh] w-full max-w-md overflow-y-auto rounded-lg bg-white p-6 shadow-xl"
+    >
+      <h2 class="text-lg font-semibold text-gray-900">Nạp tiền</h2>
+      <p class="mb-4 mt-1 text-sm text-gray-500">
+        Quét mã MoMo để nạp quỹ, sau đó chọn số tiền đã nạp. Yêu cầu sẽ chờ quản
+        trị viên duyệt.
+      </p>
+      <img
+        src="/quy-momo.jpg"
+        alt="Mã QR MoMo nạp quỹ"
+        class="mx-auto mb-5 w-full max-w-xs rounded-lg border border-gray-200"
+      />
+      <div class="grid grid-cols-2 gap-3">
+        <button
+          v-for="amount in tournamentDebtTopUpAmounts"
+          :key="amount"
+          type="button"
+          class="rounded-lg border px-4 py-3 font-medium transition-colors"
+          :class="
+            selectedTournamentDebtTopUpAmount === amount
+              ? 'border-primary-600 bg-primary-600 text-white'
+              : 'border-gray-200 text-gray-700 hover:bg-gray-50'
+          "
+          @click="selectedTournamentDebtTopUpAmount = amount"
+        >
+          {{ amount.toLocaleString("vi-VN") }} ₫
+        </button>
+      </div>
+      <label for="tournament-top-up" class="form-label mt-5 block"
+        >Hoặc nhập số tiền khác</label
+      >
+      <div class="mt-1 flex items-center gap-2">
+        <button
+          type="button"
+          class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-gray-100 text-xl font-semibold text-gray-700 hover:bg-gray-200"
+          @click="
+            selectedTournamentDebtTopUpAmount = Math.max(
+              0,
+              selectedTournamentDebtTopUpAmount - 100000,
+            )
+          "
+        >
+          −
+        </button>
+        <div class="relative flex-1">
+          <span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500"
+            >₫</span
+          ><input
+            id="tournament-top-up"
+            v-model.number="selectedTournamentDebtTopUpAmount"
+            type="number"
+            min="0"
+            class="form-input pl-8"
+            placeholder="Nhập số tiền"
+          />
+        </div>
+        <button
+          type="button"
+          class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary-100 text-xl font-semibold text-primary-700 hover:bg-primary-200"
+          @click="selectedTournamentDebtTopUpAmount += 100000"
+        >
+          +
+        </button>
+      </div>
+      <p class="mt-2 text-center text-xs text-gray-500">
+        Đang nhập: {{ formatMoney(selectedTournamentDebtTopUpAmount) }}
+      </p>
+      <div class="mt-6 flex justify-end gap-3">
+        <button
+          type="button"
+          class="btn-secondary"
+          @click="showTournamentDebtTopUpModal = false"
+        >
+          Hủy</button
+        ><button
+          type="button"
+          class="btn-primary"
+          :disabled="tournamentDebtTopUpSubmitting"
+          @click="submitTournamentDebtTopUp"
+        >
+          {{ tournamentDebtTopUpSubmitting ? "Đang gửi..." : "Xác nhận" }}
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div
+    v-if="showFieldRegistrationModal"
+    class="fixed inset-0 z-[70] flex items-center justify-center overflow-y-auto overscroll-contain bg-black/50 p-4"
+  >
+    <div
+      class="my-auto max-h-[90vh] w-full max-w-md overflow-y-auto rounded-lg bg-white p-6 shadow-xl"
+    >
+      <h3 class="text-lg font-semibold text-gray-900">
+        {{
+          pendingSwapRequest
+            ? `Xác nhận swap với ${pendingSwapRequest.requester.name}`
+            : fieldRegistrationAddOnly
+              ? "Thêm sân đăng ký"
+              : "Chọn sân đăng ký"
+        }}
+      </h3>
+      <p class="mt-1 text-sm text-gray-600">
+        {{
+          pendingSwapRequest
+            ? "Chọn sân trước khi xác nhận thay thế cầu thủ."
+            : fieldRegistrationAddOnly
+              ? "Bạn chỉ có thể thêm sân chưa đăng ký sau thời gian chốt hủy."
+              : "Bạn có thể đăng ký một hoặc cả hai sân."
+        }}
+      </p>
+      <div class="mt-5 grid grid-cols-2 gap-3">
+        <button
+          type="button"
+          :disabled="
+            fieldRegistrationAddOnly && fieldRegistrationExistingField5
+          "
+          class="rounded-lg border-2 px-4 py-4 font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-60"
+          :class="
+            registrationField5
+              ? 'border-primary-600 bg-primary-600 text-white'
+              : 'border-gray-200 text-gray-700 hover:border-primary-400'
+          "
+          @click="registrationField5 = !registrationField5"
+        >
+          Sân 5 {{ registrationField5 ? "✓" : "" }}
+        </button>
+        <button
+          type="button"
+          :disabled="
+            fieldRegistrationAddOnly && fieldRegistrationExistingField7
+          "
+          class="rounded-lg border-2 px-4 py-4 font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-60"
+          :class="
+            registrationField7
+              ? 'border-primary-600 bg-primary-600 text-white'
+              : 'border-gray-200 text-gray-700 hover:border-primary-400'
+          "
+          @click="registrationField7 = !registrationField7"
+        >
+          Sân 7 {{ registrationField7 ? "✓" : "" }}
+        </button>
+      </div>
+      <p class="mt-3 text-center text-sm font-medium text-primary-700">
+        Bạn đang chọn:
+        {{
+          registrationField5 && registrationField7
+            ? "Sân 5 và Sân 7"
+            : registrationField5
+              ? "Sân 5"
+              : registrationField7
+                ? "Sân 7"
+                : "chưa chọn sân"
+        }}
+      </p>
+      <p
+        v-if="!registrationField5 && !registrationField7"
+        class="mt-3 text-sm text-red-600"
+      >
+        Vui lòng chọn ít nhất một sân.
+      </p>
+      <div class="mt-6 flex justify-end gap-3">
+        <button
+          type="button"
+          class="btn-secondary"
+          @click="closeFieldRegistrationModal"
+        >
+          Hủy</button
+        ><button
+          type="button"
+          class="btn-primary"
+          :disabled="!canConfirmFieldRegistration"
+          @click="confirmFieldRegistration"
+        >
+          {{ pendingSwapRequest ? "Xác nhận swap" : "Xác nhận" }}
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div
+    v-if="showSwapModal"
+    class="fixed inset-0 z-[70] flex items-center justify-center overflow-y-auto overscroll-contain bg-black/50 p-4"
+  >
+    <div
+      class="flex max-h-[90vh] w-full max-w-2xl flex-col overflow-hidden rounded-lg bg-white shadow-xl"
+    >
+      <div class="flex items-center justify-between border-b p-5">
+        <div>
+          <h3 class="text-lg font-semibold text-gray-900">Đăng ký hàng chờ</h3>
+          <p class="mt-1 text-sm text-gray-500">
+            Bạn sẽ vào hàng chờ thứ
+            {{ getSwapWaitlistPosition(swapTournament?.id || "") }}.
+          </p>
+        </div>
+        <button
+          type="button"
+          class="text-2xl text-gray-400 hover:text-gray-700"
+          @click="closeSwapModal"
+        >
+          ×
+        </button>
+      </div>
+      <div class="min-h-0 overflow-y-auto p-5">
+        <p class="rounded-lg bg-amber-50 p-3 text-sm text-amber-800">
+          Bạn sẽ vào hàng chờ thứ
+          {{ getSwapWaitlistPosition(swapTournament?.id || "") }}, nếu đủ người
+          hủy sẽ tự động vào danh sách.
+        </p>
+      </div>
+      <div class="flex justify-end border-t p-4">
+        <button type="button" class="btn-secondary" @click="closeSwapModal">
+          Đóng
+        </button>
+      </div>
     </div>
   </div>
 
   <!-- Attendance Details Modal -->
-  <div v-if="showAttendanceModal" class="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto overscroll-contain bg-black bg-opacity-50 p-4">
-    <div class="bg-white rounded-lg shadow-xl max-w-5xl w-full mx-4 max-h-[85vh] overflow-hidden" @click.stop>
+  <div
+    v-if="showAttendanceModal"
+    class="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto overscroll-contain bg-black bg-opacity-50 p-4"
+  >
+    <div
+      class="bg-white rounded-lg shadow-xl max-w-5xl w-full mx-4 max-h-[85vh] overflow-hidden"
+      @click.stop
+    >
       <!-- Modal Header -->
-      <div class="flex items-center justify-between p-6 border-b border-gray-200">
-        <h3 class="text-lg font-semibold text-gray-900">{{ attendanceModalTitle }}</h3>
-        <button 
+      <div
+        class="flex items-center justify-between p-6 border-b border-gray-200"
+      >
+        <h3 class="text-lg font-semibold text-gray-900">
+          {{ attendanceModalTitle }}
+        </h3>
+        <button
           @click="closeAttendanceModal"
           class="text-gray-400 hover:text-gray-600 transition-colors"
         >
-          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+          <svg
+            class="w-6 h-6"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M6 18L18 6M6 6l12 12"
+            />
           </svg>
         </button>
       </div>
@@ -927,57 +2974,157 @@
       <div class="p-6 overflow-y-auto max-h-[65vh]">
         <div class="mb-4">
           <label class="form-label">Tìm theo tên cầu thủ</label>
-          <input v-model="attendancePlayerNameFilter" type="text" class="form-input mt-1" placeholder="Nhập tên cầu thủ...">
+          <input
+            v-model="attendancePlayerNameFilter"
+            type="text"
+            class="form-input mt-1"
+            placeholder="Nhập tên cầu thủ..."
+          />
         </div>
         <div class="mb-4">
-          <button type="button" class="rounded-lg px-3 py-1.5 text-sm font-medium transition-colors" :class="attendanceSortByTier ? 'bg-primary-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'" :aria-pressed="attendanceSortByTier" @click="attendanceSortByTier = !attendanceSortByTier">Sắp xếp theo Tier {{ attendanceSortByTier ? '✓' : '' }}</button>
+          <button
+            type="button"
+            class="rounded-lg px-3 py-1.5 text-sm font-medium transition-colors"
+            :class="
+              attendanceSortByTier
+                ? 'bg-primary-600 text-white'
+                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+            "
+            :aria-pressed="attendanceSortByTier"
+            @click="attendanceSortByTier = !attendanceSortByTier"
+          >
+            Sắp xếp theo Tier {{ attendanceSortByTier ? "✓" : "" }}
+          </button>
         </div>
         <div v-if="attendanceModalType === 'attending'" class="mb-4 flex gap-2">
-          <button type="button" class="rounded-lg px-4 py-2 text-sm font-medium" :class="attendanceFieldTab === 'FIELD_5' ? 'bg-primary-600 text-white' : 'bg-gray-100 text-gray-700'" @click="attendanceFieldTab = 'FIELD_5'">Sân 5</button>
-          <button type="button" class="rounded-lg px-4 py-2 text-sm font-medium" :class="attendanceFieldTab === 'FIELD_7' ? 'bg-primary-600 text-white' : 'bg-gray-100 text-gray-700'" @click="attendanceFieldTab = 'FIELD_7'">Sân 7</button>
+          <button
+            type="button"
+            class="rounded-lg px-4 py-2 text-sm font-medium"
+            :class="
+              attendanceFieldTab === 'FIELD_5'
+                ? 'bg-primary-600 text-white'
+                : 'bg-gray-100 text-gray-700'
+            "
+            @click="attendanceFieldTab = 'FIELD_5'"
+          >
+            Sân 5
+          </button>
+          <button
+            type="button"
+            class="rounded-lg px-4 py-2 text-sm font-medium"
+            :class="
+              attendanceFieldTab === 'FIELD_7'
+                ? 'bg-primary-600 text-white'
+                : 'bg-gray-100 text-gray-700'
+            "
+            @click="attendanceFieldTab = 'FIELD_7'"
+          >
+            Sân 7
+          </button>
         </div>
         <div v-if="attendanceModalType === 'pending'" class="mb-4">
           <p class="form-label">Lọc theo Tier</p>
           <div class="mt-2 flex flex-wrap gap-2">
-            <button type="button" class="rounded-lg px-3 py-1.5 text-sm font-medium transition-colors" :class="attendancePlayerTierFilter === null ? 'bg-primary-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'" @click="attendancePlayerTierFilter = null">Tất cả</button>
-            <button v-for="tier in 6" :key="tier" type="button" class="rounded-lg px-3 py-1.5 text-sm font-medium transition-colors" :class="attendancePlayerTierFilter === tier ? 'bg-primary-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'" @click="attendancePlayerTierFilter = tier">Tier {{ tier }}</button>
+            <button
+              type="button"
+              class="rounded-lg px-3 py-1.5 text-sm font-medium transition-colors"
+              :class="
+                attendancePlayerTierFilter === null
+                  ? 'bg-primary-600 text-white'
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              "
+              @click="attendancePlayerTierFilter = null"
+            >
+              Tất cả
+            </button>
+            <button
+              v-for="tier in 6"
+              :key="tier"
+              type="button"
+              class="rounded-lg px-3 py-1.5 text-sm font-medium transition-colors"
+              :class="
+                attendancePlayerTierFilter === tier
+                  ? 'bg-primary-600 text-white'
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              "
+              @click="attendancePlayerTierFilter = tier"
+            >
+              Tier {{ tier }}
+            </button>
           </div>
         </div>
-        <div v-if="attendanceModalType === 'pending' && authStore.hasAnyRole(['admin', 'mod']) && !attendanceModalLoading && getFilteredModalData().length" class="mb-4 flex items-center justify-between rounded-lg bg-blue-50 px-3 py-2 text-sm text-blue-900">
+        <div
+          v-if="
+            attendanceModalType === 'pending' &&
+            authStore.hasAnyRole(['admin', 'mod']) &&
+            !attendanceModalLoading &&
+            getFilteredModalData().length
+          "
+          class="mb-4 flex items-center justify-between rounded-lg bg-blue-50 px-3 py-2 text-sm text-blue-900"
+        >
           <button
             type="button"
             class="flex items-center gap-2 font-medium hover:text-blue-700"
             :aria-pressed="areAllPendingPlayersSelected"
             @click="toggleAllPendingPlayers"
           >
-            <span class="flex h-5 w-5 items-center justify-center rounded border transition-colors" :class="areAllPendingPlayersSelected ? 'border-blue-600 bg-blue-600 text-white' : 'border-blue-300 bg-white'">{{ areAllPendingPlayersSelected ? '✓' : '' }}</span>
+            <span
+              class="flex h-5 w-5 items-center justify-center rounded border transition-colors"
+              :class="
+                areAllPendingPlayersSelected
+                  ? 'border-blue-600 bg-blue-600 text-white'
+                  : 'border-blue-300 bg-white'
+              "
+              >{{ areAllPendingPlayersSelected ? "✓" : "" }}</span
+            >
             Chọn tất cả ({{ getFilteredModalData().length }})
           </button>
           <span>{{ selectedPendingPlayerIds.size }} đã chọn</span>
         </div>
         <!-- Loading State -->
         <div v-if="attendanceModalLoading" class="text-center py-8">
-          <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+          <div
+            class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"
+          ></div>
           <p class="text-gray-600 mt-2">Đang tải cầu thủ...</p>
         </div>
-        
+
         <!-- No Data State -->
-        <div v-else-if="getFilteredModalData().length === 0" class="text-center py-8">
-          <p class="text-gray-600">Không có cầu thủ {{ attendanceModalType === 'pending' ? 'chưa phản hồi' : attendanceModalType === 'attending' ? 'tham gia' : attendanceModalType === 'not-attending' ? 'không tham gia' : attendanceModalType === 'water' ? 'uống nước' : 'chọn Ngôi sao hy vọng' }} giải đấu này.</p>
+        <div
+          v-else-if="getFilteredModalData().length === 0"
+          class="text-center py-8"
+        >
+          <p class="text-gray-600">
+            Không có cầu thủ
+            {{
+              attendanceModalType === "pending"
+                ? "chưa phản hồi"
+                : attendanceModalType === "attending"
+                  ? "tham gia"
+                  : attendanceModalType === "not-attending"
+                    ? "không tham gia"
+                    : attendanceModalType === "water"
+                      ? "uống nước"
+                      : "chọn Ngôi sao hy vọng"
+            }}
+            giải đấu này.
+          </p>
         </div>
-        
+
         <!-- Player List -->
         <div v-else class="grid grid-cols-1 gap-3 md:grid-cols-2">
-          <div 
-            v-for="attendance in getFilteredModalData()" 
+          <div
+            v-for="attendance in getFilteredModalData()"
             :key="attendance.id"
             class="flex items-center p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
           >
             <!-- Player Avatar -->
-            <div class="w-12 h-12 rounded-full bg-gray-300 flex items-center justify-center mr-4">
-              <img 
-                v-if="attendance.player.avatar" 
-                :src="attendance.player.avatar" 
+            <div
+              class="w-12 h-12 rounded-full bg-gray-300 flex items-center justify-center mr-4"
+            >
+              <img
+                v-if="attendance.player.avatar"
+                :src="attendance.player.avatar"
                 :alt="attendance.player.name"
                 class="w-12 h-12 rounded-full object-cover"
               />
@@ -990,53 +3137,137 @@
             <div class="flex-1">
               <!-- Player Name Row with Water Toggle Button -->
               <div class="flex items-center justify-between">
-                <h4 class="font-semibold text-gray-900">{{ attendance.player.name }}</h4>
-                
+                <h4 class="font-semibold text-gray-900">
+                  {{ attendance.player.name }}
+                </h4>
+
                 <!-- Water Toggle Button (Admin/Mod only) - Shows same as water status -->
-                <div v-if="attendanceModalType === 'attending' && authStore.hasAnyRole(['admin', 'mod'])" class="flex items-center">
+                <div
+                  v-if="
+                    attendanceModalType === 'attending' &&
+                    authStore.hasAnyRole(['admin', 'mod'])
+                  "
+                  class="flex items-center"
+                >
                   <button
                     v-if="!isSelfFundedTournament(attendanceModalTournamentId)"
                     @click="togglePlayerWater(attendance)"
                     :disabled="playerWaterLoading.has(attendance.player.id)"
                     class="text-xs px-2 py-1 rounded-full transition-colors"
-                    :class="attendance.withWater 
-                      ? 'bg-blue-100 text-blue-800 hover:bg-blue-200' 
-                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'"
-                    :title="attendance.withWater ? 'Nhấn để bỏ chọn nước' : 'Nhấn để chọn nước'"
+                    :class="
+                      attendance.withWater
+                        ? 'bg-blue-100 text-blue-800 hover:bg-blue-200'
+                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                    "
+                    :title="
+                      attendance.withWater
+                        ? 'Nhấn để bỏ chọn nước'
+                        : 'Nhấn để chọn nước'
+                    "
                   >
-                    <div v-if="playerWaterLoading.has(attendance.player.id)" class="flex items-center">
-                      <div class="animate-spin rounded-full h-3 w-3 border-b border-current mr-1"></div>
+                    <div
+                      v-if="playerWaterLoading.has(attendance.player.id)"
+                      class="flex items-center"
+                    >
+                      <div
+                        class="animate-spin rounded-full h-3 w-3 border-b border-current mr-1"
+                      ></div>
                       <span>Đang tải...</span>
                     </div>
-                    <span v-else>
-                      <span class="sm:hidden">{{ attendance.withWater ? '💧' : '🚫' }}</span>
-                      <span class="hidden sm:inline">{{ attendance.withWater ? '💧 Có uống nước' : '🚫 Không uống nước' }}</span>
-                    </span>
+                    <span v-else aria-hidden="true">{{
+                      attendance.withWater ? "💧" : "🚫"
+                    }}</span>
                   </button>
                   <button
-                    v-if="getTournamentById(attendance.tournamentId)?.status === 'UPCOMING'"
+                    v-if="
+                      getTournamentById(attendance.tournamentId)?.status !==
+                      'COMPLETED'
+                    "
                     @click="cancelPlayerAttendance(attendance)"
-                    :disabled="playerAttendanceLoading.has(attendance.player.id)"
+                    :disabled="
+                      playerAttendanceLoading.has(attendance.player.id)
+                    "
                     :title="`Hủy ${attendanceFieldTab === 'FIELD_5' ? 'Sân 5' : 'Sân 7'}`"
-                    class="ml-2 rounded px-2 py-1 text-xs font-medium text-red-700 hover:bg-red-100 disabled:opacity-50"
+                    class="ml-2 inline-flex h-7 w-7 items-center justify-center rounded text-sm font-bold text-red-700 hover:bg-red-100 disabled:opacity-50"
                   >
-                    <span v-if="playerAttendanceLoading.has(attendance.player.id)">Đang cập nhật...</span>
-                    <template v-else><span class="sm:hidden">✕</span><span class="hidden sm:inline">Hủy {{ attendanceFieldTab === 'FIELD_5' ? 'Sân 5' : 'Sân 7' }}</span></template>
+                    <span
+                      v-if="playerAttendanceLoading.has(attendance.player.id)"
+                      class="animate-spin"
+                      >◌</span
+                    >
+                    <span v-else aria-hidden="true">✕</span>
+                  </button>
+                  <button
+                    v-if="hasTournamentStarted(attendance.tournamentId)"
+                    @click="togglePlayerNotOnField(attendance)"
+                    :disabled="
+                      playerAttendanceLoading.has(attendance.player.id)
+                    "
+                    class="ml-2 rounded px-2 py-1 text-xs font-medium transition-colors disabled:opacity-50"
+                    :class="
+                      attendance.notOnField
+                        ? 'bg-orange-600 text-white hover:bg-orange-700'
+                        : 'bg-orange-100 text-orange-800 hover:bg-orange-200'
+                    "
+                    :title="
+                      attendance.notOnField
+                        ? 'Nhấn để xác nhận cầu thủ lên sân'
+                        : 'Đánh dấu cầu thủ không lên sân'
+                    "
+                  >
+                    {{
+                      attendance.notOnField
+                        ? "Không lên sân ✓"
+                        : "Không lên sân"
+                    }}
                   </button>
                 </div>
               </div>
-              
+
               <!-- Player Details Row -->
               <div class="mt-1 flex items-center justify-between gap-3">
-                <span class="text-sm text-gray-600">{{ attendance.player.position }}<template v-if="attendance.player.positionSecond">-{{ attendance.player.positionSecond }}</template> - Tier {{ attendance.player.tier }}<template v-if="attendanceModalType === 'attending' && attendance.addedBy"> - thêm bởi {{ attendance.addedBy.username }}</template></span>
-                <span v-if="attendanceModalType === 'attending' && attendance.registeredAt" class="shrink-0 text-xs text-gray-500">{{ formatRegistrationTime(attendance.registeredAt) }}</span>
+                <span class="text-sm text-gray-600"
+                  >{{ attendance.player.position
+                  }}<template v-if="attendance.player.positionSecond"
+                    >-{{ attendance.player.positionSecond }}</template
+                  >
+                  - Tier {{ attendance.player.tier
+                  }}<template
+                    v-if="
+                      attendanceModalType === 'attending' && attendance.addedBy
+                    "
+                  >
+                    - thêm bởi {{ attendance.addedBy.username }}</template
+                  ></span
+                >
+                <span
+                  v-if="
+                    attendanceModalType === 'attending' &&
+                    attendance.registeredAt
+                  "
+                  class="shrink-0 text-xs text-gray-500"
+                  >{{ formatRegistrationTime(attendance.registeredAt) }}</span
+                >
               </div>
+              <p
+                v-if="attendance.notOnField"
+                class="mt-1 text-xs font-medium text-orange-700"
+              >
+                Không lên sân
+              </p>
             </div>
             <button
-              v-if="attendanceModalType === 'pending' && authStore.hasAnyRole(['admin', 'mod'])"
+              v-if="
+                attendanceModalType === 'pending' &&
+                authStore.hasAnyRole(['admin', 'mod'])
+              "
               type="button"
               class="ml-3 flex h-7 w-7 shrink-0 items-center justify-center self-center rounded-full border text-sm font-bold transition-colors"
-              :class="selectedPendingPlayerIds.has(attendance.player.id) ? 'border-blue-600 bg-blue-600 text-white' : 'border-gray-300 bg-white text-transparent hover:border-blue-400'"
+              :class="
+                selectedPendingPlayerIds.has(attendance.player.id)
+                  ? 'border-blue-600 bg-blue-600 text-white'
+                  : 'border-gray-300 bg-white text-transparent hover:border-blue-400'
+              "
               :aria-label="`Chọn ${attendance.player.name}`"
               :aria-pressed="selectedPendingPlayerIds.has(attendance.player.id)"
               @click="togglePendingPlayer(attendance.player.id)"
@@ -1048,19 +3279,50 @@
       </div>
 
       <!-- Modal Footer -->
-      <div class="flex items-center justify-between border-t border-gray-200 bg-gray-50 p-6" :class="attendanceModalType === 'pending' ? 'flex-col' : ''">
-        <p v-if="attendanceModalType !== 'pending'" class="text-sm text-gray-600">
-          {{ getFilteredModalData().length }} cầu thủ {{ attendanceModalType === 'attending' ? 'tham gia' : attendanceModalType === 'not-attending' ? 'không tham gia' : attendanceModalType === 'water' ? 'uống nước' : 'chọn Ngôi sao hy vọng' }}
+      <div
+        class="flex items-center justify-between border-t border-gray-200 bg-gray-50 p-6"
+        :class="attendanceModalType === 'pending' ? 'flex-col' : ''"
+      >
+        <p
+          v-if="attendanceModalType !== 'pending'"
+          class="text-sm text-gray-600"
+        >
+          {{ getFilteredModalData().length }} cầu thủ
+          {{
+            attendanceModalType === "attending"
+              ? "tham gia"
+              : attendanceModalType === "not-attending"
+                ? "không tham gia"
+                : attendanceModalType === "water"
+                  ? "uống nước"
+                  : "chọn Ngôi sao hy vọng"
+          }}
         </p>
-        <div class="flex items-center gap-3" :class="attendanceModalType === 'pending' ? 'w-full flex-col sm:w-auto sm:flex-row' : ''">
+        <div
+          class="flex items-center gap-3"
+          :class="
+            attendanceModalType === 'pending'
+              ? 'w-full flex-col sm:w-auto sm:flex-row'
+              : ''
+          "
+        >
           <button
-            v-if="attendanceModalType === 'pending' && authStore.hasAnyRole(['admin', 'mod'])"
+            v-if="
+              attendanceModalType === 'pending' &&
+              authStore.hasAnyRole(['admin', 'mod'])
+            "
             @click="registerSelectedPlayers"
-            :disabled="selectedPendingPlayerIds.size === 0 || batchAttendanceSaving"
+            :disabled="
+              selectedPendingPlayerIds.size === 0 || batchAttendanceSaving
+            "
             class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:cursor-not-allowed disabled:opacity-50"
             :class="attendanceModalType === 'pending' ? 'w-full sm:w-auto' : ''"
           >
-            {{ batchAttendanceSaving ? 'Đang đăng ký...' : `Đăng ký (${selectedPendingPlayerIds.size})` }}
+            {{
+              batchAttendanceSaving
+                ? "Đang đăng ký..."
+                : `Đăng ký (${selectedPendingPlayerIds.size})`
+            }}
           </button>
           <button
             @click="closeAttendanceModal"
@@ -1075,75 +3337,597 @@
     </div>
   </div>
 
-  <div v-if="showStadiumCostModal" class="fixed inset-0 z-[60] flex items-center justify-center overflow-y-auto overscroll-contain bg-black/50 p-4">
-    <form class="w-full max-w-md rounded-lg bg-white p-6 shadow-xl" @submit.prevent="saveStadiumCost">
+  <div
+    v-if="showStadiumCostModal"
+    class="fixed inset-0 z-[60] flex items-center justify-center overflow-y-auto overscroll-contain bg-black/50 p-4"
+  >
+    <form
+      class="w-full max-w-md rounded-lg bg-white p-6 shadow-xl"
+      @submit.prevent="saveStadiumCost"
+    >
       <div class="flex items-center justify-between border-b pb-4">
-        <div><h3 class="text-lg font-semibold text-gray-900">Chỉnh sửa chi phí sân</h3><p class="text-sm text-gray-500">{{ stadiumCostTournament?.name }}</p></div>
-        <button type="button" @click="closeStadiumCostModal" class="text-2xl text-gray-400 hover:text-gray-700">×</button>
+        <div>
+          <h3 class="text-lg font-semibold text-gray-900">
+            Chỉnh sửa chi phí sân
+          </h3>
+          <p class="text-sm text-gray-500">{{ stadiumCostTournament?.name }}</p>
+        </div>
+        <button
+          type="button"
+          @click="closeStadiumCostModal"
+          class="text-2xl text-gray-400 hover:text-gray-700"
+        >
+          ×
+        </button>
       </div>
       <div class="py-5">
         <label class="form-label">Chọn chi phí sân</label>
-        <div class="mt-3 grid grid-cols-2 gap-3"><button v-for="amount in stadiumCostOptions" :key="amount" type="button" @click="stadiumCostForm = amount" class="rounded-lg border px-4 py-3 font-medium transition-colors" :class="stadiumCostForm === amount ? 'border-primary-600 bg-primary-600 text-white' : 'border-gray-200 text-gray-700 hover:bg-gray-50'">{{ amount.toLocaleString('vi-VN') }} ₫</button></div>
-        <label for="stadium-cost" class="form-label mt-5 block">Hoặc nhập chi phí sân khác</label>
-        <div class="mt-1 flex items-center gap-2"><button type="button" class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-gray-100 text-xl font-semibold text-gray-700 transition-colors hover:bg-gray-200" title="Giảm 100.000 ₫" @click="stadiumCostForm = Math.max(0, (stadiumCostForm || 0) - 100000)">−</button><div class="relative flex-1"><span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">₫</span><input id="stadium-cost" v-model.number="stadiumCostForm" type="number" min="0" required class="form-input pl-8" placeholder="Nhập chi phí sân"></div><button type="button" class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary-100 text-xl font-semibold text-primary-700 transition-colors hover:bg-primary-200" title="Tăng 100.000 ₫" @click="stadiumCostForm = (stadiumCostForm || 0) + 100000">+</button></div>
+        <div class="mt-3 grid grid-cols-2 gap-3">
+          <button
+            v-for="amount in stadiumCostOptions"
+            :key="amount"
+            type="button"
+            @click="stadiumCostForm = amount"
+            class="rounded-lg border px-4 py-3 font-medium transition-colors"
+            :class="
+              stadiumCostForm === amount
+                ? 'border-primary-600 bg-primary-600 text-white'
+                : 'border-gray-200 text-gray-700 hover:bg-gray-50'
+            "
+          >
+            {{ amount.toLocaleString("vi-VN") }} ₫
+          </button>
+        </div>
+        <label for="stadium-cost" class="form-label mt-5 block"
+          >Hoặc nhập chi phí sân khác</label
+        >
+        <div class="mt-1 flex items-center gap-2">
+          <button
+            type="button"
+            class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-gray-100 text-xl font-semibold text-gray-700 transition-colors hover:bg-gray-200"
+            title="Giảm 100.000 ₫"
+            @click="
+              stadiumCostForm = Math.max(0, (stadiumCostForm || 0) - 100000)
+            "
+          >
+            −
+          </button>
+          <div class="relative flex-1">
+            <span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500"
+              >₫</span
+            ><input
+              id="stadium-cost"
+              v-model.number="stadiumCostForm"
+              type="number"
+              min="0"
+              required
+              class="form-input pl-8"
+              placeholder="Nhập chi phí sân"
+            />
+          </div>
+          <button
+            type="button"
+            class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary-100 text-xl font-semibold text-primary-700 transition-colors hover:bg-primary-200"
+            title="Tăng 100.000 ₫"
+            @click="stadiumCostForm = (stadiumCostForm || 0) + 100000"
+          >
+            +
+          </button>
+        </div>
       </div>
-        <p class="mt-2 text-center text-xs text-gray-500">Đang nhập: {{ formatMoney(stadiumCostForm) }}</p><div class="flex justify-end gap-3 border-t pt-4"><button type="button" @click="closeStadiumCostModal" class="btn-secondary">Hủy</button><button type="submit" :disabled="stadiumCostSaving" class="btn-primary disabled:opacity-50">{{ stadiumCostSaving ? 'Đang lưu...' : 'Lưu' }}</button></div>
+      <p class="mt-2 text-center text-xs text-gray-500">
+        Đang nhập: {{ formatMoney(stadiumCostForm) }}
+      </p>
+      <div class="flex justify-end gap-3 border-t pt-4">
+        <button
+          type="button"
+          @click="closeStadiumCostModal"
+          class="btn-secondary"
+        >
+          Hủy</button
+        ><button
+          type="submit"
+          :disabled="stadiumCostSaving"
+          class="btn-primary disabled:opacity-50"
+        >
+          {{ stadiumCostSaving ? "Đang lưu..." : "Lưu" }}
+        </button>
+      </div>
     </form>
   </div>
 
-  <div v-if="showSponsorMoneyModal" class="fixed inset-0 z-[60] flex items-center justify-center overflow-y-auto overscroll-contain bg-black/50 p-4">
-    <div class="w-full max-w-md rounded-lg bg-white p-6 shadow-xl">
-      <div class="flex items-center justify-between border-b pb-4"><div><h3 class="text-lg font-semibold text-gray-900">Chỉnh sửa tiền tài trợ</h3><p class="text-sm text-gray-500">{{ sponsorMoneyTournament?.name }}</p></div><button type="button" @click="closeSponsorMoneyModal" class="text-2xl text-gray-400 hover:text-gray-700">×</button></div>
-      <div class="py-5"><div class="grid grid-cols-2 gap-3"><button v-for="amount in sponsorMoneyOptions" :key="amount" type="button" @click="selectedSponsorMoney = amount" class="rounded-lg border-2 px-4 py-4 font-semibold transition-colors" :class="selectedSponsorMoney === amount ? 'border-primary-600 bg-primary-600 text-white' : 'border-gray-200 text-gray-700 hover:border-primary-400'">{{ amount.toLocaleString('vi-VN') }} ₫</button></div><label for="sponsor-money" class="form-label mt-5 block">Hoặc nhập số tiền khác</label><div class="mt-1 flex items-center gap-2"><button type="button" class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-gray-100 text-xl font-semibold text-gray-700 transition-colors hover:bg-gray-200" title="Giảm 100.000 ₫" @click="selectedSponsorMoney = Math.max(0, selectedSponsorMoney - 100000)">−</button><div class="relative flex-1"><span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">₫</span><input id="sponsor-money" v-model.number="selectedSponsorMoney" type="number" min="0" class="form-input pl-8" placeholder="Nhập tiền tài trợ"></div><button type="button" class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary-100 text-xl font-semibold text-primary-700 transition-colors hover:bg-primary-200" title="Tăng 100.000 ₫" @click="selectedSponsorMoney += 100000">+</button></div></div>
-      <p class="mt-2 text-center text-xs text-gray-500">Đang nhập: {{ formatMoney(selectedSponsorMoney) }}</p><div class="flex justify-end gap-3 border-t pt-4"><button type="button" class="btn-secondary" @click="closeSponsorMoneyModal">Hủy</button><button type="button" class="btn-primary" :disabled="sponsorMoneySaving" @click="saveSponsorMoney">{{ sponsorMoneySaving ? 'Đang lưu...' : 'Lưu' }}</button></div>
-    </div>
-  </div>
-
-  <div v-if="showTournamentTimeModal" class="fixed inset-0 z-[60] flex items-center justify-center overflow-y-auto overscroll-contain bg-black/50 p-4">
+  <div
+    v-if="showSponsorMoneyModal"
+    class="fixed inset-0 z-[60] flex items-center justify-center overflow-y-auto overscroll-contain bg-black/50 p-4"
+  >
     <div class="w-full max-w-md rounded-lg bg-white p-6 shadow-xl">
       <div class="flex items-center justify-between border-b pb-4">
-        <div><h3 class="text-lg font-semibold text-gray-900">Chỉnh sửa giờ thi đấu</h3><p class="text-sm text-gray-500">{{ timeTournament?.name }}</p></div>
-        <button type="button" @click="closeTournamentTimeModal" class="text-2xl text-gray-400 hover:text-gray-700">×</button>
+        <div>
+          <h3 class="text-lg font-semibold text-gray-900">
+            Chỉnh sửa tiền tài trợ
+          </h3>
+          <p class="text-sm text-gray-500">
+            {{ sponsorMoneyTournament?.name }}
+          </p>
+        </div>
+        <button
+          type="button"
+          @click="closeSponsorMoneyModal"
+          class="text-2xl text-gray-400 hover:text-gray-700"
+        >
+          ×
+        </button>
       </div>
-      <div class="py-5"><p class="form-label mb-3">Chọn giờ bắt đầu</p><div class="grid grid-cols-3 gap-3"><button v-for="time in tournamentTimeOptions" :key="time" type="button" @click="selectedTournamentTime = time" class="rounded-lg border px-3 py-3 font-medium transition-colors" :class="selectedTournamentTime === time ? 'border-primary-600 bg-primary-600 text-white' : 'border-gray-200 text-gray-700 hover:bg-gray-50'">{{ time }}</button></div><label for="tournament-time" class="form-label mt-5 block">Hoặc chọn giờ khác</label><div class="mt-1 flex items-center gap-2"><button type="button" class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-gray-100 text-xl font-semibold text-gray-700 hover:bg-gray-200" title="Giảm 30 phút" @click="adjustTournamentTime(-30)">−</button><input id="tournament-time" v-model="selectedTournamentTime" type="time" step="1800" class="form-input flex-1 text-center"><button type="button" class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary-100 text-xl font-semibold text-primary-700 hover:bg-primary-200" title="Tăng 30 phút" @click="adjustTournamentTime(30)">+</button></div></div>
-      <div class="flex justify-end gap-3 border-t pt-4"><button type="button" @click="closeTournamentTimeModal" class="btn-secondary">Hủy</button><button type="button" @click="saveTournamentTime" :disabled="tournamentTimeSaving" class="btn-primary disabled:opacity-50">{{ tournamentTimeSaving ? 'Đang lưu...' : 'Lưu' }}</button></div>
+      <div class="py-5">
+        <div class="grid grid-cols-2 gap-3">
+          <button
+            v-for="amount in sponsorMoneyOptions"
+            :key="amount"
+            type="button"
+            @click="selectedSponsorMoney = amount"
+            class="rounded-lg border-2 px-4 py-4 font-semibold transition-colors"
+            :class="
+              selectedSponsorMoney === amount
+                ? 'border-primary-600 bg-primary-600 text-white'
+                : 'border-gray-200 text-gray-700 hover:border-primary-400'
+            "
+          >
+            {{ amount.toLocaleString("vi-VN") }} ₫
+          </button>
+        </div>
+        <label for="sponsor-money" class="form-label mt-5 block"
+          >Hoặc nhập số tiền khác</label
+        >
+        <div class="mt-1 flex items-center gap-2">
+          <button
+            type="button"
+            class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-gray-100 text-xl font-semibold text-gray-700 transition-colors hover:bg-gray-200"
+            title="Giảm 100.000 ₫"
+            @click="
+              selectedSponsorMoney = Math.max(0, selectedSponsorMoney - 100000)
+            "
+          >
+            −
+          </button>
+          <div class="relative flex-1">
+            <span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500"
+              >₫</span
+            ><input
+              id="sponsor-money"
+              v-model.number="selectedSponsorMoney"
+              type="number"
+              min="0"
+              class="form-input pl-8"
+              placeholder="Nhập tiền tài trợ"
+            />
+          </div>
+          <button
+            type="button"
+            class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary-100 text-xl font-semibold text-primary-700 transition-colors hover:bg-primary-200"
+            title="Tăng 100.000 ₫"
+            @click="selectedSponsorMoney += 100000"
+          >
+            +
+          </button>
+        </div>
+      </div>
+      <p class="mt-2 text-center text-xs text-gray-500">
+        Đang nhập: {{ formatMoney(selectedSponsorMoney) }}
+      </p>
+      <div class="flex justify-end gap-3 border-t pt-4">
+        <button
+          type="button"
+          class="btn-secondary"
+          @click="closeSponsorMoneyModal"
+        >
+          Hủy</button
+        ><button
+          type="button"
+          class="btn-primary"
+          :disabled="sponsorMoneySaving"
+          @click="saveSponsorMoney"
+        >
+          {{ sponsorMoneySaving ? "Đang lưu..." : "Lưu" }}
+        </button>
+      </div>
     </div>
   </div>
 
-  <div v-if="showCancellationDeadlineModal" class="fixed inset-0 z-[60] flex items-center justify-center overflow-y-auto overscroll-contain bg-black/50 p-4">
+  <div
+    v-if="showTournamentTimeModal"
+    class="fixed inset-0 z-[60] flex items-center justify-center overflow-y-auto overscroll-contain bg-black/50 p-4"
+  >
     <div class="w-full max-w-md rounded-lg bg-white p-6 shadow-xl">
-      <div class="flex items-center justify-between border-b pb-4"><div><h3 class="text-lg font-semibold text-gray-900">Chốt hủy tham gia</h3><p class="text-sm text-gray-500">{{ cancellationDeadlineTournament?.name }}</p></div><button type="button" class="text-2xl text-gray-400 hover:text-gray-700" @click="closeCancellationDeadlineModal">×</button></div>
-      <div class="py-5"><label for="cancellation-deadline" class="form-label block">Chọn ngày giờ chốt hủy</label><input id="cancellation-deadline" v-model="selectedCancellationDeadline" type="datetime-local" class="form-input mt-1" :min="cancellationDeadlineMin" :max="cancellationDeadlineMax"><p class="mt-2 text-xs text-gray-500">Chỉ có thể chọn từ thời điểm hiện tại đến trước giờ diễn ra giải đấu.</p></div>
-      <div class="flex justify-end gap-3 border-t pt-4"><button type="button" class="btn-secondary" :disabled="cancellationDeadlineSaving" @click="closeCancellationDeadlineModal">Hủy</button><button type="button" class="btn-primary" :disabled="cancellationDeadlineSaving || !selectedCancellationDeadline" @click="saveCancellationDeadline">{{ cancellationDeadlineSaving ? 'Đang lưu...' : 'Lưu' }}</button></div>
+      <div class="flex items-center justify-between border-b pb-4">
+        <div>
+          <h3 class="text-lg font-semibold text-gray-900">
+            Chỉnh sửa giờ thi đấu
+          </h3>
+          <p class="text-sm text-gray-500">{{ timeTournament?.name }}</p>
+        </div>
+        <button
+          type="button"
+          @click="closeTournamentTimeModal"
+          class="text-2xl text-gray-400 hover:text-gray-700"
+        >
+          ×
+        </button>
+      </div>
+      <div class="py-5">
+        <p class="form-label mb-3">Chọn giờ bắt đầu</p>
+        <div class="grid grid-cols-3 gap-3">
+          <button
+            v-for="time in tournamentTimeOptions"
+            :key="time"
+            type="button"
+            @click="selectedTournamentTime = time"
+            class="rounded-lg border px-3 py-3 font-medium transition-colors"
+            :class="
+              selectedTournamentTime === time
+                ? 'border-primary-600 bg-primary-600 text-white'
+                : 'border-gray-200 text-gray-700 hover:bg-gray-50'
+            "
+          >
+            {{ time }}
+          </button>
+        </div>
+        <label for="tournament-time" class="form-label mt-5 block"
+          >Hoặc chọn giờ khác</label
+        >
+        <div class="mt-1 flex items-center gap-2">
+          <button
+            type="button"
+            class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-gray-100 text-xl font-semibold text-gray-700 hover:bg-gray-200"
+            title="Giảm 30 phút"
+            @click="adjustTournamentTime(-30)"
+          >
+            −</button
+          ><input
+            id="tournament-time"
+            v-model="selectedTournamentTime"
+            type="time"
+            step="1800"
+            class="form-input flex-1 text-center"
+          /><button
+            type="button"
+            class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary-100 text-xl font-semibold text-primary-700 hover:bg-primary-200"
+            title="Tăng 30 phút"
+            @click="adjustTournamentTime(30)"
+          >
+            +
+          </button>
+        </div>
+      </div>
+      <div class="flex justify-end gap-3 border-t pt-4">
+        <button
+          type="button"
+          @click="closeTournamentTimeModal"
+          class="btn-secondary"
+        >
+          Hủy</button
+        ><button
+          type="button"
+          @click="saveTournamentTime"
+          :disabled="tournamentTimeSaving"
+          class="btn-primary disabled:opacity-50"
+        >
+          {{ tournamentTimeSaving ? "Đang lưu..." : "Lưu" }}
+        </button>
+      </div>
     </div>
   </div>
 
-  <div v-if="showFundContributionModal" class="fixed inset-0 z-[60] flex items-center justify-center overflow-y-auto overscroll-contain bg-black/50 p-4">
-    <form class="w-full max-w-md rounded-lg bg-white p-6 shadow-xl" @submit.prevent="saveFundContribution">
-      <div class="flex items-center justify-between border-b pb-4"><div><h3 class="text-lg font-semibold text-gray-900">Trích quỹ</h3><p class="text-sm text-gray-500">{{ fundContributionTournament?.name }}</p></div><button type="button" @click="closeFundContributionModal" class="text-2xl text-gray-400 hover:text-gray-700">×</button></div>
-      <div class="py-5"><p class="form-label mb-3">Chọn số tiền trích quỹ</p><div class="grid grid-cols-2 gap-3"><button v-for="amount in fundContributionOptions" :key="amount" type="button" @click="fundContributionForm = amount" class="rounded-lg border px-4 py-3 font-medium transition-colors" :class="fundContributionForm === amount ? 'border-primary-600 bg-primary-600 text-white' : 'border-gray-200 text-gray-700 hover:bg-gray-50'">{{ amount.toLocaleString('vi-VN') }} ₫</button></div><label for="fund-contribution" class="form-label mt-5 block">Hoặc nhập số tiền khác</label><div class="mt-1 flex items-center gap-2"><button type="button" class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-gray-100 text-xl font-semibold text-gray-700 transition-colors hover:bg-gray-200" title="Giảm 100.000 ₫" @click="fundContributionForm = Math.max(0, (fundContributionForm || 0) - 100000)">−</button><div class="relative flex-1"><span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">₫</span><input id="fund-contribution" v-model.number="fundContributionForm" type="number" min="0" required class="form-input pl-8" placeholder="Nhập số tiền trích quỹ"></div><button type="button" class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary-100 text-xl font-semibold text-primary-700 transition-colors hover:bg-primary-200" title="Tăng 100.000 ₫" @click="fundContributionForm = (fundContributionForm || 0) + 100000">+</button></div></div>
-      <div class="flex justify-end gap-3 border-t pt-4"><button type="button" @click="closeFundContributionModal" class="btn-secondary">Hủy</button><button type="submit" :disabled="fundContributionSaving" class="btn-primary disabled:opacity-50">{{ fundContributionSaving ? 'Đang lưu...' : 'Lưu' }}</button></div>
+  <div
+    v-if="showCancellationDeadlineModal"
+    class="fixed inset-0 z-[60] flex items-center justify-center overflow-y-auto overscroll-contain bg-black/50 p-4"
+  >
+    <div class="w-full max-w-md rounded-lg bg-white p-6 shadow-xl">
+      <div class="flex items-center justify-between border-b pb-4">
+        <div>
+          <h3 class="text-lg font-semibold text-gray-900">Chốt hủy tham gia</h3>
+          <p class="text-sm text-gray-500">
+            {{ cancellationDeadlineTournament?.name }}
+          </p>
+        </div>
+        <button
+          type="button"
+          class="text-2xl text-gray-400 hover:text-gray-700"
+          @click="closeCancellationDeadlineModal"
+        >
+          ×
+        </button>
+      </div>
+      <div class="py-5">
+        <label for="cancellation-deadline" class="form-label block"
+          >Chọn ngày giờ chốt hủy</label
+        ><input
+          id="cancellation-deadline"
+          v-model="selectedCancellationDeadline"
+          type="datetime-local"
+          class="form-input mt-1"
+          :min="cancellationDeadlineMin"
+          :max="cancellationDeadlineMax"
+        />
+        <p class="mt-2 text-xs text-gray-500">
+          Chỉ có thể chọn từ thời điểm hiện tại đến trước giờ diễn ra giải đấu.
+        </p>
+      </div>
+      <div class="flex justify-end gap-3 border-t pt-4">
+        <button
+          type="button"
+          class="btn-secondary"
+          :disabled="cancellationDeadlineSaving"
+          @click="closeCancellationDeadlineModal"
+        >
+          Hủy</button
+        ><button
+          type="button"
+          class="btn-primary"
+          :disabled="
+            cancellationDeadlineSaving || !selectedCancellationDeadline
+          "
+          @click="saveCancellationDeadline"
+        >
+          {{ cancellationDeadlineSaving ? "Đang lưu..." : "Lưu" }}
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div
+    v-if="showFundContributionModal"
+    class="fixed inset-0 z-[60] flex items-center justify-center overflow-y-auto overscroll-contain bg-black/50 p-4"
+  >
+    <form
+      class="w-full max-w-md rounded-lg bg-white p-6 shadow-xl"
+      @submit.prevent="saveFundContribution"
+    >
+      <div class="flex items-center justify-between border-b pb-4">
+        <div>
+          <h3 class="text-lg font-semibold text-gray-900">Trích quỹ</h3>
+          <p class="text-sm text-gray-500">
+            {{ fundContributionTournament?.name }}
+          </p>
+        </div>
+        <button
+          type="button"
+          @click="closeFundContributionModal"
+          class="text-2xl text-gray-400 hover:text-gray-700"
+        >
+          ×
+        </button>
+      </div>
+      <div class="py-5">
+        <p class="form-label mb-3">Chọn số tiền trích quỹ</p>
+        <div class="grid grid-cols-2 gap-3">
+          <button
+            v-for="amount in fundContributionOptions"
+            :key="amount"
+            type="button"
+            @click="fundContributionForm = amount"
+            class="rounded-lg border px-4 py-3 font-medium transition-colors"
+            :class="
+              fundContributionForm === amount
+                ? 'border-primary-600 bg-primary-600 text-white'
+                : 'border-gray-200 text-gray-700 hover:bg-gray-50'
+            "
+          >
+            {{ amount.toLocaleString("vi-VN") }} ₫
+          </button>
+        </div>
+        <label for="fund-contribution" class="form-label mt-5 block"
+          >Hoặc nhập số tiền khác</label
+        >
+        <div class="mt-1 flex items-center gap-2">
+          <button
+            type="button"
+            class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-gray-100 text-xl font-semibold text-gray-700 transition-colors hover:bg-gray-200"
+            title="Giảm 100.000 ₫"
+            @click="
+              fundContributionForm = Math.max(
+                0,
+                (fundContributionForm || 0) - 100000,
+              )
+            "
+          >
+            −
+          </button>
+          <div class="relative flex-1">
+            <span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500"
+              >₫</span
+            ><input
+              id="fund-contribution"
+              v-model.number="fundContributionForm"
+              type="number"
+              min="0"
+              required
+              class="form-input pl-8"
+              placeholder="Nhập số tiền trích quỹ"
+            />
+          </div>
+          <button
+            type="button"
+            class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary-100 text-xl font-semibold text-primary-700 transition-colors hover:bg-primary-200"
+            title="Tăng 100.000 ₫"
+            @click="fundContributionForm = (fundContributionForm || 0) + 100000"
+          >
+            +
+          </button>
+        </div>
+      </div>
+      <div class="flex justify-end gap-3 border-t pt-4">
+        <button
+          type="button"
+          @click="closeFundContributionModal"
+          class="btn-secondary"
+        >
+          Hủy</button
+        ><button
+          type="submit"
+          :disabled="fundContributionSaving"
+          class="btn-primary disabled:opacity-50"
+        >
+          {{ fundContributionSaving ? "Đang lưu..." : "Lưu" }}
+        </button>
+      </div>
     </form>
   </div>
 
-  <div v-if="showPitchTypeModal" class="fixed inset-0 z-[60] flex items-center justify-center overflow-y-auto overscroll-contain bg-black/50 p-4"><div class="w-full max-w-md rounded-lg bg-white p-6 shadow-xl"><h3 class="text-lg font-semibold">Chọn sân</h3><p class="mt-2 text-sm text-primary-700">Đang chọn: <strong>{{ selectedPitchType === 'FIELD_5' ? 'Sân 5' : 'Sân 7' }}</strong></p><div class="mt-5 grid grid-cols-2 gap-3"><button v-for="field in [{ value: 'FIELD_5', label: 'Sân 5' }, { value: 'FIELD_7', label: 'Sân 7' }]" :key="field.value" class="rounded-lg border-2 px-4 py-4 font-semibold" :class="selectedPitchType === field.value ? 'border-primary-600 bg-primary-600 text-white' : 'border-gray-200'" @click="selectedPitchType = field.value as 'FIELD_5' | 'FIELD_7'">{{ field.label }}</button></div><div class="mt-6 flex justify-end gap-3"><button class="btn-secondary" @click="showPitchTypeModal = false">Hủy</button><button class="btn-primary" @click="savePitchType">Lưu</button></div></div></div>
+  <div
+    v-if="showPitchTypeModal"
+    class="fixed inset-0 z-[60] flex items-center justify-center overflow-y-auto overscroll-contain bg-black/50 p-4"
+  >
+    <div class="w-full max-w-md rounded-lg bg-white p-6 shadow-xl">
+      <h3 class="text-lg font-semibold">Chọn sân</h3>
+      <p class="mt-2 text-sm text-primary-700">
+        Đang chọn:
+        <strong>{{
+          selectedPitchType === "FIELD_5" ? "Sân 5" : "Sân 7"
+        }}</strong>
+      </p>
+      <div class="mt-5 grid grid-cols-2 gap-3">
+        <button
+          v-for="field in [
+            { value: 'FIELD_5', label: 'Sân 5' },
+            { value: 'FIELD_7', label: 'Sân 7' },
+          ]"
+          :key="field.value"
+          class="rounded-lg border-2 px-4 py-4 font-semibold"
+          :class="
+            selectedPitchType === field.value
+              ? 'border-primary-600 bg-primary-600 text-white'
+              : 'border-gray-200'
+          "
+          @click="selectedPitchType = field.value as 'FIELD_5' | 'FIELD_7'"
+        >
+          {{ field.label }}
+        </button>
+      </div>
+      <div class="mt-6 flex justify-end gap-3">
+        <button class="btn-secondary" @click="showPitchTypeModal = false">
+          Hủy</button
+        ><button class="btn-primary" @click="savePitchType">Lưu</button>
+      </div>
+    </div>
+  </div>
 
-  <div v-if="showMaxAttendanceModal" class="fixed inset-0 z-[60] flex items-center justify-center overflow-y-auto overscroll-contain bg-black/50 p-4">
-    <div class="w-full max-w-md rounded-lg bg-white p-6 shadow-xl"><div class="flex items-center justify-between border-b pb-4"><div><h3 class="text-lg font-semibold text-gray-900">Số lượng cầu thủ</h3><p class="text-sm text-gray-500">{{ maxAttendanceTournament?.name }}</p></div><button type="button" class="text-2xl text-gray-400" @click="closeMaxAttendanceModal">×</button></div><p class="mt-4 text-sm text-gray-600">Chọn số lượng tối đa có thể điểm danh. Không chọn là không giới hạn.</p><div class="mt-4 grid grid-cols-2 gap-3"><button v-for="amount in maxAttendanceOptions" :key="amount" type="button" @click="selectedMaxAttendance = selectedMaxAttendance === amount ? null : amount" class="rounded-lg border-2 px-4 py-4 font-semibold" :class="selectedMaxAttendance === amount ? 'border-primary-600 bg-primary-600 text-white' : 'border-gray-200 text-gray-700 hover:border-primary-400'">{{ amount }}{{ selectedMaxAttendance === amount ? ' ✓' : '' }}</button></div><label for="max-attendance" class="form-label mt-5 block">Hoặc nhập số lượng khác</label><div class="mt-1 flex items-center gap-2"><button type="button" class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-gray-100 text-xl font-semibold text-gray-700 hover:bg-gray-200" @click="selectedMaxAttendance = Math.max(1, (selectedMaxAttendance || 1) - 1)">−</button><input id="max-attendance" v-model.number="selectedMaxAttendance" type="number" min="1" step="1" class="form-input flex-1 text-center" placeholder="Nhập số lượng"><button type="button" class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary-100 text-xl font-semibold text-primary-700 hover:bg-primary-200" @click="selectedMaxAttendance = (selectedMaxAttendance || 0) + 1">+</button></div><button v-if="selectedMaxAttendance !== null" type="button" class="mt-3 text-sm font-medium text-primary-600 hover:underline" @click="selectedMaxAttendance = null">Bỏ giới hạn</button><div class="mt-6 flex justify-end gap-3 border-t pt-4"><button class="btn-secondary" @click="closeMaxAttendanceModal">Hủy</button><button class="btn-primary" :disabled="maxAttendanceSaving" @click="saveMaxAttendance">{{ maxAttendanceSaving ? 'Đang lưu...' : 'Lưu' }}</button></div></div>
+  <div
+    v-if="showMaxAttendanceModal"
+    class="fixed inset-0 z-[60] flex items-center justify-center overflow-y-auto overscroll-contain bg-black/50 p-4"
+  >
+    <div class="w-full max-w-md rounded-lg bg-white p-6 shadow-xl">
+      <div class="flex items-center justify-between border-b pb-4">
+        <div>
+          <h3 class="text-lg font-semibold text-gray-900">Số lượng cầu thủ</h3>
+          <p class="text-sm text-gray-500">
+            {{ maxAttendanceTournament?.name }}
+          </p>
+        </div>
+        <button
+          type="button"
+          class="text-2xl text-gray-400"
+          @click="closeMaxAttendanceModal"
+        >
+          ×
+        </button>
+      </div>
+      <p class="mt-4 text-sm text-gray-600">
+        Chọn số lượng tối đa có thể điểm danh. Không chọn là không giới hạn.
+      </p>
+      <div class="mt-4 grid grid-cols-2 gap-3">
+        <button
+          v-for="amount in maxAttendanceOptions"
+          :key="amount"
+          type="button"
+          @click="
+            selectedMaxAttendance =
+              selectedMaxAttendance === amount ? null : amount
+          "
+          class="rounded-lg border-2 px-4 py-4 font-semibold"
+          :class="
+            selectedMaxAttendance === amount
+              ? 'border-primary-600 bg-primary-600 text-white'
+              : 'border-gray-200 text-gray-700 hover:border-primary-400'
+          "
+        >
+          {{ amount }}{{ selectedMaxAttendance === amount ? " ✓" : "" }}
+        </button>
+      </div>
+      <label for="max-attendance" class="form-label mt-5 block"
+        >Hoặc nhập số lượng khác</label
+      >
+      <div class="mt-1 flex items-center gap-2">
+        <button
+          type="button"
+          class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-gray-100 text-xl font-semibold text-gray-700 hover:bg-gray-200"
+          @click="
+            selectedMaxAttendance = Math.max(
+              1,
+              (selectedMaxAttendance || 1) - 1,
+            )
+          "
+        >
+          −</button
+        ><input
+          id="max-attendance"
+          v-model.number="selectedMaxAttendance"
+          type="number"
+          min="1"
+          step="1"
+          class="form-input flex-1 text-center"
+          placeholder="Nhập số lượng"
+        /><button
+          type="button"
+          class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary-100 text-xl font-semibold text-primary-700 hover:bg-primary-200"
+          @click="selectedMaxAttendance = (selectedMaxAttendance || 0) + 1"
+        >
+          +
+        </button>
+      </div>
+      <button
+        v-if="selectedMaxAttendance !== null"
+        type="button"
+        class="mt-3 text-sm font-medium text-primary-600 hover:underline"
+        @click="selectedMaxAttendance = null"
+      >
+        Bỏ giới hạn
+      </button>
+      <div class="mt-6 flex justify-end gap-3 border-t pt-4">
+        <button class="btn-secondary" @click="closeMaxAttendanceModal">
+          Hủy</button
+        ><button
+          class="btn-primary"
+          :disabled="maxAttendanceSaving"
+          @click="saveMaxAttendance"
+        >
+          {{ maxAttendanceSaving ? "Đang lưu..." : "Lưu" }}
+        </button>
+      </div>
+    </div>
   </div>
 
   <!-- Additional Cost Modal -->
-  <div v-if="showAdditionalCostModal" class="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto overscroll-contain bg-gray-600 bg-opacity-50 p-4">
+  <div
+    v-if="showAdditionalCostModal"
+    class="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto overscroll-contain bg-gray-600 bg-opacity-50 p-4"
+  >
     <div class="bg-white rounded-lg p-6 w-full max-w-md">
       <div class="flex justify-between items-center mb-4">
         <h2 class="text-lg font-semibold">Chi phí phát sinh</h2>
-        <button @click="closeAdditionalCostModal" class="text-gray-400 hover:text-gray-600">
+        <button
+          @click="closeAdditionalCostModal"
+          class="text-gray-400 hover:text-gray-600"
+        >
           ✕
         </button>
       </div>
-      
+
       <!-- Add/Edit Cost Form -->
-      <form v-if="selectedTournamentForCosts?.status !== 'COMPLETED'" @submit.prevent="saveAdditionalCost" class="space-y-4 mb-6">
+      <form
+        v-if="selectedTournamentForCosts?.status !== 'COMPLETED'"
+        @submit.prevent="saveAdditionalCost"
+        class="space-y-4 mb-6"
+      >
         <div>
           <label class="form-label">Mô tả</label>
           <input
@@ -1153,15 +3937,24 @@
             minlength="3"
             maxlength="100"
             class="form-input"
-            :class="{ 'border-red-500': additionalCostForm.description.length > 0 && additionalCostForm.description.length < 3 }"
+            :class="{
+              'border-red-500':
+                additionalCostForm.description.length > 0 &&
+                additionalCostForm.description.length < 3,
+            }"
             placeholder="Enter cost description (min 3 characters)"
+          />
+          <p
+            v-if="
+              additionalCostForm.description.length > 0 &&
+              additionalCostForm.description.length < 3
+            "
+            class="text-red-500 text-xs mt-1"
           >
-          <p v-if="additionalCostForm.description.length > 0 && additionalCostForm.description.length < 3" 
-             class="text-red-500 text-xs mt-1">
             Mô tả phải có ít nhất 3 ký tự
           </p>
         </div>
-        
+
         <div>
           <label class="form-label">Số tiền</label>
           <input
@@ -1172,24 +3965,46 @@
             max="999999"
             step="0.01"
             class="form-input"
-            :class="{ 'border-red-500': additionalCostForm.amount !== null && (additionalCostForm.amount <= 0 || isNaN(additionalCostForm.amount)) }"
+            :class="{
+              'border-red-500':
+                additionalCostForm.amount !== null &&
+                (additionalCostForm.amount <= 0 ||
+                  isNaN(additionalCostForm.amount)),
+            }"
             placeholder="Enter amount (must be greater than 0)"
+          />
+          <p
+            v-if="
+              additionalCostForm.amount !== null &&
+              (additionalCostForm.amount <= 0 ||
+                isNaN(additionalCostForm.amount))
+            "
+            class="text-red-500 text-xs mt-1"
           >
-          <p v-if="additionalCostForm.amount !== null && (additionalCostForm.amount <= 0 || isNaN(additionalCostForm.amount))" 
-             class="text-red-500 text-xs mt-1">
             Số tiền phải là số hợp lệ lớn hơn 0
           </p>
         </div>
-        
-        <button 
-          type="submit" 
+
+        <button
+          type="submit"
           :disabled="additionalCostLoading || !isFormValid"
           class="btn-primary w-full"
-          :class="{ 'opacity-50 cursor-not-allowed': additionalCostLoading || !isFormValid }"
+          :class="{
+            'opacity-50 cursor-not-allowed':
+              additionalCostLoading || !isFormValid,
+          }"
         >
-          {{ additionalCostLoading ? (editingCostId ? 'Đang cập nhật...' : 'Đang thêm...') : (editingCostId ? 'Cập nhật chi phí' : 'Thêm chi phí') }}
+          {{
+            additionalCostLoading
+              ? editingCostId
+                ? "Đang cập nhật..."
+                : "Đang thêm..."
+              : editingCostId
+                ? "Cập nhật chi phí"
+                : "Thêm chi phí"
+          }}
         </button>
-        <button 
+        <button
           v-if="editingCostId"
           type="button"
           @click="cancelEdit"
@@ -1198,11 +4013,16 @@
           Hủy chỉnh sửa
         </button>
       </form>
-      
+
       <!-- Additional Costs List -->
       <div>
-        <h3 class="font-medium text-gray-900 mb-3">Chi phí phát sinh hiện tại</h3>
-        <div v-if="currentAdditionalCosts.length === 0" class="text-gray-500 text-sm">
+        <h3 class="font-medium text-gray-900 mb-3">
+          Chi phí phát sinh hiện tại
+        </h3>
+        <div
+          v-if="currentAdditionalCosts.length === 0"
+          class="text-gray-500 text-sm"
+        >
           Chưa có chi phí phát sinh
         </div>
         <div v-else class="space-y-2">
@@ -1213,9 +4033,14 @@
           >
             <div>
               <div class="font-medium">{{ cost.description }}</div>
-              <div class="text-sm text-gray-500">{{ cost.amount.toLocaleString('vi-VN') }} ₫</div>
+              <div class="text-sm text-gray-500">
+                {{ cost.amount.toLocaleString("vi-VN") }} ₫
+              </div>
             </div>
-            <div v-if="selectedTournamentForCosts?.status !== 'COMPLETED'" class="flex space-x-2">
+            <div
+              v-if="selectedTournamentForCosts?.status !== 'COMPLETED'"
+              class="flex space-x-2"
+            >
               <button
                 @click="editAdditionalCost(cost)"
                 class="text-blue-600 hover:text-blue-800 text-sm"
@@ -1233,12 +4058,15 @@
             </div>
           </div>
         </div>
-        
+
         <!-- Total -->
-        <div v-if="currentAdditionalCosts.length > 0" class="mt-4 pt-4 border-t">
+        <div
+          v-if="currentAdditionalCosts.length > 0"
+          class="mt-4 pt-4 border-t"
+        >
           <div class="flex justify-between font-semibold">
             <span>Tổng chi phí phát sinh:</span>
-            <span>{{ totalAdditionalCosts.toLocaleString('vi-VN') }} ₫</span>
+            <span>{{ totalAdditionalCosts.toLocaleString("vi-VN") }} ₫</span>
           </div>
         </div>
       </div>
@@ -1246,19 +4074,37 @@
   </div>
 
   <!-- Tournament Score Modal -->
-  <div v-if="showScoresModal" class="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto overscroll-contain bg-black bg-opacity-50 p-4">
-    <div class="bg-white rounded-lg p-6 max-w-4xl w-full max-h-[90vh] overflow-y-auto" @click.stop>
+  <div
+    v-if="showScoresModal"
+    class="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto overscroll-contain bg-black bg-opacity-50 p-4"
+  >
+    <div
+      class="bg-white rounded-lg p-6 max-w-4xl w-full max-h-[90vh] overflow-y-auto"
+      @click.stop
+    >
       <h3 class="text-lg font-semibold text-gray-900 mb-4">Điểm số giải đấu</h3>
-      
+
       <!-- Team scores -->
-      <div v-if="scoresTournamentId && getTournamentTeams(weeklyTournaments.find(t => t.id === scoresTournamentId) || {} as Tournament).length > 0" class="mb-6">
+      <div
+        v-if="
+          scoresTournamentId &&
+          getTournamentTeams(
+            weeklyTournaments.find((t) => t.id === scoresTournamentId) ||
+              ({} as Tournament),
+          ).length > 0
+        "
+        class="mb-6"
+      >
         <p class="hidden sm:block text-gray-600 mb-4">
           Cập nhật điểm số của các đội trong giải đấu đang diễn ra.
         </p>
-        
+
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div
-            v-for="team in getTournamentTeams(weeklyTournaments.find(t => t.id === scoresTournamentId) || {} as Tournament)"
+            v-for="team in getTournamentTeams(
+              weeklyTournaments.find((t) => t.id === scoresTournamentId) ||
+                ({} as Tournament),
+            )"
             :key="team.id"
             class="bg-white border rounded-lg p-4 hover:shadow-md transition-shadow"
             :class="getTeamCardClass(team.name)"
@@ -1266,12 +4112,26 @@
             <!-- Team Header -->
             <div class="flex items-center justify-between mb-3">
               <div class="flex items-center">
-                <div class="w-10 h-10 rounded-full flex items-center justify-center mr-3" :class="getTeamNumberClass(team.name)">
-                  <span class="text-white font-bold text-lg">{{ getTeamNumber(team.name) }}</span>
+                <div
+                  class="w-10 h-10 rounded-full flex items-center justify-center mr-3"
+                  :class="getTeamNumberClass(team.name)"
+                >
+                  <span class="text-white font-bold text-lg">{{
+                    getTeamNumber(team.name)
+                  }}</span>
                 </div>
                 <div>
-                  <h5 class="font-semibold text-gray-900">{{ displayTeamName(team.name) }} <span class="text-sm font-medium" :class="getTeamTextClass(team.name)">- {{ getTeamJerseyLabel(team.name) }}</span></h5>
-                  <p class="text-sm text-gray-600">{{ team.players?.length || 0 }} cầu thủ</p>
+                  <h5 class="font-semibold text-gray-900">
+                    {{ displayTeamName(team.name) }}
+                    <span
+                      class="text-sm font-medium"
+                      :class="getTeamTextClass(team.name)"
+                      >- {{ getTeamJerseyLabel(team.name) }}</span
+                    >
+                  </h5>
+                  <p class="text-sm text-gray-600">
+                    {{ team.players?.length || 0 }} cầu thủ
+                  </p>
                 </div>
               </div>
               <span class="text-lg font-bold text-blue-600 flex items-center">
@@ -1280,44 +4140,69 @@
             </div>
 
             <!-- Score Controls -->
-            <div class="flex items-center justify-center space-x-4 mt-4 p-3 bg-gray-50 rounded-lg">
+            <div
+              class="flex items-center justify-center space-x-4 mt-4 p-3 bg-gray-50 rounded-lg"
+            >
               <button
                 @click="decreaseScore(team.id)"
                 class="w-10 h-10 bg-red-500 text-white rounded-full flex items-center justify-center hover:bg-red-600 transition-colors"
                 :disabled="getTeamScore(team.id) <= 0"
               >
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 12H4"/>
+                <svg
+                  class="w-5 h-5"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M20 12H4"
+                  />
                 </svg>
               </button>
-              
+
               <div class="text-center">
-                <div class="text-3xl font-bold text-gray-900">{{ getTeamScore(team.id) }}</div>
+                <div class="text-3xl font-bold text-gray-900">
+                  {{ getTeamScore(team.id) }}
+                </div>
               </div>
-              
+
               <button
                 @click="increaseScore(team.id)"
                 class="w-10 h-10 bg-green-500 text-white rounded-full flex items-center justify-center hover:bg-green-600 transition-colors"
               >
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/>
+                <svg
+                  class="w-5 h-5"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M12 6v6m0 0v6m0-6h6m-6 0H6"
+                  />
                 </svg>
               </button>
             </div>
           </div>
         </div>
       </div>
-      
+
       <!-- No teams message -->
       <div v-else class="mb-6">
-        <p class="text-gray-600">
-          Không tìm thấy đội nào trong giải đấu này.
-        </p>
+        <p class="text-gray-600">Không tìm thấy đội nào trong giải đấu này.</p>
       </div>
-      
+
       <div class="flex justify-end space-x-3">
         <button
-          @click="showScoresModal = false; scoresTournamentId = null"
+          @click="
+            showScoresModal = false;
+            scoresTournamentId = null;
+          "
           class="px-4 py-2 text-gray-600 hover:text-gray-800 transition-colors"
         >
           Đóng
@@ -1333,115 +4218,275 @@
   </div>
 
   <!-- End Tournament Modal -->
-  <div v-if="showEndTournamentModal" class="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto overscroll-contain bg-black bg-opacity-50 p-4">
-    <div class="bg-white rounded-lg p-6 max-w-4xl w-full max-h-[90vh] overflow-y-auto" @click.stop>
-      <h3 class="text-lg font-semibold text-gray-900 mb-4">Kết thúc giải đấu</h3>
-      
+  <div
+    v-if="showEndTournamentModal"
+    class="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto overscroll-contain bg-black bg-opacity-50 p-4"
+  >
+    <div
+      class="bg-white rounded-lg p-6 max-w-4xl w-full max-h-[90vh] overflow-y-auto"
+      @click.stop
+    >
+      <h3 class="text-lg font-semibold text-gray-900 mb-4">
+        Kết thúc giải đấu
+      </h3>
+
       <!-- Tournament teams showing auto-selected winner and loser -->
-      <div v-if="endTournamentId && getTournamentTeams(weeklyTournaments.find(t => t.id === endTournamentId) || {} as Tournament).length > 0" class="mb-6">
+      <div
+        v-if="
+          endTournamentId &&
+          getTournamentTeams(
+            weeklyTournaments.find((t) => t.id === endTournamentId) ||
+              ({} as Tournament),
+          ).length > 0
+        "
+        class="mb-6"
+      >
         <p class="text-gray-600 mb-4">
-          Giải đấu sẽ được kết thúc với kết quả sau, dựa trên điểm số của các đội:
+          Giải đấu sẽ được kết thúc với kết quả sau, dựa trên điểm số của các
+          đội:
         </p>
-        
+
         <div class="space-y-4 mb-6">
           <!-- Winner Team -->
-          <div v-if="selectedWinningTeam" class="bg-green-50 border border-green-200 rounded-lg p-4">
+          <div
+            v-if="selectedWinningTeam"
+            class="bg-green-50 border border-green-200 rounded-lg p-4"
+          >
             <div class="flex items-center justify-between">
               <div class="flex-1">
-                <h4 class="font-semibold text-green-800">🏆 Đội thắng: {{ selectedWinningTeam.name }}</h4>
+                <h4 class="font-semibold text-green-800">
+                  🏆 Đội thắng: {{ selectedWinningTeam.name }}
+                </h4>
               </div>
               <div class="text-right">
-                <span class="text-lg font-bold text-green-700">⚽: {{ selectedWinningTeam.score || 0 }}</span>
+                <span class="text-lg font-bold text-green-700"
+                  >⚽: {{ selectedWinningTeam.score || 0 }}</span
+                >
               </div>
             </div>
           </div>
-          
+
           <!-- Loser Team -->
-          <div v-if="selectedLosingTeam" class="bg-red-50 border border-red-200 rounded-lg p-4">
+          <div
+            v-if="selectedLosingTeam"
+            class="bg-red-50 border border-red-200 rounded-lg p-4"
+          >
             <div class="flex items-center justify-between">
               <div class="flex-1">
-                <h4 class="font-semibold text-red-800">😔 Đội thua: {{ selectedLosingTeam.name }}</h4>
+                <h4 class="font-semibold text-red-800">
+                  😔 Đội thua: {{ selectedLosingTeam.name }}
+                </h4>
               </div>
               <div class="text-right">
-                <span class="text-lg font-bold text-red-700">⚽: {{ selectedLosingTeam.score || 0 }}</span>
+                <span class="text-lg font-bold text-red-700"
+                  >⚽: {{ selectedLosingTeam.score || 0 }}</span
+                >
               </div>
             </div>
           </div>
         </div>
-        
+
         <!-- Money Calculation Info -->
-        <div class="bg-primary-50 border border-primary-200 rounded-lg p-4 mb-4">
-          <h5 class="font-semibold text-primary-800 mb-2">💰 Cách tính tiền:</h5>
+        <div
+          class="bg-primary-50 border border-primary-200 rounded-lg p-4 mb-4"
+        >
+          <h5 class="font-semibold text-primary-800 mb-2">
+            💰 Cách tính tiền:
+          </h5>
           <ul class="text-xs text-primary-700 space-y-1">
-            <li v-if="getTournamentById(endTournamentId)?.selfFunded">• Giải tự túc: không có biến động tiền cầu thủ.</li>
-            <li v-if="!getTournamentById(endTournamentId)?.selfFunded">• Chi phí giải đấu mỗi cầu thủ: -{{ calculateCostPerPlayer(endTournamentId).toLocaleString('vi-VN') }} ₫</li>
-            <li v-if="!getTournamentById(endTournamentId)?.selfFunded">• GK được giảm 50% chi phí giải đấu</li>
-            <li v-if="!getTournamentById(endTournamentId)?.selfFunded">• Ngôi sao hy vọng thắng: +10.000 ₫</li>
-            <li v-if="!getTournamentById(endTournamentId)?.selfFunded">• Ngôi sao hy vọng thua: -10.000 ₫</li>
-            <li v-if="!getTournamentById(endTournamentId)?.selfFunded">• Cầu thủ đội thua: -10.000 ₫</li>
-            <li v-if="!getTournamentById(endTournamentId)?.selfFunded">• Chi phí nước: -10.000 ₫</li>
-            <li v-if="!getTournamentById(endTournamentId)?.selfFunded">• Đội thắng được miễn phí nước</li>
+            <li v-if="getTournamentById(endTournamentId)?.selfFunded">
+              • Giải tự túc: không có biến động tiền cầu thủ.
+            </li>
+            <li v-if="!getTournamentById(endTournamentId)?.selfFunded">
+              • Chi phí giải đấu mỗi cầu thủ: -{{
+                calculateCostPerPlayer(endTournamentId).toLocaleString("vi-VN")
+              }}
+              ₫
+            </li>
+            <li v-if="!getTournamentById(endTournamentId)?.selfFunded">
+              • GK được giảm 50% chi phí giải đấu
+            </li>
+            <li v-if="!getTournamentById(endTournamentId)?.selfFunded">
+              • Ngôi sao hy vọng thắng: +10.000 ₫
+            </li>
+            <li v-if="!getTournamentById(endTournamentId)?.selfFunded">
+              • Ngôi sao hy vọng thua: -10.000 ₫
+            </li>
+            <li v-if="!getTournamentById(endTournamentId)?.selfFunded">
+              • Cầu thủ đội thua: -10.000 ₫
+            </li>
+            <li v-if="!getTournamentById(endTournamentId)?.selfFunded">
+              • Chi phí nước: -10.000 ₫
+            </li>
+            <li v-if="!getTournamentById(endTournamentId)?.selfFunded">
+              • Đội thắng được miễn phí nước
+            </li>
+            <li
+              v-if="
+                !getTournamentById(endTournamentId)?.selfFunded &&
+                (systemStore.currentSettings?.noShowPenalty ?? 0) > 0
+              "
+            >
+              • Không lên sân: -{{
+                (
+                  systemStore.currentSettings?.noShowPenalty ?? 0
+                ).toLocaleString("vi-VN")
+              }}
+              ₫
+            </li>
           </ul>
         </div>
 
         <!-- Preview Change Block -->
         <div class="bg-gray-50 border border-gray-200 rounded-lg p-4 mb-4">
-          <h5 class="font-semibold text-gray-800 mb-2">🔎 Xem trước biến động tiền</h5>
-          <div v-for="team in getTournamentTeams(weeklyTournaments.find(t => t.id === endTournamentId) || {} as Tournament)" :key="team.id" class="mb-4">
-            <div class="font-semibold mb-2" :class="getTeamTextClass(team.name)">{{ displayTeamName(team.name) }} - {{ getTeamJerseyLabel(team.name) }}</div>
-            <div v-for="player in team.players.filter((p: any) => endTournamentId && getAttendanceStatus(endTournamentId, p.id) === 'ATTEND')" :key="player.id" class="bg-white rounded-lg p-3 mb-2 border border-gray-100">
+          <h5 class="font-semibold text-gray-800 mb-2">
+            🔎 Xem trước biến động tiền
+          </h5>
+          <div
+            v-for="team in getTournamentTeams(
+              weeklyTournaments.find((t) => t.id === endTournamentId) ||
+                ({} as Tournament),
+            )"
+            :key="team.id"
+            class="mb-4"
+          >
+            <div
+              class="font-semibold mb-2"
+              :class="getTeamTextClass(team.name)"
+            >
+              {{ displayTeamName(team.name) }} -
+              {{ getTeamJerseyLabel(team.name) }}
+            </div>
+            <div
+              v-for="player in team.players.filter(
+                (p: any) =>
+                  endTournamentId &&
+                  getAttendanceStatus(endTournamentId, p.id) === 'ATTEND',
+              )"
+              :key="player.id"
+              class="bg-white rounded-lg p-3 mb-2 border border-gray-100"
+            >
               <!-- Player Header -->
               <div class="flex items-center justify-between mb-2">
                 <div class="flex items-center">
-                  <div class="w-6 h-6 shrink-0 overflow-hidden bg-gray-300 rounded-full flex items-center justify-center mr-2 text-xs font-medium">
-                    <img v-if="player.avatar" :src="player.avatar" :alt="player.name" class="h-full w-full object-cover">
-                    <span v-else>{{ player.name.charAt(0).toUpperCase() }}</span>
+                  <div
+                    class="w-6 h-6 shrink-0 overflow-hidden bg-gray-300 rounded-full flex items-center justify-center mr-2 text-xs font-medium"
+                  >
+                    <img
+                      v-if="player.avatar"
+                      :src="player.avatar"
+                      :alt="player.name"
+                      class="h-full w-full object-cover"
+                    />
+                    <span v-else>{{
+                      player.name.charAt(0).toUpperCase()
+                    }}</span>
                   </div>
-                  <span class="font-medium text-gray-900">{{ player.name }}</span>
-                  <span class="ml-2 text-xs text-gray-500">{{ player.position }}</span>
-                  <span class="ml-2 text-xs text-gray-500">T{{ player.tier }}</span>
-                  <button v-if="isGoalkeeper(player.position)" @click="toggleGkTournamentDiscount(player.id)" class="ml-2 text-xs px-2 py-1 rounded" :class="isGkTournamentDiscountCancelled(player.id) ? 'bg-gray-200 text-gray-700' : 'bg-yellow-100 text-yellow-800 hover:bg-yellow-200'">
-                    {{ isGkTournamentDiscountCancelled(player.id) ? 'Áp dụng giảm 50%' : 'Hủy giảm 50%' }}
+                  <span class="font-medium text-gray-900">{{
+                    player.name
+                  }}</span>
+                  <span class="ml-2 text-xs text-gray-500">{{
+                    player.position
+                  }}</span>
+                  <span class="ml-2 text-xs text-gray-500"
+                    >T{{ player.tier }}</span
+                  >
+                  <button
+                    v-if="isGoalkeeper(player.position)"
+                    @click="toggleGkTournamentDiscount(player.id)"
+                    class="ml-2 text-xs px-2 py-1 rounded"
+                    :class="
+                      isGkTournamentDiscountCancelled(player.id)
+                        ? 'bg-gray-200 text-gray-700'
+                        : 'bg-yellow-100 text-yellow-800 hover:bg-yellow-200'
+                    "
+                  >
+                    {{
+                      isGkTournamentDiscountCancelled(player.id)
+                        ? "Áp dụng giảm 50%"
+                        : "Hủy giảm 50%"
+                    }}
                   </button>
                 </div>
               </div>
-              
+
               <!-- Detailed Changes -->
               <div v-if="endTournamentId" class="ml-8 space-y-1">
-                <div 
-                  v-for="change in getDetailedMoneyChange(endTournamentId, team, player).changes" 
+                <div
+                  v-for="change in getDetailedMoneyChange(
+                    endTournamentId,
+                    team,
+                    player,
+                  ).changes"
                   :key="change.type"
                   class="flex justify-between items-center gap-3 text-xs"
                 >
-                  <span class="min-w-0 text-gray-600">{{ change.description }}:</span>
-                  <span class="shrink-0 whitespace-nowrap font-medium text-gray-900">
-                    {{ change.amount >= 0 ? '+' : '' }}{{ change.amount.toLocaleString('vi-VN') }} ₫
+                  <span class="min-w-0 text-gray-600"
+                    >{{ change.description }}:</span
+                  >
+                  <span
+                    class="shrink-0 whitespace-nowrap font-medium text-gray-900"
+                  >
+                    {{ change.amount >= 0 ? "+" : ""
+                    }}{{ change.amount.toLocaleString("vi-VN") }} ₫
                   </span>
                 </div>
                 <div class="flex justify-between items-center gap-3 text-xs">
                   <span>Tổng thay đổi: </span>
-                  <span class="shrink-0 whitespace-nowrap" :class="endTournamentId && getDetailedMoneyChange(endTournamentId, team, player).total >= 0 ? 'text-green-600' : 'text-red-600'">{{ endTournamentId && getDetailedMoneyChange(endTournamentId, team, player).total >= 0 ? '+' : '' }}{{ endTournamentId ? getDetailedMoneyChange(endTournamentId, team, player).total.toLocaleString('vi-VN') : '0' }} ₫</span>
+                  <span
+                    class="shrink-0 whitespace-nowrap"
+                    :class="
+                      endTournamentId &&
+                      getDetailedMoneyChange(endTournamentId, team, player)
+                        .total >= 0
+                        ? 'text-green-600'
+                        : 'text-red-600'
+                    "
+                    >{{
+                      endTournamentId &&
+                      getDetailedMoneyChange(endTournamentId, team, player)
+                        .total >= 0
+                        ? "+"
+                        : ""
+                    }}{{
+                      endTournamentId
+                        ? getDetailedMoneyChange(
+                            endTournamentId,
+                            team,
+                            player,
+                          ).total.toLocaleString("vi-VN")
+                        : "0"
+                    }}
+                    ₫</span
+                  >
                 </div>
                 <div class="flex justify-between items-center gap-3 text-xs">
                   <span>Hiện tại: </span>
-                  <span class="shrink-0 whitespace-nowrap">{{ (player.money || 0).toLocaleString('vi-VN') }} ₫</span>
+                  <span class="shrink-0 whitespace-nowrap"
+                    >{{ (player.money || 0).toLocaleString("vi-VN") }} ₫</span
+                  >
                 </div>
               </div>
             </div>
           </div>
         </div>
       </div>
-      
+
       <!-- No teams message -->
       <div v-else class="mb-6">
         <p class="text-gray-600">
-          Are you sure you want to end this tournament? This will mark it as COMPLETED and cannot be undone.
+          Are you sure you want to end this tournament? This will mark it as
+          COMPLETED and cannot be undone.
         </p>
       </div>
-      
+
       <div class="flex justify-end space-x-3">
         <button
-          @click="showEndTournamentModal = false; selectedWinningTeam = null; selectedLosingTeam = null"
+          @click="
+            showEndTournamentModal = false;
+            selectedWinningTeam = null;
+            selectedLosingTeam = null;
+          "
           :disabled="endTournamentSaving"
           class="px-4 py-2 text-gray-600 hover:text-gray-800 transition-colors"
         >
@@ -1452,26 +4497,43 @@
           :disabled="endTournamentSaving"
           class="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 transition-colors disabled:cursor-not-allowed disabled:opacity-50"
         >
-          {{ endTournamentSaving ? 'Đang lưu...' : 'Kết thúc giải đấu' }}
+          {{ endTournamentSaving ? "Đang lưu..." : "Kết thúc giải đấu" }}
         </button>
       </div>
     </div>
   </div>
 
   <!-- Delete Tournament Confirmation Modal -->
-  <div v-if="showDeleteTournamentModal" class="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto overscroll-contain bg-black bg-opacity-50 p-4">
+  <div
+    v-if="showDeleteTournamentModal"
+    class="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto overscroll-contain bg-black bg-opacity-50 p-4"
+  >
     <div class="bg-white rounded-lg p-6 max-w-lg w-full" @click.stop>
       <h3 class="text-lg font-semibold text-gray-900 mb-4">Xóa giải đấu</h3>
       <div class="text-gray-600 mb-6">
-        <p class="mb-2">Bạn có chắc muốn xóa <strong>"{{ deleteTournamentData?.name }}"</strong>?</p>
+        <p class="mb-2">
+          Bạn có chắc muốn xóa
+          <strong>"{{ deleteTournamentData?.name }}"</strong>?
+        </p>
         <div v-if="deleteTournamentInfo" class="bg-red-50 p-3 rounded-lg">
-          <p class="font-medium text-red-800 mb-2">Thao tác này sẽ xóa vĩnh viễn:</p>
+          <p class="font-medium text-red-800 mb-2">
+            Thao tác này sẽ xóa vĩnh viễn:
+          </p>
           <ul class="text-red-700 text-sm space-y-1">
-            <li v-if="deleteTournamentInfo.teamCount > 0">• {{ deleteTournamentInfo.teamCount }} phân công đội</li>
-            <li v-if="deleteTournamentInfo.attendanceCount > 0">• {{ deleteTournamentInfo.attendanceCount }} bản ghi điểm danh</li>
-            <li v-if="deleteTournamentInfo.additionalCostCount > 0">• {{ deleteTournamentInfo.additionalCostCount }} khoản chi phí phát sinh</li>
+            <li v-if="deleteTournamentInfo.teamCount > 0">
+              • {{ deleteTournamentInfo.teamCount }} phân công đội
+            </li>
+            <li v-if="deleteTournamentInfo.attendanceCount > 0">
+              • {{ deleteTournamentInfo.attendanceCount }} bản ghi điểm danh
+            </li>
+            <li v-if="deleteTournamentInfo.additionalCostCount > 0">
+              • {{ deleteTournamentInfo.additionalCostCount }} khoản chi phí
+              phát sinh
+            </li>
           </ul>
-          <p class="text-red-800 font-medium mt-2">Thao tác này không thể hoàn tác.</p>
+          <p class="text-red-800 font-medium mt-2">
+            Thao tác này không thể hoàn tác.
+          </p>
         </div>
       </div>
       <div class="flex justify-end space-x-3">
@@ -1492,39 +4554,99 @@
   </div>
 
   <!-- Team Count Selection Modal -->
-  <div v-if="showTeamCountModal" class="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto overscroll-contain bg-black bg-opacity-50 p-4">
+  <div
+    v-if="showTeamCountModal"
+    class="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto overscroll-contain bg-black bg-opacity-50 p-4"
+  >
     <div class="bg-white rounded-lg p-6 max-w-md w-full">
-      <h3 class="text-lg font-semibold text-gray-900 mb-2">Chọn số lượng đội</h3>
-      <p class="text-sm text-gray-600 mb-5">Chọn một số lượng đội để hệ thống chia cầu thủ cân bằng.</p>
+      <h3 class="text-lg font-semibold text-gray-900 mb-2">
+        Chọn số lượng đội
+      </h3>
+      <p class="text-sm text-gray-600 mb-5">
+        Chọn một số lượng đội để hệ thống chia cầu thủ cân bằng.
+      </p>
       <div class="grid grid-cols-3 gap-3">
-        <button v-for="count in teamCountOptions" :key="count" type="button" @click="selectedTeamCount = count"
+        <button
+          v-for="count in teamCountOptions"
+          :key="count"
+          type="button"
+          @click="selectedTeamCount = count"
           class="rounded-lg border-2 px-3 py-3 font-semibold transition-colors"
-          :class="selectedTeamCount === count ? 'border-primary-600 bg-primary-600 text-white' : 'border-gray-200 text-gray-700 hover:border-primary-400'">
+          :class="
+            selectedTeamCount === count
+              ? 'border-primary-600 bg-primary-600 text-white'
+              : 'border-gray-200 text-gray-700 hover:border-primary-400'
+          "
+        >
           {{ count }} đội
         </button>
       </div>
       <p class="mt-5 text-sm font-medium text-gray-700">Chọn sân</p>
       <div class="mt-2 grid grid-cols-2 gap-3">
-        <button v-for="field in [{ value: 'FIELD_5', label: 'Sân 5' }, { value: 'FIELD_7', label: 'Sân 7' }]" :key="field.value" type="button" @click="selectedTeamField = field.value as 'FIELD_5' | 'FIELD_7'" class="rounded-lg border-2 px-3 py-3 font-semibold transition-colors" :class="selectedTeamField === field.value ? 'border-primary-600 bg-primary-600 text-white' : 'border-gray-200 text-gray-700 hover:border-primary-400'">{{ field.label }}</button>
+        <button
+          v-for="field in [
+            { value: 'FIELD_5', label: 'Sân 5' },
+            { value: 'FIELD_7', label: 'Sân 7' },
+          ]"
+          :key="field.value"
+          type="button"
+          @click="selectedTeamField = field.value as 'FIELD_5' | 'FIELD_7'"
+          class="rounded-lg border-2 px-3 py-3 font-semibold transition-colors"
+          :class="
+            selectedTeamField === field.value
+              ? 'border-primary-600 bg-primary-600 text-white'
+              : 'border-gray-200 text-gray-700 hover:border-primary-400'
+          "
+        >
+          {{ field.label }}
+        </button>
       </div>
-      <p v-if="teamCountModalTournamentId" class="mt-3 text-sm text-gray-600">Sân {{ selectedTeamField === 'FIELD_5' ? '5' : '7' }} hiện có {{ getFieldAttendanceCount(teamCountModalTournamentId, selectedTeamField) }} cầu thủ; cần tối thiểu {{ getMinimumPlayersForField(selectedTeamField) }} cầu thủ.</p>
+      <p v-if="teamCountModalTournamentId" class="mt-3 text-sm text-gray-600">
+        Sân {{ selectedTeamField === "FIELD_5" ? "5" : "7" }} hiện có
+        {{
+          getFieldAttendanceCount(teamCountModalTournamentId, selectedTeamField)
+        }}
+        cầu thủ; cần tối thiểu
+        {{ getMinimumPlayersForField(selectedTeamField) }} cầu thủ.
+      </p>
       <div class="flex justify-end gap-3 mt-6">
-        <button type="button" class="btn-secondary" @click="closeTeamCountModal">Hủy</button>
-        <button type="button" class="btn-primary" :disabled="teamGenerationLoading || !canGenerateTeams(teamCountModalTournamentId || '', selectedTeamField)" @click="confirmGenerateRandomTeams">
-          {{ teamGenerationLoading ? 'Đang chia...' : 'Chia đội' }}
+        <button
+          type="button"
+          class="btn-secondary"
+          @click="closeTeamCountModal"
+        >
+          Hủy
+        </button>
+        <button
+          type="button"
+          class="btn-primary"
+          :disabled="
+            teamGenerationLoading ||
+            !canGenerateTeams(
+              teamCountModalTournamentId || '',
+              selectedTeamField,
+            )
+          "
+          @click="confirmGenerateRandomTeams"
+        >
+          {{ teamGenerationLoading ? "Đang chia..." : "Chia đội" }}
         </button>
       </div>
     </div>
   </div>
 
   <!-- Clear Teams Confirmation Modal -->
-  <div v-if="showClearTeamsModal" class="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto overscroll-contain bg-black bg-opacity-50 p-4">
+  <div
+    v-if="showClearTeamsModal"
+    class="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto overscroll-contain bg-black bg-opacity-50 p-4"
+  >
     <div class="bg-white rounded-lg p-6 max-w-lg w-full" @click.stop>
       <h3 class="text-lg font-semibold text-gray-900 mb-4">Xóa đội</h3>
       <div class="text-gray-600 mb-6">
         <p class="mb-2">Bạn có chắc muốn xóa tất cả đội của giải đấu này?</p>
         <p class="text-red-600 font-medium text-sm">
-          Thao tác này không thể hoàn tác. Toàn bộ phân công cầu thủ vào đội sẽ bị xóa.
+          Thao tác này không thể hoàn tác. Toàn bộ phân công cầu thủ vào đội sẽ
+          bị xóa.
         </p>
       </div>
       <div class="flex justify-end space-x-3">
@@ -1545,11 +4667,17 @@
   </div>
 
   <!-- Delete Additional Cost Confirmation Modal -->
-  <div v-if="showDeleteCostModal" class="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto overscroll-contain bg-black bg-opacity-50 p-4">
+  <div
+    v-if="showDeleteCostModal"
+    class="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto overscroll-contain bg-black bg-opacity-50 p-4"
+  >
     <div class="bg-white rounded-lg p-6 max-w-md w-full" @click.stop>
-      <h3 class="text-lg font-semibold text-gray-900 mb-4">Xóa chi phí phát sinh</h3>
+      <h3 class="text-lg font-semibold text-gray-900 mb-4">
+        Xóa chi phí phát sinh
+      </h3>
       <p class="text-gray-600 mb-6">
-        Are you sure you want to delete this additional cost? This action cannot be undone.
+        Are you sure you want to delete this additional cost? This action cannot
+        be undone.
       </p>
       <div class="flex justify-end space-x-3">
         <button
@@ -1568,1326 +4696,2230 @@
     </div>
   </div>
 
-  <div v-if="showFriendSwapModal" class="fixed inset-0 z-[80] flex items-center justify-center overflow-y-auto overscroll-contain bg-black/50 p-4">
-    <div class="max-h-[90vh] w-full max-w-md overflow-y-auto rounded-lg bg-white p-6 shadow-xl">
+  <div
+    v-if="showFriendSwapModal"
+    class="fixed inset-0 z-[80] flex items-center justify-center overflow-y-auto overscroll-contain bg-black/50 p-4"
+  >
+    <div
+      class="max-h-[90vh] w-full max-w-md overflow-y-auto rounded-lg bg-white p-6 shadow-xl"
+    >
       <h3 class="text-lg font-semibold">Swap dùm bạn</h3>
-      <p class="mt-1 text-sm text-gray-600">Chọn một bạn, sau đó chọn cầu thủ đang chờ swap.</p>
-      <div v-if="friendsLoading" class="py-8 text-center text-gray-500">Đang tải...</div>
+      <p class="mt-1 text-sm text-gray-600">
+        Chọn một bạn, sau đó chọn cầu thủ đang chờ swap.
+      </p>
+      <div v-if="friendsLoading" class="py-8 text-center text-gray-500">
+        Đang tải...
+      </div>
       <template v-else>
         <p class="mt-5 text-sm font-semibold">Bạn của bạn</p>
         <div v-if="friends.length" class="mt-2 space-y-2">
-          <button v-for="friend in friends" :key="friend.id" type="button" class="w-full rounded-lg border-2 px-4 py-3 text-left font-medium" :class="friendSelectedIds[0] === friend.id ? 'border-primary-600 bg-primary-50 text-primary-800' : 'border-gray-200'" @click="friendSelectedIds = [friend.id]">{{ friend.name }} · {{ friend.position }} - Tier {{ friend.tier }}</button>
+          <button
+            v-for="friend in friends"
+            :key="friend.id"
+            type="button"
+            class="w-full rounded-lg border-2 px-4 py-3 text-left font-medium"
+            :class="
+              friendSelectedIds[0] === friend.id
+                ? 'border-primary-600 bg-primary-50 text-primary-800'
+                : 'border-gray-200'
+            "
+            @click="friendSelectedIds = [friend.id]"
+          >
+            {{ friend.name }} · {{ friend.position }} - Tier {{ friend.tier }}
+          </button>
         </div>
-        <p v-else class="mt-2 rounded-lg bg-gray-50 p-3 text-sm text-gray-600">Bạn chưa có cầu thủ bạn bè nào.</p>
-        <button v-if="friends.length < 2" type="button" class="mt-3 w-full rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 font-semibold text-blue-700 hover:bg-blue-100" @click="showCreateFriendModal = true">+ Tạo bạn mới</button>
+        <p v-else class="mt-2 rounded-lg bg-gray-50 p-3 text-sm text-gray-600">
+          Bạn chưa có cầu thủ bạn bè nào.
+        </p>
+        <button
+          v-if="friends.length < 2"
+          type="button"
+          class="mt-3 w-full rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 font-semibold text-blue-700 hover:bg-blue-100"
+          @click="showCreateFriendModal = true"
+        >
+          + Tạo bạn mới
+        </button>
         <p class="mt-5 text-sm font-semibold">Cầu thủ đang chờ swap</p>
         <div class="mt-2 space-y-2">
-          <button v-for="request in getIncomingSwapRequests(friendTournamentId || '')" :key="request.id" type="button" class="w-full rounded-lg border-2 px-4 py-3 text-left font-medium" :class="friendSwapRequest?.id === request.id ? 'border-orange-500 bg-orange-50 text-orange-800' : 'border-gray-200'" @click="friendSwapRequest = request">{{ request.requester.name }} · {{ request.requester.position }} - Tier {{ request.requester.tier }}</button>
-          <p v-if="!getIncomingSwapRequests(friendTournamentId || '').length" class="rounded-lg bg-gray-50 p-3 text-sm text-gray-600">Không có cầu thủ nào đang chờ swap.</p>
+          <button
+            v-for="request in getIncomingSwapRequests(friendTournamentId || '')"
+            :key="request.id"
+            type="button"
+            class="w-full rounded-lg border-2 px-4 py-3 text-left font-medium"
+            :class="
+              friendSwapRequest?.id === request.id
+                ? 'border-orange-500 bg-orange-50 text-orange-800'
+                : 'border-gray-200'
+            "
+            @click="friendSwapRequest = request"
+          >
+            {{ request.requester.name }} · {{ request.requester.position }} -
+            Tier {{ request.requester.tier }}
+          </button>
+          <p
+            v-if="!getIncomingSwapRequests(friendTournamentId || '').length"
+            class="rounded-lg bg-gray-50 p-3 text-sm text-gray-600"
+          >
+            Không có cầu thủ nào đang chờ swap.
+          </p>
         </div>
       </template>
-      <div class="mt-6 flex justify-end gap-3"><button class="btn-secondary" @click="showFriendSwapModal = false">Hủy</button><button class="btn-primary" :disabled="friendsLoading || friendRegistrationSaving || !friendSelectedIds.length || !friendSwapRequest" @click="acceptSwapForFriend">Xác nhận swap</button></div>
+      <div class="mt-6 flex justify-end gap-3">
+        <button class="btn-secondary" @click="showFriendSwapModal = false">
+          Hủy</button
+        ><button
+          class="btn-primary"
+          :disabled="
+            friendsLoading ||
+            friendRegistrationSaving ||
+            !friendSelectedIds.length ||
+            !friendSwapRequest
+          "
+          @click="acceptSwapForFriend"
+        >
+          Xác nhận swap
+        </button>
+      </div>
     </div>
   </div>
 
-  <div v-if="showFriendRegistrationModal" class="fixed inset-0 z-[70] flex items-center justify-center overflow-y-auto overscroll-contain bg-black/50 p-4">
-    <div class="max-h-[90vh] w-full max-w-md overflow-y-auto rounded-lg bg-white p-6 shadow-xl">
-      <div class="flex items-center gap-1"><h3 class="text-lg font-semibold">Chọn sân đăng ký</h3><button type="button" class="inline-flex h-6 w-6 items-center justify-center rounded-full text-primary-600 transition-colors hover:bg-primary-50" title="Hướng dẫn đăng ký dùm bạn" aria-label="Hướng dẫn đăng ký dùm bạn" @click="showFriendRegistrationGuideModal = true"><svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9" stroke-width="2"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0-9h.01"/></svg></button></div>
+  <div
+    v-if="showFriendRegistrationModal"
+    class="fixed inset-0 z-[70] flex items-center justify-center overflow-y-auto overscroll-contain bg-black/50 p-4"
+  >
+    <div
+      class="max-h-[90vh] w-full max-w-md overflow-y-auto rounded-lg bg-white p-6 shadow-xl"
+    >
+      <div class="flex items-center gap-1">
+        <h3 class="text-lg font-semibold">Chọn sân đăng ký</h3>
+        <button
+          type="button"
+          class="inline-flex h-6 w-6 items-center justify-center rounded-full text-primary-600 transition-colors hover:bg-primary-50"
+          title="Hướng dẫn đăng ký dùm bạn"
+          aria-label="Hướng dẫn đăng ký dùm bạn"
+          @click="showFriendRegistrationGuideModal = true"
+        >
+          <svg
+            class="h-5 w-5"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+            aria-hidden="true"
+          >
+            <circle cx="12" cy="12" r="9" stroke-width="2" />
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M12 10v6m0-9h.01"
+            />
+          </svg>
+        </button>
+      </div>
       <p class="mt-1 text-sm text-gray-600">Chọn bạn và sân muốn đăng ký.</p>
-      <div v-if="friendsLoading" class="py-8 text-center text-gray-500">Đang tải...</div>
+      <div v-if="friendsLoading" class="py-8 text-center text-gray-500">
+        Đang tải...
+      </div>
       <template v-else>
         <div v-if="friends.length" class="mt-5 space-y-3">
-          <div v-for="friend in friends" :key="friend.id" role="button" tabindex="0" @click="toggleFriend(friend.id)" @keydown.enter="toggleFriend(friend.id)" class="flex w-full cursor-pointer items-center justify-between rounded-lg border-2 px-4 py-3 text-left font-medium transition-colors" :class="friendSelectedIds.includes(friend.id) ? 'border-blue-600 bg-blue-50 text-blue-800' : 'border-gray-200 text-gray-700'">
-            <span>{{ friend.name }} <span class="text-sm font-normal text-gray-500">{{ friend.position }} - Tier {{ friend.tier }}</span></span><span class="flex items-center gap-3"><span>{{ friendSelectedIds.includes(friend.id) ? '✓' : '' }}</span><button type="button" class="rounded p-1 text-gray-500 hover:bg-white hover:text-primary-600" title="Chỉnh sửa bạn" @click.stop="openEditFriend(friend)"><svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m16.86 3.49 3.65 3.65M4 20l3.6-.8L19.7 7.1a2.58 2.58 0 0 0-3.65-3.65L3.95 15.55 4 20Z"/></svg></button></span>
+          <div
+            v-for="friend in friends"
+            :key="friend.id"
+            role="button"
+            tabindex="0"
+            @click="toggleFriend(friend.id)"
+            @keydown.enter="toggleFriend(friend.id)"
+            class="flex w-full cursor-pointer items-center justify-between rounded-lg border-2 px-4 py-3 text-left font-medium transition-colors"
+            :class="
+              friendSelectedIds.includes(friend.id)
+                ? 'border-blue-600 bg-blue-50 text-blue-800'
+                : 'border-gray-200 text-gray-700'
+            "
+          >
+            <span
+              >{{ friend.name }}
+              <span class="text-sm font-normal text-gray-500"
+                >{{ friend.position }} - Tier {{ friend.tier }}</span
+              ></span
+            ><span class="flex items-center gap-3"
+              ><span>{{
+                friendSelectedIds.includes(friend.id) ? "✓" : ""
+              }}</span
+              ><button
+                type="button"
+                class="rounded p-1 text-gray-500 hover:bg-white hover:text-primary-600"
+                title="Chỉnh sửa bạn"
+                @click.stop="openEditFriend(friend)"
+              >
+                <svg
+                  class="h-4 w-4"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="m16.86 3.49 3.65 3.65M4 20l3.6-.8L19.7 7.1a2.58 2.58 0 0 0-3.65-3.65L3.95 15.55 4 20Z"
+                  />
+                </svg></button
+            ></span>
           </div>
         </div>
-        <p v-else class="mt-5 rounded-lg bg-gray-50 p-4 text-sm text-gray-600">Bạn chưa có cầu thủ bạn bè nào.</p>
-        <button v-if="friends.length < 2" type="button" class="mt-4 w-full rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 font-semibold text-blue-700 hover:bg-blue-100" @click="showCreateFriendModal = true">+ Tạo bạn mới</button>
-        <div class="mt-5"><p class="form-label">Chọn sân</p><div class="grid grid-cols-2 gap-3"><button type="button" @click="friendField5 = !friendField5" class="rounded-lg border-2 px-4 py-3 font-semibold" :class="friendField5 ? 'border-primary-600 bg-primary-600 text-white' : 'border-gray-200'">Sân 5{{ friendField5 ? ' ✓' : '' }}</button><button type="button" @click="friendField7 = !friendField7" class="rounded-lg border-2 px-4 py-3 font-semibold" :class="friendField7 ? 'border-primary-600 bg-primary-600 text-white' : 'border-gray-200'">Sân 7{{ friendField7 ? ' ✓' : '' }}</button></div><p class="mt-3 text-center text-sm font-medium text-primary-700">Bạn đang chọn: {{ friendField5 && friendField7 ? 'Sân 5 và Sân 7' : friendField5 ? 'Sân 5' : friendField7 ? 'Sân 7' : 'chưa chọn sân' }}</p></div>
+        <p v-else class="mt-5 rounded-lg bg-gray-50 p-4 text-sm text-gray-600">
+          Bạn chưa có cầu thủ bạn bè nào.
+        </p>
+        <button
+          v-if="friends.length < 2"
+          type="button"
+          class="mt-4 w-full rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 font-semibold text-blue-700 hover:bg-blue-100"
+          @click="showCreateFriendModal = true"
+        >
+          + Tạo bạn mới
+        </button>
+        <div class="mt-5">
+          <p class="form-label">Chọn sân</p>
+          <div class="grid grid-cols-2 gap-3">
+            <button
+              type="button"
+              @click="friendField5 = !friendField5"
+              class="rounded-lg border-2 px-4 py-3 font-semibold"
+              :class="
+                friendField5
+                  ? 'border-primary-600 bg-primary-600 text-white'
+                  : 'border-gray-200'
+              "
+            >
+              Sân 5{{ friendField5 ? " ✓" : "" }}</button
+            ><button
+              type="button"
+              @click="friendField7 = !friendField7"
+              class="rounded-lg border-2 px-4 py-3 font-semibold"
+              :class="
+                friendField7
+                  ? 'border-primary-600 bg-primary-600 text-white'
+                  : 'border-gray-200'
+              "
+            >
+              Sân 7{{ friendField7 ? " ✓" : "" }}
+            </button>
+          </div>
+          <p class="mt-3 text-center text-sm font-medium text-primary-700">
+            Bạn đang chọn:
+            {{
+              friendField5 && friendField7
+                ? "Sân 5 và Sân 7"
+                : friendField5
+                  ? "Sân 5"
+                  : friendField7
+                    ? "Sân 7"
+                    : "chưa chọn sân"
+            }}
+          </p>
+        </div>
       </template>
-      <div class="mt-6 flex justify-end gap-3 border-t pt-4"><button class="btn-secondary" @click="showFriendRegistrationModal = false">Hủy</button><button class="btn-primary" :disabled="friendRegistrationSaving || !friendSelectedIds.length || (!friendSwapMode && !friendField5 && !friendField7)" @click="friendSwapRequest ? acceptSwapForFriend() : (friendSwapMode ? requestFriendSwap() : registerFriends())">{{ friendRegistrationSaving ? 'Đang xử lý...' : (friendSwapRequest ? 'Xác nhận swap' : (friendSwapMode ? 'Gửi yêu cầu swap' : 'Đăng ký')) }}</button></div>
-    </div>
-  </div>
-
-  <div v-if="showFriendRegistrationGuideModal" class="fixed inset-0 z-[80] flex items-center justify-center overflow-y-auto overscroll-contain bg-black/50 p-4">
-    <div class="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-lg bg-white shadow-xl">
-      <div class="flex items-center justify-between border-b p-5"><div><h3 class="text-lg font-semibold">Hướng dẫn đăng ký dùm bạn</h3><p class="text-sm text-gray-500">Quy định và cách tính tiền</p></div><button type="button" class="text-2xl text-gray-400 hover:text-gray-700" @click="showFriendRegistrationGuideModal = false">×</button></div>
-      <div class="space-y-5 p-5 text-sm leading-6 text-gray-700">
-        <section><h4 class="font-semibold text-gray-900">1. Bạn bè</h4><ul class="mt-2 list-disc space-y-1 pl-5"><li>Mỗi user được tạo tối đa 2 cầu thủ bạn bè.</li><li>Chỉ user đã tạo bạn mới có thể đăng ký thi đấu cho bạn đó.</li><li>Khi chỉ có một bạn, bạn đó luôn được chọn sẵn.</li></ul></section>
-        <section><h4 class="font-semibold text-gray-900">2. Đăng ký sân</h4><ul class="mt-2 list-disc space-y-1 pl-5"><li>Có thể chọn một hoặc hai bạn để đăng ký cùng lúc.</li><li>Chọn Sân 5, Sân 7 hoặc cả hai trước khi bấm Đăng ký.</li><li>Thời điểm đăng ký của bạn được lưu như một cầu thủ bình thường.</li></ul></section>
-        <section><h4 class="font-semibold text-gray-900">3. Tiền của bạn</h4><ul class="mt-2 list-disc space-y-1 pl-5"><li>Mọi chi phí, phạt đội thua, nước hoặc Ngôi sao hy vọng của bạn sẽ được cộng/trừ vào số dư cầu thủ của user sở hữu bạn đó.</li><li>Lịch sử tiền của user sẽ ghi rõ khoản chi phí được tính cho tên bạn.</li><li>Nếu số dư user đang âm, không thể đăng ký bạn trong giải thường; giải Tự túc không áp dụng điều kiện này và không phát sinh biến động tiền.</li></ul></section>
+      <div class="mt-6 flex justify-end gap-3 border-t pt-4">
+        <button
+          class="btn-secondary"
+          @click="showFriendRegistrationModal = false"
+        >
+          Hủy</button
+        ><button
+          class="btn-primary"
+          :disabled="
+            friendRegistrationSaving ||
+            !friendSelectedIds.length ||
+            (!friendSwapMode && !friendField5 && !friendField7)
+          "
+          @click="
+            friendSwapRequest
+              ? acceptSwapForFriend()
+              : friendSwapMode
+                ? requestFriendSwap()
+                : registerFriends()
+          "
+        >
+          {{
+            friendRegistrationSaving
+              ? "Đang xử lý..."
+              : friendSwapRequest
+                ? "Xác nhận swap"
+                : friendSwapMode
+                  ? "Gửi yêu cầu swap"
+                  : "Đăng ký"
+          }}
+        </button>
       </div>
-      <div class="border-t bg-gray-50 p-4 text-right"><button type="button" class="btn-primary" @click="showFriendRegistrationGuideModal = false">Đã hiểu</button></div>
     </div>
   </div>
 
-  <div v-if="showCreateFriendModal" class="fixed inset-0 z-[80] flex items-center justify-center overflow-y-auto overscroll-contain bg-black/50 p-4">
-    <form class="max-h-[90vh] w-full max-w-md overflow-y-auto rounded-lg bg-white p-6 shadow-xl" @submit.prevent="saveFriend">
-      <h3 class="text-lg font-semibold">{{ editingFriendId ? 'Chỉnh sửa cầu thủ' : 'Thêm cầu thủ' }}</h3><p class="mt-1 text-sm text-gray-600">Cầu thủ này sẽ là bạn của bạn và dùng tiền của bạn.</p>
-      <div class="mt-4 space-y-3"><input v-model="friendForm.name" required class="form-input" placeholder="Tên cầu thủ"><select v-model="friendForm.position" required class="form-input"><option value="">Chọn vị trí</option><option value="GK">GK</option><option value="DEF">DEF</option><option value="MID">MID</option><option value="FWD">FWD</option></select><input v-model.number="friendForm.yearOfBirth" required min="1950" :max="new Date().getFullYear()" type="number" class="form-input" placeholder="Năm sinh"><select v-model.number="friendForm.tier" required class="form-input"><option :value="0">Chọn Tier</option><option v-for="tier in 6" :key="tier" :value="tier">Tier {{ tier }}</option></select></div>
-      <div class="mt-6 flex justify-end gap-3"><button type="button" class="btn-secondary" @click="closeFriendForm">Hủy</button><button class="btn-primary" :disabled="friendCreateSaving">{{ friendCreateSaving ? 'Đang lưu...' : (editingFriendId ? 'Lưu thay đổi' : 'Tạo bạn') }}</button></div>
+  <div
+    v-if="showChallengeModal"
+    class="fixed inset-0 z-[80] flex items-center justify-center overflow-y-auto overscroll-contain bg-black/50 p-4"
+  >
+    <div class="w-full max-w-md rounded-xl bg-white shadow-xl">
+      <div class="border-b p-5">
+        <h3 class="text-lg font-semibold text-primary-700">⚔️ Thách đấu</h3>
+        <p class="mt-1 text-sm text-gray-600">{{ challengeTarget?.name }}</p>
+      </div>
+      <div class="space-y-2 p-5 text-sm leading-6 text-gray-700">
+        <p
+          v-if="challengePendingOutgoing || challengeAccepted"
+          class="font-semibold text-amber-700"
+        >
+          {{
+            challengeAccepted
+              ? 'Đang thách đấu.'
+              : 'Đang thách đấu — chờ đối thủ chấp nhận lời mời.'
+          }}
+        </p>
+        <p class="font-semibold">Luật thách đấu</p>
+        <p>
+          Hai cầu thủ thách đấu sẽ luôn được xếp ở hai đội khác nhau khi chia
+          đội.
+        </p>
+        <p>
+          Khi trận đấu kết thúc, cầu thủ thuộc đội có điểm cao hơn thắng: người
+          thắng +10.000 ₫, người thua -10.000 ₫.
+        </p>
+      </div>
+      <div class="flex justify-end gap-3 border-t p-4">
+        <button
+          class="btn-secondary"
+          :disabled="challengeSaving"
+          @click="showChallengeModal = false"
+        >
+          Đóng</button
+        ><button
+          v-if="challengeReceived || challengePendingOutgoing || challengeAccepted"
+          class="btn-secondary text-red-600"
+          :disabled="challengeSaving"
+          @click="cancelChallenge"
+        >
+          Hủy lời mời</button
+        ><button
+          v-if="!challengePendingOutgoing && !challengeAccepted"
+          class="btn-primary"
+          :disabled="challengeSaving"
+          @click="submitChallenge"
+        >
+          {{
+            challengeSaving
+              ? "Đang xử lý..."
+              : challengeReceived
+                ? "Chấp nhận"
+                : "Gởi lời mời"
+          }}
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div
+    v-if="showFriendRegistrationGuideModal"
+    class="fixed inset-0 z-[80] flex items-center justify-center overflow-y-auto overscroll-contain bg-black/50 p-4"
+  >
+    <div
+      class="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-lg bg-white shadow-xl"
+    >
+      <div class="flex items-center justify-between border-b p-5">
+        <div>
+          <h3 class="text-lg font-semibold">Hướng dẫn đăng ký dùm bạn</h3>
+          <p class="text-sm text-gray-500">Quy định và cách tính tiền</p>
+        </div>
+        <button
+          type="button"
+          class="text-2xl text-gray-400 hover:text-gray-700"
+          @click="showFriendRegistrationGuideModal = false"
+        >
+          ×
+        </button>
+      </div>
+      <div class="space-y-5 p-5 text-sm leading-6 text-gray-700">
+        <section>
+          <h4 class="font-semibold text-gray-900">1. Bạn bè</h4>
+          <ul class="mt-2 list-disc space-y-1 pl-5">
+            <li>Mỗi user được tạo tối đa 2 cầu thủ bạn bè.</li>
+            <li>Chỉ user đã tạo bạn mới có thể đăng ký thi đấu cho bạn đó.</li>
+            <li>Khi chỉ có một bạn, bạn đó luôn được chọn sẵn.</li>
+          </ul>
+        </section>
+        <section>
+          <h4 class="font-semibold text-gray-900">2. Đăng ký sân</h4>
+          <ul class="mt-2 list-disc space-y-1 pl-5">
+            <li>Có thể chọn một hoặc hai bạn để đăng ký cùng lúc.</li>
+            <li>Chọn Sân 5, Sân 7 hoặc cả hai trước khi bấm Đăng ký.</li>
+            <li>
+              Thời điểm đăng ký của bạn được lưu như một cầu thủ bình thường.
+            </li>
+          </ul>
+        </section>
+        <section>
+          <h4 class="font-semibold text-gray-900">3. Tiền của bạn</h4>
+          <ul class="mt-2 list-disc space-y-1 pl-5">
+            <li>
+              Mọi chi phí, phạt đội thua, nước hoặc Ngôi sao hy vọng của bạn sẽ
+              được cộng/trừ vào số dư cầu thủ của user sở hữu bạn đó.
+            </li>
+            <li>
+              Lịch sử tiền của user sẽ ghi rõ khoản chi phí được tính cho tên
+              bạn.
+            </li>
+            <li>
+              Nếu số dư user đang âm, không thể đăng ký bạn trong giải thường;
+              giải Tự túc không áp dụng điều kiện này và không phát sinh biến
+              động tiền.
+            </li>
+          </ul>
+        </section>
+      </div>
+      <div class="border-t bg-gray-50 p-4 text-right">
+        <button
+          type="button"
+          class="btn-primary"
+          @click="showFriendRegistrationGuideModal = false"
+        >
+          Đã hiểu
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div
+    v-if="showCreateFriendModal"
+    class="fixed inset-0 z-[80] flex items-center justify-center overflow-y-auto overscroll-contain bg-black/50 p-4"
+  >
+    <form
+      class="max-h-[90vh] w-full max-w-md overflow-y-auto rounded-lg bg-white p-6 shadow-xl"
+      @submit.prevent="saveFriend"
+    >
+      <h3 class="text-lg font-semibold">
+        {{ editingFriendId ? "Chỉnh sửa cầu thủ" : "Thêm cầu thủ" }}
+      </h3>
+      <p class="mt-1 text-sm text-gray-600">
+        Cầu thủ này sẽ là bạn của bạn và dùng tiền của bạn.
+      </p>
+      <div class="mt-4 space-y-3">
+        <input
+          v-model="friendForm.name"
+          required
+          class="form-input"
+          placeholder="Tên cầu thủ"
+        /><select v-model="friendForm.position" required class="form-input">
+          <option value="">Chọn vị trí</option>
+          <option value="GK">GK</option>
+          <option value="DEF">DEF</option>
+          <option value="MID">MID</option>
+          <option value="FWD">FWD</option></select
+        ><input
+          v-model.number="friendForm.yearOfBirth"
+          required
+          min="1950"
+          :max="new Date().getFullYear()"
+          type="number"
+          class="form-input"
+          placeholder="Năm sinh"
+        /><select v-model.number="friendForm.tier" required class="form-input">
+          <option :value="0">Chọn Tier</option>
+          <option v-for="tier in 6" :key="tier" :value="tier">
+            Tier {{ tier }}
+          </option>
+        </select>
+      </div>
+      <div class="mt-6 flex justify-end gap-3">
+        <button type="button" class="btn-secondary" @click="closeFriendForm">
+          Hủy</button
+        ><button class="btn-primary" :disabled="friendCreateSaving">
+          {{
+            friendCreateSaving
+              ? "Đang lưu..."
+              : editingFriendId
+                ? "Lưu thay đổi"
+                : "Tạo bạn"
+          }}
+        </button>
+      </div>
     </form>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
-import { useToast } from 'vue-toastification'
-import { useTournamentsStore } from '../stores/tournaments'
-import { useAuthStore } from '../stores/auth'
-import { useTeamsStore } from '../stores/teams'
-import { useSystemStore } from '../stores/system'
-import type { Tournament, CreateTournamentRequest, TournamentPlayerAttendance, TournamentAttendanceStats, TournamentAttendanceDetails, TournamentEndResponse } from '../types'
-import { apiClient } from '../api/client'
-import { formatMoney } from '../utils/money'
+import { ref, computed, onMounted, onBeforeUnmount } from "vue";
+import { useToast } from "vue-toastification";
+import { useTournamentsStore } from "../stores/tournaments";
+import { useAuthStore } from "../stores/auth";
+import { useTeamsStore } from "../stores/teams";
+import { useSystemStore } from "../stores/system";
+import type {
+  Tournament,
+  CreateTournamentRequest,
+  TournamentPlayerAttendance,
+  TournamentAttendanceStats,
+  TournamentAttendanceDetails,
+  TournamentEndResponse,
+} from "../types";
+import { apiClient } from "../api/client";
+import { formatMoney } from "../utils/money";
 
-const toast = useToast()
-const tournamentsStore = useTournamentsStore()
-const authStore = useAuthStore()
-const teamsStore = useTeamsStore()
-const systemStore = useSystemStore()
+const toast = useToast();
+const tournamentsStore = useTournamentsStore();
+const authStore = useAuthStore();
+const teamsStore = useTeamsStore();
+const systemStore = useSystemStore();
 
-const loading = ref(false)
-const loadingMore = ref(false)
-const showCreateTournamentModal = ref(false)
-const showTournamentCalculationInfoModal = ref(false)
-const newTournamentDate = ref('')
-const activeFilter = ref('Đang diễn ra')
-const filters = ['Đang diễn ra', 'Giải đấu cũ']
-const visibleFilters = computed(() => authStore.currentUser?.role === 'guest' ? ['Đang diễn ra'] : filters)
+const loading = ref(false);
+const loadingMore = ref(false);
+const showCreateTournamentModal = ref(false);
+const showTournamentCalculationInfoModal = ref(false);
+const newTournamentDate = ref("");
+const activeFilter = ref("Đang diễn ra");
+const filters = ["Đang diễn ra", "Giải đấu cũ"];
+const visibleFilters = computed(() =>
+  authStore.currentUser?.role === "guest" ? ["Đang diễn ra"] : filters,
+);
 
 // Attendance tracking
-const attendanceMap = ref<Map<string, TournamentPlayerAttendance>>(new Map())
-const attendanceLoading = ref<Set<string>>(new Set())
-const attendanceStats = ref<Map<string, TournamentAttendanceStats>>(new Map())
-const cannotSelfRegisterDueToDebt = computed(() => (authStore.currentUser?.player?.money ?? 0) < 0)
-const showFriendRegistrationModal = ref(false)
-const showFriendSwapModal = ref(false)
-const showFriendRegistrationGuideModal = ref(false)
-const showCreateFriendModal = ref(false)
-const friendsLoading = ref(false)
-const friendRegistrationSaving = ref(false)
-const friendSwapMode = ref(false)
-const friendSwapRequest = ref<IncomingSwapRequest | null>(null)
-const friendCreateSaving = ref(false)
-const editingFriendId = ref<string | null>(null)
-const friendTournamentId = ref<string | null>(null)
-const friends = ref<any[]>([])
-const friendSelectedIds = ref<string[]>([])
+const attendanceMap = ref<Map<string, TournamentPlayerAttendance>>(new Map());
+const attendanceLoading = ref<Set<string>>(new Set());
+const attendanceStats = ref<Map<string, TournamentAttendanceStats>>(new Map());
+const cannotSelfRegisterDueToDebt = computed(
+  () => (authStore.currentUser?.player?.money ?? 0) < 0,
+);
+const showFriendRegistrationModal = ref(false);
+const showFriendSwapModal = ref(false);
+const showFriendRegistrationGuideModal = ref(false);
+const showCreateFriendModal = ref(false);
+const showChallengeModal = ref(false);
+const challengeTarget = ref<any | null>(null);
+const challengeTournamentId = ref<string | null>(null);
+const challengeReceived = ref(false);
+const challengePendingOutgoing = ref(false);
+const challengeAccepted = ref(false);
+const challengeSaving = ref(false);
+const friendsLoading = ref(false);
+const friendRegistrationSaving = ref(false);
+const friendSwapMode = ref(false);
+const friendSwapRequest = ref<IncomingSwapRequest | null>(null);
+const friendCreateSaving = ref(false);
+const editingFriendId = ref<string | null>(null);
+const friendTournamentId = ref<string | null>(null);
+const friends = ref<any[]>([]);
+const friendSelectedIds = ref<string[]>([]);
 const friendsWaitingForSwap = computed(() => {
-  const details = friendTournamentId.value ? attendanceDetailsMap.value.get(friendTournamentId.value) || [] : []
-  const pendingIds = new Set(details.filter((item: any) => item.swapPending).map((item: any) => item.playerId))
-  return friends.value.filter(friend => pendingIds.has(friend.id))
-})
+  const details = friendTournamentId.value
+    ? attendanceDetailsMap.value.get(friendTournamentId.value) || []
+    : [];
+  const pendingIds = new Set(
+    details
+      .filter((item: any) => item.swapPending)
+      .map((item: any) => item.playerId),
+  );
+  return friends.value.filter((friend) => pendingIds.has(friend.id));
+});
 const pendingSwapPlayers = computed(() => {
-  const details = friendTournamentId.value ? attendanceDetailsMap.value.get(friendTournamentId.value) || [] : []
-  return details.filter((item: any) => item.swapPending && item.swapRequestId).map((item: any) => ({ id: item.swapRequestId, requester: item.player }))
-})
-const friendField5 = ref(true)
-const friendField7 = ref(true)
-const friendForm = ref({ name: '', position: '', yearOfBirth: 1990, tier: 0 })
+  const details = friendTournamentId.value
+    ? attendanceDetailsMap.value.get(friendTournamentId.value) || []
+    : [];
+  return details
+    .filter((item: any) => item.swapPending && item.swapRequestId)
+    .map((item: any) => ({ id: item.swapRequestId, requester: item.player }));
+});
+const friendField5 = ref(true);
+const friendField7 = ref(true);
+const friendForm = ref({ name: "", position: "", yearOfBirth: 1990, tier: 0 });
 
 // Water tracking
-const waterLoading = ref<Set<string>>(new Set())
-const playerWaterLoading = ref<Set<string>>(new Set())
+const waterLoading = ref<Set<string>>(new Set());
+const playerWaterLoading = ref<Set<string>>(new Set());
 
 // Bet tracking
-const betLoading = ref<Set<string>>(new Set())
+const betLoading = ref<Set<string>>(new Set());
 
 // Modal for attendance details
-const showAttendanceModal = ref(false)
-const attendanceModalData = ref<TournamentAttendanceDetails[]>([])
-const attendanceDetailsMap = ref<Map<string, TournamentAttendanceDetails[]>>(new Map())
-const attendanceModalTitle = ref('')
-const attendanceModalType = ref<'attending' | 'not-attending' | 'betting' | 'water' | 'pending'>('attending')
-const attendanceModalLoading = ref(false)
-const playerAttendanceLoading = ref<Set<string>>(new Set())
-const attendancePlayerNameFilter = ref('')
-const attendancePlayerTierFilter = ref<number | null>(null)
-const attendanceSortByTier = ref(false)
-const attendanceFieldTab = ref<'FIELD_5' | 'FIELD_7'>('FIELD_5')
-const attendanceExclusiveField = ref(false)
-const attendanceModalTournamentId = ref<string | null>(null)
-const selectedPendingPlayerIds = ref<Set<string>>(new Set())
-const showFieldRegistrationModal = ref(false)
-const fieldRegistrationTournamentId = ref<string | null>(null)
-const registrationField5 = ref(true)
-const registrationField7 = ref(true)
-const fieldRegistrationAddOnly = ref(false)
-const fieldRegistrationExistingField5 = ref(false)
-const fieldRegistrationExistingField7 = ref(false)
-const canConfirmFieldRegistration = computed(() => fieldRegistrationAddOnly.value
-  ? (registrationField5.value && !fieldRegistrationExistingField5.value) || (registrationField7.value && !fieldRegistrationExistingField7.value)
-  : registrationField5.value || registrationField7.value)
-interface SwapCandidate { id: string; name: string; position: string; positionSecond?: string | null; tier: number; avatar?: string | null }
-interface IncomingSwapRequest { id: string; tournamentId: string; requester: SwapCandidate }
-const showSwapModal = ref(false)
-const swapTournament = ref<Tournament | null>(null)
-const swapCandidates = ref<SwapCandidate[]>([])
-const swapCandidateFilter = ref('')
-const swapCandidatesLoading = ref(false)
-const swapRequestSavingId = ref<string | null>(null)
-const pendingSwapTargetName = ref<string | null>(null)
-const incomingSwapRequests = ref<Map<string, IncomingSwapRequest[]>>(new Map())
-const pendingSwapRequestTournamentIds = ref<Set<string>>(new Set())
-const swapWaitlistPositions = ref<Map<string, number>>(new Map())
-const swapWaitlistRetryAt = ref<Map<string, number>>(new Map())
-const swapWaitlistClock = ref(Date.now())
-const pendingSwapRequest = ref<IncomingSwapRequest | null>(null)
-const batchAttendanceSaving = ref(false)
-const attendanceDetailsLoadingIds = ref<Set<string>>(new Set())
-const refreshingAttendanceLists = ref<Set<string>>(new Set())
+const showAttendanceModal = ref(false);
+const attendanceModalData = ref<TournamentAttendanceDetails[]>([]);
+const attendanceDetailsMap = ref<Map<string, TournamentAttendanceDetails[]>>(
+  new Map(),
+);
+const attendanceModalTitle = ref("");
+const attendanceModalType = ref<
+  "attending" | "not-attending" | "betting" | "water" | "pending"
+>("attending");
+const attendanceModalLoading = ref(false);
+const playerAttendanceLoading = ref<Set<string>>(new Set());
+const attendancePlayerNameFilter = ref("");
+const attendancePlayerTierFilter = ref<number | null>(null);
+const attendanceSortByTier = ref(false);
+const attendanceFieldTab = ref<"FIELD_5" | "FIELD_7">("FIELD_5");
+const attendanceExclusiveField = ref(false);
+const attendanceModalTournamentId = ref<string | null>(null);
+const selectedPendingPlayerIds = ref<Set<string>>(new Set());
+const showFieldRegistrationModal = ref(false);
+const fieldRegistrationTournamentId = ref<string | null>(null);
+const registrationField5 = ref(true);
+const registrationField7 = ref(true);
+const fieldRegistrationAddOnly = ref(false);
+const fieldRegistrationExistingField5 = ref(false);
+const fieldRegistrationExistingField7 = ref(false);
+const canConfirmFieldRegistration = computed(() =>
+  fieldRegistrationAddOnly.value
+    ? (registrationField5.value && !fieldRegistrationExistingField5.value) ||
+      (registrationField7.value && !fieldRegistrationExistingField7.value)
+    : registrationField5.value || registrationField7.value,
+);
+interface SwapCandidate {
+  id: string;
+  name: string;
+  position: string;
+  positionSecond?: string | null;
+  tier: number;
+  avatar?: string | null;
+}
+interface IncomingSwapRequest {
+  id: string;
+  tournamentId: string;
+  requester: SwapCandidate;
+}
+const showSwapModal = ref(false);
+const swapTournament = ref<Tournament | null>(null);
+const swapCandidates = ref<SwapCandidate[]>([]);
+const swapCandidateFilter = ref("");
+const swapCandidatesLoading = ref(false);
+const swapRequestSavingId = ref<string | null>(null);
+const pendingSwapTargetName = ref<string | null>(null);
+const incomingSwapRequests = ref<Map<string, IncomingSwapRequest[]>>(new Map());
+const pendingSwapRequestTournamentIds = ref<Set<string>>(new Set());
+const swapWaitlistPositions = ref<Map<string, number>>(new Map());
+const swapWaitlistRetryAt = ref<Map<string, number>>(new Map());
+const swapWaitlistClock = ref(Date.now());
+const pendingSwapRequest = ref<IncomingSwapRequest | null>(null);
+const batchAttendanceSaving = ref(false);
+const attendanceDetailsLoadingIds = ref<Set<string>>(new Set());
+const refreshingAttendanceLists = ref<Set<string>>(new Set());
 const areAllPendingPlayersSelected = computed(() => {
-  const pendingPlayers = getFilteredModalData()
-  return pendingPlayers.length > 0 && pendingPlayers.every(item => selectedPendingPlayerIds.value.has(item.player.id))
-})
+  const pendingPlayers = getFilteredModalData();
+  return (
+    pendingPlayers.length > 0 &&
+    pendingPlayers.every((item) =>
+      selectedPendingPlayerIds.value.has(item.player.id),
+    )
+  );
+});
 
 interface TournamentMoneyHistoryItem {
-  id: string
-  amount: number
-  balanceBefore: number
-  balanceAfter: number
-  description: string
-  details?: Array<{ description: string; amount: number }> | null
-  player: { id: string; name: string }
+  id: string;
+  amount: number;
+  balanceBefore: number;
+  balanceAfter: number;
+  description: string;
+  details?: Array<{ description: string; amount: number }> | null;
+  player: { id: string; name: string };
 }
-const showTournamentMoneyHistoryModal = ref(false)
-const selectedMoneyHistoryTournament = ref<Tournament | null>(null)
-const tournamentMoneyHistory = ref<TournamentMoneyHistoryItem[]>([])
-const tournamentMoneyHistoryLoading = ref(false)
-const showTournamentDebtTopUpModal = ref(false)
-const tournamentDebtAmount = ref<number | null>(null)
-const selectedTournamentDebtTopUpAmount = ref(100000)
-const tournamentDebtTopUpSubmitting = ref(false)
-const standardTopUpAmounts = [50000, 100000, 200000, 500000]
+const showTournamentMoneyHistoryModal = ref(false);
+const selectedMoneyHistoryTournament = ref<Tournament | null>(null);
+const tournamentMoneyHistory = ref<TournamentMoneyHistoryItem[]>([]);
+const tournamentMoneyHistoryLoading = ref(false);
+const showTournamentDebtTopUpModal = ref(false);
+const tournamentDebtAmount = ref<number | null>(null);
+const selectedTournamentDebtTopUpAmount = ref(100000);
+const tournamentDebtTopUpSubmitting = ref(false);
+const standardTopUpAmounts = [50000, 100000, 200000, 500000];
 const tournamentDebtTopUpAmounts = computed(() => {
-  const debtAmount = tournamentDebtAmount.value
+  const debtAmount = tournamentDebtAmount.value;
   return debtAmount && !standardTopUpAmounts.includes(debtAmount)
     ? [debtAmount, ...standardTopUpAmounts]
-    : standardTopUpAmounts
-})
+    : standardTopUpAmounts;
+});
 
 // Team generation
-const teamGenerationLoading = ref(false)
+const teamGenerationLoading = ref(false);
 
 // Additional Cost Modal variables
-const showAdditionalCostModal = ref(false)
-const selectedTournamentForCosts = ref<Tournament | null>(null)
+const showAdditionalCostModal = ref(false);
+const selectedTournamentForCosts = ref<Tournament | null>(null);
 const additionalCostForm = ref({
-  description: '',
-  amount: null as number | null
-})
-const editingCostId = ref<string | null>(null)
-const additionalCostLoading = ref(false)
+  description: "",
+  amount: null as number | null,
+});
+const editingCostId = ref<string | null>(null);
+const additionalCostLoading = ref(false);
 
-const showStadiumCostModal = ref(false)
-const stadiumCostTournament = ref<Tournament | null>(null)
-const stadiumCostForm = ref<number | null>(null)
-const stadiumCostOptions = [1700000, 1900000, 2200000, 2400000]
-const stadiumCostSaving = ref(false)
-const showSponsorMoneyModal = ref(false)
-const sponsorMoneyTournament = ref<Tournament | null>(null)
-const selectedSponsorMoney = ref(400000)
-const sponsorMoneySaving = ref(false)
-const sponsorMoneyOptions = [0, 400000]
-const selfFundedSaving = ref(false)
-const tournamentProtectionSaving = ref(false)
+const showStadiumCostModal = ref(false);
+const stadiumCostTournament = ref<Tournament | null>(null);
+const stadiumCostForm = ref<number | null>(null);
+const stadiumCostOptions = [1700000, 1900000, 2200000, 2400000];
+const stadiumCostSaving = ref(false);
+const showSponsorMoneyModal = ref(false);
+const sponsorMoneyTournament = ref<Tournament | null>(null);
+const selectedSponsorMoney = ref(400000);
+const sponsorMoneySaving = ref(false);
+const sponsorMoneyOptions = [0, 400000];
+const selfFundedSaving = ref(false);
+const tournamentProtectionSaving = ref(false);
 
-const showTournamentTimeModal = ref(false)
-const timeTournament = ref<Tournament | null>(null)
-const selectedTournamentTime = ref('19:00')
-const tournamentTimeSaving = ref(false)
-const tournamentTimeOptions = ['19:00', '19:30', '20:00']
+const showTournamentTimeModal = ref(false);
+const timeTournament = ref<Tournament | null>(null);
+const selectedTournamentTime = ref("19:00");
+const tournamentTimeSaving = ref(false);
+const tournamentTimeOptions = ["19:00", "19:30", "20:00"];
 
-const showCancellationDeadlineModal = ref(false)
-const cancellationDeadlineTournament = ref<Tournament | null>(null)
-const selectedCancellationDeadline = ref('')
-const cancellationDeadlineSaving = ref(false)
-const currentTimestamp = ref(Date.now())
-const cancellationDeadlineMin = computed(() => toDateTimeLocalValue(new Date(currentTimestamp.value + 60_000)))
-const cancellationDeadlineMax = computed(() => cancellationDeadlineTournament.value
-  ? toDateTimeLocalValue(new Date(new Date(cancellationDeadlineTournament.value.startDate).getTime() - 60_000))
-  : '')
+const showCancellationDeadlineModal = ref(false);
+const cancellationDeadlineTournament = ref<Tournament | null>(null);
+const selectedCancellationDeadline = ref("");
+const cancellationDeadlineSaving = ref(false);
+const currentTimestamp = ref(Date.now());
+const cancellationDeadlineMin = computed(() =>
+  toDateTimeLocalValue(new Date(currentTimestamp.value + 60_000)),
+);
+const cancellationDeadlineMax = computed(() =>
+  cancellationDeadlineTournament.value
+    ? toDateTimeLocalValue(
+        new Date(
+          new Date(cancellationDeadlineTournament.value.startDate).getTime() -
+            60_000,
+        ),
+      )
+    : "",
+);
 
-const showFundContributionModal = ref(false)
-const showPitchTypeModal = ref(false)
-const pitchTypeTournament = ref<Tournament | null>(null)
-const selectedPitchType = ref<'FIELD_5' | 'FIELD_7'>('FIELD_7')
-const fundContributionTournament = ref<Tournament | null>(null)
-const fundContributionForm = ref<number | null>(null)
-const fundContributionSaving = ref(false)
-const fundContributionOptions = [100000, 200000, 300000, 400000, 500000]
-const showMaxAttendanceModal = ref(false)
-const maxAttendanceTournament = ref<Tournament | null>(null)
-const selectedMaxAttendance = ref<number | null>(null)
-const maxAttendanceSaving = ref(false)
-const maxAttendanceOptions = [18, 21, 24, 27, 28, 32]
+const showFundContributionModal = ref(false);
+const showPitchTypeModal = ref(false);
+const pitchTypeTournament = ref<Tournament | null>(null);
+const selectedPitchType = ref<"FIELD_5" | "FIELD_7">("FIELD_7");
+const fundContributionTournament = ref<Tournament | null>(null);
+const fundContributionForm = ref<number | null>(null);
+const fundContributionSaving = ref(false);
+const fundContributionOptions = [100000, 200000, 300000, 400000, 500000];
+const showMaxAttendanceModal = ref(false);
+const maxAttendanceTournament = ref<Tournament | null>(null);
+const selectedMaxAttendance = ref<number | null>(null);
+const maxAttendanceSaving = ref(false);
+const maxAttendanceOptions = [18, 21, 24, 27, 28, 32];
 
 // Confirmation Modal variables
-const showEndTournamentModal = ref(false)
-const endTournamentId = ref<string | null>(null)
-const selectedWinningTeam = ref<any | null>(null)
-const selectedLosingTeam = ref<any | null>(null)
-const cancelledGkDiscountPlayerIds = ref<Set<string>>(new Set())
-const endTournamentSaving = ref(false)
+const showEndTournamentModal = ref(false);
+const endTournamentId = ref<string | null>(null);
+const selectedWinningTeam = ref<any | null>(null);
+const selectedLosingTeam = ref<any | null>(null);
+const cancelledGkDiscountPlayerIds = ref<Set<string>>(new Set());
+const endTournamentSaving = ref(false);
 
 // Scores Modal variables
-const showScoresModal = ref(false)
-const scoresTournamentId = ref<string | null>(null)
-const teamScores = ref<Map<string, number>>(new Map())
+const showScoresModal = ref(false);
+const scoresTournamentId = ref<string | null>(null);
+const teamScores = ref<Map<string, number>>(new Map());
 
-const showDeleteTournamentModal = ref(false)
-const deleteTournamentData = ref<Tournament | null>(null)
+const showDeleteTournamentModal = ref(false);
+const deleteTournamentData = ref<Tournament | null>(null);
 const deleteTournamentInfo = ref<{
-  teamCount: number
-  attendanceCount: number
-  additionalCostCount: number
-} | null>(null)
+  teamCount: number;
+  attendanceCount: number;
+  additionalCostCount: number;
+} | null>(null);
 
-const showClearTeamsModal = ref(false)
-const clearTeamsModalTournamentId = ref<string | null>(null)
-const showTeamCountModal = ref(false)
-const teamCountModalTournamentId = ref<string | null>(null)
-const selectedTeamCount = ref<2 | 3 | 4>(2)
-const teamCountOptions: Array<2 | 3 | 4> = [2, 3, 4]
-const selectedTeamField = ref<'FIELD_5' | 'FIELD_7'>('FIELD_5')
-const mobileTeamPreviewField = ref<'FIELD_5' | 'FIELD_7'>('FIELD_5')
+const showClearTeamsModal = ref(false);
+const clearTeamsModalTournamentId = ref<string | null>(null);
+const showTeamCountModal = ref(false);
+const teamCountModalTournamentId = ref<string | null>(null);
+const selectedTeamCount = ref<2 | 3 | 4>(2);
+const teamCountOptions: Array<2 | 3 | 4> = [2, 3, 4];
+const selectedTeamField = ref<"FIELD_5" | "FIELD_7">("FIELD_5");
+const mobileTeamPreviewField = ref<"FIELD_5" | "FIELD_7">("FIELD_5");
 
-const showDeleteCostModal = ref(false)
-const deleteCostId = ref<string | null>(null)
+const showDeleteCostModal = ref(false);
+const deleteCostId = ref<string | null>(null);
 
 // Computed properties for additional costs
 const currentAdditionalCosts = computed(() => {
-  const tournamentId = selectedTournamentForCosts.value?.id
+  const tournamentId = selectedTournamentForCosts.value?.id;
   return tournamentId
-    ? systemStore.additionalCosts.filter(cost => cost.tournamentId === tournamentId)
-    : []
-})
-const totalAdditionalCosts = computed(() => 
-  currentAdditionalCosts.value.reduce((total, cost) => total + cost.amount, 0)
-)
+    ? systemStore.additionalCosts.filter(
+        (cost) => cost.tournamentId === tournamentId,
+      )
+    : [];
+});
+const totalAdditionalCosts = computed(() =>
+  currentAdditionalCosts.value.reduce((total, cost) => total + cost.amount, 0),
+);
 
 // Form validation computed property
 const isFormValid = computed(() => {
-  const descriptionValid = additionalCostForm.value.description.trim().length >= 3
-  const amountValid = additionalCostForm.value.amount !== null && 
-                      additionalCostForm.value.amount !== undefined &&
-                      typeof additionalCostForm.value.amount === 'number' && 
-                      !isNaN(additionalCostForm.value.amount) && 
-                      additionalCostForm.value.amount > 0
-  return descriptionValid && amountValid
-})
+  const descriptionValid =
+    additionalCostForm.value.description.trim().length >= 3;
+  const amountValid =
+    additionalCostForm.value.amount !== null &&
+    additionalCostForm.value.amount !== undefined &&
+    typeof additionalCostForm.value.amount === "number" &&
+    !isNaN(additionalCostForm.value.amount) &&
+    additionalCostForm.value.amount > 0;
+  return descriptionValid && amountValid;
+});
 
 // Helper functions for tournament-specific additional costs
 const getTournamentAdditionalCosts = (tournamentId: string) => {
-  const tournament = getTournamentById(tournamentId)
-  if (tournament?.selfFunded) return []
-  return systemStore.additionalCosts.filter(cost => cost.tournamentId === tournamentId)
-}
+  const tournament = getTournamentById(tournamentId);
+  if (tournament?.selfFunded) return [];
+  return systemStore.additionalCosts.filter(
+    (cost) => cost.tournamentId === tournamentId,
+  );
+};
 
-const getTournamentById = (tournamentId: string | null): Tournament | undefined => {
-  if (!tournamentId) return undefined
-  return weeklyTournaments.value.find(item => item.id === tournamentId) || oldTournaments.value.find(item => item.id === tournamentId)
-}
+const getTournamentById = (
+  tournamentId: string | null,
+): Tournament | undefined => {
+  if (!tournamentId) return undefined;
+  return (
+    weeklyTournaments.value.find((item) => item.id === tournamentId) ||
+    oldTournaments.value.find((item) => item.id === tournamentId)
+  );
+};
 
-const isSelfFundedTournament = (tournamentId: string | null): boolean => Boolean(getTournamentById(tournamentId)?.selfFunded)
+const isSelfFundedTournament = (tournamentId: string | null): boolean =>
+  Boolean(getTournamentById(tournamentId)?.selfFunded);
 
 const getTournamentAdditionalCostsTotal = (tournamentId: string) => {
-  return getTournamentAdditionalCosts(tournamentId).reduce((total, cost) => total + cost.amount, 0)
-}
+  return getTournamentAdditionalCosts(tournamentId).reduce(
+    (total, cost) => total + cost.amount,
+    0,
+  );
+};
 
 // Financial calculation functions
 const calculateTournamentNet = (tournamentId: string) => {
-  if (!systemStore.currentSettings) return 0
-  const tournament = weeklyTournaments.value.find(item => item.id === tournamentId)
-  const sponsor = tournament ? getTournamentSponsorMoney(tournament) : systemStore.currentSettings.sponsorMoney
-  const stadium = tournament ? getTournamentStadiumCost(tournament) : systemStore.currentSettings.stadiumCost
-  const additionalCosts = getTournamentAdditionalCostsTotal(tournamentId)
-  return stadium - sponsor + additionalCosts - (tournament ? getTournamentFundContribution(tournament) : 0)
-}
+  if (!systemStore.currentSettings) return 0;
+  const tournament = weeklyTournaments.value.find(
+    (item) => item.id === tournamentId,
+  );
+  const sponsor = tournament
+    ? getTournamentSponsorMoney(tournament)
+    : systemStore.currentSettings.sponsorMoney;
+  const stadium = tournament
+    ? getTournamentStadiumCost(tournament)
+    : systemStore.currentSettings.stadiumCost;
+  const additionalCosts = getTournamentAdditionalCostsTotal(tournamentId);
+  return (
+    stadium -
+    sponsor +
+    additionalCosts -
+    (tournament ? getTournamentFundContribution(tournament) : 0)
+  );
+};
 
-const calculateCostPerPlayerForCount = (tournamentId: string, divisor: number) => {
-  const net = calculateTournamentNet(tournamentId)
-  if (divisor <= 0) return 0
-  const baseCost = net / divisor
-  const tournament = getTournamentById(tournamentId)
-  if (tournament?.selfFunded) return Math.round(baseCost)
-  return Math.ceil(baseCost / 5000) * 5000
-}
+const calculateCostPerPlayerForCount = (
+  tournamentId: string,
+  divisor: number,
+) => {
+  const net = calculateTournamentNet(tournamentId);
+  if (divisor <= 0) return 0;
+  const baseCost = net / divisor;
+  const tournament = getTournamentById(tournamentId);
+  if (tournament?.selfFunded) return Math.round(baseCost);
+  return Math.ceil(baseCost / 5000) * 5000;
+};
 
 const getCostEstimateInfo = (tournamentId: string) => {
-  const stats = getAttendanceStats(tournamentId)
-  const attendingCount = stats?.attendingCount || 0
-  const field5Count = stats?.field5Count ?? attendingCount
-  const field7Count = stats?.field7Count ?? attendingCount
-  const useField5 = field5Count >= field7Count
-  const registered = useField5 ? field5Count : field7Count
-  const minimum = useField5 ? 12 : 16
-  return { registered, minimum, divisor: Math.max(registered, minimum) }
-}
+  const stats = getAttendanceStats(tournamentId);
+  const attendingCount = stats?.attendingCount || 0;
+  const field5Count = stats?.field5Count ?? attendingCount;
+  const field7Count = stats?.field7Count ?? attendingCount;
+  const useField5 = field5Count >= field7Count;
+  const registered = useField5 ? field5Count : field7Count;
+  const minimum = useField5 ? 12 : 16;
+  return { registered, minimum, divisor: Math.max(registered, minimum) };
+};
 
 const calculateCostPerPlayer = (tournamentId: string) => {
-  const { divisor } = getCostEstimateInfo(tournamentId)
-  return calculateCostPerPlayerForCount(tournamentId, divisor)
-}
+  const { divisor } = getCostEstimateInfo(tournamentId);
+  return calculateCostPerPlayerForCount(tournamentId, divisor);
+};
 
 // This adjustment is intentionally display-only. The persisted end-tournament calculation is unchanged.
 const getEstimateAdditionalCost = (tournamentId: string): number => {
-  const tournament = getTournamentById(tournamentId)
-  if (tournament?.selfFunded || getTournamentAdditionalCostsTotal(tournamentId) > 0) return 0
-  return 120000
-}
+  const tournament = getTournamentById(tournamentId);
+  if (
+    tournament?.selfFunded ||
+    getTournamentAdditionalCostsTotal(tournamentId) > 0
+  )
+    return 0;
+  return 120000;
+};
 
 const calculateDisplayEstimateNet = (tournamentId: string) =>
-  calculateTournamentNet(tournamentId) + getEstimateAdditionalCost(tournamentId)
+  calculateTournamentNet(tournamentId) +
+  getEstimateAdditionalCost(tournamentId);
 
-const calculateDisplayEstimateCostForCount = (tournamentId: string, divisor: number) => {
-  const estimateAdditionalCost = getEstimateAdditionalCost(tournamentId)
-  if (estimateAdditionalCost === 0) return calculateCostPerPlayerForCount(tournamentId, divisor)
-  if (divisor <= 0) return 0
-  return Math.ceil(calculateDisplayEstimateNet(tournamentId) / divisor / 5000) * 5000
-}
+const calculateDisplayEstimateCostForCount = (
+  tournamentId: string,
+  divisor: number,
+) => {
+  const estimateAdditionalCost = getEstimateAdditionalCost(tournamentId);
+  if (estimateAdditionalCost === 0)
+    return calculateCostPerPlayerForCount(tournamentId, divisor);
+  if (divisor <= 0) return 0;
+  return (
+    Math.ceil(calculateDisplayEstimateNet(tournamentId) / divisor / 5000) * 5000
+  );
+};
 
 const calculateDisplayEstimateCost = (tournamentId: string) => {
-  const { divisor } = getCostEstimateInfo(tournamentId)
-  return calculateDisplayEstimateCostForCount(tournamentId, divisor)
-}
+  const { divisor } = getCostEstimateInfo(tournamentId);
+  return calculateDisplayEstimateCostForCount(tournamentId, divisor);
+};
 
 const shouldShowMaxCostRange = (tournament: Tournament): boolean => {
-  const { divisor } = getCostEstimateInfo(tournament.id)
-  return Boolean(tournament.maxAttendance && tournament.maxAttendance > divisor)
-}
+  const { divisor } = getCostEstimateInfo(tournament.id);
+  return Boolean(
+    tournament.maxAttendance && tournament.maxAttendance > divisor,
+  );
+};
 
 // Get next Monday (or today if today is Monday)
 const nextMonday = computed(() => {
-  const today = new Date()
-  const dayOfWeek = today.getDay() // 0 = Sunday, 1 = Monday, etc.
-  
+  const today = new Date();
+  const dayOfWeek = today.getDay(); // 0 = Sunday, 1 = Monday, etc.
+
   if (dayOfWeek === 1) {
     // Today is Monday
-    return new Date(today.getFullYear(), today.getMonth(), today.getDate())
+    return new Date(today.getFullYear(), today.getMonth(), today.getDate());
   } else {
     // Calculate next Monday
-    const daysUntilMonday = dayOfWeek === 0 ? 1 : 8 - dayOfWeek
-    const nextMondayDate = new Date(today)
-    nextMondayDate.setDate(today.getDate() + daysUntilMonday)
-    return new Date(nextMondayDate.getFullYear(), nextMondayDate.getMonth(), nextMondayDate.getDate())
+    const daysUntilMonday = dayOfWeek === 0 ? 1 : 8 - dayOfWeek;
+    const nextMondayDate = new Date(today);
+    nextMondayDate.setDate(today.getDate() + daysUntilMonday);
+    return new Date(
+      nextMondayDate.getFullYear(),
+      nextMondayDate.getMonth(),
+      nextMondayDate.getDate(),
+    );
   }
-})
+});
 
 // Get tournaments filtered for weekly tournaments
 const weeklyTournaments = computed(() => {
-  return tournamentsStore.tournaments.filter(tournament => 
-    tournament.type === 'WEEKLY'
-  )
-})
+  return tournamentsStore.tournaments.filter(
+    (tournament) => tournament.type === "WEEKLY",
+  );
+});
 
 // Get ongoing tournament (filter by status = 'UPCOMING' or 'ONGOING')
 const ongoingTournament = computed(() => {
-  return weeklyTournaments.value.find(tournament => 
-    tournament.status === 'UPCOMING' || tournament.status === 'ONGOING'
-  )
-})
+  return weeklyTournaments.value.find(
+    (tournament) =>
+      tournament.status === "UPCOMING" || tournament.status === "ONGOING",
+  );
+});
 
 // Check if we can create a new tournament
 const canCreateNew = computed(() => {
   // Don't allow creating if there's an ongoing tournament
-  if (ongoingTournament.value) return false
-  
+  if (ongoingTournament.value) return false;
+
   // A scheduled or ongoing tournament already occupies this date. A completed
   // tournament may be followed by a new tournament on a different day.
-  const targetDate = nextMonday.value
-  const targetDateStr = toLocalDateKey(targetDate)
-  
-  const tournamentForNextMonday = weeklyTournaments.value.find(tournament => {
-    const tournamentDateStr = toLocalDateKey(new Date(tournament.startDate))
-    return tournamentDateStr === targetDateStr && tournament.status !== 'COMPLETED'
-  })
-  
-  return !tournamentForNextMonday
-})
+  const targetDate = nextMonday.value;
+  const targetDateStr = toLocalDateKey(targetDate);
+
+  const tournamentForNextMonday = weeklyTournaments.value.find((tournament) => {
+    const tournamentDateStr = toLocalDateKey(new Date(tournament.startDate));
+    return (
+      tournamentDateStr === targetDateStr && tournament.status !== "COMPLETED"
+    );
+  });
+
+  return !tournamentForNextMonday;
+});
 
 const completedTournamentForNextMonday = computed(() => {
-  const targetDateStr = toLocalDateKey(nextMonday.value)
-  return weeklyTournaments.value.find(tournament =>
-    tournament.status === 'COMPLETED' && toLocalDateKey(new Date(tournament.startDate)) === targetDateStr
-  )
-})
+  const targetDateStr = toLocalDateKey(nextMonday.value);
+  return weeklyTournaments.value.find(
+    (tournament) =>
+      tournament.status === "COMPLETED" &&
+      toLocalDateKey(new Date(tournament.startDate)) === targetDateStr,
+  );
+});
 
 const minimumNewTournamentDate = computed(() => {
-  return toLocalDateKey(new Date())
-})
+  return toLocalDateKey(new Date());
+});
 
-const minimumSelectableDate = computed(() => toLocalDateKey(new Date()))
+const minimumSelectableDate = computed(() => toLocalDateKey(new Date()));
 
 // Get old tournaments (completed or past)
-const oldTournaments = ref<Tournament[]>([])
-const oldTournamentIndex = ref(0)
-const oldTournamentDateFilter = ref('')
-const oldTournamentDateDraft = ref('')
-const showOldTournamentDateModal = ref(false)
-const oldTournamentCalendarMonth = ref(new Date(new Date().getFullYear(), new Date().getMonth(), 1))
-const completedTournamentDates = ref<Set<string>>(new Set())
-const oldTournamentCalendarLoading = ref(false)
-const oldTournamentWeekdays = ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7']
+const oldTournaments = ref<Tournament[]>([]);
+const oldTournamentIndex = ref(0);
+const oldTournamentDateFilter = ref("");
+const oldTournamentDateDraft = ref("");
+const showOldTournamentDateModal = ref(false);
+const oldTournamentCalendarMonth = ref(
+  new Date(new Date().getFullYear(), new Date().getMonth(), 1),
+);
+const completedTournamentDates = ref<Set<string>>(new Set());
+const oldTournamentCalendarLoading = ref(false);
+const oldTournamentWeekdays = ["CN", "T2", "T3", "T4", "T5", "T6", "T7"];
 const filteredOldTournaments = computed(() => {
-  const filterDate = oldTournamentDateFilter.value
+  const filterDate = oldTournamentDateFilter.value;
   return weeklyTournaments.value
-    .filter(tournament => tournament.status === 'COMPLETED')
-    .filter(tournament => !filterDate || toLocalDateKey(new Date(tournament.startDate)) === filterDate)
-    .sort((first, second) => new Date(second.startDate).getTime() - new Date(first.startDate).getTime())
-})
-const selectedOldTournament = computed(() => filteredOldTournaments.value[oldTournamentIndex.value] || null)
+    .filter((tournament) => tournament.status === "COMPLETED")
+    .filter(
+      (tournament) =>
+        !filterDate ||
+        toLocalDateKey(new Date(tournament.startDate)) === filterDate,
+    )
+    .sort(
+      (first, second) =>
+        new Date(second.startDate).getTime() -
+        new Date(first.startDate).getTime(),
+    );
+});
+const selectedOldTournament = computed(
+  () => filteredOldTournaments.value[oldTournamentIndex.value] || null,
+);
 
 // Helper functions
 const toLocalDateKey = (date: Date): string => {
-  const year = date.getFullYear()
-  const month = String(date.getMonth() + 1).padStart(2, '0')
-  const day = String(date.getDate()).padStart(2, '0')
-  return `${year}-${month}-${day}`
-}
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+};
 
-const oldTournamentCalendarLabel = computed(() => oldTournamentCalendarMonth.value.toLocaleDateString('vi-VN', {
-  month: 'long',
-  year: 'numeric',
-}))
+const oldTournamentCalendarLabel = computed(() =>
+  oldTournamentCalendarMonth.value.toLocaleDateString("vi-VN", {
+    month: "long",
+    year: "numeric",
+  }),
+);
 
 const oldTournamentCalendarDays = computed(() => {
-  const month = oldTournamentCalendarMonth.value
-  const firstDay = new Date(month.getFullYear(), month.getMonth(), 1)
-  const dayCount = new Date(month.getFullYear(), month.getMonth() + 1, 0).getDate()
-  const days: Array<Date | null> = Array.from({ length: firstDay.getDay() }, () => null)
-  for (let day = 1; day <= dayCount; day++) days.push(new Date(month.getFullYear(), month.getMonth(), day))
-  while (days.length % 7 !== 0) days.push(null)
-  return days
-})
+  const month = oldTournamentCalendarMonth.value;
+  const firstDay = new Date(month.getFullYear(), month.getMonth(), 1);
+  const dayCount = new Date(
+    month.getFullYear(),
+    month.getMonth() + 1,
+    0,
+  ).getDate();
+  const days: Array<Date | null> = Array.from(
+    { length: firstDay.getDay() },
+    () => null,
+  );
+  for (let day = 1; day <= dayCount; day++)
+    days.push(new Date(month.getFullYear(), month.getMonth(), day));
+  while (days.length % 7 !== 0) days.push(null);
+  return days;
+});
 
 const fetchCompletedTournamentDates = async (): Promise<void> => {
   try {
-    oldTournamentCalendarLoading.value = true
-    const month = oldTournamentCalendarMonth.value
-    const response = await apiClient.get<string[]>(`/tournaments/completed-dates?year=${month.getFullYear()}&month=${month.getMonth() + 1}`)
-    if (!response.success) throw new Error(response.error || 'Không thể tải lịch giải đấu')
-    completedTournamentDates.value = new Set(response.data || [])
+    oldTournamentCalendarLoading.value = true;
+    const month = oldTournamentCalendarMonth.value;
+    const response = await apiClient.get<string[]>(
+      `/tournaments/completed-dates?year=${month.getFullYear()}&month=${month.getMonth() + 1}`,
+    );
+    if (!response.success)
+      throw new Error(response.error || "Không thể tải lịch giải đấu");
+    completedTournamentDates.value = new Set(response.data || []);
   } catch (error) {
-    completedTournamentDates.value = new Set()
-    toast.error(error instanceof Error ? error.message : 'Không thể tải lịch giải đấu')
+    completedTournamentDates.value = new Set();
+    toast.error(
+      error instanceof Error ? error.message : "Không thể tải lịch giải đấu",
+    );
   } finally {
-    oldTournamentCalendarLoading.value = false
+    oldTournamentCalendarLoading.value = false;
   }
-}
+};
 
 const openOldTournamentDateModal = async (): Promise<void> => {
-  oldTournamentDateDraft.value = oldTournamentDateFilter.value
-  const sourceDate = oldTournamentDateDraft.value ? new Date(`${oldTournamentDateDraft.value}T00:00:00`) : new Date()
-  oldTournamentCalendarMonth.value = new Date(sourceDate.getFullYear(), sourceDate.getMonth(), 1)
-  showOldTournamentDateModal.value = true
-  await fetchCompletedTournamentDates()
-}
+  oldTournamentDateDraft.value = oldTournamentDateFilter.value;
+  const sourceDate = oldTournamentDateDraft.value
+    ? new Date(`${oldTournamentDateDraft.value}T00:00:00`)
+    : new Date();
+  oldTournamentCalendarMonth.value = new Date(
+    sourceDate.getFullYear(),
+    sourceDate.getMonth(),
+    1,
+  );
+  showOldTournamentDateModal.value = true;
+  await fetchCompletedTournamentDates();
+};
 
-const changeOldTournamentCalendarMonth = async (offset: number): Promise<void> => {
-  const current = oldTournamentCalendarMonth.value
-  oldTournamentCalendarMonth.value = new Date(current.getFullYear(), current.getMonth() + offset, 1)
-  await fetchCompletedTournamentDates()
-}
+const changeOldTournamentCalendarMonth = async (
+  offset: number,
+): Promise<void> => {
+  const current = oldTournamentCalendarMonth.value;
+  oldTournamentCalendarMonth.value = new Date(
+    current.getFullYear(),
+    current.getMonth() + offset,
+    1,
+  );
+  await fetchCompletedTournamentDates();
+};
 
 const getTournamentSponsorMoney = (tournament: Tournament) => {
-  if (tournament.selfFunded) return 0
-  return tournament.sponsorMoney !== null && tournament.sponsorMoney !== undefined
+  if (tournament.selfFunded) return 0;
+  return tournament.sponsorMoney !== null &&
+    tournament.sponsorMoney !== undefined
     ? tournament.sponsorMoney
-    : (systemStore.currentSettings?.sponsorMoney || 0)
-}
+    : systemStore.currentSettings?.sponsorMoney || 0;
+};
 
 const getTournamentStadiumCost = (tournament: Tournament) => {
   return tournament.stadiumCost !== null && tournament.stadiumCost !== undefined
     ? tournament.stadiumCost
-    : (systemStore.currentSettings?.stadiumCost || 0)
-}
+    : systemStore.currentSettings?.stadiumCost || 0;
+};
 
-const getTournamentFundContribution = (tournament: Tournament) => tournament.fundContribution || 0
+const getTournamentFundContribution = (tournament: Tournament) =>
+  tournament.fundContribution || 0;
 
 const isAttendanceLimitReached = (tournament: Tournament): boolean => {
-  const limit = tournament.maxAttendance
-  if (!limit) return false
-  const stats = getAttendanceStats(tournament.id)
-  return (stats?.field5Count || 0) >= limit || (stats?.field7Count || 0) >= limit
-}
+  const limit = tournament.maxAttendance;
+  if (!limit) return false;
+  const stats = getAttendanceStats(tournament.id);
+  return (
+    (stats?.field5Count || 0) >= limit || (stats?.field7Count || 0) >= limit
+  );
+};
 
 const attendanceLimitMessage = (tournament: Tournament): string => {
-  const limit = tournament.maxAttendance || 0
-  const stats = getAttendanceStats(tournament.id)
+  const limit = tournament.maxAttendance || 0;
+  const stats = getAttendanceStats(tournament.id);
   const fullFields = [
-    (stats?.field5Count || 0) >= limit ? 'Sân 5' : '',
-    (stats?.field7Count || 0) >= limit ? 'Sân 7' : '',
-  ].filter(Boolean)
-  return `${fullFields.join(' và ')} đã đạt giới hạn ${limit} cầu thủ`
-}
+    (stats?.field5Count || 0) >= limit ? "Sân 5" : "",
+    (stats?.field7Count || 0) >= limit ? "Sân 7" : "",
+  ].filter(Boolean);
+  return `${fullFields.join(" và ")} đã đạt giới hạn ${limit} cầu thủ`;
+};
 
 const formatDate = (date: string | Date): string => {
-  if (!date) return 'Không có'
+  if (!date) return "Không có";
   try {
-    const dateObj = typeof date === 'string' ? new Date(date) : date
-    return dateObj.toLocaleDateString('vi-VN', {
-      weekday: 'long',
-      year: 'numeric', 
-      month: 'short', 
-      day: 'numeric' 
-    })
+    const dateObj = typeof date === "string" ? new Date(date) : date;
+    return dateObj.toLocaleDateString("vi-VN", {
+      weekday: "long",
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+    });
   } catch {
-    return 'Ngày không hợp lệ'
+    return "Ngày không hợp lệ";
   }
-}
+};
 
 const formatTime = (date: string | Date): string => {
-  if (!date) return 'Không có'
+  if (!date) return "Không có";
   try {
-    const dateObj = typeof date === 'string' ? new Date(date) : date
-    return dateObj.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })
+    const dateObj = typeof date === "string" ? new Date(date) : date;
+    return dateObj.toLocaleTimeString("vi-VN", {
+      hour: "2-digit",
+      minute: "2-digit",
+    });
   } catch {
-    return 'Giờ không hợp lệ'
+    return "Giờ không hợp lệ";
   }
-}
+};
 
 const toDateTimeLocalValue = (date: Date): string => {
-  const adjustedDate = new Date(date.getTime() - date.getTimezoneOffset() * 60_000)
-  return adjustedDate.toISOString().slice(0, 16)
-}
+  const adjustedDate = new Date(
+    date.getTime() - date.getTimezoneOffset() * 60_000,
+  );
+  return adjustedDate.toISOString().slice(0, 16);
+};
 
-const formatCancellationDeadline = (deadline?: string | Date | null): string => {
-  if (!deadline) return 'Chưa đặt'
-  const date = new Date(deadline)
-  if (Number.isNaN(date.getTime())) return 'Chưa đặt'
-  const hours = date.getHours()
-  const minutes = date.getMinutes()
-  const weekdays = ['Chủ nhật', 'Thứ 2', 'Thứ 3', 'Thứ 4', 'Thứ 5', 'Thứ 6', 'Thứ 7']
-  return `${hours}h${minutes ? String(minutes).padStart(2, '0') : ''} ${weekdays[date.getDay()]}`
-}
+const formatCancellationDeadline = (
+  deadline?: string | Date | null,
+): string => {
+  if (!deadline) return "Chưa đặt";
+  const date = new Date(deadline);
+  if (Number.isNaN(date.getTime())) return "Chưa đặt";
+  const hours = date.getHours();
+  const minutes = date.getMinutes();
+  const weekdays = [
+    "Chủ nhật",
+    "Thứ 2",
+    "Thứ 3",
+    "Thứ 4",
+    "Thứ 5",
+    "Thứ 6",
+    "Thứ 7",
+  ];
+  return `${hours}h${minutes ? String(minutes).padStart(2, "0") : ""} ${weekdays[date.getDay()]}`;
+};
 
 const getCancellationDeadlineBadgeText = (tournament: Tournament): string => {
-  currentTimestamp.value
-  const deadline = new Date(tournament.cancellationDeadline || getDefaultCancellationDeadline(tournament.startDate))
-  if (!Number.isNaN(deadline.getTime()) && deadline.getTime() <= Date.now()) return 'ĐÃ CHỐT'
-  return `Chốt hủy: ${formatCancellationDeadline(deadline)}`
-}
+  currentTimestamp.value;
+  const deadline = new Date(
+    tournament.cancellationDeadline ||
+      getDefaultCancellationDeadline(tournament.startDate),
+  );
+  if (!Number.isNaN(deadline.getTime()) && deadline.getTime() <= Date.now())
+    return "ĐÃ CHỐT";
+  return `Chốt hủy: ${formatCancellationDeadline(deadline)}`;
+};
 
 const isUserCancellationLocked = (tournament: Tournament): boolean => {
-  return authStore.hasRole('user') && isCancellationDeadlinePassed(tournament)
-}
+  return authStore.hasRole("user") && isCancellationDeadlinePassed(tournament);
+};
 
 const isCancellationDeadlinePassed = (tournament: Tournament): boolean => {
-  currentTimestamp.value
-  return new Date(tournament.cancellationDeadline || getDefaultCancellationDeadline(tournament.startDate)).getTime() < Date.now()
-}
+  currentTimestamp.value;
+  return (
+    new Date(
+      tournament.cancellationDeadline ||
+        getDefaultCancellationDeadline(tournament.startDate),
+    ).getTime() < Date.now()
+  );
+};
+
+const hasTournamentStarted = (tournamentId: string): boolean => {
+  currentTimestamp.value;
+  const tournament = getTournamentById(tournamentId);
+  if (!tournament || tournament.status === "COMPLETED") return false;
+  return new Date(tournament.startDate).getTime() < Date.now();
+};
 
 const formatRegistrationTime = (date: string | Date): string => {
   try {
-    const dateObj = typeof date === 'string' ? new Date(date) : date
-    return dateObj.toLocaleString('vi-VN', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit' })
+    const dateObj = typeof date === "string" ? new Date(date) : date;
+    return dateObj.toLocaleString("vi-VN", {
+      hour: "2-digit",
+      minute: "2-digit",
+      day: "2-digit",
+      month: "2-digit",
+    });
   } catch {
-    return ''
+    return "";
   }
-}
+};
 
 const formatNextMonday = (date: Date): string => {
-  return date.toLocaleDateString('vi-VN', {
-    weekday: 'long',
-    month: 'short', 
-    day: 'numeric',
-    year: 'numeric'
-  })
-}
+  return date.toLocaleDateString("vi-VN", {
+    weekday: "long",
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+};
 
 const getStatusBadge = (status: string) => {
   switch (status) {
-    case 'UPCOMING':
-      return 'bg-blue-100 text-blue-800'
-    case 'ONGOING':
-      return 'bg-green-100 text-green-800'
-    case 'COMPLETED':
-      return 'bg-gray-100 text-gray-800'
+    case "UPCOMING":
+      return "bg-blue-100 text-blue-800";
+    case "ONGOING":
+      return "bg-green-100 text-green-800";
+    case "COMPLETED":
+      return "bg-gray-100 text-gray-800";
     default:
-      return 'bg-gray-100 text-gray-800'
+      return "bg-gray-100 text-gray-800";
   }
-}
+};
 
 // Attendance functions
 const fetchAttendance = async (tournamentId: string): Promise<void> => {
   try {
-    const response = await apiClient.get<TournamentPlayerAttendance>(`/tournaments/${tournamentId}/attendance`)
+    const response = await apiClient.get<TournamentPlayerAttendance>(
+      `/tournaments/${tournamentId}/attendance`,
+    );
     if (response.success) {
       // If response.data is empty object {}, user has no player record
       if (response.data && Object.keys(response.data).length > 0) {
-        attendanceMap.value.set(tournamentId, response.data)
+        attendanceMap.value.set(tournamentId, response.data);
       } else {
         // User has no player record, set a special marker
-        const noPlayerMarker = { 
-          id: '', 
-          tournamentId, 
-          playerId: '', 
-          status: 'NO_PLAYER' as any,
+        const noPlayerMarker = {
+          id: "",
+          tournamentId,
+          playerId: "",
+          status: "NO_PLAYER" as any,
           withWater: false,
           bet: false,
           createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString()
-        }
-        attendanceMap.value.set(tournamentId, noPlayerMarker)
+          updatedAt: new Date().toISOString(),
+        };
+        attendanceMap.value.set(tournamentId, noPlayerMarker);
       }
     }
   } catch (err: any) {
-    console.error('Fetch attendance error:', err)
+    console.error("Fetch attendance error:", err);
     // Silent error for attendance fetch - we don't want to spam the user with toasts
   }
-}
+};
 
 const openFriendRegistration = async (tournamentId: string): Promise<void> => {
-  friendSwapMode.value = false
-  friendTournamentId.value = tournamentId
-  friendField5.value = true
-  friendField7.value = true
-  friendsLoading.value = true
-  showFriendRegistrationModal.value = true
+  friendSwapMode.value = false;
+  friendTournamentId.value = tournamentId;
+  friendField5.value = true;
+  friendField7.value = true;
+  friendsLoading.value = true;
+  showFriendRegistrationModal.value = true;
   try {
-    const response = await apiClient.getMyFriends()
-    if (!response.success) throw new Error(response.error || 'Không thể tải danh sách bạn')
-    friends.value = (response.data || []) as any[]
-    friendSelectedIds.value = friends.value.length === 1 ? [friends.value[0].id] : []
+    const response = await apiClient.getMyFriends();
+    if (!response.success)
+      throw new Error(response.error || "Không thể tải danh sách bạn");
+    friends.value = (response.data || []) as any[];
+    friendSelectedIds.value =
+      friends.value.length === 1 ? [friends.value[0].id] : [];
   } catch (error: any) {
-    toast.error(error.message || 'Không thể tải danh sách bạn')
-  } finally { friendsLoading.value = false }
-}
+    toast.error(error.message || "Không thể tải danh sách bạn");
+  } finally {
+    friendsLoading.value = false;
+  }
+};
 
 const openFriendSwap = async (tournamentId: string): Promise<void> => {
   if (cannotSelfRegisterDueToDebt.value) {
-    toast.error('Số dư đang âm, vui lòng thanh toán trước khi swap dùm bạn')
-    return
+    toast.error("Số dư đang âm, vui lòng thanh toán trước khi swap dùm bạn");
+    return;
   }
-  friendTournamentId.value = tournamentId
-  friendSelectedIds.value = []
-  friendSwapRequest.value = null
-  friendsLoading.value = true
-  showFriendSwapModal.value = true
-  try { const response = await apiClient.getMyFriends(); if (!response.success) throw new Error(response.error); friends.value = (response.data || []) as any[]; await Promise.all([fetchAttendanceDetails(tournamentId), fetchIncomingSwapRequests(tournamentId)]) } catch (error: any) { toast.error(error.message || 'Không thể tải danh sách bạn') } finally { friendsLoading.value = false }
-}
+  friendTournamentId.value = tournamentId;
+  friendSelectedIds.value = [];
+  friendSwapRequest.value = null;
+  friendsLoading.value = true;
+  showFriendSwapModal.value = true;
+  try {
+    const response = await apiClient.getMyFriends();
+    if (!response.success) throw new Error(response.error);
+    friends.value = (response.data || []) as any[];
+    await Promise.all([
+      fetchAttendanceDetails(tournamentId),
+      fetchIncomingSwapRequests(tournamentId),
+    ]);
+  } catch (error: any) {
+    toast.error(error.message || "Không thể tải danh sách bạn");
+  } finally {
+    friendsLoading.value = false;
+  }
+};
 
-const openFriendSwapAcceptance = async (tournamentId: string, request: IncomingSwapRequest): Promise<void> => {
-  friendSwapRequest.value = request
-  await openFriendSwap(tournamentId)
-  friendSwapRequest.value = request
-}
+const openFriendSwapAcceptance = async (
+  tournamentId: string,
+  request: IncomingSwapRequest,
+): Promise<void> => {
+  friendSwapRequest.value = request;
+  await openFriendSwap(tournamentId);
+  friendSwapRequest.value = request;
+};
 
 const toggleFriend = (id: string): void => {
-  if (friends.value.length === 1) return
+  if (friends.value.length === 1) return;
   friendSelectedIds.value = friendSelectedIds.value.includes(id)
-    ? friendSelectedIds.value.filter(item => item !== id)
-    : [...friendSelectedIds.value, id]
-}
+    ? friendSelectedIds.value.filter((item) => item !== id)
+    : [...friendSelectedIds.value, id];
+};
 
 const openEditFriend = (friend: any): void => {
-  editingFriendId.value = friend.id
+  editingFriendId.value = friend.id;
   friendForm.value = {
     name: friend.name,
     position: friend.position,
     yearOfBirth: friend.yearOfBirth,
     tier: friend.tier,
-  }
-  showCreateFriendModal.value = true
-}
+  };
+  showCreateFriendModal.value = true;
+};
 
 const closeFriendForm = (): void => {
-  showCreateFriendModal.value = false
-  editingFriendId.value = null
-  friendForm.value = { name: '', position: '', yearOfBirth: 1990, tier: 0 }
-}
+  showCreateFriendModal.value = false;
+  editingFriendId.value = null;
+  friendForm.value = { name: "", position: "", yearOfBirth: 1990, tier: 0 };
+};
 
 const saveFriend = async (): Promise<void> => {
   if (editingFriendId.value) {
-    if (!friendForm.value.name || !friendForm.value.position || !friendForm.value.yearOfBirth || !friendForm.value.tier) return
-    friendCreateSaving.value = true
+    if (
+      !friendForm.value.name ||
+      !friendForm.value.position ||
+      !friendForm.value.yearOfBirth ||
+      !friendForm.value.tier
+    )
+      return;
+    friendCreateSaving.value = true;
     try {
-      const response = await apiClient.updateFriend(editingFriendId.value, friendForm.value)
-      if (!response.success || !response.data) throw new Error(response.error || 'Không thể cập nhật bạn')
-      friends.value = friends.value.map(friend => friend.id === editingFriendId.value ? response.data : friend)
-      closeFriendForm()
-      toast.success('Đã cập nhật bạn')
+      const response = await apiClient.updateFriend(
+        editingFriendId.value,
+        friendForm.value,
+      );
+      if (!response.success || !response.data)
+        throw new Error(response.error || "Không thể cập nhật bạn");
+      friends.value = friends.value.map((friend) =>
+        friend.id === editingFriendId.value ? response.data : friend,
+      );
+      closeFriendForm();
+      toast.success("Đã cập nhật bạn");
     } catch (error: any) {
-      toast.error(error.message || 'Không thể cập nhật bạn')
-    } finally { friendCreateSaving.value = false }
-    return
+      toast.error(error.message || "Không thể cập nhật bạn");
+    } finally {
+      friendCreateSaving.value = false;
+    }
+    return;
   }
-  await createFriend()
-}
+  await createFriend();
+};
 
 const createFriend = async (): Promise<void> => {
-  if (!friendForm.value.name || !friendForm.value.position || !friendForm.value.yearOfBirth || !friendForm.value.tier) return
-  friendCreateSaving.value = true
+  if (
+    !friendForm.value.name ||
+    !friendForm.value.position ||
+    !friendForm.value.yearOfBirth ||
+    !friendForm.value.tier
+  )
+    return;
+  friendCreateSaving.value = true;
   try {
-    const response = await apiClient.createFriend(friendForm.value)
-    if (!response.success || !response.data) throw new Error(response.error || 'Không thể tạo bạn mới')
-    const createdFriend = response.data as any
-    friends.value = [...friends.value, createdFriend]
-    friendSelectedIds.value = [createdFriend.id]
-    closeFriendForm()
-    toast.success('Đã tạo bạn mới')
+    const response = await apiClient.createFriend(friendForm.value);
+    if (!response.success || !response.data)
+      throw new Error(response.error || "Không thể tạo bạn mới");
+    const createdFriend = response.data as any;
+    friends.value = [...friends.value, createdFriend];
+    friendSelectedIds.value = [createdFriend.id];
+    closeFriendForm();
+    toast.success("Đã tạo bạn mới");
   } catch (error: any) {
-    toast.error(error.message || 'Không thể tạo bạn mới')
-  } finally { friendCreateSaving.value = false }
-}
+    toast.error(error.message || "Không thể tạo bạn mới");
+  } finally {
+    friendCreateSaving.value = false;
+  }
+};
 
 const registerFriends = async (): Promise<void> => {
-  if (!friendTournamentId.value || !friendSelectedIds.value.length) return
-  friendRegistrationSaving.value = true
+  if (!friendTournamentId.value || !friendSelectedIds.value.length) return;
+  friendRegistrationSaving.value = true;
   try {
-    const response = await apiClient.registerFriendsForTournament(friendTournamentId.value, friendSelectedIds.value, friendField5.value, friendField7.value)
-    if (!response.success) throw new Error(response.error || 'Không thể đăng ký cho bạn')
-    showFriendRegistrationModal.value = false
-    showFriendSwapModal.value = false
-    await Promise.all([fetchAttendance(friendTournamentId.value), fetchAttendanceStats(friendTournamentId.value), fetchAttendanceDetails(friendTournamentId.value)])
-    toast.success('Đã đăng ký cho bạn')
+    const response = await apiClient.registerFriendsForTournament(
+      friendTournamentId.value,
+      friendSelectedIds.value,
+      friendField5.value,
+      friendField7.value,
+    );
+    if (!response.success)
+      throw new Error(response.error || "Không thể đăng ký cho bạn");
+    showFriendRegistrationModal.value = false;
+    showFriendSwapModal.value = false;
+    await Promise.all([
+      fetchAttendance(friendTournamentId.value),
+      fetchAttendanceStats(friendTournamentId.value),
+      fetchAttendanceDetails(friendTournamentId.value),
+    ]);
+    toast.success("Đã đăng ký cho bạn");
   } catch (error: any) {
-    toast.error(error.message || 'Không thể đăng ký cho bạn')
-  } finally { friendRegistrationSaving.value = false }
-}
+    toast.error(error.message || "Không thể đăng ký cho bạn");
+  } finally {
+    friendRegistrationSaving.value = false;
+  }
+};
 
 const requestFriendSwap = async (): Promise<void> => {
-  if (!friendTournamentId.value || !friendSelectedIds.value.length) return
+  if (!friendTournamentId.value || !friendSelectedIds.value.length) return;
   if (cannotSelfRegisterDueToDebt.value) {
-    toast.error('Số dư đang âm, vui lòng thanh toán trước khi swap dùm bạn')
-    return
+    toast.error("Số dư đang âm, vui lòng thanh toán trước khi swap dùm bạn");
+    return;
   }
-  friendRegistrationSaving.value = true
+  friendRegistrationSaving.value = true;
   try {
     for (const playerId of friendSelectedIds.value) {
-      const response = await apiClient.createSwapRequest(friendTournamentId.value, playerId)
-      if (!response.success) throw new Error(response.error || 'Không thể gửi yêu cầu swap')
+      const response = await apiClient.createSwapRequest(
+        friendTournamentId.value,
+        playerId,
+      );
+      if (!response.success)
+        throw new Error(response.error || "Không thể gửi yêu cầu swap");
     }
-    showFriendRegistrationModal.value = false
-    await Promise.all([fetchAttendanceDetails(friendTournamentId.value), fetchIncomingSwapRequests(friendTournamentId.value)])
-    toast.success('Đã gửi yêu cầu swap cho bạn')
-  } catch (error: any) { toast.error(error.message || 'Không thể gửi yêu cầu swap cho bạn') }
-  finally { friendRegistrationSaving.value = false }
-}
+    showFriendRegistrationModal.value = false;
+    await Promise.all([
+      fetchAttendanceDetails(friendTournamentId.value),
+      fetchIncomingSwapRequests(friendTournamentId.value),
+    ]);
+    toast.success("Đã gửi yêu cầu swap cho bạn");
+  } catch (error: any) {
+    toast.error(error.message || "Không thể gửi yêu cầu swap cho bạn");
+  } finally {
+    friendRegistrationSaving.value = false;
+  }
+};
 
 const acceptSwapForFriend = async (): Promise<void> => {
-  if (!friendTournamentId.value || !friendSwapRequest.value || friendSelectedIds.value.length !== 1) return
+  if (
+    !friendTournamentId.value ||
+    !friendSwapRequest.value ||
+    friendSelectedIds.value.length !== 1
+  )
+    return;
   if (cannotSelfRegisterDueToDebt.value) {
-    toast.error('Số dư đang âm, vui lòng thanh toán trước khi swap dùm bạn')
-    return
+    toast.error("Số dư đang âm, vui lòng thanh toán trước khi swap dùm bạn");
+    return;
   }
-  friendRegistrationSaving.value = true
+  friendRegistrationSaving.value = true;
   try {
-    const response = await apiClient.acceptSwapRequest(friendTournamentId.value, friendSwapRequest.value.id, true, true, friendSelectedIds.value[0])
-    if (!response.success) throw new Error(response.error || 'Không thể xác nhận swap')
-    showFriendRegistrationModal.value = false
-    await fetchData()
-    toast.success('Đã swap dùm bạn')
-  } catch (error: any) { toast.error(error.message || 'Không thể xác nhận swap') }
-  finally { friendRegistrationSaving.value = false; friendSwapRequest.value = null }
-}
+    const response = await apiClient.acceptSwapRequest(
+      friendTournamentId.value,
+      friendSwapRequest.value.id,
+      true,
+      true,
+      friendSelectedIds.value[0],
+    );
+    if (!response.success)
+      throw new Error(response.error || "Không thể xác nhận swap");
+    showFriendRegistrationModal.value = false;
+    await fetchData();
+    toast.success("Đã swap dùm bạn");
+  } catch (error: any) {
+    toast.error(error.message || "Không thể xác nhận swap");
+  } finally {
+    friendRegistrationSaving.value = false;
+    friendSwapRequest.value = null;
+  }
+};
 
-const normalizeSwapText = (value: string): string => value
-  .normalize('NFD')
-  .replace(/[\u0300-\u036f]/g, '')
-  .replace(/đ/g, 'd')
-  .replace(/Đ/g, 'D')
-  .toLocaleLowerCase('vi')
+const normalizeSwapText = (value: string): string =>
+  value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/đ/g, "d")
+    .replace(/Đ/g, "D")
+    .toLocaleLowerCase("vi");
 
 const filteredSwapCandidates = computed(() => {
-  const query = normalizeSwapText(swapCandidateFilter.value.trim())
-  return query ? swapCandidates.value.filter(player => normalizeSwapText(player.name).includes(query)) : swapCandidates.value
-})
+  const query = normalizeSwapText(swapCandidateFilter.value.trim());
+  return query
+    ? swapCandidates.value.filter((player) =>
+        normalizeSwapText(player.name).includes(query),
+      )
+    : swapCandidates.value;
+});
 
-const getIncomingSwapRequests = (tournamentId: string): IncomingSwapRequest[] => {
-  const requests = incomingSwapRequests.value.get(tournamentId) || []
-  const details = attendanceDetailsMap.value.get(tournamentId) || []
-  const pending = details.filter((item: any) => item.swapPending && item.swapRequestId).map((item: any) => ({ id: item.swapRequestId, tournamentId, requester: item.player }))
-  return [...requests, ...pending.filter((item: IncomingSwapRequest) => !requests.some(request => request.id === item.id))]
-}
-const hasPendingSwapRequest = (tournamentId: string): boolean => pendingSwapRequestTournamentIds.value.has(tournamentId)
-const getSwapWaitlistPosition = (tournamentId: string): number => swapWaitlistPositions.value.get(tournamentId) || 0
-const isSwapWaitlistCooldownActive = (tournamentId: string): boolean => (swapWaitlistRetryAt.value.get(tournamentId) || 0) > swapWaitlistClock.value
+const getIncomingSwapRequests = (
+  tournamentId: string,
+): IncomingSwapRequest[] => {
+  const requests = incomingSwapRequests.value.get(tournamentId) || [];
+  const details = attendanceDetailsMap.value.get(tournamentId) || [];
+  const pending = details
+    .filter((item: any) => item.swapPending && item.swapRequestId)
+    .map((item: any) => ({
+      id: item.swapRequestId,
+      tournamentId,
+      requester: item.player,
+    }));
+  return [
+    ...requests,
+    ...pending.filter(
+      (item: IncomingSwapRequest) =>
+        !requests.some((request) => request.id === item.id),
+    ),
+  ];
+};
+const hasPendingSwapRequest = (tournamentId: string): boolean =>
+  pendingSwapRequestTournamentIds.value.has(tournamentId);
+const getSwapWaitlistPosition = (tournamentId: string): number =>
+  swapWaitlistPositions.value.get(tournamentId) || 0;
+const isSwapWaitlistCooldownActive = (tournamentId: string): boolean =>
+  (swapWaitlistRetryAt.value.get(tournamentId) || 0) > swapWaitlistClock.value;
 const swapWaitlistCooldownLabel = (tournamentId: string): string => {
-  const remainingMs = (swapWaitlistRetryAt.value.get(tournamentId) || 0) - swapWaitlistClock.value
-  return remainingMs > 0 ? `Đăng ký hàng chờ (${Math.ceil(remainingMs / 60000)} phút)` : 'Đăng ký hàng chờ'
-}
+  const remainingMs =
+    (swapWaitlistRetryAt.value.get(tournamentId) || 0) -
+    swapWaitlistClock.value;
+  return remainingMs > 0
+    ? `Đăng ký hàng chờ (${Math.ceil(remainingMs / 60000)} phút)`
+    : "Đăng ký hàng chờ";
+};
 const isUserRegisteredForSelectedField = (tournament: Tournament): boolean => {
-  const attendance = attendanceMap.value.get(tournament.id)
-  if (attendance?.status !== 'ATTEND') return false
-  if (tournament.pitchType === 'FIELD_5') return attendance.field5 !== false
-  if (tournament.pitchType === 'FIELD_7') return attendance.field7 !== false
-  return true
-}
+  const attendance = attendanceMap.value.get(tournament.id);
+  if (attendance?.status !== "ATTEND") return false;
+  if (tournament.pitchType === "FIELD_5") return attendance.field5 !== false;
+  if (tournament.pitchType === "FIELD_7") return attendance.field7 !== false;
+  return true;
+};
 
-const canRequestSwap = (tournament: Tournament): boolean => (
-  tournament.status === 'UPCOMING'
-  && getTournamentTeams(tournament).length === 0
-  && isUserRegisteredForSelectedField(tournament)
-  && isUserCancellationLocked(tournament)
-  && !cannotSelfRegisterDueToDebt.value
-)
+const canRequestSwap = (tournament: Tournament): boolean =>
+  tournament.status === "UPCOMING" &&
+  getTournamentTeams(tournament).length === 0 &&
+  isUserRegisteredForSelectedField(tournament) &&
+  isUserCancellationLocked(tournament) &&
+  !cannotSelfRegisterDueToDebt.value;
 
-const canJoinSwapWaitlist = (tournament: Tournament): boolean => (
-  tournament.status === 'UPCOMING'
-  && getTournamentTeams(tournament).length === 0
-  && getUserAttendanceStatus(tournament.id) !== 'ATTEND'
-  && isUserCancellationLocked(tournament)
-  && Boolean(authStore.currentUser?.player)
-  && !cannotSelfRegisterDueToDebt.value
-)
+const canJoinSwapWaitlist = (tournament: Tournament): boolean =>
+  tournament.status === "UPCOMING" &&
+  getTournamentTeams(tournament).length === 0 &&
+  getUserAttendanceStatus(tournament.id) !== "ATTEND" &&
+  isUserCancellationLocked(tournament) &&
+  Boolean(authStore.currentUser?.player) &&
+  !cannotSelfRegisterDueToDebt.value;
 
-const fetchIncomingSwapRequests = async (tournamentId: string): Promise<void> => {
+const fetchIncomingSwapRequests = async (
+  tournamentId: string,
+): Promise<void> => {
   try {
-    const response = await apiClient.getMySwapRequests(tournamentId)
-    if (!response.success) return
-    const data = (response.data || {}) as { requests?: IncomingSwapRequest[]; myPending?: boolean; waitingPosition?: number; waitlistRetryAt?: string | null }
-    const updatedRequests = new Map(incomingSwapRequests.value)
-    updatedRequests.set(tournamentId, data.requests || [])
-    incomingSwapRequests.value = updatedRequests
-    const pendingTournamentIds = new Set(pendingSwapRequestTournamentIds.value)
-    if (data.myPending) pendingTournamentIds.add(tournamentId)
-    else pendingTournamentIds.delete(tournamentId)
-    pendingSwapRequestTournamentIds.value = pendingTournamentIds
-    const waitlistPositions = new Map(swapWaitlistPositions.value)
-    if (data.waitingPosition) waitlistPositions.set(tournamentId, data.waitingPosition)
-    else waitlistPositions.delete(tournamentId)
-    swapWaitlistPositions.value = waitlistPositions
-    const retryAt = new Map(swapWaitlistRetryAt.value)
-    const retryAtTime = data.waitlistRetryAt ? new Date(data.waitlistRetryAt).getTime() : 0
+    const response = await apiClient.getMySwapRequests(tournamentId);
+    if (!response.success) return;
+    const data = (response.data || {}) as {
+      requests?: IncomingSwapRequest[];
+      myPending?: boolean;
+      waitingPosition?: number;
+      waitlistRetryAt?: string | null;
+    };
+    const updatedRequests = new Map(incomingSwapRequests.value);
+    updatedRequests.set(tournamentId, data.requests || []);
+    incomingSwapRequests.value = updatedRequests;
+    const pendingTournamentIds = new Set(pendingSwapRequestTournamentIds.value);
+    if (data.myPending) pendingTournamentIds.add(tournamentId);
+    else pendingTournamentIds.delete(tournamentId);
+    pendingSwapRequestTournamentIds.value = pendingTournamentIds;
+    const waitlistPositions = new Map(swapWaitlistPositions.value);
+    if (data.waitingPosition)
+      waitlistPositions.set(tournamentId, data.waitingPosition);
+    else waitlistPositions.delete(tournamentId);
+    swapWaitlistPositions.value = waitlistPositions;
+    const retryAt = new Map(swapWaitlistRetryAt.value);
+    const retryAtTime = data.waitlistRetryAt
+      ? new Date(data.waitlistRetryAt).getTime()
+      : 0;
     if (retryAtTime > Date.now()) {
-      retryAt.set(tournamentId, retryAtTime)
-      window.setTimeout(() => { swapWaitlistClock.value = Date.now() }, retryAtTime - Date.now() + 50)
-    } else retryAt.delete(tournamentId)
-    swapWaitlistRetryAt.value = retryAt
+      retryAt.set(tournamentId, retryAtTime);
+      window.setTimeout(
+        () => {
+          swapWaitlistClock.value = Date.now();
+        },
+        retryAtTime - Date.now() + 50,
+      );
+    } else retryAt.delete(tournamentId);
+    swapWaitlistRetryAt.value = retryAt;
   } catch {
     // Swap requests are optional UI data; attendance remains available if loading them fails.
   }
-}
+};
 
 const refreshAttendanceList = async (tournamentId: string): Promise<void> => {
-  if (refreshingAttendanceLists.value.has(tournamentId)) return
-  const refreshing = new Set(refreshingAttendanceLists.value)
-  refreshing.add(tournamentId)
-  refreshingAttendanceLists.value = refreshing
+  if (refreshingAttendanceLists.value.has(tournamentId)) return;
+  const refreshing = new Set(refreshingAttendanceLists.value);
+  refreshing.add(tournamentId);
+  refreshingAttendanceLists.value = refreshing;
   try {
     await Promise.all([
       fetchAttendanceDetails(tournamentId),
       fetchAttendanceStats(tournamentId),
       fetchIncomingSwapRequests(tournamentId),
-    ])
-    toast.success('Đã cập nhật danh sách cầu thủ')
+    ]);
+    toast.success("Đã cập nhật danh sách cầu thủ");
   } catch {
-    toast.error('Không thể cập nhật danh sách cầu thủ')
+    toast.error("Không thể cập nhật danh sách cầu thủ");
   } finally {
-    const updatedRefreshing = new Set(refreshingAttendanceLists.value)
-    updatedRefreshing.delete(tournamentId)
-    refreshingAttendanceLists.value = updatedRefreshing
+    const updatedRefreshing = new Set(refreshingAttendanceLists.value);
+    updatedRefreshing.delete(tournamentId);
+    refreshingAttendanceLists.value = updatedRefreshing;
   }
-}
+};
 
 const openSwapModal = async (tournament: Tournament): Promise<void> => {
-  swapTournament.value = tournament
-  swapCandidateFilter.value = ''
-  swapCandidates.value = []
-  pendingSwapTargetName.value = null
-  showSwapModal.value = true
-  swapCandidatesLoading.value = true
+  swapTournament.value = tournament;
+  swapCandidateFilter.value = "";
+  swapCandidates.value = [];
+  pendingSwapTargetName.value = null;
+  showSwapModal.value = true;
+  swapCandidatesLoading.value = true;
   try {
-    const response = await apiClient.getSwapCandidates(tournament.id)
-    if (!response.success) throw new Error(response.error || 'Không thể tải danh sách cầu thủ')
-    const swapData = (response.data || {}) as { candidates?: SwapCandidate[]; pendingTargetName?: string | null }
-    swapCandidates.value = swapData.candidates || []
-    pendingSwapTargetName.value = swapData.pendingTargetName || null
+    const response = await apiClient.getSwapCandidates(tournament.id);
+    if (!response.success)
+      throw new Error(response.error || "Không thể tải danh sách cầu thủ");
+    const swapData = (response.data || {}) as {
+      candidates?: SwapCandidate[];
+      pendingTargetName?: string | null;
+    };
+    swapCandidates.value = swapData.candidates || [];
+    pendingSwapTargetName.value = swapData.pendingTargetName || null;
   } catch (error: any) {
-    toast.error(error.response?.data?.error || error.message || 'Không thể tải danh sách cầu thủ')
+    toast.error(
+      error.response?.data?.error ||
+        error.message ||
+        "Không thể tải danh sách cầu thủ",
+    );
   } finally {
-    swapCandidatesLoading.value = false
+    swapCandidatesLoading.value = false;
   }
-}
+};
 
 const closeSwapModal = (): void => {
-  showSwapModal.value = false
-  swapTournament.value = null
-  swapCandidates.value = []
-  swapCandidateFilter.value = ''
-  pendingSwapTargetName.value = null
-}
+  showSwapModal.value = false;
+  swapTournament.value = null;
+  swapCandidates.value = [];
+  swapCandidateFilter.value = "";
+  pendingSwapTargetName.value = null;
+};
 
 const requestSwap = async (tournament: Tournament): Promise<void> => {
-  if (swapRequestSavingId.value || hasPendingSwapRequest(tournament.id)) return
+  if (swapRequestSavingId.value || hasPendingSwapRequest(tournament.id)) return;
   if (cannotSelfRegisterDueToDebt.value) {
-    toast.error('Số dư đang âm, vui lòng thanh toán trước khi swap')
-    return
+    toast.error("Số dư đang âm, vui lòng thanh toán trước khi swap");
+    return;
   }
   try {
-    swapRequestSavingId.value = tournament.id
-    const response = await apiClient.createSwapRequest(tournament.id)
-    if (!response.success) throw new Error(response.error || 'Không thể gửi yêu cầu swap')
-    toast.success(response.message || 'Đã gửi yêu cầu swap')
-    const pendingTournamentIds = new Set(pendingSwapRequestTournamentIds.value)
-    pendingTournamentIds.add(tournament.id)
-    pendingSwapRequestTournamentIds.value = pendingTournamentIds
-    await Promise.all([fetchIncomingSwapRequests(tournament.id), fetchAttendanceDetails(tournament.id)])
+    swapRequestSavingId.value = tournament.id;
+    const response = await apiClient.createSwapRequest(tournament.id);
+    if (!response.success)
+      throw new Error(response.error || "Không thể gửi yêu cầu swap");
+    toast.success(response.message || "Đã gửi yêu cầu swap");
+    const pendingTournamentIds = new Set(pendingSwapRequestTournamentIds.value);
+    pendingTournamentIds.add(tournament.id);
+    pendingSwapRequestTournamentIds.value = pendingTournamentIds;
+    await Promise.all([
+      fetchIncomingSwapRequests(tournament.id),
+      fetchAttendanceDetails(tournament.id),
+    ]);
   } catch (error: any) {
-    toast.error(error.response?.data?.error || error.message || 'Không thể gửi yêu cầu swap')
+    toast.error(
+      error.response?.data?.error ||
+        error.message ||
+        "Không thể gửi yêu cầu swap",
+    );
   } finally {
-    swapRequestSavingId.value = null
+    swapRequestSavingId.value = null;
   }
-}
+};
 
 const cancelSwapRequest = async (tournament: Tournament): Promise<void> => {
-  if (swapRequestSavingId.value) return
+  if (swapRequestSavingId.value) return;
   try {
-    swapRequestSavingId.value = tournament.id
-    const response = await apiClient.cancelSwapRequest(tournament.id)
-    if (!response.success) throw new Error(response.error || 'Không thể hủy đăng ký swap')
-    const pendingTournamentIds = new Set(pendingSwapRequestTournamentIds.value)
-    pendingTournamentIds.delete(tournament.id)
-    pendingSwapRequestTournamentIds.value = pendingTournamentIds
-    await Promise.all([fetchIncomingSwapRequests(tournament.id), fetchAttendanceDetails(tournament.id)])
-    toast.success('Đã hủy đăng ký swap')
+    swapRequestSavingId.value = tournament.id;
+    const response = await apiClient.cancelSwapRequest(tournament.id);
+    if (!response.success)
+      throw new Error(response.error || "Không thể hủy đăng ký swap");
+    const pendingTournamentIds = new Set(pendingSwapRequestTournamentIds.value);
+    pendingTournamentIds.delete(tournament.id);
+    pendingSwapRequestTournamentIds.value = pendingTournamentIds;
+    await Promise.all([
+      fetchIncomingSwapRequests(tournament.id),
+      fetchAttendanceDetails(tournament.id),
+    ]);
+    toast.success("Đã hủy đăng ký swap");
   } catch (error: any) {
-    toast.error(error.response?.data?.error || error.message || 'Không thể hủy đăng ký swap')
+    toast.error(
+      error.response?.data?.error ||
+        error.message ||
+        "Không thể hủy đăng ký swap",
+    );
   } finally {
-    swapRequestSavingId.value = null
+    swapRequestSavingId.value = null;
   }
-}
+};
 
 const joinSwapWaitlist = async (tournament: Tournament): Promise<void> => {
   if (cannotSelfRegisterDueToDebt.value) {
-    toast.error('Số dư đang âm, vui lòng thanh toán trước khi đăng ký hàng chờ')
-    return
+    toast.error(
+      "Số dư đang âm, vui lòng thanh toán trước khi đăng ký hàng chờ",
+    );
+    return;
   }
   try {
-    swapTournament.value = tournament
-    const response = await apiClient.joinSwapWaitlist(tournament.id)
-    if (!response.success) throw new Error(response.error || 'Không thể đăng ký hàng chờ')
-    const position = Number((response.data as { position?: number } | undefined)?.position || 0)
-    const waitlistPositions = new Map(swapWaitlistPositions.value)
-    waitlistPositions.set(tournament.id, position)
-    swapWaitlistPositions.value = waitlistPositions
-    toast.success(`Bạn sẽ vào hàng chờ thứ ${position}, nếu đủ người hủy sẽ tự động vào danh sách.`)
-    await Promise.all([fetchIncomingSwapRequests(tournament.id), fetchAttendanceDetails(tournament.id)])
+    swapTournament.value = tournament;
+    const response = await apiClient.joinSwapWaitlist(tournament.id);
+    if (!response.success)
+      throw new Error(response.error || "Không thể đăng ký hàng chờ");
+    const position = Number(
+      (response.data as { position?: number } | undefined)?.position || 0,
+    );
+    const waitlistPositions = new Map(swapWaitlistPositions.value);
+    waitlistPositions.set(tournament.id, position);
+    swapWaitlistPositions.value = waitlistPositions;
+    toast.success(
+      `Bạn sẽ vào hàng chờ thứ ${position}, nếu đủ người hủy sẽ tự động vào danh sách.`,
+    );
+    await Promise.all([
+      fetchIncomingSwapRequests(tournament.id),
+      fetchAttendanceDetails(tournament.id),
+    ]);
   } catch (error: any) {
-    toast.error(error.response?.data?.error || error.message || 'Không thể đăng ký hàng chờ')
+    toast.error(
+      error.response?.data?.error ||
+        error.message ||
+        "Không thể đăng ký hàng chờ",
+    );
   }
-}
+};
 
 const cancelSwapWaitlist = async (tournament: Tournament): Promise<void> => {
   try {
-    const response = await apiClient.cancelSwapWaitlist(tournament.id)
-    if (!response.success) throw new Error(response.error || 'Không thể hủy đăng ký hàng chờ')
-    const positions = new Map(swapWaitlistPositions.value)
-    positions.delete(tournament.id)
-    swapWaitlistPositions.value = positions
-    await Promise.all([fetchIncomingSwapRequests(tournament.id), fetchAttendanceDetails(tournament.id)])
-    toast.success('Đã hủy đăng ký hàng chờ. Bạn có thể đăng ký lại sau 5 phút.')
+    const response = await apiClient.cancelSwapWaitlist(tournament.id);
+    if (!response.success)
+      throw new Error(response.error || "Không thể hủy đăng ký hàng chờ");
+    const positions = new Map(swapWaitlistPositions.value);
+    positions.delete(tournament.id);
+    swapWaitlistPositions.value = positions;
+    await Promise.all([
+      fetchIncomingSwapRequests(tournament.id),
+      fetchAttendanceDetails(tournament.id),
+    ]);
+    toast.success(
+      "Đã hủy đăng ký hàng chờ. Bạn có thể đăng ký lại sau 5 phút.",
+    );
   } catch (error: any) {
-    toast.error(error.response?.data?.error || error.message || 'Không thể hủy đăng ký hàng chờ')
+    toast.error(
+      error.response?.data?.error ||
+        error.message ||
+        "Không thể hủy đăng ký hàng chờ",
+    );
   }
-}
+};
 
 const openSwapAcceptance = (request: IncomingSwapRequest): void => {
   if (cannotSelfRegisterDueToDebt.value) {
-    toast.error('Số dư đang âm, vui lòng thanh toán trước khi swap')
-    return
+    toast.error("Số dư đang âm, vui lòng thanh toán trước khi swap");
+    return;
   }
-  pendingSwapRequest.value = request
-  fieldRegistrationTournamentId.value = request.tournamentId
-  registrationField5.value = true
-  registrationField7.value = true
-  fieldRegistrationAddOnly.value = false
-  fieldRegistrationExistingField5.value = false
-  fieldRegistrationExistingField7.value = false
-  showFieldRegistrationModal.value = true
-}
+  pendingSwapRequest.value = request;
+  fieldRegistrationTournamentId.value = request.tournamentId;
+  registrationField5.value = true;
+  registrationField7.value = true;
+  fieldRegistrationAddOnly.value = false;
+  fieldRegistrationExistingField5.value = false;
+  fieldRegistrationExistingField7.value = false;
+  showFieldRegistrationModal.value = true;
+};
 
 const canAddAnotherField = (tournamentId: string): boolean => {
-  const attendance = attendanceMap.value.get(tournamentId)
-  return attendance?.status === 'ATTEND' && (!attendance.field5 || !attendance.field7)
-}
+  const attendance = attendanceMap.value.get(tournamentId);
+  return (
+    attendance?.status === "ATTEND" &&
+    (!attendance.field5 || !attendance.field7)
+  );
+};
 
 const toggleAttendance = async (tournamentId: string): Promise<void> => {
-  if (attendanceLoading.value.has(tournamentId)) return
-  
-  const currentAttendance = attendanceMap.value.get(tournamentId)
-  
+  if (attendanceLoading.value.has(tournamentId)) return;
+
+  const currentAttendance = attendanceMap.value.get(tournamentId);
+
   // Don't allow toggle if user has no player
-  if (!currentAttendance || (currentAttendance as any).status === 'NO_PLAYER') {
-    return
-  }
-  
-  const currentStatus = currentAttendance.status || 'NULL'
-  if (currentStatus !== 'ATTEND') {
-    fieldRegistrationTournamentId.value = tournamentId
-    registrationField5.value = true
-    registrationField7.value = true
-    fieldRegistrationAddOnly.value = false
-    fieldRegistrationExistingField5.value = false
-    fieldRegistrationExistingField7.value = false
-    showFieldRegistrationModal.value = true
-    return
+  if (!currentAttendance || (currentAttendance as any).status === "NO_PLAYER") {
+    return;
   }
 
-  const tournament = weeklyTournaments.value.find(item => item.id === tournamentId)
+  const currentStatus = currentAttendance.status || "NULL";
+  if (currentStatus !== "ATTEND") {
+    fieldRegistrationTournamentId.value = tournamentId;
+    registrationField5.value = true;
+    registrationField7.value = true;
+    fieldRegistrationAddOnly.value = false;
+    fieldRegistrationExistingField5.value = false;
+    fieldRegistrationExistingField7.value = false;
+    showFieldRegistrationModal.value = true;
+    return;
+  }
+
+  const tournament = weeklyTournaments.value.find(
+    (item) => item.id === tournamentId,
+  );
   if (tournament && isUserCancellationLocked(tournament)) {
-    if (!canAddAnotherField(tournamentId)) return
-    fieldRegistrationTournamentId.value = tournamentId
-    fieldRegistrationExistingField5.value = Boolean(currentAttendance.field5)
-    fieldRegistrationExistingField7.value = Boolean(currentAttendance.field7)
-    registrationField5.value = Boolean(currentAttendance.field5)
-    registrationField7.value = Boolean(currentAttendance.field7)
-    fieldRegistrationAddOnly.value = true
-    showFieldRegistrationModal.value = true
-    return
+    if (!canAddAnotherField(tournamentId)) return;
+    fieldRegistrationTournamentId.value = tournamentId;
+    fieldRegistrationExistingField5.value = Boolean(currentAttendance.field5);
+    fieldRegistrationExistingField7.value = Boolean(currentAttendance.field7);
+    registrationField5.value = Boolean(currentAttendance.field5);
+    registrationField7.value = Boolean(currentAttendance.field7);
+    fieldRegistrationAddOnly.value = true;
+    showFieldRegistrationModal.value = true;
+    return;
   }
 
   try {
-    attendanceLoading.value.add(tournamentId)
+    attendanceLoading.value.add(tournamentId);
     const response = await apiClient.put<TournamentPlayerAttendance>(
       `/tournaments/${tournamentId}/attendance`,
-      { status: 'NOT_ATTEND' }
-    )
-    
+      { status: "NOT_ATTEND" },
+    );
+
     if (response.success && response.data) {
-      attendanceMap.value.set(tournamentId, response.data)
+      attendanceMap.value.set(tournamentId, response.data);
       // Refresh attendance stats
-      await fetchAttendanceStats(tournamentId)
+      await Promise.all([fetchAttendanceStats(tournamentId), fetchAttendanceDetails(tournamentId)]);
     }
   } catch (err: any) {
-    console.error('Toggle attendance error:', err)
-    toast.error(err.response?.data?.error || 'Không thể cập nhật điểm danh')
+    console.error("Toggle attendance error:", err);
+    toast.error(err.response?.data?.error || "Không thể cập nhật điểm danh");
   } finally {
-    attendanceLoading.value.delete(tournamentId)
+    attendanceLoading.value.delete(tournamentId);
   }
-}
+};
+
+const canCancelOwnField = (
+  tournament: any,
+  field: "FIELD_5" | "FIELD_7",
+): boolean => {
+  const attendance = attendanceMap.value.get(tournament.id);
+  return Boolean(
+    attendance?.status === "ATTEND" &&
+      (field === "FIELD_5" ? attendance.field5 : attendance.field7) &&
+      !isUserCancellationLocked(tournament),
+  );
+};
+
+const cancelOwnField = async (
+  tournament: any,
+  field: "FIELD_5" | "FIELD_7",
+): Promise<void> => {
+  const attendance = attendanceMap.value.get(tournament.id);
+  if (!attendance || attendanceLoading.value.has(tournament.id)) return;
+
+  const field5 = field === "FIELD_5" ? false : Boolean(attendance.field5);
+  const field7 = field === "FIELD_7" ? false : Boolean(attendance.field7);
+  const remainsRegistered = field5 || field7;
+
+  try {
+    attendanceLoading.value = new Set(attendanceLoading.value).add(
+      tournament.id,
+    );
+    const response = await apiClient.put<TournamentPlayerAttendance>(
+      `/tournaments/${tournament.id}/attendance`,
+      {
+        status: remainsRegistered ? "ATTEND" : "NOT_ATTEND",
+        field5,
+        field7,
+        withWater: remainsRegistered ? attendance.withWater : false,
+        bet: remainsRegistered ? attendance.bet : false,
+      },
+    );
+    if (!response.success || !response.data) {
+      throw new Error(response.error || "Không thể hủy đăng ký sân");
+    }
+    attendanceMap.value.set(tournament.id, response.data);
+    await Promise.all([
+      fetchAttendanceStats(tournament.id),
+      fetchAttendanceDetails(tournament.id),
+    ]);
+    toast.success(`Đã hủy đăng ký ${field === "FIELD_5" ? "Sân 5" : "Sân 7"}`);
+  } catch (error: any) {
+    toast.error(
+      error.response?.data?.error || error.message || "Không thể hủy đăng ký sân",
+    );
+  } finally {
+    const loading = new Set(attendanceLoading.value);
+    loading.delete(tournament.id);
+    attendanceLoading.value = loading;
+  }
+};
 
 const getAttendanceButtonText = (tournamentId: string): string => {
-  const attendance = attendanceMap.value.get(tournamentId)
-  if (!attendance || (attendance as any).status === 'NO_PLAYER') return 'Không có cầu thủ'
-  if (attendance.status === 'NULL') return 'Tham gia'
-  return attendance.status === 'ATTEND' ? 'Đã tham gia' : 'Tham gia'
-}
+  const attendance = attendanceMap.value.get(tournamentId);
+  if (!attendance || (attendance as any).status === "NO_PLAYER")
+    return "Không có cầu thủ";
+  if (attendance.status === "NULL") return "Tham gia";
+  return attendance.status === "ATTEND" ? "Đã tham gia" : "Tham gia";
+};
 
 const getCardBackgroundClass = (tournamentId: string): string => {
-  const attendance = attendanceMap.value.get(tournamentId)
-  if (!attendance || (attendance as any).status === 'NO_PLAYER' || attendance.status === 'NULL') return ''
-  return attendance.status === 'ATTEND' ? 'bg-green-50' : 'bg-red-50'
-}
+  const attendance = attendanceMap.value.get(tournamentId);
+  if (
+    !attendance ||
+    (attendance as any).status === "NO_PLAYER" ||
+    attendance.status === "NULL"
+  )
+    return "";
+  return attendance.status === "ATTEND" ? "bg-green-50" : "bg-red-50";
+};
 
 // Attendance statistics functions
 const fetchAttendanceStats = async (tournamentId: string): Promise<void> => {
   try {
-    const response = await apiClient.get<TournamentAttendanceStats>(`/tournaments/${tournamentId}/attendance-stats`)
+    const response = await apiClient.get<TournamentAttendanceStats>(
+      `/tournaments/${tournamentId}/attendance-stats`,
+    );
     if (response.success && response.data) {
-      attendanceStats.value.set(tournamentId, response.data)
+      attendanceStats.value.set(tournamentId, response.data);
     }
   } catch (err: any) {
-    console.error('Fetch attendance stats error:', err)
+    console.error("Fetch attendance stats error:", err);
     // Silent error for attendance stats fetch
   }
-}
+};
 
-const getAttendanceStats = (tournamentId: string): TournamentAttendanceStats | undefined => {
-  return attendanceStats.value.get(tournamentId)
-}
+const getAttendanceStats = (
+  tournamentId: string,
+): TournamentAttendanceStats | undefined => {
+  return attendanceStats.value.get(tournamentId);
+};
 
 const getAttendancePercentage = (tournamentId: string): number => {
-  const stats = attendanceStats.value.get(tournamentId)
-  if (!stats || stats.totalPlayers === 0) return 0
-  return Math.round((getHighestFieldAttendanceCount(tournamentId) / stats.totalPlayers) * 100)
-}
+  const stats = attendanceStats.value.get(tournamentId);
+  if (!stats || stats.totalPlayers === 0) return 0;
+  return Math.round(
+    (getHighestFieldAttendanceCount(tournamentId) / stats.totalPlayers) * 100,
+  );
+};
 
 const getHighestFieldAttendanceCount = (tournamentId: string): number => {
-  const stats = attendanceStats.value.get(tournamentId)
-  if (!stats) return 0
-  return Math.max(stats.field5Count ?? stats.attendingCount, stats.field7Count ?? stats.attendingCount)
-}
+  const stats = attendanceStats.value.get(tournamentId);
+  if (!stats) return 0;
+  return Math.max(
+    stats.field5Count ?? stats.attendingCount,
+    stats.field7Count ?? stats.attendingCount,
+  );
+};
 
 // Modal functions
 const fetchAttendanceDetails = async (tournamentId: string): Promise<void> => {
-  if (attendanceDetailsLoadingIds.value.has(tournamentId)) return
+  if (attendanceDetailsLoadingIds.value.has(tournamentId)) return;
   try {
-    attendanceDetailsLoadingIds.value = new Set(attendanceDetailsLoadingIds.value).add(tournamentId)
-    attendanceModalLoading.value = true
-    const response = await apiClient.get<TournamentAttendanceDetails[]>(`/tournaments/${tournamentId}/attendance-details`)
+    attendanceDetailsLoadingIds.value = new Set(
+      attendanceDetailsLoadingIds.value,
+    ).add(tournamentId);
+    attendanceModalLoading.value = true;
+    const response = await apiClient.get<TournamentAttendanceDetails[]>(
+      `/tournaments/${tournamentId}/attendance-details`,
+    );
     if (response.success && response.data) {
-      attendanceModalData.value = response.data
+      attendanceModalData.value = response.data;
       // Store in map for betting count calculation
-      attendanceDetailsMap.value.set(tournamentId, response.data)
+      attendanceDetailsMap.value.set(tournamentId, response.data);
     }
   } catch (err: any) {
-    console.error('Fetch attendance details error:', err)
-    toast.error('Không thể tải chi tiết điểm danh')
-    attendanceModalData.value = []
+    console.error("Fetch attendance details error:", err);
+    toast.error("Không thể tải chi tiết điểm danh");
+    attendanceModalData.value = [];
   } finally {
-    attendanceModalLoading.value = false
-    const loadingIds = new Set(attendanceDetailsLoadingIds.value)
-    loadingIds.delete(tournamentId)
-    attendanceDetailsLoadingIds.value = loadingIds
+    attendanceModalLoading.value = false;
+    const loadingIds = new Set(attendanceDetailsLoadingIds.value);
+    loadingIds.delete(tournamentId);
+    attendanceDetailsLoadingIds.value = loadingIds;
   }
-}
+};
 
 const closeFieldRegistrationModal = (): void => {
-  showFieldRegistrationModal.value = false
-  fieldRegistrationTournamentId.value = null
-  pendingSwapRequest.value = null
-  fieldRegistrationAddOnly.value = false
-  fieldRegistrationExistingField5.value = false
-  fieldRegistrationExistingField7.value = false
-}
+  showFieldRegistrationModal.value = false;
+  fieldRegistrationTournamentId.value = null;
+  pendingSwapRequest.value = null;
+  fieldRegistrationAddOnly.value = false;
+  fieldRegistrationExistingField5.value = false;
+  fieldRegistrationExistingField7.value = false;
+};
 
 const confirmFieldRegistration = async (): Promise<void> => {
-  const tournamentId = fieldRegistrationTournamentId.value
-  if (!tournamentId || !canConfirmFieldRegistration.value || attendanceLoading.value.has(tournamentId)) return
+  const tournamentId = fieldRegistrationTournamentId.value;
+  if (
+    !tournamentId ||
+    !canConfirmFieldRegistration.value ||
+    attendanceLoading.value.has(tournamentId)
+  )
+    return;
   try {
-    attendanceLoading.value.add(tournamentId)
+    attendanceLoading.value.add(tournamentId);
     if (pendingSwapRequest.value) {
-      const response = await apiClient.acceptSwapRequest(tournamentId, pendingSwapRequest.value.id, registrationField5.value, registrationField7.value)
-      if (!response.success || !response.data) throw new Error(response.error || 'Không thể xác nhận swap')
-      attendanceMap.value.set(tournamentId, response.data as TournamentPlayerAttendance)
-      await Promise.all([fetchAttendanceStats(tournamentId), fetchAttendanceDetails(tournamentId), fetchIncomingSwapRequests(tournamentId)])
-      closeFieldRegistrationModal()
-      toast.success('Đã swap cầu thủ thành công')
-      return
+      const response = await apiClient.acceptSwapRequest(
+        tournamentId,
+        pendingSwapRequest.value.id,
+        registrationField5.value,
+        registrationField7.value,
+      );
+      if (!response.success || !response.data)
+        throw new Error(response.error || "Không thể xác nhận swap");
+      attendanceMap.value.set(
+        tournamentId,
+        response.data as TournamentPlayerAttendance,
+      );
+      await Promise.all([
+        fetchAttendanceStats(tournamentId),
+        fetchAttendanceDetails(tournamentId),
+        fetchIncomingSwapRequests(tournamentId),
+      ]);
+      closeFieldRegistrationModal();
+      toast.success("Đã swap cầu thủ thành công");
+      return;
     }
-    const response = await apiClient.put<TournamentPlayerAttendance>(`/tournaments/${tournamentId}/attendance`, {
-      status: 'ATTEND', field5: registrationField5.value, field7: registrationField7.value,
-    })
-    if (!response.success || !response.data) throw new Error(response.error || 'Không thể đăng ký tham gia')
-    const addedFieldAfterDeadline = fieldRegistrationAddOnly.value
-    attendanceMap.value.set(tournamentId, response.data)
-    await fetchAttendanceStats(tournamentId)
-    closeFieldRegistrationModal()
-    toast.success(addedFieldAfterDeadline ? 'Đã thêm sân đăng ký' : 'Đã đăng ký tham gia')
+    const response = await apiClient.put<TournamentPlayerAttendance>(
+      `/tournaments/${tournamentId}/attendance`,
+      {
+        status: "ATTEND",
+        field5: registrationField5.value,
+        field7: registrationField7.value,
+      },
+    );
+    if (!response.success || !response.data)
+      throw new Error(response.error || "Không thể đăng ký tham gia");
+    const addedFieldAfterDeadline = fieldRegistrationAddOnly.value;
+    attendanceMap.value.set(tournamentId, response.data);
+    await Promise.all([fetchAttendanceStats(tournamentId), fetchAttendanceDetails(tournamentId)]);
+    closeFieldRegistrationModal();
+    toast.success(
+      addedFieldAfterDeadline ? "Đã thêm sân đăng ký" : "Đã đăng ký tham gia",
+    );
   } catch (err: any) {
-    toast.error(err.response?.data?.error || err.message || 'Không thể đăng ký tham gia')
+    toast.error(
+      err.response?.data?.error || err.message || "Không thể đăng ký tham gia",
+    );
   } finally {
-    attendanceLoading.value.delete(tournamentId)
+    attendanceLoading.value.delete(tournamentId);
   }
-}
+};
 
-const openAttendanceModal = async (tournamentId: string, type: 'attending' | 'not-attending' | 'betting' | 'water' | 'pending', field: 'FIELD_5' | 'FIELD_7' = 'FIELD_5', exclusiveField = false): Promise<void> => {
-  attendanceModalType.value = type
-  if (type === 'pending') {
-    attendanceModalTitle.value = 'Điểm danh cầu thủ'
-  } else if (type === 'attending') {
-    attendanceModalTitle.value = 'Cầu thủ tham gia'
-  } else if (type === 'not-attending') {
-    attendanceModalTitle.value = 'Cầu thủ không tham gia'
-  } else if (type === 'betting') {
-    attendanceModalTitle.value = 'Cầu thủ chọn Ngôi sao hy vọng'
-  } else if (type === 'water') {
-    attendanceModalTitle.value = 'Cầu thủ uống nước'
+const openAttendanceModal = async (
+  tournamentId: string,
+  type: "attending" | "not-attending" | "betting" | "water" | "pending",
+  field: "FIELD_5" | "FIELD_7" = "FIELD_5",
+  exclusiveField = false,
+): Promise<void> => {
+  attendanceModalType.value = type;
+  if (type === "pending") {
+    attendanceModalTitle.value = "Điểm danh cầu thủ";
+  } else if (type === "attending") {
+    attendanceModalTitle.value = "Cầu thủ tham gia";
+  } else if (type === "not-attending") {
+    attendanceModalTitle.value = "Cầu thủ không tham gia";
+  } else if (type === "betting") {
+    attendanceModalTitle.value = "Cầu thủ chọn Ngôi sao hy vọng";
+  } else if (type === "water") {
+    attendanceModalTitle.value = "Cầu thủ uống nước";
   }
-  showAttendanceModal.value = true
-  attendanceModalData.value = [] // Clear previous data
-  attendancePlayerNameFilter.value = ''
-  attendancePlayerTierFilter.value = null
-  attendanceSortByTier.value = false
-  attendanceFieldTab.value = field
-  attendanceExclusiveField.value = exclusiveField
-  if (type === 'attending' && exclusiveField) {
-    attendanceModalTitle.value = 'Cầu thủ tham gia chỉ 1 loại sân'
+  showAttendanceModal.value = true;
+  attendanceModalData.value = []; // Clear previous data
+  attendancePlayerNameFilter.value = "";
+  attendancePlayerTierFilter.value = null;
+  attendanceSortByTier.value = false;
+  attendanceFieldTab.value = field;
+  attendanceExclusiveField.value = exclusiveField;
+  if (type === "attending" && exclusiveField) {
+    attendanceModalTitle.value = "Cầu thủ tham gia chỉ 1 loại sân";
   }
-  attendanceModalTournamentId.value = tournamentId
-  selectedPendingPlayerIds.value = new Set()
-  
-  await fetchAttendanceDetails(tournamentId)
-}
+  attendanceModalTournamentId.value = tournamentId;
+  selectedPendingPlayerIds.value = new Set();
+
+  await fetchAttendanceDetails(tournamentId);
+};
 
 const closeAttendanceModal = (): void => {
-  showAttendanceModal.value = false
-  attendanceModalData.value = []
-  attendanceModalLoading.value = false
-  attendancePlayerNameFilter.value = ''
-  attendancePlayerTierFilter.value = null
-  attendanceSortByTier.value = false
-  attendanceModalTournamentId.value = null
-  attendanceExclusiveField.value = false
-  selectedPendingPlayerIds.value = new Set()
-}
+  showAttendanceModal.value = false;
+  attendanceModalData.value = [];
+  attendanceModalLoading.value = false;
+  attendancePlayerNameFilter.value = "";
+  attendancePlayerTierFilter.value = null;
+  attendanceSortByTier.value = false;
+  attendanceModalTournamentId.value = null;
+  attendanceExclusiveField.value = false;
+  selectedPendingPlayerIds.value = new Set();
+};
 
 const getFilteredModalData = (): TournamentAttendanceDetails[] => {
   const matchesName = (item: TournamentAttendanceDetails) =>
-    item.player.name.toLowerCase().includes(attendancePlayerNameFilter.value.trim().toLowerCase())
-  const sortPlayers = (a: TournamentAttendanceDetails, b: TournamentAttendanceDetails) =>
+    item.player.name
+      .toLowerCase()
+      .includes(attendancePlayerNameFilter.value.trim().toLowerCase());
+  const sortPlayers = (
+    a: TournamentAttendanceDetails,
+    b: TournamentAttendanceDetails,
+  ) =>
     attendanceSortByTier.value
-      ? a.player.tier - b.player.tier || a.player.name.localeCompare(b.player.name, 'vi')
-      : a.player.name.localeCompare(b.player.name, 'vi')
-  if (attendanceModalType.value === 'pending') {
+      ? a.player.tier - b.player.tier ||
+        a.player.name.localeCompare(b.player.name, "vi")
+      : a.player.name.localeCompare(b.player.name, "vi");
+  if (attendanceModalType.value === "pending") {
     return attendanceModalData.value
-      .filter(item => item.status !== 'ATTEND' && item.status !== 'NOT_ATTEND')
+      .filter(
+        (item) => item.status !== "ATTEND" && item.status !== "NOT_ATTEND",
+      )
       .filter(matchesName)
-      .filter(item => attendancePlayerTierFilter.value === null || item.player.tier === attendancePlayerTierFilter.value)
-      .sort(sortPlayers)
+      .filter(
+        (item) =>
+          attendancePlayerTierFilter.value === null ||
+          item.player.tier === attendancePlayerTierFilter.value,
+      )
+      .sort(sortPlayers);
   }
-  if (attendanceModalType.value === 'betting') {
+  if (attendanceModalType.value === "betting") {
     return attendanceModalData.value
-      .filter(item => item.bet === true && isAttendingSelectedPitch(attendanceModalTournamentId.value || '', item))
+      .filter(
+        (item) =>
+          item.bet === true &&
+          isAttendingSelectedPitch(
+            attendanceModalTournamentId.value || "",
+            item,
+          ),
+      )
       .filter(matchesName)
-      .sort(sortPlayers)
-  } else if (attendanceModalType.value === 'water') {
+      .sort(sortPlayers);
+  } else if (attendanceModalType.value === "water") {
     return attendanceModalData.value
-      .filter(item => item.status === 'ATTEND' && item.withWater === true)
+      .filter((item) => item.status === "ATTEND" && item.withWater === true)
       .filter(matchesName)
-      .sort(sortPlayers)
+      .sort(sortPlayers);
   } else {
     // Filter by status for attending/not-attending players
-    let targetStatus: string
-    if (attendanceModalType.value === 'attending') {
-      targetStatus = 'ATTEND'
-    } else if (attendanceModalType.value === 'not-attending') {
-      targetStatus = 'NOT_ATTEND'
+    let targetStatus: string;
+    if (attendanceModalType.value === "attending") {
+      targetStatus = "ATTEND";
+    } else if (attendanceModalType.value === "not-attending") {
+      targetStatus = "NOT_ATTEND";
     }
-    
+
     return attendanceModalData.value
-      .filter(item => item.status === targetStatus)
-      .filter(item => {
-        if (attendanceModalType.value !== 'attending') return true
-        const registeredForSelectedField = attendanceFieldTab.value === 'FIELD_5' ? item.field5 !== false : item.field7 !== false
-        if (!attendanceExclusiveField.value) return registeredForSelectedField
-        return registeredForSelectedField && (attendanceFieldTab.value === 'FIELD_5' ? item.field7 === false : item.field5 === false)
+      .filter((item) => item.status === targetStatus)
+      .filter((item) => {
+        if (attendanceModalType.value !== "attending") return true;
+        const registeredForSelectedField =
+          attendanceFieldTab.value === "FIELD_5"
+            ? item.field5 !== false
+            : item.field7 !== false;
+        if (!attendanceExclusiveField.value) return registeredForSelectedField;
+        return (
+          registeredForSelectedField &&
+          (attendanceFieldTab.value === "FIELD_5"
+            ? item.field7 === false
+            : item.field5 === false)
+        );
       })
       .filter(matchesName)
-      .sort(sortPlayers)
+      .sort(sortPlayers);
   }
-}
+};
 
 // Team generation functions
-const getMinimumPlayersForField = (field: 'FIELD_5' | 'FIELD_7'): number => field === 'FIELD_5' ? 12 : 16
+const getMinimumPlayersForField = (field: "FIELD_5" | "FIELD_7"): number =>
+  field === "FIELD_5" ? 12 : 16;
 
-const getFieldAttendanceCount = (tournamentId: string, field: 'FIELD_5' | 'FIELD_7'): number => {
-  const stats = attendanceStats.value.get(tournamentId)
-  if (!stats) return 0
-  return field === 'FIELD_5' ? (stats.field5Count ?? 0) : (stats.field7Count ?? 0)
-}
+const getFieldAttendanceCount = (
+  tournamentId: string,
+  field: "FIELD_5" | "FIELD_7",
+): number => {
+  const stats = attendanceStats.value.get(tournamentId);
+  if (!stats) return 0;
+  return field === "FIELD_5"
+    ? (stats.field5Count ?? 0)
+    : (stats.field7Count ?? 0);
+};
 
 const getDisplayedAttendanceCount = (tournament: Tournament): number =>
   tournament.pitchType
     ? getFieldAttendanceCount(tournament.id, tournament.pitchType)
-    : getHighestFieldAttendanceCount(tournament.id)
+    : getHighestFieldAttendanceCount(tournament.id);
 
 const getDisplayedAttendancePercentage = (tournament: Tournament): number => {
-  const fallbackTotal = getAttendanceStats(tournament.id)?.totalPlayers || 0
-  const total = tournament.maxAttendance || fallbackTotal
-  if (total === 0) return 0
-  return Math.min(100, Math.round((getDisplayedAttendanceCount(tournament) / total) * 100))
-}
+  const fallbackTotal = getAttendanceStats(tournament.id)?.totalPlayers || 0;
+  const total = tournament.maxAttendance || fallbackTotal;
+  if (total === 0) return 0;
+  return Math.min(
+    100,
+    Math.round((getDisplayedAttendanceCount(tournament) / total) * 100),
+  );
+};
 
 const isDisplayedAttendanceFull = (tournament: Tournament): boolean =>
-  getDisplayedAttendancePercentage(tournament) >= 100
+  getDisplayedAttendancePercentage(tournament) >= 100;
 
 const getAttendanceFireCount = (tournament: Tournament): number =>
-  Math.max(1, Math.ceil(getDisplayedAttendancePercentage(tournament) / 3))
+  Math.max(1, Math.ceil(getDisplayedAttendancePercentage(tournament) / 3));
 
-const getTeamPreviewPlayers = (tournamentId: string, field: 'FIELD_5' | 'FIELD_7'): any[] => {
-  const details = attendanceDetailsMap.value.get(tournamentId) || []
-  const tournament = weeklyTournaments.value.find(item => item.id === tournamentId)
-  const includeWaitlist = tournament?.pitchType === field
+const getTeamPreviewPlayers = (
+  tournamentId: string,
+  field: "FIELD_5" | "FIELD_7",
+): any[] => {
+  const details = attendanceDetailsMap.value.get(tournamentId) || [];
+  const tournament = weeklyTournaments.value.find(
+    (item) => item.id === tournamentId,
+  );
+  const includeWaitlist = tournament?.pitchType === field;
   const players = details
-    .filter((attendance: any) => (
-      (attendance.status === 'ATTEND' && (field === 'FIELD_5' ? attendance.field5 !== false : attendance.field7 !== false))
-      || (includeWaitlist && Boolean(attendance.swapWaitlistPosition))
-    ))
+    .filter(
+      (attendance: any) =>
+        (attendance.status === "ATTEND" &&
+          (field === "FIELD_5"
+            ? attendance.field5 !== false
+            : attendance.field7 !== false)) ||
+        (includeWaitlist && Boolean(attendance.swapWaitlistPosition)),
+    )
     .map((attendance: any) => ({
       ...attendance.player,
       addedByUsername: attendance.addedBy?.username || null,
@@ -2895,1153 +6927,1556 @@ const getTeamPreviewPlayers = (tournamentId: string, field: 'FIELD_5' | 'FIELD_7
       swapPending: Boolean(attendance.swapPending),
       swapWaitlistPosition: attendance.swapWaitlistPosition || null,
       swappedWithName: attendance.swappedWithName || null,
-    }))
-  const hasPrimaryGoalkeeper = players.some((player: any) => isGoalkeeper(player.position))
+      challenge: attendance.challenge || null,
+    }));
+  const hasPrimaryGoalkeeper = players.some((player: any) =>
+    isGoalkeeper(player.position),
+  );
   return players.sort((first: any, second: any) => {
-    const firstIsGoalkeeper = isGoalkeeper(first.position)
-    const secondIsGoalkeeper = isGoalkeeper(second.position)
-    if (firstIsGoalkeeper !== secondIsGoalkeeper) return firstIsGoalkeeper ? -1 : 1
+    const firstIsGoalkeeper = isGoalkeeper(first.position);
+    const secondIsGoalkeeper = isGoalkeeper(second.position);
+    if (firstIsGoalkeeper !== secondIsGoalkeeper)
+      return firstIsGoalkeeper ? -1 : 1;
     if (!hasPrimaryGoalkeeper) {
-      const firstIsSecondaryGoalkeeper = isGoalkeeper(first.positionSecond)
-      const secondIsSecondaryGoalkeeper = isGoalkeeper(second.positionSecond)
-      if (firstIsSecondaryGoalkeeper !== secondIsSecondaryGoalkeeper) return firstIsSecondaryGoalkeeper ? -1 : 1
+      const firstIsSecondaryGoalkeeper = isGoalkeeper(first.positionSecond);
+      const secondIsSecondaryGoalkeeper = isGoalkeeper(second.positionSecond);
+      if (firstIsSecondaryGoalkeeper !== secondIsSecondaryGoalkeeper)
+        return firstIsSecondaryGoalkeeper ? -1 : 1;
     }
-    return first.tier - second.tier || first.name.localeCompare(second.name, 'vi')
-  })
-}
+    return (
+      first.tier - second.tier || first.name.localeCompare(second.name, "vi")
+    );
+  });
+};
 
-const canGenerateTeams = (tournamentId: string, field?: 'FIELD_5' | 'FIELD_7'): boolean => {
-  if (field) return getFieldAttendanceCount(tournamentId, field) >= getMinimumPlayersForField(field)
-  return ['FIELD_5', 'FIELD_7'].some(candidate => canGenerateTeams(tournamentId, candidate as 'FIELD_5' | 'FIELD_7'))
-}
+const getCurrentPlayerId = (): string | null =>
+  authStore.currentUser?.player?.id || authStore.currentUser?.playerId || null;
+const isCurrentUsersFriend = (player: any): boolean =>
+  Boolean(
+    player.friendOwnerId && player.friendOwnerId === authStore.currentUser?.id,
+  );
+const isSameChallengeTierRange = (
+  firstTier: number,
+  secondTier: number,
+): boolean => Math.ceil(firstTier / 2) === Math.ceil(secondTier / 2);
+const isPendingOutgoingChallengeTarget = (
+  tournamentId: string,
+  player: any,
+): boolean => {
+  const currentPlayerId = getCurrentPlayerId();
+  if (!currentPlayerId || player.id === currentPlayerId) return false;
+  const details = attendanceDetailsMap.value.get(tournamentId) || [];
+  const self = details.find((item: any) => item.playerId === currentPlayerId);
+  return Boolean(
+    self?.challenge?.direction === "SENT" &&
+      self.challenge?.status === "PENDING" &&
+      player.challenge?.direction === "RECEIVED" &&
+      player.challenge?.status === "PENDING",
+  );
+};
+const isCurrentUsersAcceptedChallenge = (
+  tournamentId: string,
+  player: any,
+): boolean => {
+  const currentPlayerId = getCurrentPlayerId();
+  if (!currentPlayerId) return false;
+  const details = attendanceDetailsMap.value.get(tournamentId) || [];
+  const self = details.find((item: any) => item.playerId === currentPlayerId);
+  if (self?.challenge?.status !== "ACCEPTED") return false;
+  return (
+    player.id === currentPlayerId ||
+    self.challenge.opponentPlayerId === player.id
+  );
+};
+const canShowChallengeIcon = (
+  tournamentId: string,
+  field: "FIELD_5" | "FIELD_7",
+  player: any,
+): boolean => {
+  const currentPlayerId = getCurrentPlayerId();
+  if (!currentPlayerId) return false;
+  const details = attendanceDetailsMap.value.get(tournamentId) || [];
+  const self = details.find((item: any) => item.playerId === currentPlayerId);
+  if (
+    !self ||
+    self.status !== "ATTEND" ||
+    (field === "FIELD_5" ? !self.field5 : !self.field7)
+  )
+    return false;
+  if (player.id === currentPlayerId)
+    return (
+      player.challenge?.direction === "RECEIVED" &&
+      player.challenge?.status === "PENDING"
+    );
+  if (isPendingOutgoingChallengeTarget(tournamentId, player)) return true;
+  return (
+    !player.friendOwnerName &&
+    !self.challenge &&
+    !player.challenge &&
+    isSameChallengeTierRange(self.player.tier, player.tier)
+  );
+};
+
+const openChallengeModal = (tournamentId: string, player: any): void => {
+  challengeTournamentId.value = tournamentId;
+  challengeTarget.value = player;
+  challengeReceived.value =
+    player.id === getCurrentPlayerId() &&
+    player.challenge?.direction === "RECEIVED";
+  challengePendingOutgoing.value = isPendingOutgoingChallengeTarget(
+    tournamentId,
+    player,
+  );
+  challengeAccepted.value = isCurrentUsersAcceptedChallenge(
+    tournamentId,
+    player,
+  );
+  showChallengeModal.value = true;
+};
+
+const submitChallenge = async (): Promise<void> => {
+  if (
+    !challengeTournamentId.value ||
+    !challengeTarget.value ||
+    challengeSaving.value
+  )
+    return;
+  try {
+    challengeSaving.value = true;
+    const response = challengeReceived.value
+      ? await apiClient.acceptTournamentChallenge(
+          challengeTournamentId.value,
+          challengeTarget.value.challenge.id,
+        )
+      : await apiClient.createTournamentChallenge(
+          challengeTournamentId.value,
+          challengeTarget.value.id,
+        );
+    if (!response.success)
+      throw new Error(response.error || "Không thể cập nhật lời mời thách đấu");
+    showChallengeModal.value = false;
+    await fetchAttendanceDetails(challengeTournamentId.value);
+    toast.success(
+      challengeReceived.value
+        ? "Đã chấp nhận thách đấu"
+        : "Đã gửi lời mời thách đấu",
+    );
+  } catch (error: any) {
+    toast.error(
+      error.response?.data?.error ||
+        error.message ||
+        "Không thể cập nhật lời mời thách đấu",
+    );
+  } finally {
+    challengeSaving.value = false;
+  }
+};
+
+const cancelChallenge = async (): Promise<void> => {
+  if (!challengeTournamentId.value || challengeSaving.value) return;
+  try {
+    challengeSaving.value = true;
+    const response = await apiClient.cancelTournamentChallenge(
+      challengeTournamentId.value,
+    );
+    if (!response.success)
+      throw new Error(response.error || "Không thể hủy thách đấu");
+    showChallengeModal.value = false;
+    await fetchAttendanceDetails(challengeTournamentId.value);
+    toast.success("Đã hủy thách đấu");
+  } catch (error: any) {
+    toast.error(
+      error.response?.data?.error || error.message || "Không thể hủy thách đấu",
+    );
+  } finally {
+    challengeSaving.value = false;
+  }
+};
+
+const canGenerateTeams = (
+  tournamentId: string,
+  field?: "FIELD_5" | "FIELD_7",
+): boolean => {
+  if (field)
+    return (
+      getFieldAttendanceCount(tournamentId, field) >=
+      getMinimumPlayersForField(field)
+    );
+  return ["FIELD_5", "FIELD_7"].some((candidate) =>
+    canGenerateTeams(tournamentId, candidate as "FIELD_5" | "FIELD_7"),
+  );
+};
 
 const getTeamCount = (tournamentId: string): number => {
-  const stats = attendanceStats.value.get(tournamentId)
-  if (!stats) return 0
-  
-  const playerCount = getFieldAttendanceCount(tournamentId, selectedTeamField.value)
-  if (playerCount < 15) return 2
-  if (playerCount < 20) return 3
-  return 4
-}
+  const stats = attendanceStats.value.get(tournamentId);
+  if (!stats) return 0;
+
+  const playerCount = getFieldAttendanceCount(
+    tournamentId,
+    selectedTeamField.value,
+  );
+  if (playerCount < 15) return 2;
+  if (playerCount < 20) return 3;
+  return 4;
+};
 
 // Helper function to get teams with players from tournament data
 const getTournamentTeams = (tournament: Tournament): any[] => {
-  if (!tournament.teams) return []
-  
+  if (!tournament.teams) return [];
+
   // Create a map of team players from tournamentTeamPlayers
-  const teamPlayersMap = new Map<string, any[]>()
-  
+  const teamPlayersMap = new Map<string, any[]>();
+
   if (tournament.tournamentTeamPlayers) {
     tournament.tournamentTeamPlayers.forEach((ttp: any) => {
       if (!teamPlayersMap.has(ttp.teamId)) {
-        teamPlayersMap.set(ttp.teamId, [])
+        teamPlayersMap.set(ttp.teamId, []);
       }
-      teamPlayersMap.get(ttp.teamId)!.push(ttp.player)
-    })
+      teamPlayersMap.get(ttp.teamId)!.push(ttp.player);
+    });
   }
-  
-   
-  
+
   // Tournament teams come as { team: { id, name, logo, score } } structure
   return tournament.teams.map((tournamentTeam: any) => {
-    const team = tournamentTeam.team || tournamentTeam
+    const team = tournamentTeam.team || tournamentTeam;
     return {
       id: team.id,
       name: team.name,
       logo: team.logo,
       players: (() => {
-        const players = [...(teamPlayersMap.get(team.id) || [])]
-        const hasPrimaryGoalkeeper = players.some((player: any) => isGoalkeeper(player.position))
+        const players = [...(teamPlayersMap.get(team.id) || [])];
+        const hasPrimaryGoalkeeper = players.some((player: any) =>
+          isGoalkeeper(player.position),
+        );
         return players.sort((first, second) => {
-        const firstIsGoalkeeper = isGoalkeeper(first.position)
-        const secondIsGoalkeeper = isGoalkeeper(second.position)
-        if (firstIsGoalkeeper !== secondIsGoalkeeper) return firstIsGoalkeeper ? -1 : 1
-        // If the team lacks a primary GK, make its secondary GK visibly lead
-        // the list as the designated goalkeeper for that team.
-        if (!hasPrimaryGoalkeeper) {
-          const firstIsSecondaryGoalkeeper = isGoalkeeper(first.positionSecond)
-          const secondIsSecondaryGoalkeeper = isGoalkeeper(second.positionSecond)
-          if (firstIsSecondaryGoalkeeper !== secondIsSecondaryGoalkeeper) return firstIsSecondaryGoalkeeper ? -1 : 1
-        }
-        return first.tier - second.tier || first.name.localeCompare(second.name, 'vi')
-        })
+          const firstIsGoalkeeper = isGoalkeeper(first.position);
+          const secondIsGoalkeeper = isGoalkeeper(second.position);
+          if (firstIsGoalkeeper !== secondIsGoalkeeper)
+            return firstIsGoalkeeper ? -1 : 1;
+          // If the team lacks a primary GK, make its secondary GK visibly lead
+          // the list as the designated goalkeeper for that team.
+          if (!hasPrimaryGoalkeeper) {
+            const firstIsSecondaryGoalkeeper = isGoalkeeper(
+              first.positionSecond,
+            );
+            const secondIsSecondaryGoalkeeper = isGoalkeeper(
+              second.positionSecond,
+            );
+            if (firstIsSecondaryGoalkeeper !== secondIsSecondaryGoalkeeper)
+              return firstIsSecondaryGoalkeeper ? -1 : 1;
+          }
+          return (
+            first.tier - second.tier ||
+            first.name.localeCompare(second.name, "vi")
+          );
+        });
       })(),
-      score: team.score || 0
-    }
-  })
-}
+      score: team.score || 0,
+    };
+  });
+};
 
-const getPositionLabel = (position: string): string => ({
-  GK: 'GK',
-  DEF: 'DEF',
-  MID: 'MID',
-  FWD: 'FWD',
-  Goalkeeper: 'GK',
-  Defender: 'DEF',
-  Midfielder: 'MID',
-  Forward: 'FWD'
-}[position] || position)
+const getPositionLabel = (position: string): string =>
+  ({
+    GK: "GK",
+    DEF: "DEF",
+    MID: "MID",
+    FWD: "FWD",
+    Goalkeeper: "GK",
+    Defender: "DEF",
+    Midfielder: "MID",
+    Forward: "FWD",
+  })[position] || position;
 
-const isGoalkeeper = (position: string): boolean => position === 'GK' || position === 'Goalkeeper'
+const isGoalkeeper = (position: string): boolean =>
+  position === "GK" || position === "Goalkeeper";
 
 const teamGridClass = (teamCount: number): string => {
-  if (teamCount <= 2) return 'grid-cols-1 md:grid-cols-2 mx-auto max-w-5xl'
-  if (teamCount === 3) return 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3 mx-auto max-w-7xl'
-  return 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4'
-}
+  if (teamCount <= 2) return "grid-cols-1 md:grid-cols-2 mx-auto max-w-5xl";
+  if (teamCount === 3)
+    return "grid-cols-1 md:grid-cols-2 lg:grid-cols-3 mx-auto max-w-7xl";
+  return "grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4";
+};
 
 const isTeamGoalkeeper = (players: any[], player: any): boolean =>
   isGoalkeeper(player.position) ||
-  (!players.some(teamPlayer => isGoalkeeper(teamPlayer.position)) && isGoalkeeper(player.positionSecond))
+  (!players.some((teamPlayer) => isGoalkeeper(teamPlayer.position)) &&
+    isGoalkeeper(player.positionSecond));
 
 const openTeamCountModal = (tournamentId: string): void => {
-  if (!canGenerateTeams(tournamentId) || teamGenerationLoading.value) return
-  selectedTeamField.value = canGenerateTeams(tournamentId, 'FIELD_5') ? 'FIELD_5' : 'FIELD_7'
-  selectedTeamCount.value = getTeamCount(tournamentId) as 2 | 3 | 4
-  teamCountModalTournamentId.value = tournamentId
-  showTeamCountModal.value = true
-}
+  if (!canGenerateTeams(tournamentId) || teamGenerationLoading.value) return;
+  selectedTeamField.value = canGenerateTeams(tournamentId, "FIELD_5")
+    ? "FIELD_5"
+    : "FIELD_7";
+  selectedTeamCount.value = getTeamCount(tournamentId) as 2 | 3 | 4;
+  teamCountModalTournamentId.value = tournamentId;
+  showTeamCountModal.value = true;
+};
 
 const closeTeamCountModal = (): void => {
-  showTeamCountModal.value = false
-  teamCountModalTournamentId.value = null
-}
+  showTeamCountModal.value = false;
+  teamCountModalTournamentId.value = null;
+};
 
 const confirmGenerateRandomTeams = async (): Promise<void> => {
-  if (!teamCountModalTournamentId.value) return
-  await generateRandomTeams(teamCountModalTournamentId.value, selectedTeamCount.value, selectedTeamField.value)
-}
+  if (!teamCountModalTournamentId.value) return;
+  await generateRandomTeams(
+    teamCountModalTournamentId.value,
+    selectedTeamCount.value,
+    selectedTeamField.value,
+  );
+};
 
-const generateRandomTeams = async (tournamentId: string, teamCount: 2 | 3 | 4, field: 'FIELD_5' | 'FIELD_7'): Promise<void> => {
-  if (!canGenerateTeams(tournamentId, field) || teamGenerationLoading.value) return
-  
-  const stats = attendanceStats.value.get(tournamentId)
-  if (!stats) return
-  
+const generateRandomTeams = async (
+  tournamentId: string,
+  teamCount: 2 | 3 | 4,
+  field: "FIELD_5" | "FIELD_7",
+): Promise<void> => {
+  if (!canGenerateTeams(tournamentId, field) || teamGenerationLoading.value)
+    return;
+
+  const stats = attendanceStats.value.get(tournamentId);
+  if (!stats) return;
+
   try {
-    teamGenerationLoading.value = true
-    
-    const response = await apiClient.post(`/tournaments/${tournamentId}/generate-teams`, { teamCount, field })
-    
+    teamGenerationLoading.value = true;
+
+    const response = await apiClient.post(
+      `/tournaments/${tournamentId}/generate-teams`,
+      { teamCount, field },
+    );
+
     if (response.success) {
       // Show success message with team details
-      const data = response.data as any
-      toast.success(`Đã chia ${data.playerCount} cầu thủ Sân ${field === 'FIELD_5' ? '5' : '7'} thành ${data.teamCount} đội!`)
-      
+      const data = response.data as any;
+      toast.success(
+        `Đã chia ${data.playerCount} cầu thủ Sân ${field === "FIELD_5" ? "5" : "7"} thành ${data.teamCount} đội!`,
+      );
+
       // Refresh tournament data
-      await fetchData()
-      closeTeamCountModal()
+      await fetchData();
+      closeTeamCountModal();
     }
   } catch (err: any) {
-    console.error('Generate teams error:', err)
-    toast.error(err.response?.data?.error || 'Không thể chia đội')
+    console.error("Generate teams error:", err);
+    toast.error(err.response?.data?.error || "Không thể chia đội");
   } finally {
-    teamGenerationLoading.value = false
+    teamGenerationLoading.value = false;
   }
-}
+};
 
 const handleCreateNew = () => {
-  const completedTournament = completedTournamentForNextMonday.value
+  const completedTournament = completedTournamentForNextMonday.value;
   if (!completedTournament) {
-    createWeeklyTournament(nextMonday.value)
-    return
+    createWeeklyTournament(nextMonday.value);
+    return;
   }
 
-  newTournamentDate.value = minimumNewTournamentDate.value
-  showCreateTournamentModal.value = true
-}
+  newTournamentDate.value = minimumNewTournamentDate.value;
+  showCreateTournamentModal.value = true;
+};
 
 const closeCreateTournamentModal = () => {
-  showCreateTournamentModal.value = false
-  newTournamentDate.value = ''
-}
+  showCreateTournamentModal.value = false;
+  newTournamentDate.value = "";
+};
 
 const createWeeklyTournamentFromSelectedDate = async () => {
-  if (!newTournamentDate.value) return
-  await createWeeklyTournament(new Date(`${newTournamentDate.value}T00:00:00`))
-}
+  if (!newTournamentDate.value) return;
+  await createWeeklyTournament(new Date(`${newTournamentDate.value}T00:00:00`));
+};
 
 // Create new weekly tournament
 const createWeeklyTournament = async (tournamentDay: Date) => {
-  if (!canCreateNew.value || loading.value) return
-  if (weeklyTournaments.value.some(tournament => toLocalDateKey(new Date(tournament.startDate)) === toLocalDateKey(tournamentDay))) {
-    toast.error('Ngày đã chọn đã có giải đấu. Vui lòng chọn ngày khác.')
-    return
+  if (!canCreateNew.value || loading.value) return;
+  if (
+    weeklyTournaments.value.some(
+      (tournament) =>
+        toLocalDateKey(new Date(tournament.startDate)) ===
+        toLocalDateKey(tournamentDay),
+    )
+  ) {
+    toast.error("Ngày đã chọn đã có giải đấu. Vui lòng chọn ngày khác.");
+    return;
   }
-  
+
   try {
-    loading.value = true
-    
+    loading.value = true;
+
     // Create dates in local time
-    const startDate = new Date(tournamentDay)
-    startDate.setHours(19, 0, 0, 0) // 7:00 PM local time
-    
-    const endDate = new Date(tournamentDay)
-    endDate.setHours(21, 0, 0, 0) // 9:00 PM local time
-    
+    const startDate = new Date(tournamentDay);
+    startDate.setHours(19, 0, 0, 0); // 7:00 PM local time
+
+    const endDate = new Date(tournamentDay);
+    endDate.setHours(21, 0, 0, 0); // 9:00 PM local time
+
     // Convert to ISO strings to preserve the exact time we want
-    const startDateISO = startDate.toISOString()
-    const endDateISO = endDate.toISOString()
-    
+    const startDateISO = startDate.toISOString();
+    const endDateISO = endDate.toISOString();
+
     const tournamentData: CreateTournamentRequest = {
       name: `Giải hằng tuần - ${formatDate(startDate)}`,
-      type: 'WEEKLY' as const,
-      status: 'UPCOMING' as const,
+      type: "WEEKLY" as const,
+      status: "UPCOMING" as const,
       startDate: startDateISO,
-      endDate: endDateISO
-    }
-    tournamentData.cancellationDeadline = getDefaultCancellationDeadline(startDate).toISOString()
-    
-    await tournamentsStore.addTournament(tournamentData)
-    closeCreateTournamentModal()
-    await fetchData()
-    toast.success('Đã tạo giải hằng tuần!')
+      endDate: endDateISO,
+    };
+    tournamentData.cancellationDeadline =
+      getDefaultCancellationDeadline(startDate).toISOString();
+
+    await tournamentsStore.addTournament(tournamentData);
+    closeCreateTournamentModal();
+    await fetchData();
+    toast.success("Đã tạo giải hằng tuần!");
   } catch (err: any) {
-    console.error('Create weekly tournament error:', err)
-    toast.error(err.response?.data?.error || 'Không thể tạo giải hằng tuần')
+    console.error("Create weekly tournament error:", err);
+    toast.error(err.response?.data?.error || "Không thể tạo giải hằng tuần");
   } finally {
-    loading.value = false
+    loading.value = false;
   }
-}
+};
 
 // Load old tournaments with pagination
 const loadOldTournaments = async () => {
   try {
     oldTournaments.value = weeklyTournaments.value
-      .filter(t => t.status === 'COMPLETED')
-      .sort((a, b) => new Date(b.startDate).getTime() - new Date(a.startDate).getTime())
-    oldTournamentIndex.value = 0
+      .filter((t) => t.status === "COMPLETED")
+      .sort(
+        (a, b) =>
+          new Date(b.startDate).getTime() - new Date(a.startDate).getTime(),
+      );
+    oldTournamentIndex.value = 0;
   } catch (err: any) {
-    console.error('Load old tournaments error:', err)
-    toast.error('Không thể tải giải đấu cũ')
+    console.error("Load old tournaments error:", err);
+    toast.error("Không thể tải giải đấu cũ");
   }
-}
+};
 
 const navigateOldTournament = async (direction: -1 | 1): Promise<void> => {
-  const nextIndex = oldTournamentIndex.value + direction
-  if (nextIndex < 0 || nextIndex >= filteredOldTournaments.value.length) return
-  oldTournamentIndex.value = nextIndex
-  if (selectedOldTournament.value) await loadAttendanceData([selectedOldTournament.value])
-}
+  const nextIndex = oldTournamentIndex.value + direction;
+  if (nextIndex < 0 || nextIndex >= filteredOldTournaments.value.length) return;
+  oldTournamentIndex.value = nextIndex;
+  if (selectedOldTournament.value)
+    await loadAttendanceData([selectedOldTournament.value]);
+};
 
 const applyOldTournamentDateFilter = async (): Promise<void> => {
-  oldTournamentDateFilter.value = oldTournamentDateDraft.value
-  oldTournamentIndex.value = 0
-  showOldTournamentDateModal.value = false
-  if (selectedOldTournament.value) await loadAttendanceData([selectedOldTournament.value])
-}
+  oldTournamentDateFilter.value = oldTournamentDateDraft.value;
+  oldTournamentIndex.value = 0;
+  showOldTournamentDateModal.value = false;
+  if (selectedOldTournament.value)
+    await loadAttendanceData([selectedOldTournament.value]);
+};
 
 const clearOldTournamentDateFilter = async (): Promise<void> => {
-  oldTournamentDateDraft.value = ''
-  oldTournamentDateFilter.value = ''
-  oldTournamentIndex.value = 0
-  showOldTournamentDateModal.value = false
-  if (selectedOldTournament.value) await loadAttendanceData([selectedOldTournament.value])
-}
+  oldTournamentDateDraft.value = "";
+  oldTournamentDateFilter.value = "";
+  oldTournamentIndex.value = 0;
+  showOldTournamentDateModal.value = false;
+  if (selectedOldTournament.value)
+    await loadAttendanceData([selectedOldTournament.value]);
+};
 
 const formatOldTournamentFilterDate = (value: string): string => {
-  const [year, month, day] = value.split('-')
-  return `${day}/${month}/${year}`
-}
+  const [year, month, day] = value.split("-");
+  return `${day}/${month}/${year}`;
+};
 
 // Tournament actions
 const editTournament = (tournament: Tournament) => {
   // Navigate to regular tournaments page with edit functionality
   // Since we're reusing tournament functionality
   // You can implement this based on your tournament editing needs
-}
+};
 
 const startTournament = async (tournamentId: string) => {
   try {
     const response = await apiClient.put(`/tournaments/${tournamentId}`, {
-      status: 'ONGOING'
-    })
-    
+      status: "ONGOING",
+    });
+
     if (response.success) {
-      toast.success('Đã bắt đầu giải đấu!')
-      await fetchData()
+      toast.success("Đã bắt đầu giải đấu!");
+      await fetchData();
     } else {
-      toast.error('Không thể bắt đầu giải đấu')
+      toast.error("Không thể bắt đầu giải đấu");
     }
   } catch (err: any) {
-    console.error('Start tournament error:', err)
-    toast.error(err.response?.data?.error || 'Không thể bắt đầu giải đấu')
+    console.error("Start tournament error:", err);
+    toast.error(err.response?.data?.error || "Không thể bắt đầu giải đấu");
   }
-}
+};
 
 const openScoresModal = async (tournamentId: string) => {
-  scoresTournamentId.value = tournamentId
-  showScoresModal.value = true
-  
+  scoresTournamentId.value = tournamentId;
+  showScoresModal.value = true;
+
   // Initialize scores for all teams
-  const tournament = weeklyTournaments.value.find(t => t.id === tournamentId)
+  const tournament = weeklyTournaments.value.find((t) => t.id === tournamentId);
   if (tournament) {
-    const teams = getTournamentTeams(tournament)
-    teamScores.value.clear()
-    
+    const teams = getTournamentTeams(tournament);
+    teamScores.value.clear();
+
     // Use team scores directly from tournament data
-    teams.forEach(team => {
-      teamScores.value.set(team.id, team.score || 0)
-    })
-    
+    teams.forEach((team) => {
+      teamScores.value.set(team.id, team.score || 0);
+    });
   }
-}
+};
 
 const getTeamScore = (teamId: string): number => {
-  return teamScores.value.get(teamId) || 0
-}
+  return teamScores.value.get(teamId) || 0;
+};
 
 const increaseScore = (teamId: string) => {
-  const currentScore = teamScores.value.get(teamId) || 0
-  teamScores.value.set(teamId, currentScore + 1)
-}
+  const currentScore = teamScores.value.get(teamId) || 0;
+  teamScores.value.set(teamId, currentScore + 1);
+};
 
 const decreaseScore = (teamId: string) => {
-  const currentScore = teamScores.value.get(teamId) || 0
+  const currentScore = teamScores.value.get(teamId) || 0;
   if (currentScore > 0) {
-    teamScores.value.set(teamId, currentScore - 1)
+    teamScores.value.set(teamId, currentScore - 1);
   }
-}
+};
 
 const saveScores = async () => {
-  if (!scoresTournamentId.value) return
-  
+  if (!scoresTournamentId.value) return;
+
   try {
     // Prepare scores data for API call - convert Map to object
-    const scores: Record<string, number> = {}
+    const scores: Record<string, number> = {};
     teamScores.value.forEach((score, teamId) => {
-      scores[teamId] = score
-    })
+      scores[teamId] = score;
+    });
 
     // Call the API to update tournament scores
-    const response = await apiClient.updateTournamentScores(scoresTournamentId.value, scores)
-    
+    const response = await apiClient.updateTournamentScores(
+      scoresTournamentId.value,
+      scores,
+    );
+
     if (response.success) {
-      toast.success('Đã lưu điểm số!')
-      
+      toast.success("Đã lưu điểm số!");
+
       // Update local tournament data immediately with new scores for instant UI feedback
-      const tournament = weeklyTournaments.value.find(t => t.id === scoresTournamentId.value)
+      const tournament = weeklyTournaments.value.find(
+        (t) => t.id === scoresTournamentId.value,
+      );
       if (tournament?.teams) {
-        tournament.teams.forEach(team => {
+        tournament.teams.forEach((team) => {
           if (scores[team.id] !== undefined) {
-            (team as any).score = scores[team.id]
+            (team as any).score = scores[team.id];
           }
-        })
+        });
       }
-      
+
       // Refresh modal scores to reflect the changes
       if (scoresTournamentId.value) {
-        await refreshModalScores(scoresTournamentId.value)
+        await refreshModalScores(scoresTournamentId.value);
       }
-      
-      showScoresModal.value = false
-      scoresTournamentId.value = null
-      
+
+      showScoresModal.value = false;
+      scoresTournamentId.value = null;
+
       // Also refresh tournament data from backend to ensure consistency
       setTimeout(() => {
-        tournamentsStore.fetchTournaments()
-      }, 100)
+        tournamentsStore.fetchTournaments();
+      }, 100);
     } else {
-      throw new Error(response.error || 'Không thể lưu điểm số')
+      throw new Error(response.error || "Không thể lưu điểm số");
     }
   } catch (err: any) {
-    console.error('Save scores error:', err)
-    toast.error(err.response?.data?.error || err.message || 'Không thể lưu điểm số')
+    console.error("Save scores error:", err);
+    toast.error(
+      err.response?.data?.error || err.message || "Không thể lưu điểm số",
+    );
   }
-}
+};
 
 // Helper function to refresh modal scores
 const refreshModalScores = async (tournamentId: string) => {
   // Refresh scores from tournament data instead of API call
-  const tournament = weeklyTournaments.value.find(t => t.id === tournamentId)
+  const tournament = weeklyTournaments.value.find((t) => t.id === tournamentId);
   if (tournament) {
-    const teams = getTournamentTeams(tournament)
-    teams.forEach(team => {
-      teamScores.value.set(team.id, team.score || 0)
-    })
+    const teams = getTournamentTeams(tournament);
+    teams.forEach((team) => {
+      teamScores.value.set(team.id, team.score || 0);
+    });
   }
-}
+};
 
 const endTournament = async (tournamentId: string) => {
   // Check if tournament can be ended
   if (!canEndTournament(tournamentId)) {
-    const statusMessage = getTournamentEndStatusMessage(tournamentId)
-    toast.error(`Không thể kết thúc giải đấu: ${statusMessage}`)
-    return
+    const statusMessage = getTournamentEndStatusMessage(tournamentId);
+    toast.error(`Không thể kết thúc giải đấu: ${statusMessage}`);
+    return;
   }
-  
-  endTournamentId.value = tournamentId
-  cancelledGkDiscountPlayerIds.value = new Set()
-  
+
+  endTournamentId.value = tournamentId;
+  cancelledGkDiscountPlayerIds.value = new Set();
+
   // Auto-select the team with the highest score as winner and lowest score as loser
-  const tournament = weeklyTournaments.value.find(t => t.id === tournamentId)
+  const tournament = weeklyTournaments.value.find((t) => t.id === tournamentId);
   if (tournament) {
-    const teams = getTournamentTeams(tournament)
+    const teams = getTournamentTeams(tournament);
     if (teams.length > 0) {
-      const highestScoreTeam = getHighestScoreTeam(teams)
-      const lowestScoreTeam = getLowestScoreTeam(teams)
-      
-      selectedWinningTeam.value = highestScoreTeam
-      selectedLosingTeam.value = lowestScoreTeam
+      const highestScoreTeam = getHighestScoreTeam(teams);
+      const lowestScoreTeam = getLowestScoreTeam(teams);
+
+      selectedWinningTeam.value = highestScoreTeam;
+      selectedLosingTeam.value = lowestScoreTeam;
     }
   }
-  
-  showEndTournamentModal.value = true
-}
+
+  showEndTournamentModal.value = true;
+};
 
 const confirmEndTournament = async () => {
-  if (!endTournamentId.value || endTournamentSaving.value) return
-  
+  if (!endTournamentId.value || endTournamentSaving.value) return;
+
   try {
-    endTournamentSaving.value = true
+    endTournamentSaving.value = true;
     // No need to send winnerId - backend will auto-select based on scores
-    const response = await apiClient.put(`/tournaments/${endTournamentId.value}/end`, {
-      cancelledGkDiscountPlayerIds: [...cancelledGkDiscountPlayerIds.value]
-    })
-    
+    const response = await apiClient.put(
+      `/tournaments/${endTournamentId.value}/end`,
+      {
+        cancelledGkDiscountPlayerIds: [...cancelledGkDiscountPlayerIds.value],
+      },
+    );
+
     if (response.success) {
-      const data = response.data as any
-      let message = 'Đã kết thúc giải đấu!'
-      
+      const data = response.data as any;
+      let message = "Đã kết thúc giải đấu!";
+
       if (data.winner) {
-        message += ` Đội thắng: ${data.winner.name} (${data.winner.score} điểm).`
+        message += ` Đội thắng: ${data.winner.name} (${data.winner.score} điểm).`;
       }
-      
+
       if (data.loser) {
-        message += ` Đội thua: ${data.loser.name} (${data.loser.score} điểm).`
+        message += ` Đội thua: ${data.loser.name} (${data.loser.score} điểm).`;
       }
-      
+
       if (data.playersUpdated > 0) {
-        message += ` Đã cập nhật tiền cho ${data.playersUpdated} cầu thủ.`
+        message += ` Đã cập nhật tiền cho ${data.playersUpdated} cầu thủ.`;
       }
-      
+
       if (data.totalAdded > 0) {
-        message += ` Tổng tiền cộng: ${data.totalAdded.toLocaleString('vi-VN')} ₫.`
+        message += ` Tổng tiền cộng: ${data.totalAdded.toLocaleString("vi-VN")} ₫.`;
       }
-      
+
       if (data.totalDeducted > 0) {
-        message += ` Tổng tiền trừ: ${data.totalDeducted.toLocaleString('vi-VN')} ₫.`
+        message += ` Tổng tiền trừ: ${data.totalDeducted.toLocaleString("vi-VN")} ₫.`;
       }
-      
-      toast.success(message)
-      await fetchData()
+
+      toast.success(message);
+      await fetchData();
     } else {
-      toast.error('Không thể kết thúc giải đấu')
+      toast.error("Không thể kết thúc giải đấu");
     }
   } catch (err: any) {
-    console.error('End tournament error:', err)
-    toast.error(err.response?.data?.error || 'Không thể kết thúc giải đấu')
+    console.error("End tournament error:", err);
+    toast.error(err.response?.data?.error || "Không thể kết thúc giải đấu");
   } finally {
-    endTournamentSaving.value = false
-    showEndTournamentModal.value = false
-    endTournamentId.value = null
-    selectedWinningTeam.value = null
-    selectedLosingTeam.value = null
-    cancelledGkDiscountPlayerIds.value = new Set()
+    endTournamentSaving.value = false;
+    showEndTournamentModal.value = false;
+    endTournamentId.value = null;
+    selectedWinningTeam.value = null;
+    selectedLosingTeam.value = null;
+    cancelledGkDiscountPlayerIds.value = new Set();
   }
-}
+};
 
 const toggleTournamentProtection = async (tournament: Tournament) => {
-  if (tournamentProtectionSaving.value) return
-  tournamentProtectionSaving.value = true
+  if (tournamentProtectionSaving.value) return;
+  tournamentProtectionSaving.value = true;
   try {
-    const response = await apiClient.setTournamentProtection(tournament.id, !tournament.isProtected)
-    if (!response.success) throw new Error(response.error || 'Không thể cập nhật Protect giải đấu')
-    tournament.isProtected = !tournament.isProtected
-    toast.success(tournament.isProtected ? 'Đã Protect giải đấu' : 'Đã bỏ Protect giải đấu')
+    const response = await apiClient.setTournamentProtection(
+      tournament.id,
+      !tournament.isProtected,
+    );
+    if (!response.success)
+      throw new Error(response.error || "Không thể cập nhật Protect giải đấu");
+    tournament.isProtected = !tournament.isProtected;
+    toast.success(
+      tournament.isProtected ? "Đã Protect giải đấu" : "Đã bỏ Protect giải đấu",
+    );
   } catch (error: any) {
-    toast.error(error.message || 'Không thể cập nhật Protect giải đấu')
+    toast.error(error.message || "Không thể cập nhật Protect giải đấu");
   } finally {
-    tournamentProtectionSaving.value = false
+    tournamentProtectionSaving.value = false;
   }
-}
+};
 
 const deleteTournament = async (id: string) => {
   // Find the tournament to show detailed confirmation
-  const tournament = weeklyTournaments.value.find(t => t.id === id) || 
-                    oldTournaments.value.find(t => t.id === id);
-  
+  const tournament =
+    weeklyTournaments.value.find((t) => t.id === id) ||
+    oldTournaments.value.find((t) => t.id === id);
+
   if (!tournament) {
-    toast.error('Không tìm thấy giải đấu');
+    toast.error("Không tìm thấy giải đấu");
     return;
   }
 
   const teamCount = getTournamentTeams(tournament).length;
   const attendanceCount = attendanceStats.value.get(id)?.totalPlayers || 0;
   const additionalCostCount = getTournamentAdditionalCosts(id).length;
-  
+
   // Set up modal data
   deleteTournamentData.value = tournament;
   deleteTournamentInfo.value = {
     teamCount,
     attendanceCount,
-    additionalCostCount
+    additionalCostCount,
   };
   showDeleteTournamentModal.value = true;
-}
+};
 
 const confirmDeleteTournament = async () => {
   if (!deleteTournamentData.value) return;
-  
+
   try {
     await tournamentsStore.deleteTournament(deleteTournamentData.value.id);
-    
+
     // Clear local data
     attendanceMap.value.delete(deleteTournamentData.value.id);
     attendanceStats.value.delete(deleteTournamentData.value.id);
-    
+
     await fetchData();
-    toast.success('Đã xóa giải đấu cùng các đội, điểm danh và chi phí liên quan.');
+    toast.success(
+      "Đã xóa giải đấu cùng các đội, điểm danh và chi phí liên quan.",
+    );
   } catch (err: any) {
-    console.error('Delete tournament error:', err);
-    toast.error(err.response?.data?.error || 'Không thể xóa giải đấu')
+    console.error("Delete tournament error:", err);
+    toast.error(err.response?.data?.error || "Không thể xóa giải đấu");
   } finally {
     showDeleteTournamentModal.value = false;
     deleteTournamentData.value = null;
     deleteTournamentInfo.value = null;
   }
-}
+};
 
 // Clear Teams functions
 const openClearTeamsModal = (tournamentId: string) => {
-  clearTeamsModalTournamentId.value = tournamentId
-  showClearTeamsModal.value = true
-}
+  clearTeamsModalTournamentId.value = tournamentId;
+  showClearTeamsModal.value = true;
+};
 
 const closeClearTeamsModal = () => {
-  showClearTeamsModal.value = false
-  clearTeamsModalTournamentId.value = null
-}
+  showClearTeamsModal.value = false;
+  clearTeamsModalTournamentId.value = null;
+};
 
 const confirmClearTeams = async () => {
-  if (!clearTeamsModalTournamentId.value) return
-  
+  if (!clearTeamsModalTournamentId.value) return;
+
   try {
-    const response = await apiClient.put(`/tournaments/${clearTeamsModalTournamentId.value}/clear-teams`)
-    
+    const response = await apiClient.put(
+      `/tournaments/${clearTeamsModalTournamentId.value}/clear-teams`,
+    );
+
     if (response.success) {
-      toast.success('Đã xóa toàn bộ đội!')
-      await fetchData()
+      toast.success("Đã xóa toàn bộ đội!");
+      await fetchData();
     } else {
-      toast.error('Không thể xóa đội')
+      toast.error("Không thể xóa đội");
     }
   } catch (err: any) {
-    console.error('Clear teams error:', err)
-    toast.error(err.response?.data?.error || 'Không thể xóa đội')
+    console.error("Clear teams error:", err);
+    toast.error(err.response?.data?.error || "Không thể xóa đội");
   } finally {
-    showClearTeamsModal.value = false
-    clearTeamsModalTournamentId.value = null
+    showClearTeamsModal.value = false;
+    clearTeamsModalTournamentId.value = null;
   }
-}
+};
 
 const openStadiumCostModal = (tournament: Tournament) => {
-  stadiumCostTournament.value = tournament
-  stadiumCostForm.value = getTournamentStadiumCost(tournament)
-  showStadiumCostModal.value = true
-}
+  stadiumCostTournament.value = tournament;
+  stadiumCostForm.value = getTournamentStadiumCost(tournament);
+  showStadiumCostModal.value = true;
+};
 
 const loadAttendanceData = async (tournaments: Tournament[]): Promise<void> => {
-  const tournamentIds = [...new Set(tournaments.map(tournament => tournament.id))]
+  const tournamentIds = [
+    ...new Set(tournaments.map((tournament) => tournament.id)),
+  ];
   await Promise.all([
-    ...tournamentIds.map(id => fetchAttendance(id)),
-    ...tournamentIds.map(id => fetchAttendanceStats(id)),
-    ...tournamentIds.map(id => fetchAttendanceDetails(id)),
-    ...tournamentIds.map(id => fetchIncomingSwapRequests(id)),
-    ...tournamentIds.map(id => systemStore.fetchAdditionalCosts(id)),
-  ])
-}
+    ...tournamentIds.map((id) => fetchAttendance(id)),
+    ...tournamentIds.map((id) => fetchAttendanceStats(id)),
+    ...tournamentIds.map((id) => fetchAttendanceDetails(id)),
+    ...tournamentIds.map((id) => fetchIncomingSwapRequests(id)),
+    ...tournamentIds.map((id) => systemStore.fetchAdditionalCosts(id)),
+  ]);
+};
 
 const handleFilterChange = async (filter: string): Promise<void> => {
-  activeFilter.value = filter
-  if (filter === 'Giải đấu cũ' && selectedOldTournament.value) {
-    await loadAttendanceData([selectedOldTournament.value])
+  activeFilter.value = filter;
+  if (filter === "Giải đấu cũ" && selectedOldTournament.value) {
+    await loadAttendanceData([selectedOldTournament.value]);
   }
-}
+};
 
 const togglePendingPlayer = (playerId: string): void => {
-  const selected = new Set(selectedPendingPlayerIds.value)
-  if (selected.has(playerId)) selected.delete(playerId)
-  else selected.add(playerId)
-  selectedPendingPlayerIds.value = selected
-}
+  const selected = new Set(selectedPendingPlayerIds.value);
+  if (selected.has(playerId)) selected.delete(playerId);
+  else selected.add(playerId);
+  selectedPendingPlayerIds.value = selected;
+};
 
 const toggleAllPendingPlayers = (): void => {
-  const pendingPlayerIds = getFilteredModalData().map(item => item.player.id)
-  const allSelected = pendingPlayerIds.length > 0 && pendingPlayerIds.every(playerId => selectedPendingPlayerIds.value.has(playerId))
-  const selected = new Set(selectedPendingPlayerIds.value)
-  if (allSelected) pendingPlayerIds.forEach(playerId => selected.delete(playerId))
-  else pendingPlayerIds.forEach(playerId => selected.add(playerId))
-  selectedPendingPlayerIds.value = selected
-}
+  const pendingPlayerIds = getFilteredModalData().map((item) => item.player.id);
+  const allSelected =
+    pendingPlayerIds.length > 0 &&
+    pendingPlayerIds.every((playerId) =>
+      selectedPendingPlayerIds.value.has(playerId),
+    );
+  const selected = new Set(selectedPendingPlayerIds.value);
+  if (allSelected)
+    pendingPlayerIds.forEach((playerId) => selected.delete(playerId));
+  else pendingPlayerIds.forEach((playerId) => selected.add(playerId));
+  selectedPendingPlayerIds.value = selected;
+};
 
 const registerSelectedPlayers = async (): Promise<void> => {
-  const tournamentId = attendanceModalTournamentId.value
-  const playerIds = [...selectedPendingPlayerIds.value]
-  if (!tournamentId || playerIds.length === 0 || batchAttendanceSaving.value) return
+  const tournamentId = attendanceModalTournamentId.value;
+  const playerIds = [...selectedPendingPlayerIds.value];
+  if (!tournamentId || playerIds.length === 0 || batchAttendanceSaving.value)
+    return;
 
   try {
-    batchAttendanceSaving.value = true
-    const response = await apiClient.put<{ updatedCount: number; playerIds: string[] }>(
-      `/tournaments/${tournamentId}/attendance/batch`,
-      { playerIds },
-    )
-    if (!response.success) throw new Error(response.error || 'Không thể đăng ký cầu thủ')
+    batchAttendanceSaving.value = true;
+    const response = await apiClient.put<{
+      updatedCount: number;
+      playerIds: string[];
+    }>(`/tournaments/${tournamentId}/attendance/batch`, { playerIds });
+    if (!response.success)
+      throw new Error(response.error || "Không thể đăng ký cầu thủ");
 
-    const updatedPlayerIds = new Set(response.data?.playerIds || [])
-    attendanceModalData.value = attendanceModalData.value.map(item =>
-      updatedPlayerIds.has(item.player.id) ? { ...item, status: 'ATTEND', field5: true, field7: true } : item,
-    )
-    attendanceDetailsMap.value.set(tournamentId, attendanceModalData.value)
-    selectedPendingPlayerIds.value = new Set()
-    await fetchAttendanceStats(tournamentId)
-    toast.success(`Đã đăng ký ${response.data?.updatedCount || 0} cầu thủ`)
+    const updatedPlayerIds = new Set(response.data?.playerIds || []);
+    attendanceModalData.value = attendanceModalData.value.map((item) =>
+      updatedPlayerIds.has(item.player.id)
+        ? { ...item, status: "ATTEND", field5: true, field7: true }
+        : item,
+    );
+    attendanceDetailsMap.value.set(tournamentId, attendanceModalData.value);
+    selectedPendingPlayerIds.value = new Set();
+    await fetchAttendanceStats(tournamentId);
+    toast.success(`Đã đăng ký ${response.data?.updatedCount || 0} cầu thủ`);
   } catch (error: any) {
-    toast.error(error.response?.data?.error || error.message || 'Không thể đăng ký cầu thủ')
+    toast.error(
+      error.response?.data?.error ||
+        error.message ||
+        "Không thể đăng ký cầu thủ",
+    );
   } finally {
-    batchAttendanceSaving.value = false
+    batchAttendanceSaving.value = false;
   }
-}
+};
 
 const closeStadiumCostModal = () => {
-  showStadiumCostModal.value = false
-  stadiumCostTournament.value = null
-  stadiumCostForm.value = null
-}
+  showStadiumCostModal.value = false;
+  stadiumCostTournament.value = null;
+  stadiumCostForm.value = null;
+};
 
 const openSponsorMoneyModal = (tournament: Tournament) => {
-  sponsorMoneyTournament.value = tournament
-  selectedSponsorMoney.value = getTournamentSponsorMoney(tournament)
-  showSponsorMoneyModal.value = true
-}
+  sponsorMoneyTournament.value = tournament;
+  selectedSponsorMoney.value = getTournamentSponsorMoney(tournament);
+  showSponsorMoneyModal.value = true;
+};
 
 const closeSponsorMoneyModal = () => {
-  showSponsorMoneyModal.value = false
-  sponsorMoneyTournament.value = null
-}
+  showSponsorMoneyModal.value = false;
+  sponsorMoneyTournament.value = null;
+};
 
 const saveSponsorMoney = async () => {
-  if (!sponsorMoneyTournament.value || sponsorMoneySaving.value) return
+  if (!sponsorMoneyTournament.value || sponsorMoneySaving.value) return;
   try {
-    sponsorMoneySaving.value = true
-    const response = await apiClient.updateTournament(sponsorMoneyTournament.value.id, { sponsorMoney: selectedSponsorMoney.value })
-    if (!response.success || !response.data) throw new Error(response.error || 'Không thể lưu tiền tài trợ')
-    const tournament = weeklyTournaments.value.find(item => item.id === sponsorMoneyTournament.value?.id)
-    if (tournament) tournament.sponsorMoney = (response.data as Tournament).sponsorMoney
-    toast.success('Đã cập nhật tiền tài trợ')
-    closeSponsorMoneyModal()
+    sponsorMoneySaving.value = true;
+    const response = await apiClient.updateTournament(
+      sponsorMoneyTournament.value.id,
+      { sponsorMoney: selectedSponsorMoney.value },
+    );
+    if (!response.success || !response.data)
+      throw new Error(response.error || "Không thể lưu tiền tài trợ");
+    const tournament = weeklyTournaments.value.find(
+      (item) => item.id === sponsorMoneyTournament.value?.id,
+    );
+    if (tournament)
+      tournament.sponsorMoney = (response.data as Tournament).sponsorMoney;
+    toast.success("Đã cập nhật tiền tài trợ");
+    closeSponsorMoneyModal();
   } catch (error: any) {
-    toast.error(error.response?.data?.error || error.message || 'Không thể lưu tiền tài trợ')
+    toast.error(
+      error.response?.data?.error ||
+        error.message ||
+        "Không thể lưu tiền tài trợ",
+    );
   } finally {
-    sponsorMoneySaving.value = false
+    sponsorMoneySaving.value = false;
   }
-}
+};
 
 const saveStadiumCost = async () => {
-  if (!stadiumCostTournament.value || stadiumCostForm.value === null || stadiumCostForm.value < 0 || stadiumCostSaving.value) return
+  if (
+    !stadiumCostTournament.value ||
+    stadiumCostForm.value === null ||
+    stadiumCostForm.value < 0 ||
+    stadiumCostSaving.value
+  )
+    return;
 
   try {
-    stadiumCostSaving.value = true
-    const response = await apiClient.updateTournament(stadiumCostTournament.value.id, {
-      stadiumCost: Math.round(stadiumCostForm.value),
-    })
-    if (!response.success || !response.data) throw new Error(response.error || 'Không thể lưu chi phí sân')
+    stadiumCostSaving.value = true;
+    const response = await apiClient.updateTournament(
+      stadiumCostTournament.value.id,
+      {
+        stadiumCost: Math.round(stadiumCostForm.value),
+      },
+    );
+    if (!response.success || !response.data)
+      throw new Error(response.error || "Không thể lưu chi phí sân");
 
-    const tournament = weeklyTournaments.value.find(item => item.id === stadiumCostTournament.value?.id)
-    if (tournament) tournament.stadiumCost = (response.data as Tournament).stadiumCost
-    toast.success('Đã cập nhật chi phí sân')
-    closeStadiumCostModal()
+    const tournament = weeklyTournaments.value.find(
+      (item) => item.id === stadiumCostTournament.value?.id,
+    );
+    if (tournament)
+      tournament.stadiumCost = (response.data as Tournament).stadiumCost;
+    toast.success("Đã cập nhật chi phí sân");
+    closeStadiumCostModal();
   } catch (error: any) {
-    toast.error(error.response?.data?.error || error.message || 'Không thể lưu chi phí sân')
+    toast.error(
+      error.response?.data?.error ||
+        error.message ||
+        "Không thể lưu chi phí sân",
+    );
   } finally {
-    stadiumCostSaving.value = false
+    stadiumCostSaving.value = false;
   }
-}
+};
 
 const openTournamentTimeModal = (tournament: Tournament) => {
-  const date = new Date(tournament.startDate)
-  selectedTournamentTime.value = `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`
-  timeTournament.value = tournament
-  showTournamentTimeModal.value = true
-}
+  const date = new Date(tournament.startDate);
+  selectedTournamentTime.value = `${String(date.getHours()).padStart(2, "0")}:${String(date.getMinutes()).padStart(2, "0")}`;
+  timeTournament.value = tournament;
+  showTournamentTimeModal.value = true;
+};
 
 const closeTournamentTimeModal = () => {
-  showTournamentTimeModal.value = false
-  timeTournament.value = null
-}
+  showTournamentTimeModal.value = false;
+  timeTournament.value = null;
+};
 
 const adjustTournamentTime = (minutesToAdjust: number): void => {
-  const [hours, minutes] = selectedTournamentTime.value.split(':').map(Number)
-  const totalMinutes = ((hours * 60 + minutes + minutesToAdjust) % 1440 + 1440) % 1440
-  selectedTournamentTime.value = `${String(Math.floor(totalMinutes / 60)).padStart(2, '0')}:${String(totalMinutes % 60).padStart(2, '0')}`
-}
+  const [hours, minutes] = selectedTournamentTime.value.split(":").map(Number);
+  const totalMinutes =
+    (((hours * 60 + minutes + minutesToAdjust) % 1440) + 1440) % 1440;
+  selectedTournamentTime.value = `${String(Math.floor(totalMinutes / 60)).padStart(2, "0")}:${String(totalMinutes % 60).padStart(2, "0")}`;
+};
 
 const saveTournamentTime = async () => {
-  if (!timeTournament.value || tournamentTimeSaving.value) return
+  if (!timeTournament.value || tournamentTimeSaving.value) return;
 
   try {
-    tournamentTimeSaving.value = true
-    const [hours, minutes] = selectedTournamentTime.value.split(':').map(Number)
-    const startDate = new Date(timeTournament.value.startDate)
-    startDate.setHours(hours, minutes, 0, 0)
-    const response = await apiClient.updateTournament(timeTournament.value.id, { startDate: startDate.toISOString() })
-    if (!response.success || !response.data) throw new Error(response.error || 'Không thể lưu giờ thi đấu')
+    tournamentTimeSaving.value = true;
+    const [hours, minutes] = selectedTournamentTime.value
+      .split(":")
+      .map(Number);
+    const startDate = new Date(timeTournament.value.startDate);
+    startDate.setHours(hours, minutes, 0, 0);
+    const response = await apiClient.updateTournament(timeTournament.value.id, {
+      startDate: startDate.toISOString(),
+    });
+    if (!response.success || !response.data)
+      throw new Error(response.error || "Không thể lưu giờ thi đấu");
 
-    const tournament = weeklyTournaments.value.find(item => item.id === timeTournament.value?.id)
-    if (tournament) tournament.startDate = (response.data as Tournament).startDate
-    toast.success('Đã cập nhật giờ thi đấu')
-    closeTournamentTimeModal()
+    const tournament = weeklyTournaments.value.find(
+      (item) => item.id === timeTournament.value?.id,
+    );
+    if (tournament)
+      tournament.startDate = (response.data as Tournament).startDate;
+    toast.success("Đã cập nhật giờ thi đấu");
+    closeTournamentTimeModal();
   } catch (error: any) {
-    toast.error(error.response?.data?.error || error.message || 'Không thể lưu giờ thi đấu')
+    toast.error(
+      error.response?.data?.error ||
+        error.message ||
+        "Không thể lưu giờ thi đấu",
+    );
   } finally {
-    tournamentTimeSaving.value = false
+    tournamentTimeSaving.value = false;
   }
-}
+};
 
 const getDefaultCancellationDeadline = (startDate: string | Date): Date => {
-  const deadline = new Date(startDate)
-  const startTime = deadline.getTime()
-  const daysSinceThursday = (deadline.getDay() - 4 + 7) % 7
-  deadline.setDate(deadline.getDate() - daysSinceThursday)
-  deadline.setHours(14, 0, 0, 0)
-  if (deadline.getTime() >= startTime) deadline.setDate(deadline.getDate() - 7)
-  return deadline
-}
+  const deadline = new Date(startDate);
+  const startTime = deadline.getTime();
+  const daysSinceThursday = (deadline.getDay() - 4 + 7) % 7;
+  deadline.setDate(deadline.getDate() - daysSinceThursday);
+  deadline.setHours(14, 0, 0, 0);
+  if (deadline.getTime() >= startTime) deadline.setDate(deadline.getDate() - 7);
+  return deadline;
+};
 
 const openCancellationDeadlineModal = (tournament: Tournament) => {
-  cancellationDeadlineTournament.value = tournament
-  const defaultDeadline = getDefaultCancellationDeadline(tournament.startDate)
+  cancellationDeadlineTournament.value = tournament;
+  const defaultDeadline = getDefaultCancellationDeadline(tournament.startDate);
   const deadline = tournament.cancellationDeadline
     ? new Date(tournament.cancellationDeadline)
-    : defaultDeadline.getTime() > Date.now() ? defaultDeadline : null
-  selectedCancellationDeadline.value = deadline ? toDateTimeLocalValue(deadline) : ''
-  currentTimestamp.value = Date.now()
-  showCancellationDeadlineModal.value = true
-}
+    : defaultDeadline.getTime() > Date.now()
+      ? defaultDeadline
+      : null;
+  selectedCancellationDeadline.value = deadline
+    ? toDateTimeLocalValue(deadline)
+    : "";
+  currentTimestamp.value = Date.now();
+  showCancellationDeadlineModal.value = true;
+};
 
 const closeCancellationDeadlineModal = () => {
-  showCancellationDeadlineModal.value = false
-  cancellationDeadlineTournament.value = null
-  selectedCancellationDeadline.value = ''
-}
+  showCancellationDeadlineModal.value = false;
+  cancellationDeadlineTournament.value = null;
+  selectedCancellationDeadline.value = "";
+};
 
 const saveCancellationDeadline = async () => {
-  if (!cancellationDeadlineTournament.value || !selectedCancellationDeadline.value || cancellationDeadlineSaving.value) return
-  const deadline = new Date(selectedCancellationDeadline.value)
-  const startDate = new Date(cancellationDeadlineTournament.value.startDate)
-  if (Number.isNaN(deadline.getTime()) || deadline.getTime() <= Date.now() || deadline.getTime() >= startDate.getTime()) {
-    toast.error('Thời gian chốt hủy phải sau thời điểm hiện tại và trước giờ diễn ra giải đấu')
-    return
+  if (
+    !cancellationDeadlineTournament.value ||
+    !selectedCancellationDeadline.value ||
+    cancellationDeadlineSaving.value
+  )
+    return;
+  const deadline = new Date(selectedCancellationDeadline.value);
+  const startDate = new Date(cancellationDeadlineTournament.value.startDate);
+  if (
+    Number.isNaN(deadline.getTime()) ||
+    deadline.getTime() <= Date.now() ||
+    deadline.getTime() >= startDate.getTime()
+  ) {
+    toast.error(
+      "Thời gian chốt hủy phải sau thời điểm hiện tại và trước giờ diễn ra giải đấu",
+    );
+    return;
   }
   try {
-    cancellationDeadlineSaving.value = true
-    const response = await apiClient.updateTournament(cancellationDeadlineTournament.value.id, {
-      cancellationDeadline: deadline.toISOString(),
-    })
-    if (!response.success || !response.data) throw new Error(response.error || 'Không thể lưu thời gian chốt hủy')
-    const tournament = weeklyTournaments.value.find(item => item.id === cancellationDeadlineTournament.value?.id)
-    if (tournament) tournament.cancellationDeadline = (response.data as Tournament).cancellationDeadline ?? null
-    toast.success('Đã cập nhật thời gian chốt hủy')
-    closeCancellationDeadlineModal()
+    cancellationDeadlineSaving.value = true;
+    const response = await apiClient.updateTournament(
+      cancellationDeadlineTournament.value.id,
+      {
+        cancellationDeadline: deadline.toISOString(),
+      },
+    );
+    if (!response.success || !response.data)
+      throw new Error(response.error || "Không thể lưu thời gian chốt hủy");
+    const tournament = weeklyTournaments.value.find(
+      (item) => item.id === cancellationDeadlineTournament.value?.id,
+    );
+    if (tournament)
+      tournament.cancellationDeadline =
+        (response.data as Tournament).cancellationDeadline ?? null;
+    toast.success("Đã cập nhật thời gian chốt hủy");
+    closeCancellationDeadlineModal();
   } catch (error: any) {
-    toast.error(error.response?.data?.error || error.message || 'Không thể lưu thời gian chốt hủy')
+    toast.error(
+      error.response?.data?.error ||
+        error.message ||
+        "Không thể lưu thời gian chốt hủy",
+    );
   } finally {
-    cancellationDeadlineSaving.value = false
+    cancellationDeadlineSaving.value = false;
   }
-}
+};
 
 const openFundContributionModal = (tournament: Tournament) => {
-  fundContributionTournament.value = tournament
-  fundContributionForm.value = getTournamentFundContribution(tournament)
-  showFundContributionModal.value = true
-}
+  fundContributionTournament.value = tournament;
+  fundContributionForm.value = getTournamentFundContribution(tournament);
+  showFundContributionModal.value = true;
+};
 
 const openPitchTypeModal = (tournament: Tournament) => {
-  pitchTypeTournament.value = tournament
-  const field5Count = getFieldAttendanceCount(tournament.id, 'FIELD_5')
-  const field7Count = getFieldAttendanceCount(tournament.id, 'FIELD_7')
-  selectedPitchType.value = field5Count > field7Count ? 'FIELD_5' : 'FIELD_7'
-  showPitchTypeModal.value = true
-}
+  pitchTypeTournament.value = tournament;
+  const field5Count = getFieldAttendanceCount(tournament.id, "FIELD_5");
+  const field7Count = getFieldAttendanceCount(tournament.id, "FIELD_7");
+  selectedPitchType.value = field5Count > field7Count ? "FIELD_5" : "FIELD_7";
+  showPitchTypeModal.value = true;
+};
 
 const savePitchType = async () => {
-  if (!pitchTypeTournament.value) return
+  if (!pitchTypeTournament.value) return;
   try {
-    const response = await apiClient.updateTournament(pitchTypeTournament.value.id, { pitchType: selectedPitchType.value })
-    if (!response.success) throw new Error(response.error || 'Không thể cập nhật sân')
-    showPitchTypeModal.value = false
-    await fetchData()
-    toast.success('Đã chọn sân')
-  } catch (error: any) { toast.error(error.message || 'Không thể cập nhật sân') }
-}
+    const response = await apiClient.updateTournament(
+      pitchTypeTournament.value.id,
+      { pitchType: selectedPitchType.value },
+    );
+    if (!response.success)
+      throw new Error(response.error || "Không thể cập nhật sân");
+    showPitchTypeModal.value = false;
+    await fetchData();
+    toast.success("Đã chọn sân");
+  } catch (error: any) {
+    toast.error(error.message || "Không thể cập nhật sân");
+  }
+};
 
 const openMaxAttendanceModal = (tournament: Tournament) => {
-  maxAttendanceTournament.value = tournament
-  selectedMaxAttendance.value = tournament.maxAttendance ?? null
-  showMaxAttendanceModal.value = true
-}
+  maxAttendanceTournament.value = tournament;
+  selectedMaxAttendance.value = tournament.maxAttendance ?? null;
+  showMaxAttendanceModal.value = true;
+};
 
 const closeMaxAttendanceModal = () => {
-  showMaxAttendanceModal.value = false
-  maxAttendanceTournament.value = null
-  selectedMaxAttendance.value = null
-}
+  showMaxAttendanceModal.value = false;
+  maxAttendanceTournament.value = null;
+  selectedMaxAttendance.value = null;
+};
 
 const saveMaxAttendance = async () => {
-  if (!maxAttendanceTournament.value || maxAttendanceSaving.value) return
+  if (!maxAttendanceTournament.value || maxAttendanceSaving.value) return;
   try {
-    maxAttendanceSaving.value = true
-    const response = await apiClient.updateTournament(maxAttendanceTournament.value.id, { maxAttendance: selectedMaxAttendance.value })
-    if (!response.success || !response.data) throw new Error(response.error || 'Không thể lưu số lượng cầu thủ')
-    const tournament = weeklyTournaments.value.find(item => item.id === maxAttendanceTournament.value?.id)
-    if (tournament) tournament.maxAttendance = (response.data as Tournament).maxAttendance ?? null
-    toast.success(selectedMaxAttendance.value ? `Đã giới hạn tối đa ${selectedMaxAttendance.value} cầu thủ` : 'Đã bỏ giới hạn số lượng cầu thủ')
-    closeMaxAttendanceModal()
+    maxAttendanceSaving.value = true;
+    const response = await apiClient.updateTournament(
+      maxAttendanceTournament.value.id,
+      { maxAttendance: selectedMaxAttendance.value },
+    );
+    if (!response.success || !response.data)
+      throw new Error(response.error || "Không thể lưu số lượng cầu thủ");
+    const tournament = weeklyTournaments.value.find(
+      (item) => item.id === maxAttendanceTournament.value?.id,
+    );
+    if (tournament)
+      tournament.maxAttendance =
+        (response.data as Tournament).maxAttendance ?? null;
+    toast.success(
+      selectedMaxAttendance.value
+        ? `Đã giới hạn tối đa ${selectedMaxAttendance.value} cầu thủ`
+        : "Đã bỏ giới hạn số lượng cầu thủ",
+    );
+    closeMaxAttendanceModal();
   } catch (error: any) {
-    toast.error(error.response?.data?.error || error.message || 'Không thể lưu số lượng cầu thủ')
-  } finally { maxAttendanceSaving.value = false }
-}
+    toast.error(
+      error.response?.data?.error ||
+        error.message ||
+        "Không thể lưu số lượng cầu thủ",
+    );
+  } finally {
+    maxAttendanceSaving.value = false;
+  }
+};
 
 const closeFundContributionModal = () => {
-  showFundContributionModal.value = false
-  fundContributionTournament.value = null
-  fundContributionForm.value = null
-}
+  showFundContributionModal.value = false;
+  fundContributionTournament.value = null;
+  fundContributionForm.value = null;
+};
 
 const saveFundContribution = async () => {
-  if (!fundContributionTournament.value || fundContributionForm.value === null || fundContributionForm.value < 0 || fundContributionSaving.value) return
+  if (
+    !fundContributionTournament.value ||
+    fundContributionForm.value === null ||
+    fundContributionForm.value < 0 ||
+    fundContributionSaving.value
+  )
+    return;
 
   try {
-    fundContributionSaving.value = true
-    const response = await apiClient.updateTournament(fundContributionTournament.value.id, {
-      fundContribution: Math.round(fundContributionForm.value),
-    })
-    if (!response.success || !response.data) throw new Error(response.error || 'Không thể lưu số tiền trích quỹ')
+    fundContributionSaving.value = true;
+    const response = await apiClient.updateTournament(
+      fundContributionTournament.value.id,
+      {
+        fundContribution: Math.round(fundContributionForm.value),
+      },
+    );
+    if (!response.success || !response.data)
+      throw new Error(response.error || "Không thể lưu số tiền trích quỹ");
 
-    const tournament = weeklyTournaments.value.find(item => item.id === fundContributionTournament.value?.id)
-    if (tournament) tournament.fundContribution = (response.data as Tournament).fundContribution || 0
-    toast.success('Đã cập nhật số tiền trích quỹ')
-    closeFundContributionModal()
+    const tournament = weeklyTournaments.value.find(
+      (item) => item.id === fundContributionTournament.value?.id,
+    );
+    if (tournament)
+      tournament.fundContribution =
+        (response.data as Tournament).fundContribution || 0;
+    toast.success("Đã cập nhật số tiền trích quỹ");
+    closeFundContributionModal();
   } catch (error: any) {
-    toast.error(error.response?.data?.error || error.message || 'Không thể lưu số tiền trích quỹ')
+    toast.error(
+      error.response?.data?.error ||
+        error.message ||
+        "Không thể lưu số tiền trích quỹ",
+    );
   } finally {
-    fundContributionSaving.value = false
+    fundContributionSaving.value = false;
   }
-}
+};
 
 // Additional Cost functions
 const openAdditionalCostModal = async (tournament: Tournament) => {
   if (tournament.selfFunded) {
-    toast.error('Giải tự túc không hỗ trợ chi phí phát sinh')
-    return
+    toast.error("Giải tự túc không hỗ trợ chi phí phát sinh");
+    return;
   }
-  selectedTournamentForCosts.value = tournament
-  showAdditionalCostModal.value = true
-  editingCostId.value = null
+  selectedTournamentForCosts.value = tournament;
+  showAdditionalCostModal.value = true;
+  editingCostId.value = null;
   additionalCostForm.value = {
-    description: '',
-    amount: null
-  }
+    description: "",
+    amount: null,
+  };
   // Fetch additional costs for this tournament
-  await systemStore.fetchAdditionalCosts(tournament.id)
+  await systemStore.fetchAdditionalCosts(tournament.id);
   if (currentAdditionalCosts.value.length === 0) {
-    additionalCostForm.value.description = 'Tiền Nước'
+    additionalCostForm.value.description = "Tiền Nước";
   }
-}
+};
 
 const toggleSelfFunded = async (tournament: Tournament) => {
   if (selfFundedSaving.value || tournament.isProtected) {
-    if (tournament.isProtected) toast.error('Giải đấu đã Protect, không thể thay đổi chế độ quỹ')
-    return
+    if (tournament.isProtected)
+      toast.error("Giải đấu đã Protect, không thể thay đổi chế độ quỹ");
+    return;
   }
 
   try {
-    selfFundedSaving.value = true
-    const response = await apiClient.updateTournament(tournament.id, { selfFunded: !tournament.selfFunded })
-    if (!response.success || !response.data) throw new Error(response.error || 'Không thể cập nhật chế độ tự túc')
+    selfFundedSaving.value = true;
+    const response = await apiClient.updateTournament(tournament.id, {
+      selfFunded: !tournament.selfFunded,
+    });
+    if (!response.success || !response.data)
+      throw new Error(response.error || "Không thể cập nhật chế độ tự túc");
 
-    const updatedTournament = response.data as Tournament
-    Object.assign(tournament, updatedTournament)
+    const updatedTournament = response.data as Tournament;
+    Object.assign(tournament, updatedTournament);
     await Promise.all([
       systemStore.fetchAdditionalCosts(tournament.id),
       fetchAttendance(tournament.id),
       fetchAttendanceDetails(tournament.id),
       fetchAttendanceStats(tournament.id),
-    ])
-    toast.success(updatedTournament.selfFunded
-      ? 'Đã bật Tự túc: Sponsor, nước, Ngôi sao hy vọng và chi phí phát sinh đã được tắt'
-      : 'Đã tắt chế độ Tự túc')
+    ]);
+    toast.success(
+      updatedTournament.selfFunded
+        ? "Đã bật Tự túc: Sponsor, nước, Ngôi sao hy vọng và chi phí phát sinh đã được tắt"
+        : "Đã tắt chế độ Tự túc",
+    );
   } catch (error: any) {
-    toast.error(error.response?.data?.error || error.message || 'Không thể cập nhật chế độ tự túc')
+    toast.error(
+      error.response?.data?.error ||
+        error.message ||
+        "Không thể cập nhật chế độ tự túc",
+    );
   } finally {
-    selfFundedSaving.value = false
+    selfFundedSaving.value = false;
   }
-}
+};
 
 const closeAdditionalCostModal = () => {
-  showAdditionalCostModal.value = false
-  selectedTournamentForCosts.value = null
-  editingCostId.value = null
+  showAdditionalCostModal.value = false;
+  selectedTournamentForCosts.value = null;
+  editingCostId.value = null;
   additionalCostForm.value = {
-    description: '',
-    amount: null
-  }
-}
+    description: "",
+    amount: null,
+  };
+};
 
 const editAdditionalCost = (cost: any) => {
   additionalCostForm.value = {
     description: cost.description,
-    amount: cost.amount
-  }
-  editingCostId.value = cost.id
-}
+    amount: cost.amount,
+  };
+  editingCostId.value = cost.id;
+};
 
 const cancelEdit = () => {
   additionalCostForm.value = {
-    description: '',
-    amount: null
-  }
-  editingCostId.value = null
-}
+    description: "",
+    amount: null,
+  };
+  editingCostId.value = null;
+};
 
 const saveAdditionalCost = async () => {
-  if (!selectedTournamentForCosts.value || additionalCostLoading.value) return
-  
+  if (!selectedTournamentForCosts.value || additionalCostLoading.value) return;
+
   // Client-side validation
   if (additionalCostForm.value.description.trim().length < 3) {
-    toast.error('Mô tả phải có ít nhất 3 ký tự')
-    return
+    toast.error("Mô tả phải có ít nhất 3 ký tự");
+    return;
   }
-  
-  if (!additionalCostForm.value.amount || additionalCostForm.value.amount <= 0) {
-    toast.error('Số tiền phải lớn hơn 0')
-    return
+
+  if (
+    !additionalCostForm.value.amount ||
+    additionalCostForm.value.amount <= 0
+  ) {
+    toast.error("Số tiền phải lớn hơn 0");
+    return;
   }
-  
+
   try {
-    additionalCostLoading.value = true
-    
+    additionalCostLoading.value = true;
+
     const costData = {
       description: additionalCostForm.value.description.trim(),
-      amount: additionalCostForm.value.amount
-    }
-    
-    let response
+      amount: additionalCostForm.value.amount,
+    };
+
+    let response;
     if (editingCostId.value) {
       // Edit existing cost
-      response = await systemStore.updateAdditionalCost(editingCostId.value, costData)
+      response = await systemStore.updateAdditionalCost(
+        editingCostId.value,
+        costData,
+      );
       if (response) {
-        toast.success('Đã cập nhật chi phí phát sinh')
+        toast.success("Đã cập nhật chi phí phát sinh");
       }
     } else {
       // Add new cost
       response = await systemStore.createAdditionalCost({
         tournamentId: selectedTournamentForCosts.value.id,
-        ...costData
-      })
+        ...costData,
+      });
       if (response) {
-        toast.success('Đã thêm chi phí phát sinh')
+        toast.success("Đã thêm chi phí phát sinh");
       }
     }
-    
+
     if (response) {
       // Reset form
       additionalCostForm.value = {
-        description: '',
-        amount: null
-      }
-      editingCostId.value = null
+        description: "",
+        amount: null,
+      };
+      editingCostId.value = null;
       // Refresh the costs
-      await systemStore.fetchAdditionalCosts(selectedTournamentForCosts.value.id)
+      await systemStore.fetchAdditionalCosts(
+        selectedTournamentForCosts.value.id,
+      );
     }
   } catch (err: any) {
-    console.error('Save additional cost error:', err)
-    toast.error(err.response?.data?.error || 'Không thể lưu chi phí phát sinh')
+    console.error("Save additional cost error:", err);
+    toast.error(err.response?.data?.error || "Không thể lưu chi phí phát sinh");
   } finally {
-    additionalCostLoading.value = false
+    additionalCostLoading.value = false;
   }
-}
+};
 
 const deleteAdditionalCost = async (costId: string) => {
   deleteCostId.value = costId;
   showDeleteCostModal.value = true;
-}
+};
 
 const confirmDeleteCost = async () => {
   if (!deleteCostId.value) return;
-  
+
   try {
     const success = await systemStore.deleteAdditionalCost(deleteCostId.value);
     if (success) {
-      toast.success('Đã xóa chi phí phát sinh');
+      toast.success("Đã xóa chi phí phát sinh");
       // Refresh the costs if we have a selected tournament
       if (selectedTournamentForCosts.value) {
-        await systemStore.fetchAdditionalCosts(selectedTournamentForCosts.value.id);
+        await systemStore.fetchAdditionalCosts(
+          selectedTournamentForCosts.value.id,
+        );
       }
     }
   } catch (err: any) {
-    console.error('Delete additional cost error:', err);
-    toast.error(err.response?.data?.error || 'Không thể xóa chi phí phát sinh');
+    console.error("Delete additional cost error:", err);
+    toast.error(err.response?.data?.error || "Không thể xóa chi phí phát sinh");
   } finally {
     showDeleteCostModal.value = false;
     deleteCostId.value = null;
   }
-}
+};
 
 // Helper function to extract team number from team name
 const getTeamNumber = (teamName: string): string => {
   // Extract number from team name like "Team 1 - 2025-07-21" => "1"
-  const match = teamName.match(/Team (\d+)/)
-  return match ? match[1] : teamName.charAt(teamName.length - 1)
-}
+  const match = teamName.match(/Team (\d+)/);
+  return match ? match[1] : teamName.charAt(teamName.length - 1);
+};
 
 const displayTeamName = (teamName: string): string => {
-  const generatedTeamName = teamName.match(/^(Team\s+\d+)/i)
-  return generatedTeamName?.[1] || teamName.replace(/\s*\([^)]*\)\s*$/, '')
-}
+  const generatedTeamName = teamName.match(/^(Team\s+\d+)/i);
+  return generatedTeamName?.[1] || teamName.replace(/\s*\([^)]*\)\s*$/, "");
+};
 
-const getTeamJerseyLabel = (teamName: string): string => ({
-  '1': 'Áo xanh lá',
-  '2': 'Áo cam',
-  '3': 'Áo xanh dương',
-  '4': 'Áo trắng',
-}[getTeamNumber(teamName)] || '')
+const getTeamJerseyLabel = (teamName: string): string =>
+  ({
+    "1": "Áo xanh lá",
+    "2": "Áo cam",
+    "3": "Áo xanh dương",
+    "4": "Áo trắng",
+  })[getTeamNumber(teamName)] || "";
 
-const getTeamNumberClass = (teamName: string): string => ({
-  '1': 'bg-green-600 text-white',
-  '2': 'bg-orange-500 text-white',
-  '3': 'bg-blue-600 text-white',
-  '4': 'border border-gray-300 bg-white text-gray-900',
-}[getTeamNumber(teamName)] || 'bg-primary-600 text-white')
+const getTeamNumberClass = (teamName: string): string =>
+  ({
+    "1": "bg-green-600 text-white",
+    "2": "bg-orange-500 text-white",
+    "3": "bg-blue-600 text-white",
+    "4": "border border-gray-300 bg-white text-gray-900",
+  })[getTeamNumber(teamName)] || "bg-primary-600 text-white";
 
-const getTeamCardClass = (teamName: string): string => ({
-  '1': 'border-green-300',
-  '2': 'border-orange-300',
-  '3': 'border-blue-300',
-  '4': 'border-gray-300',
-}[getTeamNumber(teamName)] || 'border-primary-200')
+const getTeamCardClass = (teamName: string): string =>
+  ({
+    "1": "border-green-300",
+    "2": "border-orange-300",
+    "3": "border-blue-300",
+    "4": "border-gray-300",
+  })[getTeamNumber(teamName)] || "border-primary-200";
 
-const getTeamTextClass = (teamName: string): string => ({
-  '1': 'text-green-700',
-  '2': 'text-orange-700',
-  '3': 'text-blue-700',
-  '4': 'text-gray-700',
-}[getTeamNumber(teamName)] || 'text-primary-700')
+const getTeamTextClass = (teamName: string): string =>
+  ({
+    "1": "text-green-700",
+    "2": "text-orange-700",
+    "3": "text-blue-700",
+    "4": "text-gray-700",
+  })[getTeamNumber(teamName)] || "text-primary-700";
 
 // Helper function to get the team with the highest score
 const getHighestScoreTeam = (teams: any[]): any | null => {
-  if (!teams || teams.length === 0) return null
+  if (!teams || teams.length === 0) return null;
   return teams.reduce((highest, current) => {
-    const currentScore = current.score || 0
-    const highestScore = highest.score || 0
-    return currentScore > highestScore ? current : highest
-  })
-}
+    const currentScore = current.score || 0;
+    const highestScore = highest.score || 0;
+    return currentScore > highestScore ? current : highest;
+  });
+};
 
 // Helper function to get sorted teams by score (highest to lowest)
 const getSortedTeamsByScore = (teams: any[]): any[] => {
-  if (!teams || teams.length === 0) return []
-  return [...teams].sort((a, b) => (b.score || 0) - (a.score || 0))
-}
+  if (!teams || teams.length === 0) return [];
+  return [...teams].sort((a, b) => (b.score || 0) - (a.score || 0));
+};
 
 // Helper function to get the team with the lowest score
 const getLowestScoreTeam = (teams: any[]): any | null => {
-  if (!teams || teams.length === 0) return null
+  if (!teams || teams.length === 0) return null;
   return teams.reduce((lowest, current) => {
-    const currentScore = current.score || 0
-    const lowestScore = lowest.score || 0
-    return currentScore < lowestScore ? current : lowest
-  })
-}
+    const currentScore = current.score || 0;
+    const lowestScore = lowest.score || 0;
+    return currentScore < lowestScore ? current : lowest;
+  });
+};
 
 // Helper function to calculate betting win amount based on number of teams
 // Helper function to get betting count from attendance details
-const isAttendingSelectedPitch = (tournamentId: string, attendance: Pick<TournamentAttendanceDetails, 'status' | 'field5' | 'field7'>): boolean => {
-  if (attendance.status !== 'ATTEND') return false
-  const pitchType = getTournamentById(tournamentId)?.pitchType
-  return pitchType === 'FIELD_5' ? Boolean(attendance.field5) : pitchType === 'FIELD_7' ? Boolean(attendance.field7) : true
-}
+const isAttendingSelectedPitch = (
+  tournamentId: string,
+  attendance: Pick<
+    TournamentAttendanceDetails,
+    "status" | "field5" | "field7" | "notOnField"
+  >,
+): boolean => {
+  if (attendance.status !== "ATTEND") return false;
+  const pitchType = getTournamentById(tournamentId)?.pitchType;
+  return pitchType === "FIELD_5"
+    ? Boolean(attendance.field5)
+    : pitchType === "FIELD_7"
+      ? Boolean(attendance.field7)
+      : true;
+};
 
 const getBettingCount = (tournamentId: string): number => {
-  const details = attendanceDetailsMap.value.get(tournamentId)
-  if (!details || !Array.isArray(details) || !details.length) return 0
-  return details.filter((detail: any) => detail.bet === true && isAttendingSelectedPitch(tournamentId, detail)).length
-}
+  const details = attendanceDetailsMap.value.get(tournamentId);
+  if (!details || !Array.isArray(details) || !details.length) return 0;
+  return details.filter(
+    (detail: any) =>
+      detail.bet === true && isAttendingSelectedPitch(tournamentId, detail),
+  ).length;
+};
 
 const getWaterCount = (tournamentId: string): number => {
-  const details = attendanceDetailsMap.value.get(tournamentId)
+  const details = attendanceDetailsMap.value.get(tournamentId);
   return Array.isArray(details)
-    ? details.filter((detail: any) => detail.status === 'ATTEND' && detail.withWater === true).length
-    : 0
-}
+    ? details.filter(
+        (detail: any) =>
+          detail.status === "ATTEND" && detail.withWater === true,
+      ).length
+    : 0;
+};
 
 // Helper function to calculate betting win amount based on number of teams
-const getBettingWinAmount = (): number => 10000
+const getBettingWinAmount = (): number => 10000;
 
 // Helper function to get attendance status for a player in a tournament
-const getAttendanceStatus = (tournamentId: string, playerId: string): string => {
-  const details = attendanceDetailsMap.value.get(tournamentId)
-  if (!details || !Array.isArray(details)) return 'NULL'
-  
-  const playerAttendance = details.find((d: any) => d.playerId === playerId)
-  return playerAttendance?.status || 'NULL'
-}
+const getAttendanceStatus = (
+  tournamentId: string,
+  playerId: string,
+): string => {
+  const details = attendanceDetailsMap.value.get(tournamentId);
+  if (!details || !Array.isArray(details)) return "NULL";
+
+  const playerAttendance = details.find((d: any) => d.playerId === playerId);
+  return playerAttendance?.status || "NULL";
+};
 
 // Check if tournament can be ended (clear winner and loser)
 const canEndTournament = (tournamentId: string): boolean => {
-  const tournament = weeklyTournaments.value.find(t => t.id === tournamentId)
-  if (!tournament || tournament.status !== 'ONGOING') return false
-  
-  const teams = getTournamentTeams(tournament)
-  if (teams.length < 2) return false
-  
+  const tournament = weeklyTournaments.value.find((t) => t.id === tournamentId);
+  if (!tournament || tournament.status !== "ONGOING") return false;
+
+  const teams = getTournamentTeams(tournament);
+  if (teams.length < 2) return false;
+
   // Get all unique scores
-  const scores = teams.map(team => team.score || 0)
-  const uniqueScores = [...new Set(scores)].sort((a, b) => b - a) // Sort descending
-  
-  if (uniqueScores.length < 2) return false // All teams have same score
-  
-  const highestScore = uniqueScores[0]
-  const lowestScore = uniqueScores[uniqueScores.length - 1]
-  
+  const scores = teams.map((team) => team.score || 0);
+  const uniqueScores = [...new Set(scores)].sort((a, b) => b - a); // Sort descending
+
+  if (uniqueScores.length < 2) return false; // All teams have same score
+
+  const highestScore = uniqueScores[0];
+  const lowestScore = uniqueScores[uniqueScores.length - 1];
+
   // Count teams with highest score
-  const teamsWithHighestScore = teams.filter(team => (team.score || 0) === highestScore)
-  // Count teams with lowest score  
-  const teamsWithLowestScore = teams.filter(team => (team.score || 0) === lowestScore)
-  
+  const teamsWithHighestScore = teams.filter(
+    (team) => (team.score || 0) === highestScore,
+  );
+  // Count teams with lowest score
+  const teamsWithLowestScore = teams.filter(
+    (team) => (team.score || 0) === lowestScore,
+  );
+
   // Can end only if there's exactly one team with highest score and one with lowest score
-  return teamsWithHighestScore.length === 1 && teamsWithLowestScore.length === 1
-}
+  return (
+    teamsWithHighestScore.length === 1 && teamsWithLowestScore.length === 1
+  );
+};
 
 // Get tournament end status message
 const getTournamentEndStatusMessage = (tournamentId: string): string => {
-  const tournament = weeklyTournaments.value.find(t => t.id === tournamentId)
-  if (!tournament || tournament.status !== 'ONGOING') return ''
-  
-  const teams = getTournamentTeams(tournament)
-  if (teams.length < 2) return 'Cần ít nhất 2 đội'
-  
-  const scores = teams.map(team => team.score || 0)
-  const uniqueScores = [...new Set(scores)].sort((a, b) => b - a)
-  
-  if (uniqueScores.length < 2) return 'Tất cả đội có cùng điểm số'
-  
-  const highestScore = uniqueScores[0]
-  const lowestScore = uniqueScores[uniqueScores.length - 1]
-  
-  const teamsWithHighestScore = teams.filter(team => (team.score || 0) === highestScore)
-  const teamsWithLowestScore = teams.filter(team => (team.score || 0) === lowestScore)
-  
+  const tournament = weeklyTournaments.value.find((t) => t.id === tournamentId);
+  if (!tournament || tournament.status !== "ONGOING") return "";
+
+  const teams = getTournamentTeams(tournament);
+  if (teams.length < 2) return "Cần ít nhất 2 đội";
+
+  const scores = teams.map((team) => team.score || 0);
+  const uniqueScores = [...new Set(scores)].sort((a, b) => b - a);
+
+  if (uniqueScores.length < 2) return "Tất cả đội có cùng điểm số";
+
+  const highestScore = uniqueScores[0];
+  const lowestScore = uniqueScores[uniqueScores.length - 1];
+
+  const teamsWithHighestScore = teams.filter(
+    (team) => (team.score || 0) === highestScore,
+  );
+  const teamsWithLowestScore = teams.filter(
+    (team) => (team.score || 0) === lowestScore,
+  );
+
   if (teamsWithHighestScore.length > 1) {
-    return `${teamsWithHighestScore.length} đội đồng điểm cao nhất (${highestScore})`
+    return `${teamsWithHighestScore.length} đội đồng điểm cao nhất (${highestScore})`;
   }
-  
+
   if (teamsWithLowestScore.length > 1) {
-    return `${teamsWithLowestScore.length} đội đồng điểm thấp nhất (${lowestScore})`
+    return `${teamsWithLowestScore.length} đội đồng điểm thấp nhất (${lowestScore})`;
   }
-  
-  return '' // Can end tournament
-}
+
+  return ""; // Can end tournament
+};
 
 // Fetch all data
 const fetchData = async () => {
@@ -4049,424 +8484,660 @@ const fetchData = async () => {
     await Promise.all([
       tournamentsStore.fetchTournaments(),
       teamsStore.fetchTeams(),
-      systemStore.fetchSystemSettings()
-    ])
-    await loadOldTournaments()
-    
+      systemStore.fetchSystemSettings(),
+    ]);
+    await loadOldTournaments();
+
     // Only load attendance for the currently displayed tournament on first render.
     // Historical tournaments are loaded on demand when the user opens that tab.
-    await loadAttendanceData(weeklyTournaments.value.filter(tournament => tournament.status !== 'COMPLETED'))
+    await loadAttendanceData(
+      weeklyTournaments.value.filter(
+        (tournament) => tournament.status !== "COMPLETED",
+      ),
+    );
   } catch (err: any) {
-    console.error('Fetch data error:', err)
-    toast.error(err.response?.data?.error || 'Không thể tải dữ liệu')
+    console.error("Fetch data error:", err);
+    toast.error(err.response?.data?.error || "Không thể tải dữ liệu");
   }
-}
+};
 
 // Initialize
 onMounted(async () => {
-  await fetchData()
-})
+  await fetchData();
+});
 
 const cancellationDeadlineTimer = window.setInterval(() => {
-  currentTimestamp.value = Date.now()
-}, 30_000)
+  currentTimestamp.value = Date.now();
+}, 30_000);
 
-onBeforeUnmount(() => window.clearInterval(cancellationDeadlineTimer))
+onBeforeUnmount(() => window.clearInterval(cancellationDeadlineTimer));
 
 // Water-related functions
 const getUserWaterStatus = (tournamentId: string): boolean => {
-  const attendance = attendanceMap.value.get(tournamentId)
-  return attendance?.withWater || false
-}
+  const attendance = attendanceMap.value.get(tournamentId);
+  return attendance?.withWater || false;
+};
 
 // Bet-related functions
 const getUserBetStatus = (tournamentId: string): boolean => {
-  const attendance = attendanceMap.value.get(tournamentId)
-  return attendance?.bet || false
-}
+  const attendance = attendanceMap.value.get(tournamentId);
+  return attendance?.bet || false;
+};
 
 const getUserAttendanceStatus = (tournamentId: string): string => {
-  const attendance = attendanceMap.value.get(tournamentId)
-  if (!attendance || (attendance as any).status === 'NO_PLAYER') return 'NO_PLAYER'
-  return attendance.status || 'NULL'
-}
+  const attendance = attendanceMap.value.get(tournamentId);
+  if (!attendance || (attendance as any).status === "NO_PLAYER")
+    return "NO_PLAYER";
+  return attendance.status || "NULL";
+};
 
 const isCurrentUserPlayer = (playerId: string): boolean => {
-  const currentPlayerId = authStore.currentUser?.player?.id || authStore.currentUser?.playerId
-  return Boolean(currentPlayerId && currentPlayerId === playerId)
-}
+  const currentPlayerId =
+    authStore.currentUser?.player?.id || authStore.currentUser?.playerId;
+  return Boolean(currentPlayerId && currentPlayerId === playerId);
+};
 
 const toggleWater = async (tournamentId: string): Promise<void> => {
-  if (waterLoading.value.has(tournamentId)) return
-  
-  const currentAttendance = attendanceMap.value.get(tournamentId)
-  
+  if (waterLoading.value.has(tournamentId)) return;
+
+  const currentAttendance = attendanceMap.value.get(tournamentId);
+
   // Only allow water toggle if user is attending
-  if (!currentAttendance || currentAttendance.status !== 'ATTEND') {
-    return
+  if (!currentAttendance || currentAttendance.status !== "ATTEND") {
+    return;
   }
-  
+
   try {
-    waterLoading.value.add(tournamentId)
-    
-    const newWaterStatus = !currentAttendance.withWater
-    
+    waterLoading.value.add(tournamentId);
+
+    const newWaterStatus = !currentAttendance.withWater;
+
     const response = await apiClient.put<TournamentPlayerAttendance>(
       `/tournaments/${tournamentId}/attendance`,
-      { 
+      {
         status: currentAttendance.status,
-        withWater: newWaterStatus
-      }
-    )
-    
+        withWater: newWaterStatus,
+      },
+    );
+
     if (response.success && response.data) {
-      attendanceMap.value.set(tournamentId, response.data)
-      toast.success(newWaterStatus ? 'Đã chọn nước!' : 'Đã bỏ chọn nước!')
+      attendanceMap.value.set(tournamentId, response.data);
+      toast.success(newWaterStatus ? "Đã chọn nước!" : "Đã bỏ chọn nước!");
     }
   } catch (err: any) {
-    console.error('Toggle water error:', err)
-    toast.error(err.response?.data?.error || 'Không thể cập nhật lựa chọn nước')
+    console.error("Toggle water error:", err);
+    toast.error(
+      err.response?.data?.error || "Không thể cập nhật lựa chọn nước",
+    );
   } finally {
-    waterLoading.value.delete(tournamentId)
+    waterLoading.value.delete(tournamentId);
   }
-}
+};
 
 const toggleBet = async (tournamentId: string): Promise<void> => {
-  if (betLoading.value.has(tournamentId)) return
-  
-  const currentAttendance = attendanceMap.value.get(tournamentId)
-  
+  if (betLoading.value.has(tournamentId)) return;
+
+  const currentAttendance = attendanceMap.value.get(tournamentId);
+
   // Only allow bet toggle if user is attending
-  if (!currentAttendance || currentAttendance.status !== 'ATTEND') {
-    return
+  if (!currentAttendance || currentAttendance.status !== "ATTEND") {
+    return;
   }
-  
+
   try {
-    betLoading.value.add(tournamentId)
-    
-    const newBetStatus = !currentAttendance.bet
-    
+    betLoading.value.add(tournamentId);
+
+    const newBetStatus = !currentAttendance.bet;
+
     const response = await apiClient.put<TournamentPlayerAttendance>(
       `/tournaments/${tournamentId}/attendance`,
-      { toggleBet: true }
-    )
-    
+      { toggleBet: true },
+    );
+
     if (response.success && response.data) {
-      attendanceMap.value.set(tournamentId, response.data)
-      
+      attendanceMap.value.set(tournamentId, response.data);
+
       // Refresh attendance details to update betting count
-      await fetchAttendanceDetails(tournamentId)
-      
-      toast.success(newBetStatus ? 'Đã chọn Ngôi sao hy vọng!' : 'Đã bỏ chọn Ngôi sao hy vọng!')
+      await fetchAttendanceDetails(tournamentId);
+
+      toast.success(
+        newBetStatus
+          ? "Đã chọn Ngôi sao hy vọng!"
+          : "Đã bỏ chọn Ngôi sao hy vọng!",
+      );
     }
   } catch (err: any) {
-    console.error('Toggle bet error:', err)
-    toast.error(err.response?.data?.error || 'Không thể cập nhật Ngôi sao hy vọng')
+    console.error("Toggle bet error:", err);
+    toast.error(
+      err.response?.data?.error || "Không thể cập nhật Ngôi sao hy vọng",
+    );
   } finally {
-    betLoading.value.delete(tournamentId)
+    betLoading.value.delete(tournamentId);
   }
-}
+};
 
-const togglePlayerWater = async (attendance: TournamentAttendanceDetails): Promise<void> => {
-  if (playerWaterLoading.value.has(attendance.player.id)) return
-  
+const togglePlayerWater = async (
+  attendance: TournamentAttendanceDetails,
+): Promise<void> => {
+  if (playerWaterLoading.value.has(attendance.player.id)) return;
+
   // Only allow water toggle for attending players
-  if (attendance.status !== 'ATTEND') {
-    return
+  if (attendance.status !== "ATTEND") {
+    return;
   }
-  
+
   try {
-    playerWaterLoading.value.add(attendance.player.id)
-    
-    const newWaterStatus = !attendance.withWater
-    
+    playerWaterLoading.value.add(attendance.player.id);
+
+    const newWaterStatus = !attendance.withWater;
+
     // Use admin endpoint to update any player's attendance
     const response = await apiClient.put<TournamentPlayerAttendance>(
       `/tournaments/${attendance.tournamentId}/attendance/${attendance.player.id}`,
-      { 
+      {
         status: attendance.status,
-        withWater: newWaterStatus
-      }
-    )
-    
+        withWater: newWaterStatus,
+      },
+    );
+
     if (response.success && response.data) {
       // Update the attendance in the modal data
-      const index = attendanceModalData.value.findIndex(a => a.id === attendance.id)
+      const index = attendanceModalData.value.findIndex(
+        (a) => a.id === attendance.id,
+      );
       if (index !== -1) {
         attendanceModalData.value[index] = {
           ...attendanceModalData.value[index],
-          withWater: newWaterStatus
-        }
+          withWater: newWaterStatus,
+        };
       }
-      
+
       // Also update the main attendance map if it's the current user
       if (authStore.currentUser?.player?.id === attendance.player.id) {
-        attendanceMap.value.set(attendance.tournamentId, response.data)
+        attendanceMap.value.set(attendance.tournamentId, response.data);
       }
-      
-      toast.success(`${attendance.player.name}: ${newWaterStatus ? 'Đã chọn nước!' : 'Đã bỏ chọn nước!'}`)
+
+      toast.success(
+        `${attendance.player.name}: ${newWaterStatus ? "Đã chọn nước!" : "Đã bỏ chọn nước!"}`,
+      );
     }
   } catch (err: any) {
-    console.error('Toggle player water error:', err)
-    toast.error(err.response?.data?.error || 'Không thể cập nhật lựa chọn nước')
+    console.error("Toggle player water error:", err);
+    toast.error(
+      err.response?.data?.error || "Không thể cập nhật lựa chọn nước",
+    );
   } finally {
-    playerWaterLoading.value.delete(attendance.player.id)
+    playerWaterLoading.value.delete(attendance.player.id);
   }
-}
+};
 
 const canUserToggleBet = (tournament: Tournament): boolean => {
-  return ['UPCOMING', 'ONGOING'].includes(tournament.status)
-    && new Date(tournament.startDate).getTime() > Date.now()
-}
+  return (
+    ["UPCOMING", "ONGOING"].includes(tournament.status) &&
+    new Date(tournament.startDate).getTime() > Date.now()
+  );
+};
 
 const isPlayerBetting = (tournamentId: string, playerId: string): boolean => {
-  const details = attendanceDetailsMap.value.get(tournamentId)
-  return Array.isArray(details) && details.some((detail: any) => detail.playerId === playerId && detail.bet === true)
-}
+  const details = attendanceDetailsMap.value.get(tournamentId);
+  return (
+    Array.isArray(details) &&
+    details.some(
+      (detail: any) => detail.playerId === playerId && detail.bet === true,
+    )
+  );
+};
 
 const isPlayerWithWater = (tournamentId: string, playerId: string): boolean => {
-  const details = attendanceDetailsMap.value.get(tournamentId)
-  return Array.isArray(details) && details.some((detail: any) => detail.playerId === playerId && detail.withWater === true)
-}
+  const details = attendanceDetailsMap.value.get(tournamentId);
+  return (
+    Array.isArray(details) &&
+    details.some(
+      (detail: any) =>
+        detail.playerId === playerId && detail.withWater === true,
+    )
+  );
+};
 
-const markPlayerAttending = async (attendance: TournamentAttendanceDetails): Promise<void> => {
-  if (playerAttendanceLoading.value.has(attendance.player.id)) return
+const markPlayerAttending = async (
+  attendance: TournamentAttendanceDetails,
+): Promise<void> => {
+  if (playerAttendanceLoading.value.has(attendance.player.id)) return;
   try {
-    playerAttendanceLoading.value.add(attendance.player.id)
+    playerAttendanceLoading.value.add(attendance.player.id);
     const response = await apiClient.put<TournamentPlayerAttendance>(
       `/tournaments/${attendance.tournamentId}/attendance/${attendance.player.id}`,
-      { status: 'ATTEND' }
-    )
-    if (!response.success) throw new Error(response.error || 'Không thể cập nhật điểm danh')
-    const index = attendanceModalData.value.findIndex(item => item.id === attendance.id)
-    if (index !== -1) attendanceModalData.value[index] = { ...attendanceModalData.value[index], status: 'ATTEND' }
-    attendanceDetailsMap.value.set(attendance.tournamentId, attendanceModalData.value)
-    await fetchAttendanceStats(attendance.tournamentId)
-    toast.success(`${attendance.player.name} đã tham gia`)
+      { status: "ATTEND" },
+    );
+    if (!response.success)
+      throw new Error(response.error || "Không thể cập nhật điểm danh");
+    const index = attendanceModalData.value.findIndex(
+      (item) => item.id === attendance.id,
+    );
+    if (index !== -1)
+      attendanceModalData.value[index] = {
+        ...attendanceModalData.value[index],
+        status: "ATTEND",
+      };
+    attendanceDetailsMap.value.set(
+      attendance.tournamentId,
+      attendanceModalData.value,
+    );
+    await fetchAttendanceStats(attendance.tournamentId);
+    toast.success(`${attendance.player.name} đã tham gia`);
   } catch (error: any) {
-    toast.error(error.response?.data?.error || error.message || 'Không thể cập nhật điểm danh')
+    toast.error(
+      error.response?.data?.error ||
+        error.message ||
+        "Không thể cập nhật điểm danh",
+    );
   } finally {
-    playerAttendanceLoading.value.delete(attendance.player.id)
+    playerAttendanceLoading.value.delete(attendance.player.id);
   }
-}
+};
 
-const cancelPlayerAttendance = async (attendance: TournamentAttendanceDetails): Promise<void> => {
-  if (playerAttendanceLoading.value.has(attendance.player.id)) return
+const cancelPlayerAttendance = async (
+  attendance: TournamentAttendanceDetails,
+): Promise<void> => {
+  if (playerAttendanceLoading.value.has(attendance.player.id)) return;
   try {
-    const loadingIds = new Set(playerAttendanceLoading.value)
-    loadingIds.add(attendance.player.id)
-    playerAttendanceLoading.value = loadingIds
-    const field5 = attendanceFieldTab.value === 'FIELD_5' ? false : attendance.field5 !== false
-    const field7 = attendanceFieldTab.value === 'FIELD_7' ? false : attendance.field7 !== false
-    const remainsRegistered = field5 || field7
+    const loadingIds = new Set(playerAttendanceLoading.value);
+    loadingIds.add(attendance.player.id);
+    playerAttendanceLoading.value = loadingIds;
+    const field5 =
+      attendanceFieldTab.value === "FIELD_5"
+        ? false
+        : attendance.field5 !== false;
+    const field7 =
+      attendanceFieldTab.value === "FIELD_7"
+        ? false
+        : attendance.field7 !== false;
+    const remainsRegistered = field5 || field7;
     const payload: {
-      status: 'ATTEND' | 'NULL'
-      field5: boolean
-      field7: boolean
-      withWater?: boolean
-      bet?: boolean
+      status: "ATTEND" | "NULL";
+      field5: boolean;
+      field7: boolean;
+      withWater?: boolean;
+      bet?: boolean;
     } = {
-      status: remainsRegistered ? 'ATTEND' : 'NULL',
+      status: remainsRegistered ? "ATTEND" : "NULL",
       field5,
       field7,
-    }
+    };
     if (!isSelfFundedTournament(attendance.tournamentId)) {
-      payload.withWater = remainsRegistered ? attendance.withWater : false
-      payload.bet = remainsRegistered ? attendance.bet : false
+      payload.withWater = remainsRegistered ? attendance.withWater : false;
+      payload.bet = remainsRegistered ? attendance.bet : false;
     }
     const response = await apiClient.put<TournamentPlayerAttendance>(
       `/tournaments/${attendance.tournamentId}/attendance/${attendance.player.id}`,
       payload,
-    )
-    if (!response.success) throw new Error(response.error || 'Không thể hủy tham gia')
-    const index = attendanceModalData.value.findIndex(item => item.id === attendance.id)
-    if (index !== -1) attendanceModalData.value[index] = { ...attendanceModalData.value[index], status: remainsRegistered ? 'ATTEND' : 'NULL', field5, field7, withWater: remainsRegistered ? attendance.withWater : false, bet: remainsRegistered ? attendance.bet : false }
-    attendanceDetailsMap.value.set(attendance.tournamentId, attendanceModalData.value)
-    await fetchAttendanceStats(attendance.tournamentId)
-    toast.success(`Đã hủy ${attendanceFieldTab.value === 'FIELD_5' ? 'Sân 5' : 'Sân 7'} của ${attendance.player.name}`)
+    );
+    if (!response.success)
+      throw new Error(response.error || "Không thể hủy tham gia");
+    const index = attendanceModalData.value.findIndex(
+      (item) => item.id === attendance.id,
+    );
+    if (index !== -1)
+      attendanceModalData.value[index] = {
+        ...attendanceModalData.value[index],
+        status: remainsRegistered ? "ATTEND" : "NULL",
+        field5,
+        field7,
+        withWater: remainsRegistered ? attendance.withWater : false,
+        bet: remainsRegistered ? attendance.bet : false,
+      };
+    attendanceDetailsMap.value.set(
+      attendance.tournamentId,
+      attendanceModalData.value,
+    );
+    await fetchAttendanceStats(attendance.tournamentId);
+    toast.success(
+      `Đã hủy ${attendanceFieldTab.value === "FIELD_5" ? "Sân 5" : "Sân 7"} của ${attendance.player.name}`,
+    );
   } catch (error: any) {
-    toast.error(error.response?.data?.error || error.message || 'Không thể hủy tham gia')
+    toast.error(
+      error.response?.data?.error || error.message || "Không thể hủy tham gia",
+    );
   } finally {
-    const loadingIds = new Set(playerAttendanceLoading.value)
-    loadingIds.delete(attendance.player.id)
-    playerAttendanceLoading.value = loadingIds
+    const loadingIds = new Set(playerAttendanceLoading.value);
+    loadingIds.delete(attendance.player.id);
+    playerAttendanceLoading.value = loadingIds;
   }
-}
+};
 
-const isGkTournamentDiscountCancelled = (playerId: string): boolean => cancelledGkDiscountPlayerIds.value.has(playerId)
+const cancelFriendAttendance = async (
+  attendance: TournamentAttendanceDetails,
+): Promise<void> => {
+  if (playerAttendanceLoading.value.has(attendance.player.id)) return;
+  try {
+    playerAttendanceLoading.value = new Set(playerAttendanceLoading.value).add(
+      attendance.player.id,
+    );
+    const response = await apiClient.cancelFriendTournamentAttendance(
+      attendance.tournamentId,
+      attendance.player.id,
+    );
+    if (!response.success)
+      throw new Error(response.error || "Không thể hủy tham gia cho bạn");
+    await Promise.all([
+      fetchAttendanceStats(attendance.tournamentId),
+      fetchAttendanceDetails(attendance.tournamentId),
+    ]);
+    toast.success(`Đã hủy tham gia cho ${attendance.player.name}`);
+  } catch (error: any) {
+    toast.error(
+      error.response?.data?.error ||
+        error.message ||
+        "Không thể hủy tham gia cho bạn",
+    );
+  } finally {
+    const loadingIds = new Set(playerAttendanceLoading.value);
+    loadingIds.delete(attendance.player.id);
+    playerAttendanceLoading.value = loadingIds;
+  }
+};
+
+const cancelFriendAttendanceByPlayer = async (tournamentId: string, player: any): Promise<void> => {
+  try {
+    const response = await apiClient.cancelFriendTournamentAttendance(tournamentId, player.id);
+    if (!response.success) throw new Error(response.error || 'Không thể hủy tham gia cho bạn');
+    await Promise.all([fetchAttendanceStats(tournamentId), fetchAttendanceDetails(tournamentId)]);
+    toast.success(`Đã hủy tham gia cho ${player.name}`);
+  } catch (error: any) {
+    toast.error(error.response?.data?.error || error.message || 'Không thể hủy tham gia cho bạn');
+  }
+};
+
+const togglePlayerNotOnField = async (
+  attendance: TournamentAttendanceDetails,
+): Promise<void> => {
+  if (playerAttendanceLoading.value.has(attendance.player.id)) return;
+  try {
+    playerAttendanceLoading.value = new Set(playerAttendanceLoading.value).add(
+      attendance.player.id,
+    );
+    const response = await apiClient.put<TournamentPlayerAttendance>(
+      `/tournaments/${attendance.tournamentId}/attendance/${attendance.player.id}`,
+      { status: "ATTEND", notOnField: !attendance.notOnField },
+    );
+    if (!response.success)
+      throw new Error(response.error || "Không thể cập nhật điểm danh");
+    const index = attendanceModalData.value.findIndex(
+      (item) => item.id === attendance.id,
+    );
+    if (index !== -1)
+      attendanceModalData.value[index] = {
+        ...attendanceModalData.value[index],
+        notOnField: !attendance.notOnField,
+        withWater: attendance.withWater,
+        bet: attendance.bet,
+      };
+    attendanceDetailsMap.value.set(
+      attendance.tournamentId,
+      attendanceModalData.value,
+    );
+    await fetchAttendanceStats(attendance.tournamentId);
+    toast.success(
+      attendance.notOnField
+        ? `${attendance.player.name} đã được xác nhận lên sân`
+        : `${attendance.player.name} đã được đánh dấu không lên sân`,
+    );
+  } catch (error: any) {
+    toast.error(
+      error.response?.data?.error ||
+        error.message ||
+        "Không thể cập nhật điểm danh",
+    );
+  } finally {
+    const loadingIds = new Set(playerAttendanceLoading.value);
+    loadingIds.delete(attendance.player.id);
+    playerAttendanceLoading.value = loadingIds;
+  }
+};
+
+const isGkTournamentDiscountCancelled = (playerId: string): boolean =>
+  cancelledGkDiscountPlayerIds.value.has(playerId);
 
 const toggleGkTournamentDiscount = (playerId: string): void => {
-  const updatedCancelledIds = new Set(cancelledGkDiscountPlayerIds.value)
-  if (updatedCancelledIds.has(playerId)) updatedCancelledIds.delete(playerId)
-  else updatedCancelledIds.add(playerId)
-  cancelledGkDiscountPlayerIds.value = updatedCancelledIds
-}
+  const updatedCancelledIds = new Set(cancelledGkDiscountPlayerIds.value);
+  if (updatedCancelledIds.has(playerId)) updatedCancelledIds.delete(playerId);
+  else updatedCancelledIds.add(playerId);
+  cancelledGkDiscountPlayerIds.value = updatedCancelledIds;
+};
 
-const openTournamentMoneyHistory = async (tournament: Tournament): Promise<void> => {
-  selectedMoneyHistoryTournament.value = tournament
-  tournamentMoneyHistory.value = []
-  showTournamentMoneyHistoryModal.value = true
-  tournamentMoneyHistoryLoading.value = true
+const openTournamentMoneyHistory = async (
+  tournament: Tournament,
+): Promise<void> => {
+  selectedMoneyHistoryTournament.value = tournament;
+  tournamentMoneyHistory.value = [];
+  showTournamentMoneyHistoryModal.value = true;
+  tournamentMoneyHistoryLoading.value = true;
   try {
-    const response = await apiClient.getTournamentMoneyHistory(tournament.id)
-    if (!response.success) throw new Error(response.error || 'Không thể tải biến động tiền')
-    const history = (response.data || []) as TournamentMoneyHistoryItem[]
-    const currentPlayerId = authStore.currentUser?.player?.id || authStore.currentUser?.playerId
+    const response = await apiClient.getTournamentMoneyHistory(tournament.id);
+    if (!response.success)
+      throw new Error(response.error || "Không thể tải biến động tiền");
+    const history = (response.data || []) as TournamentMoneyHistoryItem[];
+    const currentPlayerId =
+      authStore.currentUser?.player?.id || authStore.currentUser?.playerId;
     tournamentMoneyHistory.value = currentPlayerId
-      ? [...history].sort((first, second) => Number(second.player.id === currentPlayerId) - Number(first.player.id === currentPlayerId))
-      : history
+      ? [...history].sort(
+          (first, second) =>
+            Number(second.player.id === currentPlayerId) -
+            Number(first.player.id === currentPlayerId),
+        )
+      : history;
   } catch (error) {
-    toast.error(error instanceof Error ? error.message : 'Không thể tải biến động tiền')
+    toast.error(
+      error instanceof Error ? error.message : "Không thể tải biến động tiền",
+    );
   } finally {
-    tournamentMoneyHistoryLoading.value = false
+    tournamentMoneyHistoryLoading.value = false;
   }
-}
+};
 
-const openTournamentDebtTopUp = async (item: TournamentMoneyHistoryItem): Promise<void> => {
-  let currentBalance = item.balanceAfter
+const openTournamentDebtTopUp = async (
+  item: TournamentMoneyHistoryItem,
+): Promise<void> => {
+  let currentBalance = item.balanceAfter;
   try {
-    const response = await apiClient.getPlayer(item.player.id)
-    if (response.success && response.data) currentBalance = Number((response.data as any).money)
+    const response = await apiClient.getPlayer(item.player.id);
+    if (response.success && response.data)
+      currentBalance = Number((response.data as any).money);
   } catch (error) {
-    console.warn('Unable to refresh player balance before top-up:', error)
+    console.warn("Unable to refresh player balance before top-up:", error);
   }
 
   if (currentBalance >= 0) {
-    toast.info('Số dư hiện tại không còn âm')
-    return
+    toast.info("Số dư hiện tại không còn âm");
+    return;
   }
 
-  tournamentDebtAmount.value = Math.abs(currentBalance)
-  selectedTournamentDebtTopUpAmount.value = tournamentDebtAmount.value
-  showTournamentDebtTopUpModal.value = true
-}
+  tournamentDebtAmount.value = Math.abs(currentBalance);
+  selectedTournamentDebtTopUpAmount.value = tournamentDebtAmount.value;
+  showTournamentDebtTopUpModal.value = true;
+};
 
 const openCurrentUserDebtTopUp = async (): Promise<void> => {
-  const player = authStore.currentUser?.player
-  if (!player) return
+  const player = authStore.currentUser?.player;
+  if (!player) return;
 
-  let currentBalance = Number(player.money)
+  let currentBalance = Number(player.money);
   try {
-    const response = await apiClient.getPlayer(player.id)
-    if (response.success && response.data) currentBalance = Number((response.data as any).money)
+    const response = await apiClient.getPlayer(player.id);
+    if (response.success && response.data)
+      currentBalance = Number((response.data as any).money);
   } catch (error) {
-    console.warn('Unable to refresh player balance before top-up:', error)
+    console.warn("Unable to refresh player balance before top-up:", error);
   }
 
   if (currentBalance >= 0) {
-    toast.info('Số dư hiện tại không còn âm')
-    return
+    toast.info("Số dư hiện tại không còn âm");
+    return;
   }
 
-  tournamentDebtAmount.value = Math.abs(currentBalance)
-  selectedTournamentDebtTopUpAmount.value = tournamentDebtAmount.value
-  showTournamentDebtTopUpModal.value = true
-}
+  tournamentDebtAmount.value = Math.abs(currentBalance);
+  selectedTournamentDebtTopUpAmount.value = tournamentDebtAmount.value;
+  showTournamentDebtTopUpModal.value = true;
+};
 
 const submitTournamentDebtTopUp = async (): Promise<void> => {
-  if (tournamentDebtTopUpSubmitting.value) return
-  if (!Number.isInteger(selectedTournamentDebtTopUpAmount.value) || selectedTournamentDebtTopUpAmount.value <= 0) {
-    toast.error('Vui lòng nhập số tiền nạp hợp lệ')
-    return
+  if (tournamentDebtTopUpSubmitting.value) return;
+  if (
+    !Number.isInteger(selectedTournamentDebtTopUpAmount.value) ||
+    selectedTournamentDebtTopUpAmount.value <= 0
+  ) {
+    toast.error("Vui lòng nhập số tiền nạp hợp lệ");
+    return;
   }
-  tournamentDebtTopUpSubmitting.value = true
+  tournamentDebtTopUpSubmitting.value = true;
   try {
-    const response = await apiClient.createMoneyTopUp(selectedTournamentDebtTopUpAmount.value)
-    if (!response.success) throw new Error(response.error || 'Không thể gửi yêu cầu nạp tiền')
-    showTournamentDebtTopUpModal.value = false
-    toast.success('Yêu cầu nạp tiền đã được gửi và đang chờ duyệt')
+    const response = await apiClient.createMoneyTopUp(
+      selectedTournamentDebtTopUpAmount.value,
+    );
+    if (!response.success)
+      throw new Error(response.error || "Không thể gửi yêu cầu nạp tiền");
+    showTournamentDebtTopUpModal.value = false;
+    toast.success("Yêu cầu nạp tiền đã được gửi và đang chờ duyệt");
   } catch (error) {
-    toast.error(error instanceof Error ? error.message : 'Không thể gửi yêu cầu nạp tiền')
+    toast.error(
+      error instanceof Error ? error.message : "Không thể gửi yêu cầu nạp tiền",
+    );
   } finally {
-    tournamentDebtTopUpSubmitting.value = false
+    tournamentDebtTopUpSubmitting.value = false;
   }
-}
+};
 
-const getTournamentCostForPlayer = (tournamentId: string, player: any): number => {
-  const baseCost = calculateCostPerPlayer(tournamentId)
-  return isGoalkeeper(player.position) && !isGkTournamentDiscountCancelled(player.id)
+const getTournamentCostForPlayer = (
+  tournamentId: string,
+  player: any,
+): number => {
+  const baseCost = calculateCostPerPlayer(tournamentId);
+  return isGoalkeeper(player.position) &&
+    !isGkTournamentDiscountCancelled(player.id)
     ? Math.round(baseCost / 2)
-    : baseCost
-}
+    : baseCost;
+};
 
 // Helper function to get detailed money change breakdown for a player
-const getDetailedMoneyChange = (tournamentId: string, team: any, player: any): { changes: Array<{type: string, amount: number, description: string}>, total: number } => {
-  if (!systemStore.currentSettings) return { changes: [], total: 0 }
-  
-  const tournament = weeklyTournaments.value.find(t => t.id === tournamentId)
-  if (!tournament) return { changes: [], total: 0 }
-  if (tournament.selfFunded) return { changes: [], total: 0 }
-  
-  const changes: Array<{type: string, amount: number, description: string}> = []
-  
+const getDetailedMoneyChange = (
+  tournamentId: string,
+  team: any,
+  player: any,
+): {
+  changes: Array<{ type: string; amount: number; description: string }>;
+  total: number;
+} => {
+  if (!systemStore.currentSettings) return { changes: [], total: 0 };
+
+  const tournament = weeklyTournaments.value.find((t) => t.id === tournamentId);
+  if (!tournament) return { changes: [], total: 0 };
+  if (tournament.selfFunded) return { changes: [], total: 0 };
+
+  const changes: Array<{ type: string; amount: number; description: string }> =
+    [];
+
   // Base tournament cost per player
-  const costPerPlayer = getTournamentCostForPlayer(tournamentId, player)
+  const costPerPlayer = getTournamentCostForPlayer(tournamentId, player);
   changes.push({
-    type: 'cost',
+    type: "cost",
     amount: -costPerPlayer,
-    description: isGoalkeeper(player.position) && !isGkTournamentDiscountCancelled(player.id)
-      ? 'Chi phí giải đấu mỗi cầu thủ (GK giảm 50%)'
-      : 'Chi phí giải đấu mỗi cầu thủ'
-  })
-  
+    description:
+      isGoalkeeper(player.position) &&
+      !isGkTournamentDiscountCancelled(player.id)
+        ? "Chi phí giải đấu mỗi cầu thủ (GK giảm 50%)"
+        : "Chi phí giải đấu mỗi cầu thủ",
+  });
+
   // Check if player is betting
-  const details = attendanceDetailsMap.value.get(tournamentId)
-  const playerAttendance = Array.isArray(details) ? details.find((d: any) => d.playerId === player.id) : null
-  const isBetting = playerAttendance?.bet === true
-  const hasWater = playerAttendance?.withWater === true
-  
+  const details = attendanceDetailsMap.value.get(tournamentId);
+  const playerAttendance = Array.isArray(details)
+    ? details.find((d: any) => d.playerId === player.id)
+    : null;
+  const isBetting = playerAttendance?.bet === true;
+  const hasWater = playerAttendance?.withWater === true;
+
+  if (
+    playerAttendance?.notOnField &&
+    (systemStore.currentSettings?.noShowPenalty ?? 0) > 0
+  ) {
+    changes.push({
+      type: "no_show",
+      amount: -(systemStore.currentSettings?.noShowPenalty ?? 0),
+      description: "Phạt không lên sân",
+    });
+  }
+
   // Team result calculations
-  const isWinnerTeam = selectedWinningTeam.value?.id === team.id
-  const isLoserTeam = selectedLosingTeam.value?.id === team.id
-  
+  const isWinnerTeam = selectedWinningTeam.value?.id === team.id;
+  const isLoserTeam = selectedLosingTeam.value?.id === team.id;
+
   // Betting calculations
   if (isBetting) {
     if (isWinnerTeam) {
       // Betting winner
-      const winAmount = getBettingWinAmount()
+      const winAmount = getBettingWinAmount();
       changes.push({
-        type: 'betting_win',
+        type: "betting_win",
         amount: winAmount,
-        description: 'Ngôi sao hy vọng thắng'
-      })
+        description: "Ngôi sao hy vọng thắng",
+      });
     } else {
       // Betting loser
       changes.push({
-        type: 'betting_loss',
+        type: "betting_loss",
         amount: -10000,
-        description: 'Ngôi sao hy vọng thua'
-      })
+        description: "Ngôi sao hy vọng thua",
+      });
     }
   }
-  
+
   if (isLoserTeam) {
     // Loser team penalty
     changes.push({
-      type: 'team_loss',
+      type: "team_loss",
       amount: -10000,
-      description: 'Cầu thủ đội thua'
-    })
+      description: "Cầu thủ đội thua",
+    });
   }
-  
+
   // Water cost calculations
   if (hasWater && !isWinnerTeam) {
     // Winner team gets free water, others pay if they selected water
-    const waterCost = 10000
+    const waterCost = 10000;
     changes.push({
-      type: 'water',
+      type: "water",
       amount: -waterCost,
-      description: 'Chi phí nước'
-    })
+      description: "Chi phí nước",
+    });
   } else if (hasWater && isWinnerTeam) {
     changes.push({
-      type: 'water_free',
+      type: "water_free",
       amount: 0,
-      description: 'Miễn phí nước (đội thắng)'
-    })
+      description: "Miễn phí nước (đội thắng)",
+    });
   }
-  
-  const total = changes.reduce((sum, change) => sum + change.amount, 0)
-  
-  return { changes, total }
-}
+
+  const total = changes.reduce((sum, change) => sum + change.amount, 0);
+
+  return { changes, total };
+};
 </script>
+
+<style scoped>
+/* Reserve the battle-icon slot so every external attendance row aligns. */
+@media (min-width: 1024px) {
+  .bg-gray-50.p-2.text-sm > .flex.min-w-0.items-center {
+    position: relative;
+  }
+  .bg-gray-50.p-2.text-sm > .flex.min-w-0.items-center::before {
+    content: "";
+    display: inline-block;
+    width: 1.75rem;
+    flex: 0 0 1.75rem;
+  }
+  .bg-gray-50.p-2.text-sm > .flex.min-w-0.items-center > button:first-child {
+    position: absolute;
+    left: 0;
+  }
+}
+</style>

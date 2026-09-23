@@ -417,6 +417,18 @@ class ApiClient {
     return this.put(`/tournaments/${tournamentId}/challenges/${challengeId}/accept`, {});
   }
 
+  async getTournamentDeadmatches(tournamentId: string, opponentTeamId: string) {
+    return this.get(`/tournaments/${tournamentId}/deadmatches?opponentTeamId=${encodeURIComponent(opponentTeamId)}`);
+  }
+
+  async joinTournamentDeadmatch(tournamentId: string, opponentTeamId: string) {
+    return this.post(`/tournaments/${tournamentId}/deadmatches/${opponentTeamId}/join`, {});
+  }
+
+  async cancelTournamentDeadmatch(tournamentId: string, opponentTeamId: string) {
+    return this.delete(`/tournaments/${tournamentId}/deadmatches/${opponentTeamId}`);
+  }
+
   async getMySwapRequests(tournamentId: string) {
     return this.get(`/tournaments/${tournamentId}/swap-requests/mine`);
   }

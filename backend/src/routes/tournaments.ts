@@ -1330,6 +1330,86 @@ router.put('/:id/challenges/:challengeId/accept', authenticate, async (req: Auth
   res.json({ success: true, data: updated });
 });
 
+// Deadmatch is a FIFO queue for a specific pair of tournament teams.
+router.get('/:id/deadmatches', authenticate, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  const opponentTeamId = typeof req.query.opponentTeamId === 'string' ? req.query.opponentTeamId : '';
+  if (!opponentTeamId) { res.status(400).json({ success: false, error: 'Thiếu đội đối thủ' }); return; }
+  const user = await prisma.user.findUnique({ where: { id: req.user!.id }, select: { playerId: true } });
+  if (!user?.playerId) { res.status(400).json({ success: false, error: 'Tài khoản chưa liên kết cầu thủ' }); return; }
+  const assignment = await prisma.tournamentTeamPlayer.findFirst({ where: { tournamentId: req.params.id, playerId: user.playerId }, select: { teamId: true } });
+  if (!assignment) { res.status(400).json({ success: false, error: 'Bạn không thuộc đội thi đấu của giải này' }); return; }
+  const entries = await prisma.tournamentDeadmatchEntry.findMany({
+    where: {
+      tournamentId: req.params.id,
+      status: { in: ['WAITING', 'MATCHED'] },
+      OR: [
+        { teamId: assignment.teamId, opponentTeamId },
+        { teamId: opponentTeamId, opponentTeamId: assignment.teamId },
+      ],
+    },
+    include: { player: { select: { id: true, name: true, avatar: true, tier: true, position: true } } },
+    orderBy: { queueNumber: 'asc' },
+  });
+  res.json({ success: true, data: { myTeamId: assignment.teamId, opponentTeamId, entries } });
+});
+
+router.post('/:id/deadmatches/:opponentTeamId/join', authenticate, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  try {
+    const tournamentId = req.params.id;
+    const opponentTeamId = req.params.opponentTeamId;
+    const user = await prisma.user.findUnique({ where: { id: req.user!.id }, select: { playerId: true } });
+    if (!user?.playerId) { res.status(400).json({ success: false, error: 'Tài khoản chưa liên kết cầu thủ' }); return; }
+    const tournament = await prisma.tournament.findUnique({ where: { id: tournamentId }, select: { id: true, startDate: true, status: true } });
+    if (!tournament || tournament.status === 'COMPLETED' || Date.now() >= tournament.startDate.getTime()) { res.status(400).json({ success: false, error: 'Chỉ được tham gia Deadmatch trước giờ diễn ra giải đấu' }); return; }
+    const assignment = await prisma.tournamentTeamPlayer.findFirst({ where: { tournamentId, playerId: user.playerId }, select: { teamId: true } });
+    const opponentExists = await prisma.tournamentTeam.findUnique({ where: { tournamentId_teamId: { tournamentId, teamId: opponentTeamId } }, select: { teamId: true } });
+    if (!assignment || !opponentExists || assignment.teamId === opponentTeamId) { res.status(400).json({ success: false, error: 'Đội Deadmatch không hợp lệ' }); return; }
+    const playerId = user.playerId!;
+    const existing = await prisma.tournamentDeadmatchEntry.findUnique({ where: { tournamentId_playerId_opponentTeamId: { tournamentId, playerId, opponentTeamId } } });
+    if (existing?.status === 'MATCHED') { res.json({ success: true, data: existing, message: 'Bạn đã được ghép cặp Deadmatch' }); return; }
+    const result = await prisma.$transaction(async (tx) => {
+      const last = await tx.tournamentDeadmatchEntry.aggregate({ where: { tournamentId, teamId: assignment.teamId, opponentTeamId }, _max: { queueNumber: true } });
+      const entry = existing
+        ? await tx.tournamentDeadmatchEntry.update({ where: { id: existing.id }, data: { status: 'WAITING', matchKey: null, matchedAt: null, queueNumber: (last._max.queueNumber ?? 0) + 1 } })
+        : await tx.tournamentDeadmatchEntry.create({ data: { tournamentId, playerId, teamId: assignment.teamId, opponentTeamId, queueNumber: (last._max.queueNumber ?? 0) + 1 } });
+      const counterpart = await tx.tournamentDeadmatchEntry.findFirst({ where: { tournamentId, teamId: opponentTeamId, opponentTeamId: assignment.teamId, status: 'WAITING' }, orderBy: { queueNumber: 'asc' } });
+      if (!counterpart) return { entry, matched: false };
+      const matchKey = `deadmatch-${Date.now()}-${entry.id}-${counterpart.id}`;
+      const [matchedEntry] = await Promise.all([
+        tx.tournamentDeadmatchEntry.update({ where: { id: entry.id }, data: { status: 'MATCHED', matchKey, matchedAt: new Date() } }),
+        tx.tournamentDeadmatchEntry.update({ where: { id: counterpart.id }, data: { status: 'MATCHED', matchKey, matchedAt: new Date() } }),
+      ]);
+      return { entry: matchedEntry, matched: true };
+    });
+    res.json({ success: true, data: { entry: result.entry, matched: result.matched } });
+  } catch (error) {
+    console.error('Join deadmatch error:', error);
+    res.status(500).json({ success: false, error: 'Không thể tham gia Deadmatch' });
+  }
+});
+
+router.delete('/:id/deadmatches/:opponentTeamId', authenticate, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  try {
+    const tournamentId = req.params.id;
+    const opponentTeamId = req.params.opponentTeamId;
+    const user = await prisma.user.findUnique({ where: { id: req.user!.id }, select: { playerId: true } });
+    const tournament = await prisma.tournament.findUnique({ where: { id: tournamentId }, select: { startDate: true } });
+    if (!user?.playerId || !tournament || Date.now() >= tournament.startDate.getTime()) { res.status(400).json({ success: false, error: 'Không thể hủy Deadmatch sau giờ diễn ra giải đấu' }); return; }
+    const entry = await prisma.tournamentDeadmatchEntry.findUnique({ where: { tournamentId_playerId_opponentTeamId: { tournamentId, playerId: user.playerId, opponentTeamId } } });
+    if (!entry || !['WAITING', 'MATCHED'].includes(entry.status)) { res.status(400).json({ success: false, error: 'Bạn chưa tham gia Deadmatch này' }); return; }
+    await prisma.$transaction(async (tx) => {
+      await tx.tournamentDeadmatchEntry.update({ where: { id: entry.id }, data: { status: 'CANCELLED', matchKey: null } });
+      if (entry.status === 'MATCHED' && entry.matchKey) {
+        await tx.tournamentDeadmatchEntry.updateMany({ where: { tournamentId, matchKey: entry.matchKey, id: { not: entry.id } }, data: { status: 'WAITING', matchKey: null, matchedAt: null } });
+      }
+    });
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Cancel deadmatch error:', error);
+    res.status(500).json({ success: false, error: 'Không thể hủy Deadmatch' });
+  }
+});
+
 router.put('/:id/attendance', authenticate, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   try {
     const { id: tournamentId } = req.params;
@@ -2575,14 +2655,21 @@ router.put('/:id/end', authenticate, authorize(['ADMIN', 'MOD']), async (req: Au
     let totalAdded = 0;
     let totalDeducted = 0;
     const moneyUpdates: Array<{ playerId: string; oldMoney: number; newMoney: number; change: number }> = [];
-    const [systemSettings, acceptedChallenges] = await Promise.all([
+    const [systemSettings, acceptedChallenges, matchedDeadmatches] = await Promise.all([
       prisma.systemSettings.findFirst(),
       prisma.tournamentChallenge.findMany({ where: { tournamentId: id, status: 'ACCEPTED' } }),
+      prisma.tournamentDeadmatchEntry.findMany({ where: { tournamentId: id, status: 'MATCHED' } }),
     ]);
     const challengeOpponentByPlayerId = new Map<string, string>();
     for (const challenge of acceptedChallenges) {
       challengeOpponentByPlayerId.set(challenge.requesterPlayerId, challenge.targetPlayerId);
       challengeOpponentByPlayerId.set(challenge.targetPlayerId, challenge.requesterPlayerId);
+    }
+    const deadmatchesByPlayerId = new Map<string, typeof matchedDeadmatches>();
+    for (const entry of matchedDeadmatches) {
+      const entries = deadmatchesByPlayerId.get(entry.playerId) || [];
+      entries.push(entry);
+      deadmatchesByPlayerId.set(entry.playerId, entries);
     }
 
     // Get tournament settings
@@ -2642,6 +2729,18 @@ router.put('/:id/end', authenticate, authorize(['ADMIN', 'MOD']), async (req: Au
           moneyChangeDetails.push({
             description: playerTeam.score > opponentTeam.score ? 'Thắng thách đấu' : 'Thua thách đấu',
             amount: playerTeam.score > opponentTeam.score ? 10000 : -10000,
+          });
+        }
+      }
+
+      for (const deadmatch of deadmatchesByPlayerId.get(player.id) || []) {
+        const deadmatchOpponentTeam = tournament.teams.find(
+          assignment => assignment.teamId === deadmatch.opponentTeamId,
+        )?.team;
+        if (playerTeam && deadmatchOpponentTeam && playerTeam.score !== deadmatchOpponentTeam.score) {
+          moneyChangeDetails.push({
+            description: playerTeam.score > deadmatchOpponentTeam.score ? 'Thắng Deadmatch' : 'Thua Deadmatch',
+            amount: playerTeam.score > deadmatchOpponentTeam.score ? 10000 : -10000,
           });
         }
       }

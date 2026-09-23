@@ -584,9 +584,17 @@
                           <span
                             class="text-sm font-medium"
                             :class="getTeamTextClass(team.name)"
-                            >- {{ getTeamJerseyLabel(team.name) }}</span
+                          >- {{ getTeamJerseyLabel(team.name) }}</span
                           >
                         </h5>
+                        <button
+                          v-if="canOpenDeadmatch(ongoingTournament, team)"
+                          type="button"
+                          class="ml-2 rounded bg-red-600 px-2 py-1 text-xs font-semibold text-white hover:bg-red-700"
+                          @click="openDeadmatchModal(ongoingTournament, team)"
+                        >
+                          ⚔️ Battle
+                        </button>
                       </div>
                       <p class="text-sm text-gray-600">
                         {{ team.players?.length || 0 }} cầu thủ
@@ -5109,6 +5117,60 @@
   </div>
 
   <div
+    v-if="showDeadmatchModal"
+    class="fixed inset-0 z-[80] flex items-center justify-center overflow-y-auto overscroll-contain bg-black/50 p-4"
+  >
+    <div class="w-full max-w-4xl rounded-xl bg-white shadow-xl">
+      <div class="flex items-start justify-between border-b p-5">
+        <div>
+          <h3 class="text-lg font-semibold text-red-700">⚔️ Kích hoạt Deadmatch</h3>
+          <p class="mt-1 text-sm text-gray-600">Ghép cặp theo thứ tự hàng chờ giữa hai đội.</p>
+        </div>
+        <button class="text-xl text-gray-400 hover:text-gray-700" @click="showDeadmatchModal = false">×</button>
+      </div>
+      <div class="space-y-2 border-b p-5 text-sm leading-6 text-gray-700">
+        <p class="font-semibold">Luật Deadmatch</p>
+        <p>Chỉ tham gia sau khi đã chia đội. Có thể hủy trước giờ diễn ra giải đấu.</p>
+        <p>Hai hàng chờ được ghép tự động theo thứ tự đăng ký. Khi kết thúc giải, người có đội điểm cao hơn nhận +10.000 ₫; đội thua bị trừ 10.000 ₫.</p>
+      </div>
+      <div v-if="deadmatchLoading" class="p-8 text-center text-gray-500">Đang tải Deadmatch...</div>
+      <div v-else class="grid gap-4 p-5 md:grid-cols-2">
+        <div v-for="team in deadmatchTeams" :key="team.id" class="rounded-lg border p-4" :class="getTeamCardClass(team.name)">
+          <h4 class="mb-3 font-semibold text-gray-900">{{ displayTeamName(team.name) }}</h4>
+          <div v-if="getDeadmatchTeamEntries(team.id).length" class="space-y-2">
+            <div v-for="entry in getDeadmatchTeamEntries(team.id)" :key="entry.id" class="rounded bg-gray-50 px-3 py-2 text-sm">
+              <div class="flex items-center justify-between gap-2">
+                <span class="font-medium">{{ entry.player.name }}</span>
+                <span v-if="entry.status === 'WAITING'" class="text-xs text-amber-700">Hàng chờ #{{ entry.queueNumber }}</span>
+                <span v-else class="text-xs font-semibold text-red-600">⚔️ Đã ghép cặp</span>
+              </div>
+              <div v-if="getDeadmatchOpponentName(entry)" class="mt-1 border-t border-dashed pt-1 text-xs text-red-600">
+                └── ⚔️ {{ getDeadmatchOpponentName(entry) }}
+              </div>
+            </div>
+          </div>
+          <p v-else class="text-sm text-gray-500">Chưa có cầu thủ trong hàng chờ.</p>
+        </div>
+      </div>
+      <div class="flex justify-end gap-3 border-t p-4">
+        <button class="btn-secondary" :disabled="deadmatchSaving" @click="showDeadmatchModal = false">Đóng</button>
+        <button
+          v-if="currentDeadmatchEntry"
+          class="btn-secondary text-red-600"
+          :disabled="deadmatchSaving || !canManageDeadmatch"
+          @click="cancelDeadmatch"
+        >Hủy tham gia</button>
+        <button
+          v-else
+          class="btn-primary bg-red-600 hover:bg-red-700"
+          :disabled="deadmatchSaving || !canManageDeadmatch"
+          @click="joinDeadmatch"
+        >{{ deadmatchSaving ? 'Đang xử lý...' : 'Tham gia' }}</button>
+      </div>
+    </div>
+  </div>
+
+  <div
     v-if="showFriendRegistrationGuideModal"
     class="fixed inset-0 z-[80] flex items-center justify-center overflow-y-auto overscroll-contain bg-black/50 p-4"
   >
@@ -5291,6 +5353,12 @@ const challengePendingOutgoing = ref(false);
 const challengeAccepted = ref(false);
 const challengeSaving = ref(false);
 const autoOpenedIncomingChallengeIds = new Set<string>();
+const showDeadmatchModal = ref(false);
+const deadmatchTournament = ref<Tournament | null>(null);
+const deadmatchOpponentTeam = ref<any | null>(null);
+const deadmatchEntries = ref<any[]>([]);
+const deadmatchLoading = ref(false);
+const deadmatchSaving = ref(false);
 const friendsLoading = ref(false);
 const friendRegistrationSaving = ref(false);
 const friendSwapMode = ref(false);
@@ -7302,6 +7370,113 @@ const getTournamentTeams = (tournament: Tournament): any[] => {
       score: team.score || 0,
     };
   });
+};
+
+const getCurrentPlayerTeam = (tournament: Tournament): any | null => {
+  const playerId = getCurrentPlayerId();
+  if (!playerId) return null;
+  return getTournamentTeams(tournament).find((team) =>
+    team.players.some((player: any) => player.id === playerId),
+  ) || null;
+};
+
+const canOpenDeadmatch = (tournament: Tournament, team: any): boolean => {
+  const currentTeam = getCurrentPlayerTeam(tournament);
+  return Boolean(
+    currentTeam &&
+      currentTeam.id !== team.id &&
+      getTournamentTeams(tournament).length > 1 &&
+      tournament.status !== "COMPLETED",
+  );
+};
+
+const deadmatchTeams = computed(() => {
+  if (!deadmatchTournament.value || !deadmatchOpponentTeam.value) return [];
+  const ownTeam = getCurrentPlayerTeam(deadmatchTournament.value);
+  return [ownTeam, deadmatchOpponentTeam.value].filter(Boolean);
+});
+
+const currentDeadmatchEntry = computed(() => {
+  const playerId = getCurrentPlayerId();
+  return deadmatchEntries.value.find(
+    (entry) => entry.playerId === playerId && entry.status !== "CANCELLED",
+  );
+});
+
+const canManageDeadmatch = computed(
+  () => Boolean(deadmatchTournament.value && Date.now() < new Date(deadmatchTournament.value.startDate).getTime()),
+);
+
+const getDeadmatchTeamEntries = (teamId: string): any[] =>
+  deadmatchEntries.value
+    .filter((entry) => entry.teamId === teamId)
+    .sort((first, second) => {
+      const firstWaiting = first.status === "WAITING" ? 0 : 1;
+      const secondWaiting = second.status === "WAITING" ? 0 : 1;
+      return firstWaiting - secondWaiting || first.queueNumber - second.queueNumber;
+    });
+
+const getDeadmatchOpponentName = (entry: any): string | null => {
+  if (!entry.matchKey) return null;
+  return deadmatchEntries.value.find(
+    (candidate) =>
+      candidate.id !== entry.id && candidate.matchKey === entry.matchKey,
+  )?.player?.name || null;
+};
+
+const loadDeadmatches = async (): Promise<void> => {
+  if (!deadmatchTournament.value || !deadmatchOpponentTeam.value) return;
+  deadmatchLoading.value = true;
+  try {
+    const response = await apiClient.getTournamentDeadmatches(
+      deadmatchTournament.value.id,
+      deadmatchOpponentTeam.value.id,
+    );
+    if (!response.success) throw new Error(response.error || "Không thể tải Deadmatch");
+    deadmatchEntries.value = (response.data as any)?.entries || [];
+  } catch (error: any) {
+    toast.error(error.response?.data?.error || error.message || "Không thể tải Deadmatch");
+  } finally {
+    deadmatchLoading.value = false;
+  }
+};
+
+const openDeadmatchModal = async (tournament: Tournament, opponentTeam: any): Promise<void> => {
+  deadmatchTournament.value = tournament;
+  deadmatchOpponentTeam.value = opponentTeam;
+  deadmatchEntries.value = [];
+  showDeadmatchModal.value = true;
+  await loadDeadmatches();
+};
+
+const joinDeadmatch = async (): Promise<void> => {
+  if (!deadmatchTournament.value || !deadmatchOpponentTeam.value || deadmatchSaving.value) return;
+  deadmatchSaving.value = true;
+  try {
+    const response = await apiClient.joinTournamentDeadmatch(deadmatchTournament.value.id, deadmatchOpponentTeam.value.id);
+    if (!response.success) throw new Error(response.error || "Không thể tham gia Deadmatch");
+    await loadDeadmatches();
+    toast.success((response.data as any)?.matched ? "Đã ghép cặp Deadmatch" : "Đã vào hàng chờ Deadmatch");
+  } catch (error: any) {
+    toast.error(error.response?.data?.error || error.message || "Không thể tham gia Deadmatch");
+  } finally {
+    deadmatchSaving.value = false;
+  }
+};
+
+const cancelDeadmatch = async (): Promise<void> => {
+  if (!deadmatchTournament.value || !deadmatchOpponentTeam.value || deadmatchSaving.value) return;
+  deadmatchSaving.value = true;
+  try {
+    const response = await apiClient.cancelTournamentDeadmatch(deadmatchTournament.value.id, deadmatchOpponentTeam.value.id);
+    if (!response.success) throw new Error(response.error || "Không thể hủy Deadmatch");
+    await loadDeadmatches();
+    toast.success("Đã hủy tham gia Deadmatch");
+  } catch (error: any) {
+    toast.error(error.response?.data?.error || error.message || "Không thể hủy Deadmatch");
+  } finally {
+    deadmatchSaving.value = false;
+  }
 };
 
 const getPositionLabel = (position: string): string =>

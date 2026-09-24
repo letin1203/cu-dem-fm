@@ -6904,7 +6904,7 @@ const fetchAttendanceDetails = async (
     attendanceDetailsLoadingIds.value = new Set(
       attendanceDetailsLoadingIds.value,
     ).add(tournamentId);
-    attendanceModalLoading.value = true;
+    if (updateAttendanceModal) attendanceModalLoading.value = true;
     const response = await apiClient.get<TournamentAttendanceDetails[]>(
       `/tournaments/${tournamentId}/attendance-details`,
     );
@@ -6941,7 +6941,7 @@ const fetchAttendanceDetails = async (
     toast.error("Không thể tải chi tiết điểm danh");
     attendanceModalData.value = [];
   } finally {
-    attendanceModalLoading.value = false;
+    if (updateAttendanceModal) attendanceModalLoading.value = false;
     const loadingIds = new Set(attendanceDetailsLoadingIds.value);
     loadingIds.delete(tournamentId);
     attendanceDetailsLoadingIds.value = loadingIds;

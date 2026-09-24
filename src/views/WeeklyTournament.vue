@@ -1140,6 +1140,15 @@
                     Cầu thủ tham gia
                   </h4>
                   <button
+                    type="button"
+                    class="rounded p-1 text-primary-600 hover:bg-primary-100"
+                    :title="teamPreviewSortByTier ? 'Sắp xếp theo thời gian đăng ký' : 'Sắp xếp theo Tier'"
+                    :aria-label="teamPreviewSortByTier ? 'Sắp xếp theo thời gian đăng ký' : 'Sắp xếp theo Tier'"
+                    @click="teamPreviewSortByTier = !teamPreviewSortByTier"
+                  >
+                    <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 6h18M6 12h12m-9 6h6M7 4l-2 2 2 2m10 8 2 2-2 2" /></svg>
+                  </button>
+                  <button
                     v-if="authStore.hasAnyRole(['admin', 'mod'])"
                     type="button"
                     class="rounded p-1 text-primary-600 hover:bg-primary-100 disabled:opacity-50"
@@ -1437,6 +1446,15 @@
               <div class="mb-3 flex items-center justify-between">
                 <div class="flex items-center gap-2">
                   <h4 class="font-semibold text-gray-800">Cầu thủ tham gia</h4>
+                  <button
+                    type="button"
+                    class="rounded p-1 text-primary-600 hover:bg-primary-100"
+                    :title="teamPreviewSortByTier ? 'Sắp xếp theo thời gian đăng ký' : 'Sắp xếp theo Tier'"
+                    :aria-label="teamPreviewSortByTier ? 'Sắp xếp theo thời gian đăng ký' : 'Sắp xếp theo Tier'"
+                    @click="teamPreviewSortByTier = !teamPreviewSortByTier"
+                  >
+                    <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 6h18M6 12h12m-9 6h6M7 4l-2 2 2 2m10 8 2 2-2 2" /></svg>
+                  </button>
                   <button
                     v-if="authStore.hasAnyRole(['admin', 'mod'])"
                     type="button"
@@ -5413,6 +5431,7 @@ const playerAttendanceLoading = ref<Set<string>>(new Set());
 const attendancePlayerNameFilter = ref("");
 const attendancePlayerTierFilter = ref<number | null>(null);
 const attendanceSortByTier = ref(false);
+const teamPreviewSortByTier = ref(true);
 const attendanceFieldTab = ref<"FIELD_5" | "FIELD_7">("FIELD_5");
 const attendanceExclusiveField = ref(false);
 const attendanceModalTournamentId = ref<string | null>(null);
@@ -6815,7 +6834,10 @@ const getHighestFieldAttendanceCount = (tournamentId: string): number => {
 };
 
 // Modal functions
-const fetchAttendanceDetails = async (tournamentId: string): Promise<void> => {
+const fetchAttendanceDetails = async (
+  tournamentId: string,
+  updateAttendanceModal = true,
+): Promise<void> => {
   if (attendanceDetailsLoadingIds.value.has(tournamentId)) return;
   try {
     attendanceDetailsLoadingIds.value = new Set(
@@ -6826,7 +6848,7 @@ const fetchAttendanceDetails = async (tournamentId: string): Promise<void> => {
       `/tournaments/${tournamentId}/attendance-details`,
     );
     if (response.success && response.data) {
-      attendanceModalData.value = response.data;
+      if (updateAttendanceModal) attendanceModalData.value = response.data;
       // Store in map for betting count calculation
       attendanceDetailsMap.value.set(tournamentId, response.data);
       const currentPlayerId = getCurrentPlayerId();
@@ -7113,24 +7135,38 @@ const getTeamPreviewPlayers = (
       swapWaitlistPosition: attendance.swapWaitlistPosition || null,
       swappedWithName: attendance.swappedWithName || null,
       challenge: attendance.challenge || null,
+      registeredAt: attendance.registeredAt || null,
     }));
   const hasPrimaryGoalkeeper = players.some((player: any) =>
     isGoalkeeper(player.position),
   );
   return players.sort((first: any, second: any) => {
-    const firstIsGoalkeeper = isGoalkeeper(first.position);
-    const secondIsGoalkeeper = isGoalkeeper(second.position);
-    if (firstIsGoalkeeper !== secondIsGoalkeeper)
-      return firstIsGoalkeeper ? -1 : 1;
-    if (!hasPrimaryGoalkeeper) {
-      const firstIsSecondaryGoalkeeper = isGoalkeeper(first.positionSecond);
-      const secondIsSecondaryGoalkeeper = isGoalkeeper(second.positionSecond);
-      if (firstIsSecondaryGoalkeeper !== secondIsSecondaryGoalkeeper)
-        return firstIsSecondaryGoalkeeper ? -1 : 1;
+    if (teamPreviewSortByTier.value) {
+      const firstIsGoalkeeper = isGoalkeeper(first.position);
+      const secondIsGoalkeeper = isGoalkeeper(second.position);
+      if (firstIsGoalkeeper !== secondIsGoalkeeper)
+        return firstIsGoalkeeper ? -1 : 1;
+      if (!hasPrimaryGoalkeeper) {
+        const firstIsSecondaryGoalkeeper = isGoalkeeper(first.positionSecond);
+        const secondIsSecondaryGoalkeeper = isGoalkeeper(second.positionSecond);
+        if (firstIsSecondaryGoalkeeper !== secondIsSecondaryGoalkeeper)
+          return firstIsSecondaryGoalkeeper ? -1 : 1;
+      }
+      return (
+        first.tier - second.tier ||
+        String(first.registeredAt || "").localeCompare(
+          String(second.registeredAt || ""),
+        ) ||
+        first.name.localeCompare(second.name, "vi")
+      );
     }
-    return (
-      first.tier - second.tier || first.name.localeCompare(second.name, "vi")
-    );
+    const firstRegisteredAt = first.registeredAt
+      ? new Date(first.registeredAt).getTime()
+      : Number.MAX_SAFE_INTEGER;
+    const secondRegisteredAt = second.registeredAt
+      ? new Date(second.registeredAt).getTime()
+      : Number.MAX_SAFE_INTEGER;
+    return firstRegisteredAt - secondRegisteredAt || first.name.localeCompare(second.name, "vi");
   });
 };
 
@@ -8804,16 +8840,54 @@ const fetchData = async () => {
   }
 };
 
+let challengePollTimer: number | undefined;
+let challengePollInFlight = false;
+
+const pollIncomingChallenges = async (): Promise<void> => {
+  if (
+    challengePollInFlight ||
+    document.visibilityState === "hidden" ||
+    !(authStore.currentUser?.playerId || authStore.currentUser?.player?.id)
+  ) {
+    return;
+  }
+  const openChallengeTournamentIds = weeklyTournaments.value
+    .filter((tournament) => tournament.status === "UPCOMING" && !tournament.teams.length)
+    .map((tournament) => tournament.id);
+  if (!openChallengeTournamentIds.length) return;
+
+  challengePollInFlight = true;
+  try {
+    await Promise.all(
+      openChallengeTournamentIds.map((tournamentId) =>
+        fetchAttendanceDetails(tournamentId, false),
+      ),
+    );
+  } finally {
+    challengePollInFlight = false;
+  }
+};
+
+const handleChallengeVisibilityChange = (): void => {
+  if (document.visibilityState === "visible") void pollIncomingChallenges();
+};
+
 // Initialize
 onMounted(async () => {
   await fetchData();
+  document.addEventListener("visibilitychange", handleChallengeVisibilityChange);
+  challengePollTimer = window.setInterval(() => void pollIncomingChallenges(), 5_000);
 });
 
 const cancellationDeadlineTimer = window.setInterval(() => {
   currentTimestamp.value = Date.now();
 }, 30_000);
 
-onBeforeUnmount(() => window.clearInterval(cancellationDeadlineTimer));
+onBeforeUnmount(() => {
+  window.clearInterval(cancellationDeadlineTimer);
+  if (challengePollTimer) window.clearInterval(challengePollTimer);
+  document.removeEventListener("visibilitychange", handleChallengeVisibilityChange);
+});
 
 // Water-related functions
 const getUserWaterStatus = (tournamentId: string): boolean => {

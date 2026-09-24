@@ -223,6 +223,10 @@ router.delete('/:id', authenticate, authorize(['ADMIN', 'MOD']), async (req: Aut
         where: { id: pending.id },
         data: { status: 'REJECTED', rejectedAt: new Date() },
       });
+      await tx.tournamentSwapRequest.updateMany({
+        where: { requesterPlayerId: pending.playerId, status: 'PENDING' },
+        data: { status: 'CANCELLED', resolvedAt: new Date() },
+      });
 
       // A player may have been allowed to register based on pending money.
       // If rejecting this request leaves their available balance below zero,

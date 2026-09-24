@@ -6503,8 +6503,15 @@ const getIncomingSwapRequests = (
 ): IncomingSwapRequest[] => {
   const requests = incomingSwapRequests.value.get(tournamentId) || [];
   const details = attendanceDetailsMap.value.get(tournamentId) || [];
+  const currentPlayerId =
+    authStore.currentUser?.player?.id || authStore.currentUser?.playerId;
   const pending = details
-    .filter((item: any) => item.swapPending && item.swapRequestId)
+    .filter(
+      (item: any) =>
+        item.swapPending &&
+        item.swapRequestId &&
+        item.playerId !== currentPlayerId,
+    )
     .map((item: any) => ({
       id: item.swapRequestId,
       tournamentId,
@@ -6785,10 +6792,15 @@ const openSwapAcceptance = (request: IncomingSwapRequest): void => {
 
 const canAddAnotherField = (tournamentId: string): boolean => {
   const attendance = attendanceMap.value.get(tournamentId);
-  return (
-    attendance?.status === "ATTEND" &&
-    (!attendance.field5 || !attendance.field7)
-  );
+  if (attendance?.status !== "ATTEND") return false;
+
+  const pitchType = weeklyTournaments.value.find(
+    (tournament) => tournament.id === tournamentId,
+  )?.pitchType;
+  if (pitchType === "FIELD_5") return !attendance.field5;
+  if (pitchType === "FIELD_7") return !attendance.field7;
+
+  return !attendance.field5 || !attendance.field7;
 };
 
 const toggleAttendance = async (tournamentId: string): Promise<void> => {

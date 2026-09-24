@@ -996,7 +996,15 @@
                     authStore.currentUser?.player
                   "
                   type="button"
-                  :disabled="isAttendanceLimitReached(ongoingTournament)"
+                  :disabled="
+                    isAttendanceLimitReached(ongoingTournament) ||
+                    cannotSelfRegisterDueToDebt
+                  "
+                  :title="
+                    cannotSelfRegisterDueToDebt
+                      ? 'Vui lòng thanh toán số dư âm trước khi đăng ký dùm bạn'
+                      : undefined
+                  "
                   class="rounded-lg bg-blue-600 px-6 py-2 font-medium text-white transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
                   @click="openFriendRegistration(ongoingTournament.id)"
                 >
@@ -6222,6 +6230,12 @@ const fetchAttendance = async (tournamentId: string): Promise<void> => {
 };
 
 const openFriendRegistration = async (tournamentId: string): Promise<void> => {
+  if (cannotSelfRegisterDueToDebt.value) {
+    toast.error(
+      "Số dư đang âm, vui lòng thanh toán trước khi đăng ký dùm bạn",
+    );
+    return;
+  }
   friendSwapMode.value = false;
   friendTournamentId.value = tournamentId;
   friendField5.value = true;

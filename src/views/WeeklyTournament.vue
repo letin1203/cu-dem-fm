@@ -721,7 +721,7 @@
               class="flex justify-center pt-2 border-t border-gray-200"
             >
               <div
-                class="flex w-full flex-col items-stretch gap-3 sm:w-auto sm:flex-row sm:flex-wrap sm:justify-center [&>button]:w-full sm:[&>button]:w-auto"
+                class="flex w-full flex-col items-stretch gap-3 sm:w-auto sm:flex-row sm:flex-wrap sm:items-start sm:justify-center [&>button]:w-full sm:[&>button]:w-auto"
               >
                 <div
                   v-if="

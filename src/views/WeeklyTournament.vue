@@ -9019,7 +9019,23 @@ const loadPendingRegistrationTopUps = async (): Promise<void> => {
 };
 
 const refreshPendingRegistrationTopUps = (): void => {
-  void loadPendingRegistrationTopUps();
+  void (async () => {
+    await loadPendingRegistrationTopUps();
+
+    // A rejected pending top-up can make the server remove the player from an
+    // upcoming tournament. Refresh attendance too, so the CTA immediately
+    // switches back to “Tham gia” and exposes the payment action.
+    const activeTournaments = weeklyTournaments.value.filter(
+      (tournament) => tournament.status !== "COMPLETED",
+    );
+    await Promise.all(
+      activeTournaments.flatMap((tournament) => [
+        fetchAttendance(tournament.id),
+        fetchAttendanceStats(tournament.id),
+        fetchAttendanceDetails(tournament.id, false),
+      ]),
+    );
+  })();
 };
 
 // Fetch all data

@@ -56,6 +56,24 @@
               />
             </svg>
             <span class="whitespace-nowrap">{{ formatCompactMoney(systemStore.currentSettings.clubFund) }}</span>
+            <span
+              v-if="authStore.currentUser?.player"
+              class="text-primary-300"
+              aria-hidden="true"
+              >|</span
+            >
+            <span
+              v-if="authStore.currentUser?.player"
+              class="whitespace-nowrap"
+              :class="
+                (authStore.currentUser.player.money || 0) < 0
+                  ? 'text-red-600'
+                  : 'text-green-600'
+              "
+              title="Số dư của bạn"
+            >
+              {{ formatCompactMoney(authStore.currentUser.player.money) }}
+            </span>
           </button>
         </div>
 
@@ -114,9 +132,15 @@
               class="flex items-center space-x-2 text-primary-700 hover:text-primary-800 hover:bg-primary-100/50 px-3 py-2 rounded-md text-sm font-medium"
             >
               <div
-                class="h-6 w-6 rounded-full bg-primary-200 flex items-center justify-center"
+                class="h-6 w-6 overflow-hidden rounded-full bg-primary-200 flex items-center justify-center"
               >
-                <span class="text-primary-800 font-medium text-xs">
+                <img
+                  v-if="currentUserAvatar"
+                  :src="currentUserAvatar"
+                  :alt="authStore.currentUser?.username || 'Avatar'"
+                  class="h-full w-full object-cover"
+                />
+                <span v-else class="text-primary-800 font-medium text-xs">
                   {{ authStore.currentUser?.username.charAt(0).toUpperCase() }}
                 </span>
               </div>
@@ -124,6 +148,7 @@
                 authStore.currentUser?.username
               }}</span>
               <span
+                v-if="isStaff"
                 class="px-2 py-1 text-xs rounded-full"
                 :class="getRoleClasses(authStore.currentUser?.role || 'user')"
               >
@@ -567,6 +592,10 @@ const linkedPlayer = computed(() => {
     (p) => p.id === authStore.currentUser?.playerId,
   );
 });
+
+const currentUserAvatar = computed(
+  () => authStore.currentUser?.player?.avatar || linkedPlayer.value?.avatar || "",
+);
 
 const formatDate = (date: string | Date) =>
   new Date(date).toLocaleDateString("vi-VN", {

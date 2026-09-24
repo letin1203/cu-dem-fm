@@ -2954,14 +2954,23 @@
             ? "Chọn sân trước khi xác nhận thay thế cầu thủ."
             : fieldRegistrationAddOnly
               ? "Bạn chỉ có thể thêm sân chưa đăng ký sau thời gian chốt hủy."
+              : fieldRegistrationPitchType === "FIELD_5"
+                ? "Admin/Mod đã chọn Sân 5 cho giải đấu này."
+                : fieldRegistrationPitchType === "FIELD_7"
+                  ? "Admin/Mod đã chọn Sân 7 cho giải đấu này."
               : "Bạn có thể đăng ký một hoặc cả hai sân."
         }}
       </p>
-      <div class="mt-5 grid grid-cols-2 gap-3">
+      <div
+        class="mt-5 grid gap-3"
+        :class="fieldRegistrationPitchType ? 'grid-cols-1' : 'grid-cols-2'"
+      >
         <button
+          v-if="fieldRegistrationPitchType !== 'FIELD_7'"
           type="button"
           :disabled="
-            fieldRegistrationAddOnly && fieldRegistrationExistingField5
+            fieldRegistrationPitchType === 'FIELD_5' ||
+            (fieldRegistrationAddOnly && fieldRegistrationExistingField5)
           "
           class="rounded-lg border-2 px-4 py-4 font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-60"
           :class="
@@ -2974,9 +2983,11 @@
           Sân 5 {{ registrationField5 ? "✓" : "" }}
         </button>
         <button
+          v-if="fieldRegistrationPitchType !== 'FIELD_5'"
           type="button"
           :disabled="
-            fieldRegistrationAddOnly && fieldRegistrationExistingField7
+            fieldRegistrationPitchType === 'FIELD_7' ||
+            (fieldRegistrationAddOnly && fieldRegistrationExistingField7)
           "
           class="rounded-lg border-2 px-4 py-4 font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-60"
           :class="
@@ -5525,12 +5536,26 @@ const registrationField7 = ref(true);
 const fieldRegistrationAddOnly = ref(false);
 const fieldRegistrationExistingField5 = ref(false);
 const fieldRegistrationExistingField7 = ref(false);
+const fieldRegistrationPitchType = computed<"FIELD_5" | "FIELD_7" | null>(
+  () =>
+    weeklyTournaments.value.find(
+      (tournament) => tournament.id === fieldRegistrationTournamentId.value,
+    )?.pitchType || null,
+);
 const canConfirmFieldRegistration = computed(() =>
   fieldRegistrationAddOnly.value
     ? (registrationField5.value && !fieldRegistrationExistingField5.value) ||
       (registrationField7.value && !fieldRegistrationExistingField7.value)
     : registrationField5.value || registrationField7.value,
 );
+
+const setRegistrationFieldsForTournament = (tournamentId: string): void => {
+  const pitchType = weeklyTournaments.value.find(
+    (tournament) => tournament.id === tournamentId,
+  )?.pitchType;
+  registrationField5.value = pitchType !== "FIELD_7";
+  registrationField7.value = pitchType !== "FIELD_5";
+};
 interface SwapCandidate {
   id: string;
   name: string;
@@ -6751,8 +6776,7 @@ const openSwapAcceptance = (request: IncomingSwapRequest): void => {
   }
   pendingSwapRequest.value = request;
   fieldRegistrationTournamentId.value = request.tournamentId;
-  registrationField5.value = true;
-  registrationField7.value = true;
+  setRegistrationFieldsForTournament(request.tournamentId);
   fieldRegistrationAddOnly.value = false;
   fieldRegistrationExistingField5.value = false;
   fieldRegistrationExistingField7.value = false;
@@ -6780,8 +6804,7 @@ const toggleAttendance = async (tournamentId: string): Promise<void> => {
   const currentStatus = currentAttendance.status || "NULL";
   if (currentStatus !== "ATTEND") {
     fieldRegistrationTournamentId.value = tournamentId;
-    registrationField5.value = true;
-    registrationField7.value = true;
+    setRegistrationFieldsForTournament(tournamentId);
     fieldRegistrationAddOnly.value = false;
     fieldRegistrationExistingField5.value = false;
     fieldRegistrationExistingField7.value = false;
@@ -6797,8 +6820,12 @@ const toggleAttendance = async (tournamentId: string): Promise<void> => {
     fieldRegistrationTournamentId.value = tournamentId;
     fieldRegistrationExistingField5.value = Boolean(currentAttendance.field5);
     fieldRegistrationExistingField7.value = Boolean(currentAttendance.field7);
-    registrationField5.value = Boolean(currentAttendance.field5);
-    registrationField7.value = Boolean(currentAttendance.field7);
+    if (tournament.pitchType) {
+      setRegistrationFieldsForTournament(tournamentId);
+    } else {
+      registrationField5.value = Boolean(currentAttendance.field5);
+      registrationField7.value = Boolean(currentAttendance.field7);
+    }
     fieldRegistrationAddOnly.value = true;
     showFieldRegistrationModal.value = true;
     return;

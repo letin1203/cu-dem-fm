@@ -782,31 +782,44 @@ function getRoleClasses(role: UserRole) {
 const isLoggingOut = ref(false);
 const pendingTopUpCount = ref(0);
 let pendingTopUpRefreshTimer: ReturnType<typeof setInterval> | null = null;
+let pendingTopUpRequestInFlight = false;
 
 async function loadPendingTopUpCount() {
   if (!authStore.hasAnyRole(["admin", "mod"])) {
     pendingTopUpCount.value = 0;
     return;
   }
+  if (pendingTopUpRequestInFlight) return;
+  pendingTopUpRequestInFlight = true;
   try {
     const response = await apiClient.getPendingMoneyTopUps();
     if (response.success) pendingTopUpCount.value = Array.isArray(response.data) ? response.data.length : 0;
   } catch {
     // The navigation remains usable if the optional badge cannot be refreshed.
+  } finally {
+    pendingTopUpRequestInFlight = false;
   }
 }
 
 const refreshPendingTopUpCount = () => void loadPendingTopUpCount();
+const refreshPendingTopUpOnVisibility = () => {
+  if (document.visibilityState === "visible") refreshPendingTopUpCount();
+};
 
 onMounted(() => {
   void loadPendingTopUpCount();
-  pendingTopUpRefreshTimer = setInterval(() => void loadPendingTopUpCount(), 60000);
+  // Polling is used instead of a persistent socket so it remains reliable on
+  // the free Render/Vercel deployment. Ten seconds is near-realtime while
+  // keeping background API traffic small.
+  pendingTopUpRefreshTimer = setInterval(() => void loadPendingTopUpCount(), 10_000);
   window.addEventListener("pending-money-top-ups-changed", refreshPendingTopUpCount);
+  document.addEventListener("visibilitychange", refreshPendingTopUpOnVisibility);
 });
 
 onBeforeUnmount(() => {
   if (pendingTopUpRefreshTimer) clearInterval(pendingTopUpRefreshTimer);
   window.removeEventListener("pending-money-top-ups-changed", refreshPendingTopUpCount);
+  document.removeEventListener("visibilitychange", refreshPendingTopUpOnVisibility);
 });
 
 async function handleLogout() {

@@ -267,6 +267,10 @@ class ApiClient {
     return this.get('/money-top-ups/mine');
   }
 
+  async getMyApprovedMoneyTopUpNotifications(since: string) {
+    return this.get(`/money-top-ups/mine/approved-notifications?since=${encodeURIComponent(since)}`);
+  }
+
   async createAdminMoneyTopUp(playerId: string, amount: number, reason: string) {
     return this.post('/money-top-ups/admin', { playerId, amount, reason });
   }

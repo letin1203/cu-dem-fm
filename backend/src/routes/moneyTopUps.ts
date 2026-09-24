@@ -47,6 +47,28 @@ router.get('/mine', authenticate, async (req: AuthenticatedRequest, res: Respons
   }
 });
 
+// Lightweight polling endpoint used by an online player to be notified when
+// a staff member approves a top-up. Only approvals after `since` are returned.
+router.get('/mine/approved-notifications', authenticate, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  try {
+    const user = await prisma.user.findUnique({ where: { id: req.user!.id }, select: { playerId: true } });
+    const since = new Date(String(req.query.since || ''));
+    if (!user?.playerId || Number.isNaN(since.getTime())) {
+      res.json({ success: true, data: [] });
+      return;
+    }
+    const approvals = await prisma.playerMoneyTopUp.findMany({
+      where: { playerId: user.playerId, status: 'APPROVED', approvedAt: { gt: since } },
+      select: { id: true, amount: true, approvedAt: true },
+      orderBy: { approvedAt: 'asc' },
+      take: 10,
+    });
+    res.json({ success: true, data: approvals });
+  } catch (error) {
+    res.status(500).json({ success: false, error: 'Không thể kiểm tra yêu cầu nạp tiền đã duyệt' });
+  }
+});
+
 // A player can cancel only their own request while it is still pending.
 router.delete('/mine/:id', authenticate, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   try {

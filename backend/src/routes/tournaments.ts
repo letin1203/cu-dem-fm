@@ -1271,7 +1271,7 @@ const isChallengeEligible = (attendance: { status: string; field5: boolean; fiel
   attendance?.status === 'ATTEND' && (field === 'FIELD_5' ? attendance.field5 : field === 'FIELD_7' ? attendance.field7 : false);
 
 // Create a player-to-player challenge. Both players must share at least one
-// registered pitch and belong to the same two-tier range.
+// registered pitch and belong to either the Tier 1–2 or Tier 3–6 group.
 router.post('/:id/challenges', authenticate, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   try {
     const targetPlayerId = typeof req.body?.targetPlayerId === 'string' ? req.body.targetPlayerId : '';
@@ -1286,7 +1286,11 @@ router.post('/:id/challenges', authenticate, async (req: AuthenticatedRequest, r
       prisma.tournamentPlayerAttendance.findUnique({ where: { tournamentId_playerId: { tournamentId: tournament.id, playerId: targetPlayerId } } }),
     ]);
     const shareAField = requesterAttendance?.status === 'ATTEND' && targetAttendance?.status === 'ATTEND' && ((requesterAttendance.field5 && targetAttendance.field5) || (requesterAttendance.field7 && targetAttendance.field7));
-    if (!requester || !target || Math.ceil(requester.tier / 2) !== Math.ceil(target.tier / 2) || !shareAField) { res.status(400).json({ success: false, error: 'Hai cầu thủ phải cùng nhóm Tier và cùng đăng ký ít nhất một sân' }); return; }
+    const getChallengeTierGroup = (tier: number): 'TIER_1_2' | 'TIER_3_6' | null =>
+      tier >= 1 && tier <= 2 ? 'TIER_1_2' : tier >= 3 && tier <= 6 ? 'TIER_3_6' : null;
+    const requesterTierGroup = requester ? getChallengeTierGroup(requester.tier) : null;
+    const targetTierGroup = target ? getChallengeTierGroup(target.tier) : null;
+    if (!requester || !target || !requesterTierGroup || requesterTierGroup !== targetTierGroup || !shareAField) { res.status(400).json({ success: false, error: 'Hai cầu thủ phải cùng nhóm Tier (Tier 1–2 hoặc Tier 3–6) và cùng đăng ký ít nhất một sân' }); return; }
     const active = await prisma.tournamentChallenge.findFirst({ where: { tournamentId: tournament.id, status: { in: ['PENDING', 'ACCEPTED'] }, OR: [{ requesterPlayerId: user.playerId }, { targetPlayerId: user.playerId }, { requesterPlayerId: targetPlayerId }, { targetPlayerId: targetPlayerId }] } });
     if (active) { res.status(400).json({ success: false, error: 'Một trong hai cầu thủ đã có lời mời thách đấu' }); return; }
     // A cancelled request is retained for history, so revive it instead of

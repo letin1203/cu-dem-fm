@@ -5153,8 +5153,8 @@
         </p>
         <p class="font-semibold">Luật thách đấu</p>
         <p>
-          Chỉ cầu thủ cùng nhóm Tier (Tier 1–2, Tier 3–4 hoặc Tier 5–6) mới
-          được thách đấu nhau.
+          Chỉ cầu thủ cùng nhóm Tier (Tier 1–2 hoặc Tier 3–6) và cùng đăng ký
+          ít nhất một sân mới được thách đấu nhau.
         </p>
         <p>
           Hai cầu thủ thách đấu sẽ luôn được xếp ở hai đội khác nhau khi chia
@@ -5210,7 +5210,7 @@
         <section class="rounded-lg border border-primary-100 bg-primary-50 p-3 text-sm leading-6 text-gray-700">
           <h4 class="font-semibold text-primary-800">Luật thách đấu</h4>
           <ul class="mt-1 list-disc space-y-1 pl-5">
-            <li>Chỉ cầu thủ cùng nhóm Tier (Tier 1–2, Tier 3–4 hoặc Tier 5–6) và cùng đăng ký ít nhất một sân mới được thách đấu.</li>
+            <li>Chỉ cầu thủ cùng nhóm Tier (Tier 1–2 hoặc Tier 3–6) và cùng đăng ký ít nhất một sân mới được thách đấu.</li>
             <li>Sau khi hai bên chấp nhận, hệ thống luôn xếp hai cầu thủ vào hai đội khác nhau khi chia đội.</li>
             <li>Kết thúc giải, cầu thủ thuộc đội có điểm cao hơn thắng và nhận +10.000 ₫; cầu thủ còn lại bị trừ 10.000 ₫.</li>
           </ul>
@@ -7396,7 +7396,9 @@ const isCurrentUsersFriend = (player: any): boolean =>
 const isSameChallengeTierRange = (
   firstTier: number,
   secondTier: number,
-): boolean => Math.ceil(firstTier / 2) === Math.ceil(secondTier / 2);
+): boolean =>
+  (firstTier >= 1 && firstTier <= 2 && secondTier >= 1 && secondTier <= 2) ||
+  (firstTier >= 3 && firstTier <= 6 && secondTier >= 3 && secondTier <= 6);
 const isPendingOutgoingChallengeTarget = (
   tournamentId: string,
   player: any,

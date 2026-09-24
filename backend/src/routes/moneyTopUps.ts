@@ -218,9 +218,48 @@ router.delete('/:id', authenticate, authorize(['ADMIN', 'MOD']), async (req: Aut
       return;
     }
 
-    await prisma.playerMoneyTopUp.update({
-      where: { id: pending.id },
-      data: { status: 'REJECTED', rejectedAt: new Date() },
+    await prisma.$transaction(async (tx) => {
+      await tx.playerMoneyTopUp.update({
+        where: { id: pending.id },
+        data: { status: 'REJECTED', rejectedAt: new Date() },
+      });
+
+      // A player may have been allowed to register based on pending money.
+      // If rejecting this request leaves their available balance below zero,
+      // remove them from upcoming tournaments automatically.
+      const remainingPending = await tx.playerMoneyTopUp.aggregate({
+        where: { playerId: pending.playerId, status: 'PENDING' },
+        _sum: { amount: true },
+      });
+      const player = await tx.player.findUnique({
+        where: { id: pending.playerId },
+        select: { money: true },
+      });
+      if ((player?.money || 0) + (remainingPending._sum.amount || 0) >= 0) return;
+
+      const upcomingAttendances = await tx.tournamentPlayerAttendance.findMany({
+        where: {
+          playerId: pending.playerId,
+          status: 'ATTEND',
+          tournament: { status: 'UPCOMING' },
+        },
+        select: { tournamentId: true },
+      });
+      const tournamentIds = upcomingAttendances.map((attendance) => attendance.tournamentId);
+      if (!tournamentIds.length) return;
+
+      await tx.tournamentPlayerAttendance.updateMany({
+        where: { playerId: pending.playerId, tournamentId: { in: tournamentIds } },
+        data: { status: 'NULL', field5: false, field7: false, withWater: false, bet: false },
+      });
+      await tx.tournamentChallenge.updateMany({
+        where: {
+          tournamentId: { in: tournamentIds },
+          status: { in: ['PENDING', 'ACCEPTED'] },
+          OR: [{ requesterPlayerId: pending.playerId }, { targetPlayerId: pending.playerId }],
+        },
+        data: { status: 'CANCELLED', respondedAt: new Date() },
+      });
     });
     res.json({ success: true, message: 'Đã từ chối yêu cầu nạp tiền' });
   } catch (error) {

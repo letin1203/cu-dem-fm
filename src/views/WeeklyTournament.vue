@@ -748,7 +748,7 @@
                       (getAttendanceButtonText(ongoingTournament.id) ===
                         'Tham gia' &&
                         (isAttendanceLimitReached(ongoingTournament) ||
-                          (cannotSelfRegisterDueToDebt &&
+                          (cannotRegisterDueToDebt &&
                             !ongoingTournament.selfFunded)))
                     "
                     :title="
@@ -761,7 +761,7 @@
                               'Tham gia' &&
                             isAttendanceLimitReached(ongoingTournament)
                           ? attendanceLimitMessage(ongoingTournament)
-                          : cannotSelfRegisterDueToDebt &&
+                          : cannotRegisterDueToDebt &&
                               !ongoingTournament.selfFunded
                             ? 'Vui lòng thanh toán số dư âm trước khi đăng ký'
                             : undefined
@@ -779,7 +779,7 @@
                       (getAttendanceButtonText(ongoingTournament.id) ===
                         'Tham gia' &&
                         (isAttendanceLimitReached(ongoingTournament) ||
-                          (cannotSelfRegisterDueToDebt &&
+                          (cannotRegisterDueToDebt &&
                             !ongoingTournament.selfFunded)))
                         ? 'opacity-50 cursor-not-allowed'
                         : 'hover:shadow-md',
@@ -804,7 +804,7 @@
                     v-if="
                       getAttendanceButtonText(ongoingTournament.id) ===
                         'Tham gia' &&
-                      cannotSelfRegisterDueToDebt &&
+                      cannotRegisterDueToDebt &&
                       !ongoingTournament.selfFunded
                     "
                     class="mt-2 text-center text-xs font-medium text-red-600"
@@ -2510,8 +2510,8 @@
               thống sẽ lưu thời điểm đăng ký.
             </li>
             <li v-if="!ongoingTournament.selfFunded">
-              • Cầu thủ có số dư âm cần thanh toán trước khi tự đăng ký tham
-              gia.
+              • Cầu thủ có số dư âm vẫn có thể tự đăng ký nếu số dư cộng tiền
+              nạp đang chờ duyệt không âm.
             </li>
             <li>• Admin/mod chia đội lúc <strong>17:00</strong>.</li>
             <li>
@@ -2999,6 +2999,18 @@
         class="mt-3 text-sm text-red-600"
       >
         Vui lòng chọn ít nhất một sân.
+      </p>
+      <p
+        v-if="
+          isRegisteringWithPendingTopUp &&
+          !pendingSwapRequest &&
+          !fieldRegistrationAddOnly
+        "
+        class="mt-4 rounded-lg bg-amber-50 p-3 text-sm leading-6 text-amber-800"
+      >
+        Vui lòng kiểm tra chắc chắn bạn đã góp quỹ qua MoMo, nếu chưa góp thì
+        khi BQT “hủy” tiền đang chờ duyệt, hệ thống sẽ xóa bạn khỏi danh sách
+        đăng ký.
       </p>
       <div class="mt-6 flex justify-end gap-3">
         <button
@@ -5404,8 +5416,23 @@ const visibleFilters = computed(() =>
 const attendanceMap = ref<Map<string, TournamentPlayerAttendance>>(new Map());
 const attendanceLoading = ref<Set<string>>(new Set());
 const attendanceStats = ref<Map<string, TournamentAttendanceStats>>(new Map());
+const pendingRegistrationTopUpAmount = ref(0);
 const cannotSelfRegisterDueToDebt = computed(
   () => (authStore.currentUser?.player?.money ?? 0) < 0,
+);
+const effectiveRegistrationBalance = computed(
+  () =>
+    (authStore.currentUser?.player?.money ?? 0) +
+    pendingRegistrationTopUpAmount.value,
+);
+const cannotRegisterDueToDebt = computed(
+  () => effectiveRegistrationBalance.value < 0,
+);
+const isRegisteringWithPendingTopUp = computed(
+  () =>
+    (authStore.currentUser?.player?.money ?? 0) < 0 &&
+    pendingRegistrationTopUpAmount.value > 0 &&
+    effectiveRegistrationBalance.value >= 0,
 );
 const showFriendRegistrationModal = ref(false);
 const showFriendSwapModal = ref(false);
@@ -8968,6 +8995,23 @@ const getTournamentEndStatusMessage = (tournamentId: string): string => {
   return ""; // Can end tournament
 };
 
+const loadPendingRegistrationTopUps = async (): Promise<void> => {
+  try {
+    const response = await apiClient.getMyPendingMoneyTopUps();
+    if (!response.success) throw new Error("Không thể tải tiền nạp chờ duyệt");
+
+    const data = (response.data || {}) as { totalPending?: number };
+    pendingRegistrationTopUpAmount.value = Number(data.totalPending || 0);
+  } catch {
+    // Keep the registration rule conservative if pending top-ups cannot load.
+    pendingRegistrationTopUpAmount.value = 0;
+  }
+};
+
+const refreshPendingRegistrationTopUps = (): void => {
+  void loadPendingRegistrationTopUps();
+};
+
 // Fetch all data
 const fetchData = async () => {
   try {
@@ -8975,6 +9019,7 @@ const fetchData = async () => {
       tournamentsStore.fetchTournaments(),
       teamsStore.fetchTeams(),
       systemStore.fetchSystemSettings(),
+      loadPendingRegistrationTopUps(),
     ]);
     await loadOldTournaments();
 
@@ -9027,6 +9072,10 @@ const handleChallengeVisibilityChange = (): void => {
 onMounted(async () => {
   await fetchData();
   document.addEventListener("visibilitychange", handleChallengeVisibilityChange);
+  window.addEventListener(
+    "pending-money-top-ups-changed",
+    refreshPendingRegistrationTopUps,
+  );
   challengePollTimer = window.setInterval(() => void pollIncomingChallenges(), 5_000);
 });
 
@@ -9038,6 +9087,10 @@ onBeforeUnmount(() => {
   window.clearInterval(cancellationDeadlineTimer);
   if (challengePollTimer) window.clearInterval(challengePollTimer);
   document.removeEventListener("visibilitychange", handleChallengeVisibilityChange);
+  window.removeEventListener(
+    "pending-money-top-ups-changed",
+    refreshPendingRegistrationTopUps,
+  );
 });
 
 // Water-related functions

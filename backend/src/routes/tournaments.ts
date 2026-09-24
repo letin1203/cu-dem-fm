@@ -1560,11 +1560,18 @@ router.put('/:id/attendance', authenticate, async (req: AuthenticatedRequest, re
     }
 
     if (status === 'ATTEND' && !tournament.selfFunded && req.user!.role === 'USER' && targetPlayerId === userId && player.money < 0) {
-      res.status(400).json({
-        success: false,
-        error: 'Cầu thủ đang có số dư âm, vui lòng thanh toán trước khi đăng ký tham gia',
+      const pendingTopUp = await prisma.playerMoneyTopUp.aggregate({
+        where: { playerId: player.id, status: 'PENDING' },
+        _sum: { amount: true },
       });
-      return;
+      const availableBalance = player.money + (pendingTopUp._sum.amount || 0);
+      if (availableBalance < 0) {
+        res.status(400).json({
+          success: false,
+          error: 'Cầu thủ đang có số dư âm, vui lòng thanh toán trước khi đăng ký tham gia',
+        });
+        return;
+      }
     }
 
     if (status === 'ATTEND' && field5 === false && field7 === false) {

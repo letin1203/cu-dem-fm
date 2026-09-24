@@ -96,7 +96,7 @@ export interface Tournament {
   type: 'LEAGUE' | 'KNOCKOUT' | 'GROUP' | 'WEEKLY'
   status: 'UPCOMING' | 'ONGOING' | 'COMPLETED'
   startDate: string | Date
-  endDate?: string | Date
+  endDate?: string | Date | null
   sponsorMoney?: number | null
   stadiumCost?: number | null
   fundContribution?: number

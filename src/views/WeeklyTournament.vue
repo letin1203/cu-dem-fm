@@ -199,12 +199,12 @@
                     class="inline-flex items-center rounded-full bg-primary-100 px-2 py-0.5 text-[10px] font-semibold text-primary-800 transition-colors hover:bg-primary-200 sm:py-1 sm:text-xs"
                     title="Chỉnh sửa giờ thi đấu"
                   >
-                    {{ formatTime(ongoingTournament.startDate) }}
+                    {{ formatTournamentTimeRange(ongoingTournament) }}
                   </button>
                   <span
                     v-else
                     class="inline-flex items-center rounded-full bg-primary-100 px-2 py-0.5 text-[10px] font-semibold text-primary-800 sm:py-1 sm:text-xs"
-                    >{{ formatTime(ongoingTournament.startDate) }}</span
+                    >{{ formatTournamentTimeRange(ongoingTournament) }}</span
                   >
                   <span
                     v-if="ongoingTournament.pitchType"
@@ -1983,7 +1983,7 @@
                   >
                     <span
                       class="inline-flex items-center rounded-full bg-primary-100 px-2 py-1 text-xs font-semibold text-primary-800"
-                      >{{ formatTime(tournament.startDate) }}</span
+                      >{{ formatTournamentTimeRange(tournament) }}</span
                     >
                     <span
                       class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium"
@@ -3714,6 +3714,17 @@
           >
             +
           </button>
+        </div>
+        <p class="form-label mb-3 mt-5">Thời gian thi đấu</p>
+        <div class="grid grid-cols-2 gap-3">
+          <button
+            v-for="option in tournamentDurationOptions"
+            :key="option.value"
+            type="button"
+            class="rounded-lg border px-3 py-3 font-medium transition-colors"
+            :class="selectedTournamentDuration === option.value ? 'border-primary-600 bg-primary-600 text-white' : 'border-gray-200 text-gray-700 hover:bg-gray-50'"
+            @click="selectedTournamentDuration = option.value"
+          >{{ option.label }}</button>
         </div>
       </div>
       <div class="flex justify-end gap-3 border-t pt-4">
@@ -5577,8 +5588,13 @@ const tournamentProtectionSaving = ref(false);
 const showTournamentTimeModal = ref(false);
 const timeTournament = ref<Tournament | null>(null);
 const selectedTournamentTime = ref("19:00");
+const selectedTournamentDuration = ref(90);
 const tournamentTimeSaving = ref(false);
 const tournamentTimeOptions = ["19:00", "19:30", "20:00"];
+const tournamentDurationOptions = [
+  { value: 90, label: "1h30p" },
+  { value: 120, label: "2h" },
+];
 
 const showCancellationDeadlineModal = ref(false);
 const cancellationDeadlineTournament = ref<Tournament | null>(null);
@@ -6033,6 +6049,16 @@ const formatTime = (date: string | Date): string => {
   } catch {
     return "Giờ không hợp lệ";
   }
+};
+
+const formatTournamentTimeRange = (tournament: Tournament): string => {
+  const startDate = new Date(tournament.startDate);
+  if (Number.isNaN(startDate.getTime())) return "Giờ không hợp lệ";
+  const storedEndDate = tournament.endDate ? new Date(tournament.endDate) : null;
+  const endDate = storedEndDate && storedEndDate.getTime() > startDate.getTime()
+    ? storedEndDate
+    : new Date(startDate.getTime() + 90 * 60_000);
+  return `${formatTime(startDate)}-${formatTime(endDate)}`;
 };
 
 const toDateTimeLocalValue = (date: Date): string => {
@@ -7714,8 +7740,7 @@ const createWeeklyTournament = async (tournamentDay: Date) => {
     const startDate = new Date(tournamentDay);
     startDate.setHours(19, 0, 0, 0); // 7:00 PM local time
 
-    const endDate = new Date(tournamentDay);
-    endDate.setHours(21, 0, 0, 0); // 9:00 PM local time
+    const endDate = new Date(startDate.getTime() + 90 * 60_000);
 
     // Convert to ISO strings to preserve the exact time we want
     const startDateISO = startDate.toISOString();
@@ -8268,6 +8293,11 @@ const saveStadiumCost = async () => {
 const openTournamentTimeModal = (tournament: Tournament) => {
   const date = new Date(tournament.startDate);
   selectedTournamentTime.value = `${String(date.getHours()).padStart(2, "0")}:${String(date.getMinutes()).padStart(2, "0")}`;
+  const endDate = tournament.endDate ? new Date(tournament.endDate) : null;
+  const durationMinutes = endDate && endDate.getTime() > date.getTime()
+    ? Math.round((endDate.getTime() - date.getTime()) / 60_000)
+    : 90;
+  selectedTournamentDuration.value = durationMinutes >= 105 ? 120 : 90;
   timeTournament.value = tournament;
   showTournamentTimeModal.value = true;
 };
@@ -8294,8 +8324,12 @@ const saveTournamentTime = async () => {
       .map(Number);
     const startDate = new Date(timeTournament.value.startDate);
     startDate.setHours(hours, minutes, 0, 0);
+    const endDate = new Date(
+      startDate.getTime() + selectedTournamentDuration.value * 60_000,
+    );
     const response = await apiClient.updateTournament(timeTournament.value.id, {
       startDate: startDate.toISOString(),
+      endDate: endDate.toISOString(),
     });
     if (!response.success || !response.data)
       throw new Error(response.error || "Không thể lưu giờ thi đấu");
@@ -8303,8 +8337,13 @@ const saveTournamentTime = async () => {
     const tournament = weeklyTournaments.value.find(
       (item) => item.id === timeTournament.value?.id,
     );
-    if (tournament)
-      tournament.startDate = (response.data as Tournament).startDate;
+    if (tournament) {
+      // Update the badge immediately, then reconcile with the canonical
+      // tournament payload so both start and end time stay in sync.
+      tournament.startDate = (response.data as Tournament).startDate || startDate.toISOString();
+      tournament.endDate = (response.data as Tournament).endDate || endDate.toISOString();
+    }
+    await tournamentsStore.fetchTournaments();
     toast.success("Đã cập nhật giờ thi đấu");
     closeTournamentTimeModal();
   } catch (error: any) {

@@ -301,7 +301,8 @@
                 <p class="mt-1 text-sm text-gray-600">{{ displayPosition(selectedProfilePlayer.position) }}<template v-if="selectedProfilePlayer.positionSecond"> - {{ displayPosition(selectedProfilePlayer.positionSecond) }}</template> · Tier {{ selectedProfilePlayer.tier }}</p>
                 <div class="mt-4 space-y-2 border-t pt-4 text-sm"><div class="flex justify-between"><span class="text-gray-600">Năm sinh</span><strong>{{ selectedProfilePlayer.yearOfBirth }}</strong></div><div class="flex justify-between"><span class="text-gray-600">Tuổi</span><strong>{{ new Date().getFullYear() - selectedProfilePlayer.yearOfBirth }} tuổi</strong></div><div class="flex justify-between"><span class="text-gray-600">Số dư</span><strong :class="selectedProfilePlayer.money < 0 ? 'text-red-600' : 'text-green-600'">{{ formatMoney(selectedProfilePlayer.money) }}</strong></div></div>
                 <div v-if="isOwnProfilePlayer && profilePendingTopUpTotal > 0" class="mt-3 rounded-lg bg-yellow-50 px-3 py-2 text-left text-sm text-yellow-800"><p>Đang chờ duyệt: <strong>{{ formatMoney(profilePendingTopUpTotal) }}</strong></p><div v-for="request in profilePendingTopUps" :key="request.id" class="mt-1 flex items-center justify-between gap-2 text-xs text-yellow-700"><span>+{{ formatMoney(request.amount) }} · Nạp lúc {{ formatProfileDate(request.requestedAt) }}</span><button type="button" class="inline-flex shrink-0 items-center justify-center rounded p-0.5 text-yellow-700 hover:bg-yellow-200 disabled:cursor-not-allowed disabled:opacity-50" :disabled="cancellingProfileTopUpId === request.id" title="Hủy yêu cầu nạp tiền" aria-label="Hủy yêu cầu nạp tiền" @click="cancelProfilePendingTopUp(request.id)"><svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 6l12 12M18 6 6 18" /></svg></button></div></div>
-                <button v-if="isOwnProfilePlayer" type="button" class="btn-primary mt-5 w-full" @click="openSelfTopUpModal">Nạp tiền</button>
+                <button v-if="isOwnProfilePlayer" type="button" class="btn-primary mt-5 w-full disabled:cursor-not-allowed disabled:opacity-50" :disabled="isProfileTopUpCooldownActive" @click="openSelfTopUpModal">{{ isProfileTopUpCooldownActive ? `Nạp lại sau ${profileTopUpCooldownLabel}` : 'Nạp tiền' }}</button>
+                <p v-if="isOwnProfilePlayer && profilePendingTopUps.length" class="mt-2 text-center text-xs text-amber-700">Yêu cầu của bạn đang được BQT kiểm tra quỹ MoMo và duyệt.</p>
               </section>
               <section class="rounded-lg border border-gray-200 p-5"><h3 class="mb-3 font-semibold text-gray-900">Lịch sử biến động tiền</h3><p v-if="profileMoneyHistoryLoading" class="text-sm text-gray-500">Đang tải...</p><p v-else-if="!profileMoneyHistory.length" class="text-sm text-gray-500">Chưa có biến động tiền.</p><div v-else class="space-y-3"><div v-for="item in profileMoneyHistory" :key="item.id" class="border-b border-gray-100 pb-3 last:border-0"><div class="flex justify-between gap-2 text-sm"><span class="min-w-0 text-gray-700">{{ item.description }}</span><strong class="shrink-0 whitespace-nowrap" :class="item.amount >= 0 ? 'text-green-600' : 'text-red-600'">{{ item.amount >= 0 ? '+' : '' }}{{ formatMoney(item.amount) }}</strong></div><p class="mt-1 text-xs text-gray-500">{{ formatProfileDate(item.createdAt) }}</p></div></div><div v-if="profileMoneyPagination.pages > 1" class="mt-4 flex items-center justify-between border-t pt-3"><button type="button" class="btn-secondary text-sm" :disabled="profileMoneyPagination.page <= 1" @click="loadProfileMoneyHistory(profileMoneyPagination.page - 1)">Trước</button><span class="text-xs text-gray-500">Trang {{ profileMoneyPagination.page }} / {{ profileMoneyPagination.pages }}</span><button type="button" class="btn-secondary text-sm" :disabled="profileMoneyPagination.page >= profileMoneyPagination.pages" @click="loadProfileMoneyHistory(profileMoneyPagination.page + 1)">Sau</button></div></section>
             </div>
@@ -510,6 +511,8 @@ const selfProfileTopUpAmount = ref(100000)
 const standardSelfProfileTopUpAmounts = [50000, 100000, 200000, 500000]
 const profilePendingTopUps = ref<Array<{ id: string; amount: number; requestedAt: string | Date }>>([])
 const cancellingProfileTopUpId = ref<string | null>(null)
+const profileTopUpCooldownNow = ref(Date.now())
+let profileTopUpCooldownTimer: number | undefined
 const showMoneyHistory = ref(false)
 const selectedMoneyPlayer = ref<Player | null>(null)
 const moneyHistory = ref<PlayerMoneyHistory[]>([])
@@ -589,6 +592,18 @@ const isOwnProfilePlayer = computed(() => {
   return Boolean(currentPlayerId && selectedProfilePlayer.value?.id === currentPlayerId)
 })
 const profilePendingTopUpTotal = computed(() => Array.isArray(profilePendingTopUps.value) ? profilePendingTopUps.value.reduce((total, request) => total + request.amount, 0) : 0)
+const profileTopUpCooldownRemainingSeconds = computed(() => {
+  const newestRequestAt = profilePendingTopUps.value.reduce((latest, request) => {
+    const requestedAt = new Date(request.requestedAt).getTime()
+    return Number.isNaN(requestedAt) ? latest : Math.max(latest, requestedAt)
+  }, 0)
+  return Math.max(0, Math.ceil((newestRequestAt + 5 * 60 * 1000 - profileTopUpCooldownNow.value) / 1000))
+})
+const isProfileTopUpCooldownActive = computed(() => profileTopUpCooldownRemainingSeconds.value > 0)
+const profileTopUpCooldownLabel = computed(() => {
+  const remaining = profileTopUpCooldownRemainingSeconds.value
+  return `${Math.floor(remaining / 60)}:${String(remaining % 60).padStart(2, '0')}`
+})
 const selfProfileDebtSettlementAmount = computed(() => {
   const balance = selectedProfilePlayer.value?.money || 0
   return balance < 0 ? Math.abs(balance) : null
@@ -684,6 +699,10 @@ function closePlayerProfileModal() {
 }
 
 function openSelfTopUpModal() {
+  if (isProfileTopUpCooldownActive.value) {
+    toast.info(`Bạn có thể nạp tiếp sau ${profileTopUpCooldownLabel.value}`)
+    return
+  }
   selfProfileTopUpAmount.value = selfProfileDebtSettlementAmount.value || 100000
   showSelfProfileTopUpModal.value = true
 }
@@ -724,6 +743,9 @@ const loadAllPlayers = async () => {
 
 onMounted(async () => {
   window.addEventListener('pending-money-top-ups-changed', refreshOwnProfileTopUpsAfterStatusChange)
+  profileTopUpCooldownTimer = window.setInterval(() => {
+    profileTopUpCooldownNow.value = Date.now()
+  }, 1_000)
   await Promise.all([
     playersStore.fetchPlayers(), // Load first 100 players
     teamsStore.fetchTeams()
@@ -731,6 +753,7 @@ onMounted(async () => {
 })
 
 onBeforeUnmount(() => {
+  if (profileTopUpCooldownTimer) window.clearInterval(profileTopUpCooldownTimer)
   window.removeEventListener('pending-money-top-ups-changed', refreshOwnProfileTopUpsAfterStatusChange)
 })
 

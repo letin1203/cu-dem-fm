@@ -134,10 +134,14 @@
             </div>
             <button
               @click="openTopUpModal"
-              class="btn-primary w-full mt-1"
+              :disabled="isTopUpCooldownActive"
+              class="btn-primary mt-1 w-full disabled:cursor-not-allowed disabled:opacity-50"
             >
-              Nạp tiền
+              {{ isTopUpCooldownActive ? `Nạp lại sau ${topUpCooldownLabel}` : "Nạp tiền" }}
             </button>
+            <p v-if="pendingTopUps.length" class="mt-2 text-center text-xs text-amber-700">
+              Yêu cầu của bạn đang được BQT kiểm tra quỹ MoMo và duyệt.
+            </p>
           </div>
         </div>
         <div class="card mt-6">
@@ -633,6 +637,20 @@ const showTopUpModal = ref(false);
 const submittingTopUp = ref(false);
 const selectedTopUpAmount = ref(100000);
 const standardTopUpAmounts = [50000, 100000, 200000, 500000];
+const topUpCooldownNow = ref(Date.now());
+let topUpCooldownTimer: number | undefined;
+const topUpCooldownRemainingSeconds = computed(() => {
+  const newestRequestAt = pendingTopUps.value.reduce((latest, request) => {
+    const requestedAt = new Date(request.requestedAt).getTime();
+    return Number.isNaN(requestedAt) ? latest : Math.max(latest, requestedAt);
+  }, 0);
+  return Math.max(0, Math.ceil((newestRequestAt + 5 * 60 * 1000 - topUpCooldownNow.value) / 1000));
+});
+const isTopUpCooldownActive = computed(() => topUpCooldownRemainingSeconds.value > 0);
+const topUpCooldownLabel = computed(() => {
+  const remaining = topUpCooldownRemainingSeconds.value;
+  return `${Math.floor(remaining / 60)}:${String(remaining % 60).padStart(2, "0")}`;
+});
 const debtSettlementAmount = computed(() => {
   const balance = playerProfile.value?.money || 0;
   return balance < 0 ? Math.abs(balance) : null;
@@ -859,6 +877,10 @@ const saveYearOfBirth = async (): Promise<void> => {
   } finally { savingYearOfBirth.value = false; }
 };
 const openTopUpModal = (): void => {
+  if (isTopUpCooldownActive.value) {
+    toast.info(`Bạn có thể nạp tiếp sau ${topUpCooldownLabel.value}`);
+    return;
+  }
   selectedTopUpAmount.value = debtSettlementAmount.value || 100000;
   showTopUpModal.value = true;
 };
@@ -907,9 +929,13 @@ const refreshPendingTopUpsAfterNotification = () => {
 
 onMounted(() => {
   void fetchPlayerProfile();
+  topUpCooldownTimer = window.setInterval(() => {
+    topUpCooldownNow.value = Date.now();
+  }, 1_000);
   window.addEventListener("pending-money-top-ups-changed", refreshPendingTopUpsAfterNotification);
 });
 onBeforeUnmount(() => {
+  if (topUpCooldownTimer) window.clearInterval(topUpCooldownTimer);
   window.removeEventListener("pending-money-top-ups-changed", refreshPendingTopUpsAfterNotification);
 });
 </script>

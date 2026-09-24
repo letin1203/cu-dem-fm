@@ -18,6 +18,28 @@ router.post('/', authenticate, async (req: AuthenticatedRequest, res: Response):
       return;
     }
 
+    const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
+    const recentPendingTopUp = await prisma.playerMoneyTopUp.findFirst({
+      where: {
+        playerId: user.playerId,
+        status: 'PENDING',
+        requestedAt: { gte: fiveMinutesAgo },
+      },
+      orderBy: { requestedAt: 'desc' },
+      select: { requestedAt: true },
+    });
+    if (recentPendingTopUp) {
+      const remainingSeconds = Math.max(
+        1,
+        Math.ceil((recentPendingTopUp.requestedAt.getTime() + 5 * 60 * 1000 - Date.now()) / 1000),
+      );
+      res.status(429).json({
+        success: false,
+        error: `Bạn vừa gửi yêu cầu nạp tiền. Vui lòng chờ ${remainingSeconds} giây trước khi nạp tiếp`,
+      });
+      return;
+    }
+
     const topUp = await prisma.playerMoneyTopUp.create({
       data: { playerId: user.playerId, amount },
       include: { player: { select: { id: true, name: true } } },

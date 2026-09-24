@@ -1148,6 +1148,7 @@
                   >
                     <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 6h18M6 12h12m-9 6h6M7 4l-2 2 2 2m10 8 2 2-2 2" /></svg>
                   </button>
+                  <button type="button" class="rounded p-1 text-red-600 hover:bg-red-100" title="Xem các cặp thách đấu" aria-label="Xem các cặp thách đấu" @click="openChallengePairsModal(ongoingTournament.id)">⚔️</button>
                   <button
                     v-if="authStore.hasAnyRole(['admin', 'mod'])"
                     type="button"
@@ -1455,6 +1456,7 @@
                   >
                     <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 6h18M6 12h12m-9 6h6M7 4l-2 2 2 2m10 8 2 2-2 2" /></svg>
                   </button>
+                  <button type="button" class="rounded p-1 text-red-600 hover:bg-red-100" title="Xem các cặp thách đấu" aria-label="Xem các cặp thách đấu" @click="openChallengePairsModal(ongoingTournament.id)">⚔️</button>
                   <button
                     v-if="authStore.hasAnyRole(['admin', 'mod'])"
                     type="button"
@@ -5135,6 +5137,27 @@
   </div>
 
   <div
+    v-if="showChallengePairsModal"
+    class="fixed inset-0 z-[80] flex items-center justify-center overflow-y-auto overscroll-contain bg-black/50 p-4"
+  >
+    <div class="my-auto max-h-[90vh] w-full max-w-md overflow-y-auto rounded-xl bg-white shadow-xl">
+      <div class="flex items-start justify-between border-b p-5">
+        <div><h3 class="text-lg font-semibold text-red-700">⚔️ Các cặp thách đấu</h3><p class="mt-1 text-sm text-gray-600">Các cầu thủ đã chấp nhận thách đấu trước khi chia đội.</p></div>
+        <button type="button" class="text-xl text-gray-400 hover:text-gray-700" aria-label="Đóng" @click="showChallengePairsModal = false">×</button>
+      </div>
+      <div class="space-y-3 p-5">
+        <p v-if="!activeChallengePairs.length" class="rounded-lg bg-gray-50 p-4 text-center text-sm text-gray-500">Chưa có cặp cầu thủ nào đang thách đấu.</p>
+        <div v-for="pair in activeChallengePairs" :key="pair.id" class="flex items-center justify-between gap-3 rounded-lg border border-red-100 bg-red-50 p-3">
+          <div class="flex min-w-0 flex-1 items-center gap-2"><div class="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full bg-gray-200 text-sm font-semibold"><img v-if="pair.requester.avatar" :src="pair.requester.avatar" :alt="pair.requester.name" class="h-full w-full object-cover"><span v-else>{{ pair.requester.name.charAt(0) }}</span></div><span class="truncate font-medium text-gray-900">{{ pair.requester.name }}</span></div>
+          <span class="shrink-0 text-lg" aria-label="Thách đấu">⚔️</span>
+          <div class="flex min-w-0 flex-1 items-center justify-end gap-2"><span class="truncate text-right font-medium text-gray-900">{{ pair.target.name }}</span><div class="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full bg-gray-200 text-sm font-semibold"><img v-if="pair.target.avatar" :src="pair.target.avatar" :alt="pair.target.name" class="h-full w-full object-cover"><span v-else>{{ pair.target.name.charAt(0) }}</span></div></div>
+        </div>
+      </div>
+      <div class="flex justify-end border-t p-4"><button type="button" class="btn-primary" @click="showChallengePairsModal = false">Đóng</button></div>
+    </div>
+  </div>
+
+  <div
     v-if="showDeadmatchModal"
     class="fixed inset-0 z-[80] flex items-center justify-center overflow-y-auto overscroll-contain bg-black/50 p-4"
   >
@@ -5363,6 +5386,8 @@ const showFriendSwapModal = ref(false);
 const showFriendRegistrationGuideModal = ref(false);
 const showCreateFriendModal = ref(false);
 const showChallengeModal = ref(false);
+const showChallengePairsModal = ref(false);
+const challengePairsTournamentId = ref<string | null>(null);
 const challengeTarget = ref<any | null>(null);
 const challengeTournamentId = ref<string | null>(null);
 const challengeId = ref<string | null>(null);
@@ -7168,6 +7193,39 @@ const getTeamPreviewPlayers = (
       : Number.MAX_SAFE_INTEGER;
     return firstRegisteredAt - secondRegisteredAt || first.name.localeCompare(second.name, "vi");
   });
+};
+
+const activeChallengePairs = computed<
+  Array<{ id: string; requester: any; target: any }>
+>(() => {
+  const tournamentId = challengePairsTournamentId.value;
+  if (!tournamentId) return [];
+  const details = attendanceDetailsMap.value.get(tournamentId) || [];
+  return details
+    .filter(
+      (attendance: any) =>
+        attendance.challenge?.status === "ACCEPTED" &&
+        attendance.challenge?.direction === "SENT",
+    )
+    .map((attendance: any) => ({
+      id: attendance.challenge.id,
+      requester: attendance.player,
+      target: details.find(
+        (candidate: any) =>
+          candidate.playerId === attendance.challenge.opponentPlayerId,
+      )?.player,
+    }))
+    .filter((pair: any) => pair.requester && pair.target) as Array<{
+    id: string;
+    requester: any;
+    target: any;
+  }>;
+});
+
+const openChallengePairsModal = async (tournamentId: string): Promise<void> => {
+  challengePairsTournamentId.value = tournamentId;
+  showChallengePairsModal.value = true;
+  await fetchAttendanceDetails(tournamentId, false);
 };
 
 const getCurrentPlayerId = (): string | null =>

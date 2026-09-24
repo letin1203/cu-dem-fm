@@ -126,7 +126,7 @@
           </router-link>
 
           <!-- User Menu -->
-          <div class="relative ml-3">
+          <div ref="desktopUserMenu" class="relative ml-3">
             <button
               @click="userMenuOpen = !userMenuOpen"
               class="flex items-center space-x-2 text-primary-700 hover:text-primary-800 hover:bg-primary-100/50 px-3 py-2 rounded-md text-sm font-medium"
@@ -162,11 +162,6 @@
               class="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg ring-1 ring-black ring-opacity-5 z-[60]"
             >
               <div class="py-1">
-                <div class="px-4 py-2 text-sm text-gray-700 border-b">
-                  <div class="font-medium">
-                    {{ authStore.currentUser?.username }}
-                  </div>
-                </div>
                 <router-link
                   v-if="authStore.currentUser?.role !== 'guest'"
                   to="/my-profile"
@@ -507,6 +502,7 @@ const toast = useToast();
 
 const mobileMenuOpen = ref(false);
 const userMenuOpen = ref(false);
+const desktopUserMenu = ref<HTMLElement | null>(null);
 const showFundHistoryModal = ref(false);
 const showFundContributionModal = ref(false);
 const submittingFundContribution = ref(false);
@@ -834,6 +830,15 @@ const refreshPendingTopUpCount = () => void loadPendingTopUpCount();
 const refreshPendingTopUpOnVisibility = () => {
   if (document.visibilityState === "visible") refreshPendingTopUpCount();
 };
+const closeDesktopUserMenuOnOutsideClick = (event: MouseEvent): void => {
+  if (
+    userMenuOpen.value &&
+    desktopUserMenu.value &&
+    !desktopUserMenu.value.contains(event.target as Node)
+  ) {
+    userMenuOpen.value = false;
+  }
+};
 
 onMounted(() => {
   void loadPendingTopUpCount();
@@ -843,12 +848,14 @@ onMounted(() => {
   pendingTopUpRefreshTimer = setInterval(() => void loadPendingTopUpCount(), 10_000);
   window.addEventListener("pending-money-top-ups-changed", refreshPendingTopUpCount);
   document.addEventListener("visibilitychange", refreshPendingTopUpOnVisibility);
+  document.addEventListener("click", closeDesktopUserMenuOnOutsideClick);
 });
 
 onBeforeUnmount(() => {
   if (pendingTopUpRefreshTimer) clearInterval(pendingTopUpRefreshTimer);
   window.removeEventListener("pending-money-top-ups-changed", refreshPendingTopUpCount);
   document.removeEventListener("visibilitychange", refreshPendingTopUpOnVisibility);
+  document.removeEventListener("click", closeDesktopUserMenuOnOutsideClick);
 });
 
 async function handleLogout() {

@@ -315,7 +315,24 @@
       </div>
     </div>
 
-    <div v-if="showSelfProfileTopUpModal" class="fixed inset-0 z-[80] flex items-center justify-center overflow-y-auto overscroll-contain bg-black/50 p-4"><div class="my-auto max-h-[90vh] w-full max-w-md overflow-y-auto rounded-lg bg-white p-6 shadow-xl"><h2 class="text-lg font-semibold text-gray-900">Nạp tiền</h2><p class="mt-1 text-sm text-gray-500">Yêu cầu sẽ chờ quản trị viên duyệt.</p><img src="/quy-momo.jpg" alt="Mã QR MoMo nạp quỹ" class="mx-auto my-5 w-full max-w-xs rounded-lg border border-gray-200"><div class="grid grid-cols-2 gap-3"><button v-for="amount in selfProfileTopUpOptions" :key="amount" type="button" class="rounded-lg border px-4 py-3 font-medium" :class="selfProfileTopUpAmount === amount ? 'border-primary-600 bg-primary-600 text-white' : 'border-gray-200'" @click="selfProfileTopUpAmount = amount">{{ formatMoney(amount) }}</button></div><label class="form-label mt-5 block">Hoặc nhập số tiền khác</label><input v-model.number="selfProfileTopUpAmount" type="number" min="1" class="form-input mt-1"><div class="mt-6 flex justify-end gap-3"><button type="button" class="btn-secondary" @click="showSelfProfileTopUpModal = false">Hủy</button><button type="button" class="btn-primary" :disabled="selfProfileTopUpSaving" @click="submitSelfProfileTopUp">{{ selfProfileTopUpSaving ? 'Đang gửi...' : 'Xác nhận' }}</button></div></div></div>
+    <div v-if="showSelfProfileTopUpModal" class="fixed inset-0 z-[80] flex items-center justify-center overflow-y-auto overscroll-contain bg-black/50 p-4">
+      <div class="my-auto max-h-[90vh] w-full max-w-md overflow-y-auto rounded-lg bg-white p-6 shadow-xl">
+        <h2 class="text-lg font-semibold text-gray-900">Nạp tiền</h2>
+        <p class="mb-4 mt-1 text-sm text-gray-500">Quét mã MoMo để nạp quỹ, sau đó chọn số tiền đã nạp. Yêu cầu sẽ chờ quản trị viên duyệt.</p>
+        <img src="/quy-momo.jpg" alt="Mã QR MoMo nạp quỹ" class="mx-auto mb-5 w-full max-w-xs rounded-lg border border-gray-200">
+        <div class="grid grid-cols-2 gap-3">
+          <button v-for="amount in selfProfileTopUpAmounts" :key="amount" type="button" class="rounded-lg border px-4 py-3 font-medium transition-colors" :class="selfProfileTopUpAmount === amount ? 'border-primary-600 bg-primary-600 text-white' : 'border-gray-200 text-gray-700 hover:bg-gray-50'" @click="selfProfileTopUpAmount = amount">{{ formatMoney(amount) }}</button>
+        </div>
+        <label for="player-modal-top-up" class="form-label mt-5 block">Hoặc nhập số tiền khác</label>
+        <div class="mt-1 flex items-center gap-2">
+          <button type="button" class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-gray-100 text-xl font-semibold text-gray-700 hover:bg-gray-200" @click="selfProfileTopUpAmount = Math.max(0, selfProfileTopUpAmount - 100000)">−</button>
+          <div class="relative flex-1"><span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">₫</span><input id="player-modal-top-up" v-model.number="selfProfileTopUpAmount" type="number" min="0" class="form-input pl-8" placeholder="Nhập số tiền"></div>
+          <button type="button" class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary-100 text-xl font-semibold text-primary-700 hover:bg-primary-200" @click="selfProfileTopUpAmount += 100000">+</button>
+        </div>
+        <p class="mt-1 text-center text-xs text-gray-500">Đang nhập: {{ formatMoney(selfProfileTopUpAmount) }}</p>
+        <div class="mt-6 flex justify-end gap-3"><button type="button" class="btn-secondary" @click="showSelfProfileTopUpModal = false">Hủy</button><button type="button" class="btn-primary" :disabled="selfProfileTopUpSaving" @click="submitSelfProfileTopUp">{{ selfProfileTopUpSaving ? 'Đang gửi...' : 'Xác nhận' }}</button></div>
+      </div>
+    </div>
 
     <PlayerMoneyDetailModal
       :is-open="showMoneyHistory"
@@ -490,7 +507,7 @@ const profileTournamentHistory = ref<any[]>([])
 const showSelfProfileTopUpModal = ref(false)
 const selfProfileTopUpSaving = ref(false)
 const selfProfileTopUpAmount = ref(100000)
-const selfProfileTopUpOptions = [50000, 100000, 200000, 500000]
+const standardSelfProfileTopUpAmounts = [50000, 100000, 200000, 500000]
 const profilePendingTopUps = ref<Array<{ id: string; amount: number; requestedAt: string | Date }>>([])
 const cancellingProfileTopUpId = ref<string | null>(null)
 const showMoneyHistory = ref(false)
@@ -572,6 +589,16 @@ const isOwnProfilePlayer = computed(() => {
   return Boolean(currentPlayerId && selectedProfilePlayer.value?.id === currentPlayerId)
 })
 const profilePendingTopUpTotal = computed(() => Array.isArray(profilePendingTopUps.value) ? profilePendingTopUps.value.reduce((total, request) => total + request.amount, 0) : 0)
+const selfProfileDebtSettlementAmount = computed(() => {
+  const balance = selectedProfilePlayer.value?.money || 0
+  return balance < 0 ? Math.abs(balance) : null
+})
+const selfProfileTopUpAmounts = computed(() => {
+  const debtAmount = selfProfileDebtSettlementAmount.value
+  return debtAmount && !standardSelfProfileTopUpAmounts.includes(debtAmount)
+    ? [debtAmount, ...standardSelfProfileTopUpAmounts]
+    : standardSelfProfileTopUpAmounts
+})
 const latestProfileTournament = computed(() => profileTournamentHistory.value[0] || null)
 const olderProfileTournaments = computed(() => profileTournamentHistory.value.slice(1))
 
@@ -657,8 +684,7 @@ function closePlayerProfileModal() {
 }
 
 function openSelfTopUpModal() {
-  const debt = selectedProfilePlayer.value?.money || 0
-  selfProfileTopUpAmount.value = debt < 0 ? Math.abs(debt) : 100000
+  selfProfileTopUpAmount.value = selfProfileDebtSettlementAmount.value || 100000
   showSelfProfileTopUpModal.value = true
 }
 

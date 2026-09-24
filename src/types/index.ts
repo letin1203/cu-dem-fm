@@ -63,6 +63,7 @@ export interface PlayerMoneyHistory {
   description: string
   details?: Array<{ description: string; amount: number }> | null
   approvedByUsername?: string | null
+  changedByUsername?: string | null
   createdAt: string | Date
   tournament?: { id: string; name: string } | null
 }

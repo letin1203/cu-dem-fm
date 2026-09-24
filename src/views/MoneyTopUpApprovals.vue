@@ -43,7 +43,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, onMounted } from 'vue'
+import { computed, ref, onBeforeUnmount, onMounted } from 'vue'
 import { useToast } from 'vue-toastification'
 import { apiClient } from '../api/client'
 import { useAuthStore } from '../stores/auth'
@@ -71,18 +71,27 @@ const passwordRequestNameFilter = ref('')
 const inactivePlayers = ref<any[]>([])
 const inactivePagination = ref({ page: 1, pages: 0, total: 0 })
 const activatingPlayerId = ref<string | null>(null)
+let pendingRefreshInFlight = false
+let pendingRefreshTimer: ReturnType<typeof setInterval> | null = null
 const formatDate = (date: string | Date) => new Date(date).toLocaleString('vi-VN')
 
-const loadPending = async () => {
-  loading.value = true; error.value = null
+const loadPending = async (silent = false) => {
+  if (pendingRefreshInFlight) return
+  pendingRefreshInFlight = true
+  if (!silent) { loading.value = true; error.value = null }
   try {
     const [topUpResponse, fundResponse] = await Promise.all([apiClient.getPendingMoneyTopUps(), apiClient.getPendingFundContributions()])
     if (!topUpResponse.success) throw new Error(topUpResponse.error || 'Không thể tải danh sách yêu cầu nạp tiền')
     if (!fundResponse.success) throw new Error(fundResponse.error || 'Không thể tải danh sách yêu cầu góp quỹ')
     requests.value = (topUpResponse.data || []) as TopUpRequest[]
     fundRequests.value = (fundResponse.data || []) as FundRequest[]
-  } catch (err) { error.value = err instanceof Error ? err.message : 'Không thể tải danh sách yêu cầu' }
-  finally { loading.value = false }
+  } catch (err) {
+    if (!silent) error.value = err instanceof Error ? err.message : 'Không thể tải danh sách yêu cầu'
+  }
+  finally {
+    if (!silent) loading.value = false
+    pendingRefreshInFlight = false
+  }
 }
 const approve = async (id: string) => {
   approvingId.value = id
@@ -155,5 +164,21 @@ const copyPasswordResetLink = async (userId: string) => {
   catch (err) { toast.error(err instanceof Error ? err.message : 'Không thể copy link') }
   finally { linkLoadingId.value = null }
 }
-onMounted(loadPending)
+const refreshPendingWhenVisible = () => {
+  if (document.visibilityState === 'visible' && activeTab.value === 'top-up') void loadPending(true)
+}
+
+onMounted(() => {
+  void loadPending()
+  // Keep the request list aligned with the near-realtime navigation badge
+  // without disturbing the page with a loading spinner every refresh.
+  pendingRefreshTimer = setInterval(() => {
+    if (activeTab.value === 'top-up' && document.visibilityState === 'visible') void loadPending(true)
+  }, 10_000)
+  document.addEventListener('visibilitychange', refreshPendingWhenVisible)
+})
+onBeforeUnmount(() => {
+  if (pendingRefreshTimer) clearInterval(pendingRefreshTimer)
+  document.removeEventListener('visibilitychange', refreshPendingWhenVisible)
+})
 </script>

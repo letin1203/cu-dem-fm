@@ -174,7 +174,11 @@ router.get('/:id/money-history', async (req: AuthenticatedRequest, res: Response
         && typeof (details as Record<string, unknown>).approvedByUsername === 'string'
         ? (details as Record<string, string>).approvedByUsername
         : null;
-      return { ...entry, approvedByUsername };
+      const changedByUsername = details && !Array.isArray(details) && typeof details === 'object'
+        && typeof (details as Record<string, unknown>).changedByUsername === 'string'
+        ? (details as Record<string, string>).changedByUsername
+        : null;
+      return { ...entry, approvedByUsername, changedByUsername };
     });
 
     res.json({
@@ -216,6 +220,7 @@ router.post('/:id/deduct-money', authenticate, authorize(['ADMIN', 'MOD']), asyn
           balanceBefore: player.money,
           balanceAfter,
           description: reason,
+          details: { changedByUsername: req.user!.username },
         },
       });
       return { player: updatedPlayer, history };

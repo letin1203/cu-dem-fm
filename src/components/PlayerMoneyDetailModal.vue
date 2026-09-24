@@ -20,6 +20,7 @@
                 <p class="font-medium text-gray-900">{{ getDescription(item) }}</p>
                 <p v-if="item.tournament" class="mt-1 text-sm text-primary-700">{{ item.tournament.name }}</p>
                 <p v-if="getApprovedByUsername(item)" class="mt-1 text-sm text-gray-600">Duyệt bởi: <strong class="text-gray-800">{{ getApprovedByUsername(item) }}</strong></p>
+                <p v-if="item.changedByUsername" class="mt-1 text-sm text-gray-600">Thay đổi bởi: <strong class="text-gray-800">{{ item.changedByUsername }}</strong></p>
                 <p class="mt-1 text-xs text-gray-500">{{ formatDate(item.createdAt) }}</p>
               </div>
               <span class="font-semibold" :class="item.amount >= 0 ? 'text-green-600' : 'text-red-600'">

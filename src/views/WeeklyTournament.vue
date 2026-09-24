@@ -2158,9 +2158,21 @@
                   <div
                     v-for="team in getTournamentTeams(tournament)"
                     :key="team.id"
-                    class="bg-white rounded-lg p-4 border hover:shadow-md transition-shadow flex flex-col"
+                    class="relative bg-white rounded-lg p-4 border hover:shadow-md transition-shadow flex flex-col"
                     :class="getTeamCardClass(team.name)"
                   >
+                    <span
+                      v-if="isTournamentWinnerTeam(tournament, team)"
+                      class="absolute right-3 top-3 text-xl"
+                      title="Đội thắng"
+                      aria-label="Đội thắng"
+                    >🏆</span>
+                    <span
+                      v-else-if="isTournamentLoserTeam(tournament, team)"
+                      class="absolute right-3 top-3 text-xl"
+                      title="Đội thua"
+                      aria-label="Đội thua"
+                    >💔</span>
                     <!-- Team Header -->
                     <div class="flex items-center mb-3">
                       <div
@@ -2221,9 +2233,12 @@
                               player.name.charAt(0).toUpperCase()
                             }}</span>
                           </div>
-                          <span class="font-medium text-gray-900">{{
-                            player.name
-                          }}</span>
+                          <button
+                            type="button"
+                            class="font-medium text-gray-900 transition-colors hover:text-primary-700 hover:underline"
+                            :title="`Xem biến động tiền của ${player.name}`"
+                            @click="openTournamentPlayerMoneyHistory(tournament, player)"
+                          >{{ player.name }}</button>
                           <span
                             v-if="isPlayerWithWater(tournament.id, player.id)"
                             class="ml-1"
@@ -2293,17 +2308,6 @@
                 </div>
               </div>
               <div class="flex justify-end gap-3 pt-2 border-t border-gray-200">
-                <button
-                  v-if="
-                    authStore.hasRole('admin') &&
-                    !tournament.selfFunded &&
-                    getTournamentTeams(tournament).length > 0
-                  "
-                  @click="openAdditionalCostModal(tournament)"
-                  class="btn-secondary"
-                >
-                  Xem chi phí phát sinh
-                </button>
                 <button
                   v-if="!tournament.selfFunded"
                   @click="openTournamentMoneyHistory(tournament)"
@@ -2723,8 +2727,9 @@
             Biến động tiền cầu thủ
           </h3>
           <p class="text-sm text-gray-500">
-            {{ selectedMoneyHistoryTournament?.name }}
+            {{ selectedMoneyHistoryPlayer?.name || selectedMoneyHistoryTournament?.name }}
           </p>
+          <p v-if="selectedMoneyHistoryPlayer" class="text-xs text-gray-500">{{ selectedMoneyHistoryTournament?.name }}</p>
         </div>
         <button
           @click="showTournamentMoneyHistoryModal = false"
@@ -5523,6 +5528,7 @@ const swapWaitlistClock = ref(Date.now());
 const pendingSwapRequest = ref<IncomingSwapRequest | null>(null);
 const batchAttendanceSaving = ref(false);
 const attendanceDetailsLoadingIds = ref<Set<string>>(new Set());
+const attendanceDetailsRequests = new Map<string, Promise<void>>();
 const refreshingAttendanceLists = ref<Set<string>>(new Set());
 const areAllPendingPlayersSelected = computed(() => {
   const pendingPlayers = getFilteredModalData();
@@ -5545,6 +5551,7 @@ interface TournamentMoneyHistoryItem {
 }
 const showTournamentMoneyHistoryModal = ref(false);
 const selectedMoneyHistoryTournament = ref<Tournament | null>(null);
+const selectedMoneyHistoryPlayer = ref<{ id: string; name: string } | null>(null);
 const tournamentMoneyHistory = ref<TournamentMoneyHistoryItem[]>([]);
 const tournamentMoneyHistoryLoading = ref(false);
 const showTournamentDebtTopUpModal = ref(false);
@@ -6899,7 +6906,18 @@ const fetchAttendanceDetails = async (
   tournamentId: string,
   updateAttendanceModal = true,
 ): Promise<void> => {
-  if (attendanceDetailsLoadingIds.value.has(tournamentId)) return;
+  if (attendanceDetailsLoadingIds.value.has(tournamentId)) {
+    await attendanceDetailsRequests.get(tournamentId);
+    if (updateAttendanceModal) {
+      attendanceModalData.value = attendanceDetailsMap.value.get(tournamentId) || [];
+    }
+    return;
+  }
+  let completeRequest!: () => void;
+  const requestComplete = new Promise<void>((resolve) => {
+    completeRequest = resolve;
+  });
+  attendanceDetailsRequests.set(tournamentId, requestComplete);
   try {
     attendanceDetailsLoadingIds.value = new Set(
       attendanceDetailsLoadingIds.value,
@@ -6938,13 +6956,17 @@ const fetchAttendanceDetails = async (
     }
   } catch (err: any) {
     console.error("Fetch attendance details error:", err);
-    toast.error("Không thể tải chi tiết điểm danh");
-    attendanceModalData.value = [];
+    if (updateAttendanceModal) {
+      toast.error("Không thể tải chi tiết điểm danh");
+      attendanceModalData.value = [];
+    }
   } finally {
     if (updateAttendanceModal) attendanceModalLoading.value = false;
     const loadingIds = new Set(attendanceDetailsLoadingIds.value);
     loadingIds.delete(tournamentId);
     attendanceDetailsLoadingIds.value = loadingIds;
+    completeRequest();
+    attendanceDetailsRequests.delete(tournamentId);
   }
 };
 
@@ -7500,6 +7522,28 @@ const getTournamentTeams = (tournament: Tournament): any[] => {
       score: team.score || 0,
     };
   });
+};
+
+const isTournamentWinnerTeam = (tournament: Tournament, team: any): boolean => {
+  if (tournament.winner?.id) return tournament.winner.id === team.id;
+  const teams = getTournamentTeams(tournament);
+  if (tournament.status !== "COMPLETED" || teams.length < 2) return false;
+  const highestScore = Math.max(...teams.map((item) => Number(item.score || 0)));
+  return (
+    Number(team.score || 0) === highestScore &&
+    teams.filter((item) => Number(item.score || 0) === highestScore).length === 1
+  );
+};
+
+const isTournamentLoserTeam = (tournament: Tournament, team: any): boolean => {
+  if (tournament.loser?.id) return tournament.loser.id === team.id;
+  const teams = getTournamentTeams(tournament);
+  if (tournament.status !== "COMPLETED" || teams.length < 2) return false;
+  const lowestScore = Math.min(...teams.map((item) => Number(item.score || 0)));
+  return (
+    Number(team.score || 0) === lowestScore &&
+    teams.filter((item) => Number(item.score || 0) === lowestScore).length === 1
+  );
 };
 
 const getCurrentPlayerTeam = (tournament: Tournament): any | null => {
@@ -9391,8 +9435,10 @@ const toggleGkTournamentDiscount = (playerId: string): void => {
 
 const openTournamentMoneyHistory = async (
   tournament: Tournament,
+  player?: { id: string; name: string },
 ): Promise<void> => {
   selectedMoneyHistoryTournament.value = tournament;
+  selectedMoneyHistoryPlayer.value = player || null;
   tournamentMoneyHistory.value = [];
   showTournamentMoneyHistoryModal.value = true;
   tournamentMoneyHistoryLoading.value = true;
@@ -9403,13 +9449,16 @@ const openTournamentMoneyHistory = async (
     const history = (response.data || []) as TournamentMoneyHistoryItem[];
     const currentPlayerId =
       authStore.currentUser?.player?.id || authStore.currentUser?.playerId;
-    tournamentMoneyHistory.value = currentPlayerId
+    const sortedHistory = currentPlayerId
       ? [...history].sort(
           (first, second) =>
             Number(second.player.id === currentPlayerId) -
             Number(first.player.id === currentPlayerId),
         )
       : history;
+    tournamentMoneyHistory.value = player
+      ? sortedHistory.filter((item) => item.player.id === player.id)
+      : sortedHistory;
   } catch (error) {
     toast.error(
       error instanceof Error ? error.message : "Không thể tải biến động tiền",
@@ -9418,6 +9467,11 @@ const openTournamentMoneyHistory = async (
     tournamentMoneyHistoryLoading.value = false;
   }
 };
+
+const openTournamentPlayerMoneyHistory = (
+  tournament: Tournament,
+  player: { id: string; name: string },
+): Promise<void> => openTournamentMoneyHistory(tournament, player);
 
 const openTournamentDebtTopUp = async (
   item: TournamentMoneyHistoryItem,

@@ -107,6 +107,13 @@ router.get('/', async (req: AuthenticatedRequest, res: Response): Promise<void> 
               logo: true,
             },
           },
+          loser: {
+            select: {
+              id: true,
+              name: true,
+              logo: true,
+            },
+          },
           _count: {
             select: {
               teams: true,

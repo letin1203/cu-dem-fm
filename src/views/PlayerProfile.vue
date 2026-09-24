@@ -902,7 +902,7 @@ const submitTopUp = async () => {
   }
 };
 const refreshPendingTopUpsAfterNotification = () => {
-  void loadPendingTopUps();
+  void refreshPlayerProfile();
 };
 
 onMounted(() => {

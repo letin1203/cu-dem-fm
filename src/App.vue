@@ -66,9 +66,11 @@ const checkApprovedTopUps = async () => {
         .filter(item => item.status === 'APPROVED' && !existingIds.has(item.id))
         .map(item => ({ id: item.id, amount: item.amount, approvedAt: item.approvedAt || new Date().toISOString() }))
       approvedTopUpQueue.value.push(...approvals)
+      if (notifications.some(item => item.status === 'APPROVED' || item.status === 'REJECTED')) {
+        window.dispatchEvent(new Event('pending-money-top-ups-changed'))
+      }
       for (const rejection of notifications.filter(item => item.status === 'REJECTED')) {
         const requestedAt = new Date(rejection.requestedAt).toLocaleString('vi-VN')
-        window.dispatchEvent(new Event('pending-money-top-ups-changed'))
         toast.error(`Số tiền ${formatApprovalAmount(rejection.amount)} ₫ bạn nạp lúc ${requestedAt} đã bị từ chối, vui lòng kiểm tra lại trong quỹ MoMo.`)
       }
     }

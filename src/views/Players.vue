@@ -472,7 +472,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, watch } from 'vue'
+import { ref, computed, onBeforeUnmount, onMounted, watch } from 'vue'
 import { usePlayersStore } from '../stores/players'
 import { useTeamsStore } from '../stores/teams'
 import { useAuthStore } from '../stores/auth'
@@ -701,16 +701,37 @@ async function submitSelfProfileTopUp() {
   finally { selfProfileTopUpSaving.value = false }
 }
 
+async function refreshOwnProfileTopUpsAfterStatusChange() {
+  if (!isOwnProfilePlayer.value || !selectedProfilePlayer.value) return
+  const playerId = selectedProfilePlayer.value.id
+  try {
+    const [playerResponse] = await Promise.all([
+      apiClient.getPlayer(playerId),
+      loadProfilePendingTopUps(),
+    ])
+    if (playerResponse.success && playerResponse.data && selectedProfilePlayer.value?.id === playerId) {
+      selectedProfilePlayer.value = playerResponse.data as Player
+    }
+  } catch {
+    // A background refresh must not interrupt the currently open profile modal.
+  }
+}
+
 // Load all players function
 const loadAllPlayers = async () => {
   await playersStore.loadAllPlayers()
 }
 
 onMounted(async () => {
+  window.addEventListener('pending-money-top-ups-changed', refreshOwnProfileTopUpsAfterStatusChange)
   await Promise.all([
     playersStore.fetchPlayers(), // Load first 100 players
     teamsStore.fetchTeams()
   ])
+})
+
+onBeforeUnmount(() => {
+  window.removeEventListener('pending-money-top-ups-changed', refreshOwnProfileTopUpsAfterStatusChange)
 })
 
 // Watch for filter changes and reset pagination when filter is cleared

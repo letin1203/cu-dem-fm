@@ -861,6 +861,7 @@
                     ongoingTournament.status === 'UPCOMING' &&
                     getTournamentTeams(ongoingTournament).length === 0 &&
                     isCancellationDeadlinePassed(ongoingTournament) &&
+                    isAttendanceLimitReached(ongoingTournament) &&
                     authStore.currentUser?.player &&
                     !cannotSelfRegisterDueToDebt
                   "
@@ -894,6 +895,7 @@
                 <button
                   v-else-if="
                     canJoinSwapWaitlist(ongoingTournament) &&
+                    isAttendanceLimitReached(ongoingTournament) &&
                     !getIncomingSwapRequests(ongoingTournament.id).length
                   "
                   type="button"

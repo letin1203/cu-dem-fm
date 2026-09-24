@@ -20,6 +20,19 @@ const getDefaultCancellationDeadline = (startDate: Date): Date => {
 const getTournamentCancellationDeadline = (tournament: { startDate: Date; cancellationDeadline: Date | null }): Date =>
   tournament.cancellationDeadline ?? getDefaultCancellationDeadline(tournament.startDate);
 
+const hasNonNegativeAvailableBalance = async (
+  playerId: string,
+  currentBalance: number,
+): Promise<boolean> => {
+  if (currentBalance >= 0) return true;
+
+  const pendingTopUps = await prisma.playerMoneyTopUp.aggregate({
+    where: { playerId, status: 'PENDING' },
+    _sum: { amount: true },
+  });
+  return currentBalance + (pendingTopUps._sum.amount || 0) >= 0;
+};
+
 const hasAttendanceCapacity = async (tournamentId: string, maxAttendance: number | null | undefined, field5: boolean, field7: boolean, additions = 1): Promise<boolean> => {
   if (!maxAttendance) return true;
   const [field5Count, field7Count] = await Promise.all([
@@ -925,8 +938,12 @@ router.put('/:id/friend-attendance', authenticate, async (req: AuthenticatedRequ
       res.status(403).json({ success: false, error: 'Bạn chỉ có thể đăng ký cho bạn bè của mình' });
       return;
     }
-    if (!tournament.selfFunded && (owner?.player?.money ?? 0) < 0) {
-      res.status(400).json({ success: false, error: 'Số dư của bạn đang âm, vui lòng thanh toán trước' });
+    if (
+      !tournament.selfFunded &&
+      owner?.player &&
+      !(await hasNonNegativeAvailableBalance(owner.player.id, owner.player.money))
+    ) {
+      res.status(400).json({ success: false, error: 'Số dư hiện tại cộng tiền nạp chờ duyệt vẫn âm, vui lòng thanh toán trước' });
       return;
     }
     const alreadyAttending = await prisma.tournamentPlayerAttendance.count({ where: { tournamentId, playerId: { in: playerIds }, status: { in: ['ATTEND', 'ATTENDING'] } } });
@@ -977,8 +994,8 @@ router.get('/:id/swap-candidates', authenticate, async (req: AuthenticatedReques
       res.status(404).json({ success: false, error: 'Không tìm thấy cầu thủ hoặc giải đấu' });
       return;
     }
-    if ((user.player?.money ?? 0) < 0) {
-      res.status(400).json({ success: false, error: 'Số dư của bạn đang âm, vui lòng thanh toán trước khi swap' });
+    if (user.player && !(await hasNonNegativeAvailableBalance(user.playerId, user.player.money))) {
+      res.status(400).json({ success: false, error: 'Số dư hiện tại cộng tiền nạp chờ duyệt vẫn âm, vui lòng thanh toán trước khi swap' });
       return;
     }
     if (tournament.status !== 'UPCOMING' || tournament.teams.length > 0 || Date.now() <= getTournamentCancellationDeadline(tournament).getTime()) {
@@ -1030,8 +1047,8 @@ router.post('/:id/swap-requests', authenticate, async (req: AuthenticatedRequest
       res.status(400).json({ success: false, error: 'Thông tin yêu cầu swap không hợp lệ' });
       return;
     }
-    if ((user.player?.money ?? 0) < 0) {
-      res.status(400).json({ success: false, error: 'Số dư của bạn đang âm, vui lòng thanh toán trước khi swap' });
+    if (user.player && !(await hasNonNegativeAvailableBalance(user.playerId, user.player.money))) {
+      res.status(400).json({ success: false, error: 'Số dư hiện tại cộng tiền nạp chờ duyệt vẫn âm, vui lòng thanh toán trước khi swap' });
       return;
     }
     if (tournament.status !== 'UPCOMING' || tournament.teams.length > 0 || Date.now() <= getTournamentCancellationDeadline(tournament).getTime()) {
@@ -1117,8 +1134,8 @@ router.post('/:id/swap-waitlist', authenticate, async (req: AuthenticatedRequest
       res.status(400).json({ success: false, error: 'Chỉ có thể đăng ký hàng chờ sau thời gian chốt hủy và trước khi chia đội' });
       return;
     }
-    if ((user.player?.money ?? 0) < 0) {
-      res.status(400).json({ success: false, error: 'Số dư của bạn đang âm, vui lòng thanh toán trước khi swap' });
+    if (user.player && !(await hasNonNegativeAvailableBalance(user.playerId, user.player.money))) {
+      res.status(400).json({ success: false, error: 'Số dư hiện tại cộng tiền nạp chờ duyệt vẫn âm, vui lòng thanh toán trước khi swap' });
       return;
     }
     const attendance = await prisma.tournamentPlayerAttendance.findUnique({ where: { tournamentId_playerId: { tournamentId: tournament.id, playerId: user.playerId } } });
@@ -1214,7 +1231,9 @@ router.put('/:id/swap-requests/:requestId/accept', authenticate, async (req: Aut
       const tournament = await tx.tournament.findUnique({ where: { id: req.params.id }, select: { id: true, status: true, selfFunded: true, pitchType: true, startDate: true, cancellationDeadline: true, teams: { select: { teamId: true } } } });
       if (!request || request.tournamentId !== req.params.id || request.status !== 'PENDING' || request.requesterPlayerId === targetPlayerId) throw new Error('Yêu cầu swap không hợp lệ');
       if (!tournament || tournament.status !== 'UPCOMING' || tournament.teams.length > 0 || Date.now() <= getTournamentCancellationDeadline(tournament).getTime()) throw new Error('Yêu cầu swap đã hết hiệu lực');
-      if (user.player!.money < 0) throw new Error('Số dư của bạn đang âm, vui lòng thanh toán trước khi swap');
+      if (!(await hasNonNegativeAvailableBalance(user.player!.id, user.player!.money))) {
+        throw new Error('Số dư hiện tại cộng tiền nạp chờ duyệt vẫn âm, vui lòng thanh toán trước khi swap');
+      }
       const [requesterAttendance, targetAttendance] = await Promise.all([
         tx.tournamentPlayerAttendance.findUnique({ where: { tournamentId_playerId: { tournamentId: tournament.id, playerId: request.requesterPlayerId } } }),
         tx.tournamentPlayerAttendance.findUnique({ where: { tournamentId_playerId: { tournamentId: tournament.id, playerId: targetPlayerId } } }),
@@ -1560,15 +1579,10 @@ router.put('/:id/attendance', authenticate, async (req: AuthenticatedRequest, re
     }
 
     if (status === 'ATTEND' && !tournament.selfFunded && req.user!.role === 'USER' && targetPlayerId === userId && player.money < 0) {
-      const pendingTopUp = await prisma.playerMoneyTopUp.aggregate({
-        where: { playerId: player.id, status: 'PENDING' },
-        _sum: { amount: true },
-      });
-      const availableBalance = player.money + (pendingTopUp._sum.amount || 0);
-      if (availableBalance < 0) {
+      if (!(await hasNonNegativeAvailableBalance(player.id, player.money))) {
         res.status(400).json({
           success: false,
-          error: 'Cầu thủ đang có số dư âm, vui lòng thanh toán trước khi đăng ký tham gia',
+          error: 'Số dư hiện tại cộng tiền nạp chờ duyệt vẫn âm, vui lòng thanh toán trước khi đăng ký tham gia',
         });
         return;
       }

@@ -763,7 +763,7 @@
                           ? attendanceLimitMessage(ongoingTournament)
                           : cannotRegisterDueToDebt &&
                               !ongoingTournament.selfFunded
-                            ? 'Vui lòng thanh toán số dư âm trước khi đăng ký'
+                            ? 'Số dư hiện tại cộng tiền nạp chờ duyệt vẫn âm'
                             : undefined
                     "
                     class="px-6 py-2 rounded-lg font-medium transition-colors duration-200"
@@ -810,12 +810,10 @@
                     class="mt-2 text-center text-xs font-medium text-red-600"
                   >
                     <p>
-                      Bạn không thể tham gia vì số dư:
+                      Bạn không thể tham gia vì số dư khả dụng:
                       <strong
                         >{{
-                          (
-                            authStore.currentUser?.player?.money || 0
-                          ).toLocaleString("vi-VN")
+                          effectiveRegistrationBalance.toLocaleString("vi-VN")
                         }}
                         ₫</strong
                       >.
@@ -863,7 +861,7 @@
                     isCancellationDeadlinePassed(ongoingTournament) &&
                     isAttendanceLimitReached(ongoingTournament) &&
                     authStore.currentUser?.player &&
-                    !cannotSelfRegisterDueToDebt
+                    !cannotRegisterDueToDebt
                   "
                   type="button"
                   class="bg-blue-600 px-4 py-2 text-center rounded-lg font-medium text-white hover:bg-blue-700"
@@ -871,7 +869,7 @@
                 >
                   Swap dùm bạn
                 </button>
-                <template v-if="!cannotSelfRegisterDueToDebt">
+                <template v-if="!cannotRegisterDueToDebt">
                   <button
                     v-for="request in getIncomingSwapRequests(
                       ongoingTournament.id,
@@ -908,11 +906,12 @@
                 <p
                   v-if="
                     isCancellationDeadlinePassed(ongoingTournament) &&
-                    cannotSelfRegisterDueToDebt
+                    cannotRegisterDueToDebt
                   "
                   class="w-full text-center text-xs font-medium text-red-600"
                 >
-                  Bạn không thể swap hoặc swap dùm bạn vì số dư đang âm.
+                  Bạn không thể swap hoặc swap dùm bạn vì số dư hiện tại cộng
+                  tiền nạp chờ duyệt vẫn âm.
                 </p>
                 <p
                   v-if="
@@ -998,11 +997,11 @@
                   type="button"
                   :disabled="
                     isAttendanceLimitReached(ongoingTournament) ||
-                    cannotSelfRegisterDueToDebt
+                    cannotRegisterDueToDebt
                   "
                   :title="
-                    cannotSelfRegisterDueToDebt
-                      ? 'Vui lòng thanh toán số dư âm trước khi đăng ký dùm bạn'
+                    cannotRegisterDueToDebt
+                      ? 'Số dư hiện tại cộng tiền nạp chờ duyệt vẫn âm'
                       : undefined
                   "
                   class="rounded-lg bg-blue-600 px-6 py-2 font-medium text-white transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
@@ -5308,9 +5307,9 @@
               bạn.
             </li>
             <li>
-              Nếu số dư user đang âm, không thể đăng ký bạn trong giải thường;
-              giải Tự túc không áp dụng điều kiện này và không phát sinh biến
-              động tiền.
+              Chỉ có thể đăng ký bạn trong giải thường khi số dư hiện tại cộng
+              tiền nạp chờ duyệt không âm; giải Tự túc không áp dụng điều kiện
+              này và không phát sinh biến động tiền.
             </li>
           </ul>
         </section>
@@ -5425,9 +5424,6 @@ const attendanceMap = ref<Map<string, TournamentPlayerAttendance>>(new Map());
 const attendanceLoading = ref<Set<string>>(new Set());
 const attendanceStats = ref<Map<string, TournamentAttendanceStats>>(new Map());
 const pendingRegistrationTopUpAmount = ref(0);
-const cannotSelfRegisterDueToDebt = computed(
-  () => (authStore.currentUser?.player?.money ?? 0) < 0,
-);
 const effectiveRegistrationBalance = computed(
   () =>
     (authStore.currentUser?.player?.money ?? 0) +
@@ -6230,9 +6226,9 @@ const fetchAttendance = async (tournamentId: string): Promise<void> => {
 };
 
 const openFriendRegistration = async (tournamentId: string): Promise<void> => {
-  if (cannotSelfRegisterDueToDebt.value) {
+  if (cannotRegisterDueToDebt.value) {
     toast.error(
-      "Số dư đang âm, vui lòng thanh toán trước khi đăng ký dùm bạn",
+      "Số dư hiện tại cộng tiền nạp chờ duyệt vẫn âm, vui lòng thanh toán trước khi đăng ký dùm bạn",
     );
     return;
   }
@@ -6257,8 +6253,8 @@ const openFriendRegistration = async (tournamentId: string): Promise<void> => {
 };
 
 const openFriendSwap = async (tournamentId: string): Promise<void> => {
-  if (cannotSelfRegisterDueToDebt.value) {
-    toast.error("Số dư đang âm, vui lòng thanh toán trước khi swap dùm bạn");
+  if (cannotRegisterDueToDebt.value) {
+    toast.error("Số dư hiện tại cộng tiền nạp chờ duyệt vẫn âm, vui lòng thanh toán trước khi swap dùm bạn");
     return;
   }
   friendTournamentId.value = tournamentId;
@@ -6400,8 +6396,8 @@ const registerFriends = async (): Promise<void> => {
 
 const requestFriendSwap = async (): Promise<void> => {
   if (!friendTournamentId.value || !friendSelectedIds.value.length) return;
-  if (cannotSelfRegisterDueToDebt.value) {
-    toast.error("Số dư đang âm, vui lòng thanh toán trước khi swap dùm bạn");
+  if (cannotRegisterDueToDebt.value) {
+    toast.error("Số dư hiện tại cộng tiền nạp chờ duyệt vẫn âm, vui lòng thanh toán trước khi swap dùm bạn");
     return;
   }
   friendRegistrationSaving.value = true;
@@ -6434,8 +6430,8 @@ const acceptSwapForFriend = async (): Promise<void> => {
     friendSelectedIds.value.length !== 1
   )
     return;
-  if (cannotSelfRegisterDueToDebt.value) {
-    toast.error("Số dư đang âm, vui lòng thanh toán trước khi swap dùm bạn");
+  if (cannotRegisterDueToDebt.value) {
+    toast.error("Số dư hiện tại cộng tiền nạp chờ duyệt vẫn âm, vui lòng thanh toán trước khi swap dùm bạn");
     return;
   }
   friendRegistrationSaving.value = true;
@@ -6524,7 +6520,7 @@ const canRequestSwap = (tournament: Tournament): boolean =>
   getTournamentTeams(tournament).length === 0 &&
   isUserRegisteredForSelectedField(tournament) &&
   isUserCancellationLocked(tournament) &&
-  !cannotSelfRegisterDueToDebt.value;
+  !cannotRegisterDueToDebt.value;
 
 const canJoinSwapWaitlist = (tournament: Tournament): boolean =>
   tournament.status === "UPCOMING" &&
@@ -6532,7 +6528,7 @@ const canJoinSwapWaitlist = (tournament: Tournament): boolean =>
   getUserAttendanceStatus(tournament.id) !== "ATTEND" &&
   isUserCancellationLocked(tournament) &&
   Boolean(authStore.currentUser?.player) &&
-  !cannotSelfRegisterDueToDebt.value;
+  !cannotRegisterDueToDebt.value;
 
 const fetchIncomingSwapRequests = async (
   tournamentId: string,
@@ -6636,8 +6632,8 @@ const closeSwapModal = (): void => {
 
 const requestSwap = async (tournament: Tournament): Promise<void> => {
   if (swapRequestSavingId.value || hasPendingSwapRequest(tournament.id)) return;
-  if (cannotSelfRegisterDueToDebt.value) {
-    toast.error("Số dư đang âm, vui lòng thanh toán trước khi swap");
+  if (cannotRegisterDueToDebt.value) {
+    toast.error("Số dư hiện tại cộng tiền nạp chờ duyệt vẫn âm, vui lòng thanh toán trước khi swap");
     return;
   }
   try {
@@ -6691,9 +6687,9 @@ const cancelSwapRequest = async (tournament: Tournament): Promise<void> => {
 };
 
 const joinSwapWaitlist = async (tournament: Tournament): Promise<void> => {
-  if (cannotSelfRegisterDueToDebt.value) {
+  if (cannotRegisterDueToDebt.value) {
     toast.error(
-      "Số dư đang âm, vui lòng thanh toán trước khi đăng ký hàng chờ",
+      "Số dư hiện tại cộng tiền nạp chờ duyệt vẫn âm, vui lòng thanh toán trước khi đăng ký hàng chờ",
     );
     return;
   }
@@ -6749,8 +6745,8 @@ const cancelSwapWaitlist = async (tournament: Tournament): Promise<void> => {
 };
 
 const openSwapAcceptance = (request: IncomingSwapRequest): void => {
-  if (cannotSelfRegisterDueToDebt.value) {
-    toast.error("Số dư đang âm, vui lòng thanh toán trước khi swap");
+  if (cannotRegisterDueToDebt.value) {
+    toast.error("Số dư hiện tại cộng tiền nạp chờ duyệt vẫn âm, vui lòng thanh toán trước khi swap");
     return;
   }
   pendingSwapRequest.value = request;
@@ -9602,6 +9598,8 @@ const submitTournamentDebtTopUp = async (): Promise<void> => {
     if (!response.success)
       throw new Error(response.error || "Không thể gửi yêu cầu nạp tiền");
     showTournamentDebtTopUpModal.value = false;
+    await loadPendingRegistrationTopUps();
+    window.dispatchEvent(new Event("pending-money-top-ups-changed"));
     toast.success("Yêu cầu nạp tiền đã được gửi và đang chờ duyệt");
   } catch (error) {
     toast.error(

@@ -237,26 +237,44 @@ router.delete('/:id', authenticate, authorize(['ADMIN', 'MOD']), async (req: Aut
       });
       if ((player?.money || 0) + (remainingPending._sum.amount || 0) >= 0) return;
 
+      const ownerUser = await tx.user.findFirst({
+        where: { playerId: pending.playerId },
+        select: { id: true },
+      });
+      const friendPlayers = ownerUser
+        ? await tx.player.findMany({
+            where: { friendOwnerId: ownerUser.id },
+            select: { id: true },
+          })
+        : [];
+      const affectedPlayerIds = [
+        pending.playerId,
+        ...friendPlayers.map((friend) => friend.id),
+      ];
       const upcomingAttendances = await tx.tournamentPlayerAttendance.findMany({
         where: {
-          playerId: pending.playerId,
+          playerId: { in: affectedPlayerIds },
           status: 'ATTEND',
           tournament: { status: 'UPCOMING' },
         },
-        select: { tournamentId: true },
+        select: { tournamentId: true, playerId: true },
       });
-      const tournamentIds = upcomingAttendances.map((attendance) => attendance.tournamentId);
-      if (!tournamentIds.length) return;
+      if (!upcomingAttendances.length) return;
+      const tournamentIds = [...new Set(upcomingAttendances.map((attendance) => attendance.tournamentId))];
+      const attendancePlayerIds = upcomingAttendances.map((attendance) => attendance.playerId);
 
       await tx.tournamentPlayerAttendance.updateMany({
-        where: { playerId: pending.playerId, tournamentId: { in: tournamentIds } },
+        where: { playerId: { in: attendancePlayerIds }, tournamentId: { in: tournamentIds } },
         data: { status: 'NULL', field5: false, field7: false, withWater: false, bet: false },
       });
       await tx.tournamentChallenge.updateMany({
         where: {
           tournamentId: { in: tournamentIds },
           status: { in: ['PENDING', 'ACCEPTED'] },
-          OR: [{ requesterPlayerId: pending.playerId }, { targetPlayerId: pending.playerId }],
+          OR: [
+            { requesterPlayerId: { in: attendancePlayerIds } },
+            { targetPlayerId: { in: attendancePlayerIds } },
+          ],
         },
         data: { status: 'CANCELLED', respondedAt: new Date() },
       });

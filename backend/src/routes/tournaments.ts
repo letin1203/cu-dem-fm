@@ -926,7 +926,7 @@ router.put('/:id/friend-attendance', authenticate, async (req: AuthenticatedRequ
     }
 
     const [tournament, owner, friends] = await Promise.all([
-      prisma.tournament.findUnique({ where: { id: tournamentId }, select: { id: true, status: true, selfFunded: true, maxAttendance: true } }),
+      prisma.tournament.findUnique({ where: { id: tournamentId }, select: { id: true, status: true, selfFunded: true, maxAttendance: true, pitchType: true } }),
       prisma.user.findUnique({ where: { id: req.user!.id }, include: { player: true } }),
       prisma.player.findMany({ where: { id: { in: playerIds }, friendOwnerId: req.user!.id }, select: { id: true } }),
     ]);
@@ -946,15 +946,17 @@ router.put('/:id/friend-attendance', authenticate, async (req: AuthenticatedRequ
       res.status(400).json({ success: false, error: 'Số dư hiện tại cộng tiền nạp chờ duyệt vẫn âm, vui lòng thanh toán trước' });
       return;
     }
+    const registrationField5 = tournament.pitchType === 'FIELD_5' ? true : tournament.pitchType === 'FIELD_7' ? false : field5;
+    const registrationField7 = tournament.pitchType === 'FIELD_7' ? true : tournament.pitchType === 'FIELD_5' ? false : field7;
     const alreadyAttending = await prisma.tournamentPlayerAttendance.count({ where: { tournamentId, playerId: { in: playerIds }, status: { in: ['ATTEND', 'ATTENDING'] } } });
-    if (!await hasAttendanceCapacity(tournamentId, tournament.maxAttendance, field5, field7, playerIds.length - alreadyAttending)) {
+    if (!await hasAttendanceCapacity(tournamentId, tournament.maxAttendance, registrationField5, registrationField7, playerIds.length - alreadyAttending)) {
       res.status(400).json({ success: false, error: `Giải đấu đã đạt giới hạn ${tournament.maxAttendance} cầu thủ điểm danh` });
       return;
     }
     await prisma.$transaction(playerIds.map(playerId => prisma.tournamentPlayerAttendance.upsert({
       where: { tournamentId_playerId: { tournamentId, playerId } },
-      update: { status: 'ATTEND', field5, field7, registeredAt: new Date(), withWater: false, bet: false },
-      create: { tournamentId, playerId, status: 'ATTEND', field5, field7, registeredAt: new Date() },
+      update: { status: 'ATTEND', field5: registrationField5, field7: registrationField7, registeredAt: new Date(), withWater: false, bet: false },
+      create: { tournamentId, playerId, status: 'ATTEND', field5: registrationField5, field7: registrationField7, registeredAt: new Date() },
     })));
     res.json({ success: true, data: { playerIds } });
   } catch (error) {

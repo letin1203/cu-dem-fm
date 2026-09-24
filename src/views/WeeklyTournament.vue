@@ -5044,11 +5044,16 @@
         </button>
         <div class="mt-5">
           <p class="form-label">Chọn sân</p>
-          <div class="grid grid-cols-2 gap-3">
+          <div
+            class="grid gap-3"
+            :class="friendRegistrationPitchType ? 'grid-cols-1' : 'grid-cols-2'"
+          >
             <button
+              v-if="friendRegistrationPitchType !== 'FIELD_7'"
               type="button"
+              :disabled="friendRegistrationPitchType === 'FIELD_5'"
               @click="friendField5 = !friendField5"
-              class="rounded-lg border-2 px-4 py-3 font-semibold"
+              class="rounded-lg border-2 px-4 py-3 font-semibold disabled:cursor-not-allowed disabled:opacity-60"
               :class="
                 friendField5
                   ? 'border-primary-600 bg-primary-600 text-white'
@@ -5057,9 +5062,11 @@
             >
               Sân 5{{ friendField5 ? " ✓" : "" }}</button
             ><button
+              v-if="friendRegistrationPitchType !== 'FIELD_5'"
               type="button"
+              :disabled="friendRegistrationPitchType === 'FIELD_7'"
               @click="friendField7 = !friendField7"
-              class="rounded-lg border-2 px-4 py-3 font-semibold"
+              class="rounded-lg border-2 px-4 py-3 font-semibold disabled:cursor-not-allowed disabled:opacity-60"
               :class="
                 friendField7
                   ? 'border-primary-600 bg-primary-600 text-white'
@@ -5069,6 +5076,12 @@
               Sân 7{{ friendField7 ? " ✓" : "" }}
             </button>
           </div>
+          <p
+            v-if="friendRegistrationPitchType"
+            class="mt-2 text-center text-xs text-gray-500"
+          >
+            Admin/Mod đã chọn {{ friendRegistrationPitchType === "FIELD_5" ? "Sân 5" : "Sân 7" }}.
+          </p>
           <p class="mt-3 text-center text-sm font-medium text-primary-700">
             Bạn đang chọn:
             {{
@@ -5500,6 +5513,19 @@ const pendingSwapPlayers = computed(() => {
 });
 const friendField5 = ref(true);
 const friendField7 = ref(true);
+const friendRegistrationPitchType = computed<"FIELD_5" | "FIELD_7" | null>(
+  () =>
+    weeklyTournaments.value.find(
+      (tournament) => tournament.id === friendTournamentId.value,
+    )?.pitchType || null,
+);
+const setFriendRegistrationFieldsForTournament = (tournamentId: string): void => {
+  const pitchType = weeklyTournaments.value.find(
+    (tournament) => tournament.id === tournamentId,
+  )?.pitchType;
+  friendField5.value = pitchType !== "FIELD_7";
+  friendField7.value = pitchType !== "FIELD_5";
+};
 const friendForm = ref({ name: "", position: "", yearOfBirth: 1990, tier: 0 });
 
 // Water tracking
@@ -6259,8 +6285,7 @@ const openFriendRegistration = async (tournamentId: string): Promise<void> => {
   }
   friendSwapMode.value = false;
   friendTournamentId.value = tournamentId;
-  friendField5.value = true;
-  friendField7.value = true;
+  setFriendRegistrationFieldsForTournament(tournamentId);
   friendsLoading.value = true;
   showFriendRegistrationModal.value = true;
   try {
@@ -9072,6 +9097,7 @@ const refreshPendingRegistrationTopUps = (): void => {
         fetchAttendance(tournament.id),
         fetchAttendanceStats(tournament.id),
         fetchAttendanceDetails(tournament.id, false),
+        fetchIncomingSwapRequests(tournament.id),
       ]),
     );
   })();

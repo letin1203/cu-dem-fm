@@ -48,7 +48,7 @@ router.get('/mine', authenticate, async (req: AuthenticatedRequest, res: Respons
 });
 
 // Lightweight polling endpoint used by an online player to be notified when
-// a staff member approves a top-up. Only approvals after `since` are returned.
+// a staff member approves or rejects a top-up. Only events after `since` are returned.
 router.get('/mine/approved-notifications', authenticate, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   try {
     const user = await prisma.user.findUnique({ where: { id: req.user!.id }, select: { playerId: true } });
@@ -57,13 +57,19 @@ router.get('/mine/approved-notifications', authenticate, async (req: Authenticat
       res.json({ success: true, data: [] });
       return;
     }
-    const approvals = await prisma.playerMoneyTopUp.findMany({
-      where: { playerId: user.playerId, status: 'APPROVED', approvedAt: { gt: since } },
-      select: { id: true, amount: true, approvedAt: true },
-      orderBy: { approvedAt: 'asc' },
+    const notifications = await prisma.playerMoneyTopUp.findMany({
+      where: {
+        playerId: user.playerId,
+        OR: [
+          { status: 'APPROVED', approvedAt: { gt: since } },
+          { status: 'REJECTED', rejectedAt: { gt: since } },
+        ],
+      },
+      select: { id: true, amount: true, status: true, requestedAt: true, approvedAt: true, rejectedAt: true },
+      orderBy: { requestedAt: 'asc' },
       take: 10,
     });
-    res.json({ success: true, data: approvals });
+    res.json({ success: true, data: notifications });
   } catch (error) {
     res.status(500).json({ success: false, error: 'Không thể kiểm tra yêu cầu nạp tiền đã duyệt' });
   }
@@ -190,8 +196,11 @@ router.delete('/:id', authenticate, authorize(['ADMIN', 'MOD']), async (req: Aut
       return;
     }
 
-    await prisma.playerMoneyTopUp.delete({ where: { id: pending.id } });
-    res.json({ success: true, message: 'Đã xóa yêu cầu nạp tiền' });
+    await prisma.playerMoneyTopUp.update({
+      where: { id: pending.id },
+      data: { status: 'REJECTED', rejectedAt: new Date() },
+    });
+    res.json({ success: true, message: 'Đã từ chối yêu cầu nạp tiền' });
   } catch (error) {
     res.status(500).json({ success: false, error: 'Không thể xóa yêu cầu nạp tiền' });
   }

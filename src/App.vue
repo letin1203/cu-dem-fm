@@ -25,12 +25,14 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
+import { useToast } from 'vue-toastification'
 import Navigation from './components/Navigation.vue'
 import { useAuthStore } from './stores/auth'
 import { apiClient } from './api/client'
 
 const authStore = useAuthStore()
 const router = useRouter()
+const toast = useToast()
 const isAuthenticated = computed(() => authStore.isAuthenticated)
 const isWakingBackend = ref(false)
 const BACKEND_WAKE_AFTER_MS = 5 * 60 * 1000
@@ -58,9 +60,17 @@ const checkApprovedTopUps = async () => {
   try {
     const response = await apiClient.getMyApprovedMoneyTopUpNotifications(topUpApprovalSince)
     if (response.success && Array.isArray(response.data)) {
-      const approvals = response.data as Array<{ id: string; amount: number; approvedAt: string }>
+      const notifications = response.data as Array<{ id: string; amount: number; status: string; requestedAt: string; approvedAt?: string; rejectedAt?: string }>
       const existingIds = new Set(approvedTopUpQueue.value.map(item => item.id))
-      approvedTopUpQueue.value.push(...approvals.filter(item => !existingIds.has(item.id)))
+      const approvals = notifications
+        .filter(item => item.status === 'APPROVED' && !existingIds.has(item.id))
+        .map(item => ({ id: item.id, amount: item.amount, approvedAt: item.approvedAt || new Date().toISOString() }))
+      approvedTopUpQueue.value.push(...approvals)
+      for (const rejection of notifications.filter(item => item.status === 'REJECTED')) {
+        const requestedAt = new Date(rejection.requestedAt).toLocaleString('vi-VN')
+        window.dispatchEvent(new Event('pending-money-top-ups-changed'))
+        toast.error(`Số tiền ${formatApprovalAmount(rejection.amount)} ₫ bạn nạp lúc ${requestedAt} đã bị từ chối, vui lòng kiểm tra lại trong quỹ MoMo.`)
+      }
     }
   } catch {
     // Notification polling must never interrupt normal use of the application.

@@ -282,10 +282,11 @@ model PlayerMoneyTopUp {
   player       Player   @relation(fields: [playerId], references: [id], onDelete: Cascade)
   playerId     String
   amount       Int
-  status       String   @default("PENDING") // "PENDING", "APPROVED"
+  status       String   @default("PENDING") // "PENDING", "APPROVED", "REJECTED"
   requestedAt  DateTime @default(now())
   approvedAt   DateTime?
   approvedById String?
+  rejectedAt   DateTime?
 
   @@index([status, requestedAt])
   @@map("player_money_top_ups")

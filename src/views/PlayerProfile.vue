@@ -590,7 +590,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from "vue";
+import { ref, computed, onBeforeUnmount, onMounted } from "vue";
 import { useAuthStore } from "../stores/auth";
 import { apiClient } from "../api/client";
 import { useToast } from "vue-toastification";
@@ -901,5 +901,15 @@ const submitTopUp = async () => {
     submittingTopUp.value = false;
   }
 };
-onMounted(fetchPlayerProfile);
+const refreshPendingTopUpsAfterNotification = () => {
+  void loadPendingTopUps();
+};
+
+onMounted(() => {
+  void fetchPlayerProfile();
+  window.addEventListener("pending-money-top-ups-changed", refreshPendingTopUpsAfterNotification);
+});
+onBeforeUnmount(() => {
+  window.removeEventListener("pending-money-top-ups-changed", refreshPendingTopUpsAfterNotification);
+});
 </script>

@@ -5146,6 +5146,14 @@
         <button type="button" class="text-xl text-gray-400 hover:text-gray-700" aria-label="Đóng" @click="showChallengePairsModal = false">×</button>
       </div>
       <div class="space-y-3 p-5">
+        <section class="rounded-lg border border-primary-100 bg-primary-50 p-3 text-sm leading-6 text-gray-700">
+          <h4 class="font-semibold text-primary-800">Luật thách đấu</h4>
+          <ul class="mt-1 list-disc space-y-1 pl-5">
+            <li>Chỉ cầu thủ cùng nhóm Tier (Tier 1–2, Tier 3–4 hoặc Tier 5–6) và cùng đăng ký ít nhất một sân mới được thách đấu.</li>
+            <li>Sau khi hai bên chấp nhận, hệ thống luôn xếp hai cầu thủ vào hai đội khác nhau khi chia đội.</li>
+            <li>Kết thúc giải, cầu thủ thuộc đội có điểm cao hơn thắng và nhận +10.000 ₫; cầu thủ còn lại bị trừ 10.000 ₫.</li>
+          </ul>
+        </section>
         <p v-if="!activeChallengePairs.length" class="rounded-lg bg-gray-50 p-4 text-center text-sm text-gray-500">Chưa có cặp cầu thủ nào đang thách đấu.</p>
         <div v-for="pair in activeChallengePairs" :key="pair.id" class="flex items-center justify-between gap-3 rounded-lg border border-red-100 bg-red-50 p-3">
           <div class="flex min-w-0 flex-1 items-center gap-2"><div class="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full bg-gray-200 text-sm font-semibold"><img v-if="pair.requester.avatar" :src="pair.requester.avatar" :alt="pair.requester.name" class="h-full w-full object-cover"><span v-else>{{ pair.requester.name.charAt(0) }}</span></div><span class="truncate font-medium text-gray-900">{{ pair.requester.name }}</span></div>

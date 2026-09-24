@@ -2537,8 +2537,8 @@
             </li>
             <li>
               • Tại thời điểm chốt hủy: đủ tối thiểu 12 cầu thủ Sân 5 hoặc 16
-              cầu thủ Sân 7 sẽ book sân 1 giờ 30 phút; đủ 18 cầu thủ Sân 5 hoặc
-              24 cầu thủ Sân 7 sẽ book sân 2 giờ.
+              cầu thủ Sân 7 sẽ book sân 1 giờ 30 phút; đủ 16 cầu thủ Sân 5 hoặc
+              20 cầu thủ Sân 7 sẽ book sân 2 giờ.
             </li>
             <li>
               • Sau khi đã chia đội, không thể hủy tham gia. Admin/mod có thể

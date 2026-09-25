@@ -1143,7 +1143,8 @@
               "
               class="mt-4 hidden rounded-lg border border-gray-200 bg-gray-50 p-4 lg:block"
             >
-              <div class="mb-3 flex items-center justify-between">
+              <div class="mb-3">
+                <div class="flex items-center">
                 <div class="flex items-center gap-2">
                   <h4 class="text-lg font-semibold text-gray-800">
                     Cầu thủ tham gia
@@ -1496,7 +1497,8 @@
                     </svg>
                   </button>
                 </div>
-                <span class="text-xs text-gray-500">Chưa chia đội</span>
+                </div>
+                <span class="mt-1 block text-[10px] text-gray-500">Chưa chia đội</span>
               </div>
               <div
                 v-if="ongoingTournament.pitchType"

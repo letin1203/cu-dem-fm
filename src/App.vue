@@ -1,7 +1,14 @@
 <template>
   <div class="min-h-screen bg-gradient-to-br from-primary-50 via-secondary-50 to-primary-100">
     <div v-if="isWakingBackend" class="fixed inset-0 z-[100] flex items-center justify-center bg-white/85 p-6 backdrop-blur-sm">
-      <div class="w-full max-w-sm text-center"><div class="mx-auto h-10 w-10 animate-spin rounded-full border-4 border-primary-200 border-t-primary-600"></div><p class="mt-4 break-words font-semibold leading-6 text-gray-900">Đang kết nối lại máy chủ, quá trình có thể tốn khoảng 10s-20s...</p><p class="mt-1 text-sm leading-5 text-gray-600">Dữ liệu sẽ tự làm mới.</p></div>
+      <div class="w-full max-w-sm text-center">
+        <div class="relative mx-auto h-12 w-12">
+          <div class="absolute inset-0 animate-spin rounded-full border-4 border-primary-200 border-t-primary-600"></div>
+          <span class="absolute inset-0 flex items-center justify-center text-[11px] font-bold tabular-nums text-primary-700">{{ wakeProgress }}%</span>
+        </div>
+        <p class="mt-4 break-words font-semibold leading-6 text-gray-900">Đang kết nối lại máy chủ, quá trình có thể tốn khoảng 10s-20s...</p>
+        <p class="mt-1 text-sm leading-5 text-gray-600">Dữ liệu sẽ tự làm mới.</p>
+      </div>
     </div>
     <div v-if="approvedTopUpQueue.length" class="fixed inset-0 z-[110] flex items-center justify-center bg-black/50 p-4">
       <div class="w-full max-w-md rounded-xl bg-white shadow-xl">
@@ -35,9 +42,12 @@ const router = useRouter()
 const toast = useToast()
 const isAuthenticated = computed(() => authStore.isAuthenticated)
 const isWakingBackend = ref(false)
+const wakeProgress = ref(0)
 const BACKEND_WAKE_AFTER_MS = 5 * 60 * 1000
+const BACKEND_WAKE_PROGRESS_DURATION_MS = 15_000
 let lastBackgroundAt = Date.now()
 let wakeInProgress = false
+let wakeProgressTimer: number | undefined
 const approvedTopUpQueue = ref<Array<{ id: string; amount: number; approvedAt: string }>>([])
 let topUpApprovalPollTimer: number | undefined
 let topUpApprovalSince = new Date().toISOString()
@@ -86,10 +96,18 @@ const wakeAndRefresh = async () => {
   if (wakeInProgress || !isAuthenticated.value || Date.now() - lastBackgroundAt < BACKEND_WAKE_AFTER_MS) return
   wakeInProgress = true
   isWakingBackend.value = true
+  wakeProgress.value = 0
+  wakeProgressTimer = window.setInterval(() => {
+    if (wakeProgress.value < 99) wakeProgress.value += 1
+  }, BACKEND_WAKE_PROGRESS_DURATION_MS / 99)
   try {
     await apiClient.wakeUpBackend()
     window.location.reload()
   } finally {
+    if (wakeProgressTimer) {
+      window.clearInterval(wakeProgressTimer)
+      wakeProgressTimer = undefined
+    }
     // The reload normally replaces this component. Keep the UI usable if it is blocked.
     wakeInProgress = false
     isWakingBackend.value = false
@@ -109,5 +127,6 @@ onMounted(() => {
 onBeforeUnmount(() => {
   document.removeEventListener('visibilitychange', handleVisibilityChange)
   if (topUpApprovalPollTimer) window.clearInterval(topUpApprovalPollTimer)
+  if (wakeProgressTimer) window.clearInterval(wakeProgressTimer)
 })
 </script>

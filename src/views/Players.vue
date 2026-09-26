@@ -153,7 +153,7 @@
             </div>
             <div class="text-right">
               <span class="text-gray-500">Tiền:</span>
-              <span class="ml-1 text-sm font-medium" :class="player.money < 0 ? 'text-red-600' : 'text-gray-900'">{{ formatMoney(player.money) }}</span>
+              <span class="ml-1 text-sm font-medium" :class="player.money < 0 ? 'text-red-600' : player.money > 0 ? 'text-green-600' : 'text-gray-900'">{{ formatMoney(player.money) }}</span>
             </div>
           </div>
         </div>
@@ -235,7 +235,7 @@
               <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                 <span class="font-medium text-gray-700">{{ player.tier }}</span>
               </td>
-              <td class="px-6 py-4 whitespace-nowrap text-sm" :class="player.money < 0 ? 'text-red-600' : 'text-gray-900'">
+              <td class="px-6 py-4 whitespace-nowrap text-sm" :class="player.money < 0 ? 'text-red-600' : player.money > 0 ? 'text-green-600' : 'text-gray-900'">
                 {{ player.money.toLocaleString('vi-VN') }} ₫
               </td>
               <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
@@ -304,11 +304,11 @@
                 <button v-if="isOwnProfilePlayer" type="button" class="btn-primary mt-5 w-full disabled:cursor-not-allowed disabled:opacity-50" :disabled="isProfileTopUpCooldownActive" @click="openSelfTopUpModal">{{ isProfileTopUpCooldownActive ? `Nạp lại sau ${profileTopUpCooldownLabel}` : 'Nạp tiền' }}</button>
                 <p v-if="isOwnProfilePlayer && profilePendingTopUps.length" class="mt-2 text-center text-xs text-amber-700">Yêu cầu của bạn đang được BQT kiểm tra quỹ MoMo và duyệt.</p>
               </section>
-              <section class="rounded-lg border border-gray-200 p-5"><h3 class="mb-3 font-semibold text-gray-900">Lịch sử biến động tiền</h3><p v-if="profileMoneyHistoryLoading" class="text-sm text-gray-500">Đang tải...</p><p v-else-if="!profileMoneyHistory.length" class="text-sm text-gray-500">Chưa có biến động tiền.</p><div v-else class="space-y-3"><div v-for="item in profileMoneyHistory" :key="item.id" class="border-b border-gray-100 pb-3 last:border-0"><div class="flex justify-between gap-2 text-sm"><span class="min-w-0 text-gray-700">{{ item.description }}</span><strong class="shrink-0 whitespace-nowrap" :class="item.amount >= 0 ? 'text-green-600' : 'text-red-600'">{{ item.amount >= 0 ? '+' : '' }}{{ formatMoney(item.amount) }}</strong></div><p class="mt-1 text-xs text-gray-500">{{ formatProfileDate(item.createdAt) }}</p></div></div><div v-if="profileMoneyPagination.pages > 1" class="mt-4 flex items-center justify-between border-t pt-3"><button type="button" class="btn-secondary text-sm" :disabled="profileMoneyPagination.page <= 1" @click="loadProfileMoneyHistory(profileMoneyPagination.page - 1)">Trước</button><span class="text-xs text-gray-500">Trang {{ profileMoneyPagination.page }} / {{ profileMoneyPagination.pages }}</span><button type="button" class="btn-secondary text-sm" :disabled="profileMoneyPagination.page >= profileMoneyPagination.pages" @click="loadProfileMoneyHistory(profileMoneyPagination.page + 1)">Sau</button></div></section>
+              <section class="rounded-lg border border-gray-200 p-5"><h3 class="mb-3 font-semibold text-gray-900">Lịch sử biến động tiền</h3><p v-if="profileMoneyHistoryLoading" class="text-sm text-gray-500">Đang tải...</p><p v-else-if="!profileMoneyHistory.length" class="text-sm text-gray-500">Chưa có biến động tiền.</p><div v-else class="space-y-3"><div v-for="item in profileMoneyHistory" :key="item.id" class="border-b border-gray-100 pb-3 last:border-0"><div class="flex justify-between gap-2 text-sm"><span class="min-w-0 text-gray-700">{{ formatProfileMoneyDescription(item.description) }}</span><strong class="shrink-0 whitespace-nowrap" :class="item.amount >= 0 ? 'text-green-600' : 'text-red-600'">{{ item.amount >= 0 ? '+' : '' }}{{ formatMoney(item.amount) }}</strong></div><p class="mt-1 text-xs text-gray-500">{{ formatProfileDate(item.createdAt) }}</p></div></div><div v-if="profileMoneyPagination.pages > 1" class="mt-4 flex items-center justify-between border-t pt-3"><button type="button" class="btn-secondary text-sm" :disabled="profileMoneyPagination.page <= 1" @click="loadProfileMoneyHistory(profileMoneyPagination.page - 1)">Trước</button><span class="text-xs text-gray-500">Trang {{ profileMoneyPagination.page }} / {{ profileMoneyPagination.pages }}</span><button type="button" class="btn-secondary text-sm" :disabled="profileMoneyPagination.page >= profileMoneyPagination.pages" @click="loadProfileMoneyHistory(profileMoneyPagination.page + 1)">Sau</button></div></section>
             </div>
             <div class="space-y-5 lg:col-span-2">
-              <section class="rounded-lg border border-gray-200 p-5"><h3 class="mb-3 text-lg font-semibold text-gray-900">Giải đấu gần nhất</h3><div v-if="latestProfileTournament" class="rounded-lg bg-gray-50 p-4 text-sm"><div class="flex flex-wrap items-start justify-between gap-2"><div><p class="font-semibold text-gray-900">{{ latestProfileTournament.tournament.name }}</p><p class="mt-1 text-gray-500">{{ formatProfileDate(latestProfileTournament.tournament.startDate) }}</p></div><span class="rounded-full bg-primary-100 px-2.5 py-1 text-xs font-medium text-primary-700">{{ profileTournamentStatus(latestProfileTournament.tournament.status) }}</span></div><div class="mt-4 grid gap-2 sm:grid-cols-2"><p><span class="text-gray-500">Đội của cầu thủ: </span><strong>{{ profileTeamName(latestProfileTournament) }}</strong></p><p><span class="text-gray-500">Đội vô địch: </span><strong>{{ profileHighestTeam(latestProfileTournament) }}</strong></p><p><span class="text-gray-500">Đội thua: </span><strong>{{ profileLowestTeam(latestProfileTournament) }}</strong></p><p v-if="latestProfileTournament.withWater" class="text-blue-600">Có uống nước</p><p v-if="latestProfileTournament.bet" class="text-yellow-700">Có Ngôi sao hy vọng</p></div></div><p v-else class="text-sm text-gray-500">Cầu thủ chưa tham gia giải đấu nào.</p></section>
-              <section class="rounded-lg border border-gray-200 p-5"><h3 class="mb-3 text-lg font-semibold text-gray-900">Lịch sử danh sách các giải đấu</h3><div v-if="olderProfileTournaments.length" class="divide-y divide-gray-100"><div v-for="attendance in olderProfileTournaments" :key="attendance.id" class="flex flex-col justify-between gap-2 py-3 first:pt-0 sm:flex-row sm:items-center"><div><p class="font-medium text-gray-900">{{ attendance.tournament.name }}</p><p class="mt-1 text-sm text-gray-500">{{ formatProfileDate(attendance.tournament.startDate) }} · {{ profileTeamName(attendance) }}</p></div><span class="w-fit rounded-full bg-gray-100 px-2.5 py-1 text-xs font-medium text-gray-600">{{ profileTournamentStatus(attendance.tournament.status) }}</span></div></div><p v-else class="text-sm text-gray-500">Chưa có giải đấu cũ hơn.</p></section>
+              <section class="rounded-lg border border-gray-200 p-5"><h3 class="mb-3 text-lg font-semibold text-gray-900">Giải đấu gần nhất</h3><div v-if="latestProfileTournament" class="rounded-lg bg-gray-50 p-4 text-sm"><div class="flex flex-wrap items-start justify-between gap-2"><div><p class="font-semibold text-gray-900">{{ formatProfileTournamentName(latestProfileTournament.tournament) }}</p><p class="mt-1 text-gray-500">{{ formatProfileDate(latestProfileTournament.tournament.startDate) }}</p></div><span class="rounded-full bg-primary-100 px-2.5 py-1 text-xs font-medium text-primary-700">{{ profileTournamentStatus(latestProfileTournament.tournament.status) }}</span></div><div class="mt-4 grid gap-2 sm:grid-cols-2"><p><span class="text-gray-500">Đội của cầu thủ: </span><strong>{{ profileTeamName(latestProfileTournament) }}</strong></p><p><span class="text-gray-500">Đội vô địch: </span><strong>{{ profileHighestTeam(latestProfileTournament) }}</strong></p><p><span class="text-gray-500">Đội thua: </span><strong>{{ profileLowestTeam(latestProfileTournament) }}</strong></p><p v-if="latestProfileTournament.withWater" class="text-blue-600">Có uống nước</p><p v-if="latestProfileTournament.bet" class="text-yellow-700">Có Ngôi sao hy vọng</p></div></div><p v-else class="text-sm text-gray-500">Cầu thủ chưa tham gia giải đấu nào.</p></section>
+              <section class="rounded-lg border border-gray-200 p-5"><h3 class="mb-3 text-lg font-semibold text-gray-900">Lịch sử danh sách các giải đấu</h3><div v-if="olderProfileTournaments.length" class="divide-y divide-gray-100"><div v-for="attendance in olderProfileTournaments" :key="attendance.id" class="flex flex-col justify-between gap-2 py-3 first:pt-0 sm:flex-row sm:items-center"><div><p class="font-medium text-gray-900">{{ formatProfileTournamentName(attendance.tournament) }}</p><p class="mt-1 text-sm text-gray-500">{{ formatProfileDate(attendance.tournament.startDate) }} · {{ profileTeamName(attendance) }}</p></div><span class="w-fit rounded-full bg-gray-100 px-2.5 py-1 text-xs font-medium text-gray-600">{{ profileTournamentStatus(attendance.tournament.status) }}</span></div></div><p v-else class="text-sm text-gray-500">Chưa có giải đấu cũ hơn.</p></section>
             </div>
           </div>
         </div>
@@ -352,7 +352,7 @@
     <ConfirmationModal
       :is-open="showInactiveConfirm"
       title="Chuyển cầu thủ sang Inactive"
-      message="Cầu thủ sẽ không còn hiển thị trong danh sách và không thể được admin/mod điểm danh. Dữ liệu lịch sử vẫn được giữ lại."
+      :message="inactiveConfirmationMessage"
       confirm-label="Chuyển Inactive"
       :loading="playersStore.loading"
       @cancel="showInactiveConfirm = false; inactivePlayerId = null"
@@ -530,6 +530,14 @@ const friendsListLoading = ref(false)
 const friendGroups = ref<any[]>([])
 const showInactiveConfirm = ref(false)
 const inactivePlayerId = ref<string | null>(null)
+const inactiveConfirmationMessage = computed(() => {
+  const player = playersStore.players.find((item) => item.id === inactivePlayerId.value)
+  const playerDescription = player
+    ? `Cầu thủ ${player.name} (Vị trí ${positionLabels[player.position] || player.position}, Tier ${player.tier}) sẽ được chuyển sang trạng thái Inactive.`
+    : "Cầu thủ này sẽ được chuyển sang trạng thái Inactive."
+
+  return `${playerDescription} Cầu thủ sẽ bị ẩn khỏi Danh sách cầu thủ, không thể được admin/mod điểm danh hoặc tham gia giải đấu mới. Số dư và toàn bộ lịch sử vẫn được giữ lại. Bạn có thể kích hoạt lại cầu thủ từ tab Cầu thủ inactive trong trang Duyệt.`
+})
 
 const tierOptions = [1, 2, 3, 4, 5, 6]
 const positionOptions = [
@@ -619,16 +627,21 @@ const olderProfileTournaments = computed(() => profileTournamentHistory.value.sl
 
 const formatProfileDate = (value: string | Date) => new Date(value).toLocaleString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' })
 const profileTournamentStatus = (status: string) => ({ UPCOMING: 'Sắp diễn ra', ONGOING: 'Đang diễn ra', COMPLETED: 'Đã hoàn thành' }[status] || status)
-const profileTeamName = (attendance: any) => attendance.tournament?.tournamentTeamPlayers?.[0]?.team?.name || 'Chưa chia đội'
+const formatProfileTournamentName = (tournament: any) =>
+  String(tournament?.name || '').replace(/^(?:Giải hằng tuần|Weekly Tournament)\s*-\s*/i, '') || 'Giải đấu'
+const formatProfileMoneyDescription = (description: string) =>
+  String(description || '').replace(/(?:Giải hằng tuần|Weekly Tournament)\s*-\s*/gi, '')
+const formatProfileTeamName = (teamName?: string) => teamName?.match(/Team\s*\d+/i)?.[0] || teamName || 'Chưa chia đội'
+const profileTeamName = (attendance: any) => formatProfileTeamName(attendance.tournament?.tournamentTeamPlayers?.[0]?.team?.name)
 const profileHighestTeam = (attendance: any) => {
   if (attendance.tournament?.status !== 'COMPLETED') return 'Chưa xác định'
   const teams = attendance.tournament?.teams || []
-  return teams.length ? teams.reduce((highest: any, item: any) => (item.team.score > highest.team.score ? item : highest)).team.name : 'Chưa xác định'
+  return teams.length ? formatProfileTeamName(teams.reduce((highest: any, item: any) => (item.team.score > highest.team.score ? item : highest)).team.name) : 'Chưa xác định'
 }
 const profileLowestTeam = (attendance: any) => {
   if (attendance.tournament?.status !== 'COMPLETED') return 'Chưa xác định'
   const teams = attendance.tournament?.teams || []
-  return teams.length ? teams.reduce((lowest: any, item: any) => (item.team.score < lowest.team.score ? item : lowest)).team.name : 'Chưa xác định'
+  return teams.length ? formatProfileTeamName(teams.reduce((lowest: any, item: any) => (item.team.score < lowest.team.score ? item : lowest)).team.name) : 'Chưa xác định'
 }
 
 async function loadProfileMoneyHistory(page = 1) {

@@ -1447,6 +1447,7 @@
                 </div>
               </div>
             </div>
+            </div>
             <div
               v-if="
                 ongoingTournament.status === 'UPCOMING' &&
@@ -1841,7 +1842,6 @@
               </button>
             </div>
           </div>
-        </div>
         </div>
         <div v-else class="text-center py-8">
           <p class="text-gray-600">Không có giải hằng tuần đang diễn ra</p>

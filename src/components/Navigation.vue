@@ -106,10 +106,28 @@
             </svg>
             <span>Tiền Quỹ: </span>
             <span class="ml-1 whitespace-nowrap">{{ formatCompactMoney(systemStore.currentSettings.clubFund) }}</span>
+            <span
+              v-if="authStore.currentUser?.player"
+              class="text-primary-300"
+              aria-hidden="true"
+              >|</span
+            >
+            <span
+              v-if="authStore.currentUser?.player"
+              class="whitespace-nowrap"
+              :class="
+                (authStore.currentUser.player.money || 0) < 0
+                  ? 'text-red-600'
+                  : 'text-green-600'
+              "
+              title="Số dư của bạn"
+            >
+              {{ formatCompactMoney(authStore.currentUser.player.money) }}
+            </span>
           </button>
 
           <router-link
-            v-for="item in visibleNavigationItems"
+            v-for="item in desktopNavigationItems"
             :key="item.name"
             :to="item.path"
             class="text-primary-700 hover:text-primary-800 hover:bg-primary-100/50 px-2 lg:px-3 py-2 rounded-md text-sm font-medium transition-colors flex items-center space-x-1 whitespace-nowrap"
@@ -169,6 +187,22 @@
                   class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
                 >
                   Hồ sơ cầu thủ
+                </router-link>
+                <router-link
+                  v-if="authStore.hasPermission('canManageUsers')"
+                  to="/users"
+                  @click="userMenuOpen = false"
+                  class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                >
+                  Người dùng
+                </router-link>
+                <router-link
+                  v-if="authStore.hasRole('admin')"
+                  to="/system-settings"
+                  @click="userMenuOpen = false"
+                  class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                >
+                  Cài đặt
                 </router-link>
                 <button
                   @click="handleLogout"
@@ -581,6 +615,12 @@ const visibleNavigationItems = computed(() => {
     return true;
   });
 });
+
+const desktopNavigationItems = computed(() =>
+  visibleNavigationItems.value.filter(
+    (item) => item.path !== "/system-settings" && item.path !== "/users",
+  ),
+);
 
 const linkedPlayer = computed(() => {
   if (!authStore.currentUser?.playerId) return null;

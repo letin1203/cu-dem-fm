@@ -1454,7 +1454,7 @@
               "
               class="mt-4 rounded-lg border border-gray-200 bg-gray-50 p-4 lg:hidden"
             >
-              <div class="mb-3 flex items-center justify-between">
+              <div class="mb-3">
                 <div class="flex items-center gap-2">
                   <h4 class="font-semibold text-gray-800">Cầu thủ tham gia</h4>
                   <button
@@ -1496,7 +1496,6 @@
                       />
                     </svg>
                   </button>
-                </div>
                 </div>
                 <span class="mt-1 block text-[10px] text-gray-500">Chưa chia đội</span>
               </div>
@@ -1783,10 +1782,8 @@
               v-if="
                 (authStore.hasRole('admin') &&
                   getTournamentTeams(ongoingTournament).length > 0) ||
-                (authStore.hasAnyRole(['admin', 'mod']) &&
-                  ongoingTournament.status !== 'COMPLETED') ||
-                (authStore.hasPermission('canDeleteTournaments') &&
-                  ongoingTournament.status !== 'COMPLETED')
+                authStore.hasAnyRole(['admin', 'mod']) ||
+                authStore.hasPermission('canDeleteTournaments')
               "
               class="flex flex-col items-stretch gap-3 pt-2 border-t border-gray-200 sm:flex-row sm:flex-wrap sm:justify-end sm:[&>button]:w-auto [&>button]:w-full"
             >
@@ -1804,7 +1801,6 @@
               <button
                 v-if="
                   authStore.hasAnyRole(['admin', 'mod']) &&
-                  ongoingTournament.status !== 'COMPLETED' &&
                   !ongoingTournament.selfFunded
                 "
                 @click="openFundContributionModal(ongoingTournament)"
@@ -1835,7 +1831,6 @@
               <button
                 v-if="
                   authStore.hasPermission('canDeleteTournaments') &&
-                  ongoingTournament.status !== 'COMPLETED' &&
                   !ongoingTournament.isProtected &&
                   getTournamentTeams(ongoingTournament).length === 0
                 "
@@ -1846,6 +1841,7 @@
               </button>
             </div>
           </div>
+        </div>
         </div>
         <div v-else class="text-center py-8">
           <p class="text-gray-600">Không có giải hằng tuần đang diễn ra</p>

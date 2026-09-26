@@ -161,7 +161,7 @@
               class="border-b border-gray-100 pb-3 last:border-0 last:pb-0"
             >
               <div class="flex justify-between gap-2 text-sm">
-                <span class="min-w-0 text-gray-700">{{ item.description }}</span
+                <span class="min-w-0 text-gray-700">{{ formatMoneyHistoryDescription(item.description) }}</span
                 ><span
                   class="shrink-0 whitespace-nowrap font-semibold"
                   :class="item.amount >= 0 ? 'text-green-600' : 'text-red-600'"
@@ -226,7 +226,7 @@
             >
               <div>
                 <p class="font-semibold text-gray-900">
-                  {{ latestTournament.tournament.name }}
+                  {{ formatTournamentName(latestTournament.tournament) }}
                 </p>
                 <p class="text-sm text-gray-500">
                   {{ formatDate(latestTournament.tournament.startDate) }}
@@ -272,7 +272,7 @@
                   :key="entry.team.id"
                   class="flex justify-between rounded bg-white px-3 py-2 text-sm"
                 >
-                  <span>{{ entry.team.name }}</span
+                  <span>{{ formatTeamName(entry.team.name) }}</span
                   ><strong>⚽ {{ entry.team.score }}</strong>
                 </div>
               </div>
@@ -295,7 +295,7 @@
                 class="rounded bg-white px-3 py-2 text-sm"
               >
                 <div class="flex justify-between gap-3">
-                  <span class="min-w-0">{{ item.description }}</span
+                  <span class="min-w-0">{{ formatMoneyHistoryDescription(item.description) }}</span
                   ><strong
                     class="shrink-0 whitespace-nowrap"
                     :class="
@@ -345,7 +345,7 @@
             >
               <div>
                 <p class="font-medium text-gray-900">
-                  {{ attendance.tournament.name }}
+                  {{ formatTournamentName(attendance.tournament) }}
                 </p>
                 <p class="text-sm text-gray-500">
                   {{ formatDate(attendance.tournament.startDate) }} ·
@@ -474,7 +474,7 @@
         <div class="flex items-start justify-between border-b p-5">
           <div>
             <h2 class="text-lg font-semibold text-gray-900">
-              {{ selectedTournamentDetail.tournament.name }}
+              {{ formatTournamentName(selectedTournamentDetail.tournament) }}
             </h2>
             <p class="text-sm text-gray-500">
               {{ formatDate(selectedTournamentDetail.tournament.startDate) }}
@@ -522,7 +522,7 @@
                 :key="entry.team.id"
                 class="flex justify-between rounded bg-gray-50 px-3 py-2 text-sm"
               >
-                <span>{{ entry.team.name }}</span
+                <span>{{ formatTeamName(entry.team.name) }}</span
                 ><strong>⚽ {{ entry.team.score }}</strong>
               </div>
             </div>
@@ -714,8 +714,39 @@ const positionLabels: Record<string, string> = {
 };
 const displayPosition = (position: string) =>
   positionLabels[position] || position;
+const formatTournamentName = (tournament: any) =>
+  String(tournament?.name || "").replace(
+    /^(?:Giải hằng tuần|Weekly Tournament)\s*-\s*/i,
+    "",
+  ) || "Giải đấu";
+const formatMoneyHistoryDescription = (description: string) => {
+  const value = String(description || "");
+  const summary = value.match(
+    /^Tổng kết giải đấu:\s*(?:Giải hằng tuần\s*-\s*)?(.+)$/i,
+  );
+  const date = summary?.[1].match(
+    /(Thứ\s+(?:Hai|Ba|Tư|Năm|Sáu|Bảy)|Chủ Nhật),?\s*(\d{1,2})\s+thg\s+(\d{1,2}),?\s*(\d{4})/i,
+  );
+  if (date) {
+    const weekday = (
+      {
+        "thứ hai": "T2",
+        "thứ ba": "T3",
+        "thứ tư": "T4",
+        "thứ năm": "T5",
+        "thứ sáu": "T6",
+        "thứ bảy": "T7",
+        "chủ nhật": "CN",
+      } as Record<string, string>
+    )[date[1].toLowerCase()];
+    return `Tổng kết: ${weekday || date[1]} ${date[2].padStart(2, "0")}/${date[3].padStart(2, "0")}/${date[4]}`;
+  }
+  return value.replace(/(?:Giải hằng tuần|Weekly Tournament)\s*-\s*/gi, "");
+};
+const formatTeamName = (name?: string) =>
+  name?.match(/Team\s*\d+/i)?.[0] || name || "Chưa chia đội";
 const teamName = (attendance: TournamentAttendanceHistory) =>
-  attendance.tournament.tournamentTeamPlayers[0]?.team.name || "Chưa chia đội";
+  formatTeamName(attendance.tournament.tournamentTeamPlayers[0]?.team.name);
 const scoreSortedTeams = (attendance: TournamentAttendanceHistory) =>
   [...attendance.tournament.teams].sort(
     (first, second) => second.team.score - first.team.score,
@@ -723,11 +754,15 @@ const scoreSortedTeams = (attendance: TournamentAttendanceHistory) =>
 const highestScoreTeamName = (attendance: TournamentAttendanceHistory) =>
   attendance.tournament.status === "ONGOING"
     ? "Chưa xác định"
-    : scoreSortedTeams(attendance)[0]?.team.name || "Chưa xác định";
+    : scoreSortedTeams(attendance)[0]
+      ? formatTeamName(scoreSortedTeams(attendance)[0].team.name)
+      : "Chưa xác định";
 const lowestScoreTeamName = (attendance: TournamentAttendanceHistory) => {
   if (attendance.tournament.status === "ONGOING") return "Chưa xác định";
   const teams = scoreSortedTeams(attendance);
-  return teams[teams.length - 1]?.team.name || "Chưa xác định";
+  return teams.length
+    ? formatTeamName(teams[teams.length - 1].team.name)
+    : "Chưa xác định";
 };
 const formatDate = (date: Date | string) =>
   new Date(date).toLocaleDateString("vi-VN", {

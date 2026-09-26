@@ -629,8 +629,16 @@ const formatProfileDate = (value: string | Date) => new Date(value).toLocaleStri
 const profileTournamentStatus = (status: string) => ({ UPCOMING: 'Sắp diễn ra', ONGOING: 'Đang diễn ra', COMPLETED: 'Đã hoàn thành' }[status] || status)
 const formatProfileTournamentName = (tournament: any) =>
   String(tournament?.name || '').replace(/^(?:Giải hằng tuần|Weekly Tournament)\s*-\s*/i, '') || 'Giải đấu'
-const formatProfileMoneyDescription = (description: string) =>
-  String(description || '').replace(/(?:Giải hằng tuần|Weekly Tournament)\s*-\s*/gi, '')
+const formatProfileMoneyDescription = (description: string) => {
+  const value = String(description || '')
+  const summary = value.match(/^Tổng kết giải đấu:\s*(?:Giải hằng tuần\s*-\s*)?(.+)$/i)
+  const date = summary?.[1].match(/(Thứ\s+(?:Hai|Ba|Tư|Năm|Sáu|Bảy)|Chủ Nhật),?\s*(\d{1,2})\s+thg\s+(\d{1,2}),?\s*(\d{4})/i)
+  if (date) {
+    const weekday = ({ 'thứ hai': 'T2', 'thứ ba': 'T3', 'thứ tư': 'T4', 'thứ năm': 'T5', 'thứ sáu': 'T6', 'thứ bảy': 'T7', 'chủ nhật': 'CN' } as Record<string, string>)[date[1].toLowerCase()]
+    return `Tổng kết: ${weekday || date[1]} ${date[2].padStart(2, '0')}/${date[3].padStart(2, '0')}/${date[4]}`
+  }
+  return value.replace(/(?:Giải hằng tuần|Weekly Tournament)\s*-\s*/gi, '')
+}
 const formatProfileTeamName = (teamName?: string) => teamName?.match(/Team\s*\d+/i)?.[0] || teamName || 'Chưa chia đội'
 const profileTeamName = (attendance: any) => formatProfileTeamName(attendance.tournament?.tournamentTeamPlayers?.[0]?.team?.name)
 const profileHighestTeam = (attendance: any) => {

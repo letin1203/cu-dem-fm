@@ -5393,11 +5393,13 @@
               <div class="min-w-0 text-left">
                 <p class="truncate font-semibold text-gray-900">{{ pair.first.player.name }}</p>
                 <p class="text-xs text-gray-500">{{ displayTeamName(pair.first.teamName) }} · ⚽ {{ pair.first.score }}</p>
+                <p class="mt-1 text-xs font-semibold" :class="pair.first.amount > 0 ? 'text-green-600' : pair.first.amount < 0 ? 'text-red-600' : 'text-gray-500'">{{ pair.first.amount > 0 ? '+' : '' }}{{ formatMoney(pair.first.amount) }}</p>
               </div>
               <span class="text-center text-lg font-bold text-red-600">⚔️</span>
               <div class="min-w-0 text-left sm:text-right">
                 <p class="truncate font-semibold text-gray-900">{{ pair.second.player.name }}</p>
                 <p class="text-xs text-gray-500">{{ displayTeamName(pair.second.teamName) }} · ⚽ {{ pair.second.score }}</p>
+                <p class="mt-1 text-xs font-semibold" :class="pair.second.amount > 0 ? 'text-green-600' : pair.second.amount < 0 ? 'text-red-600' : 'text-gray-500'">{{ pair.second.amount > 0 ? '+' : '' }}{{ formatMoney(pair.second.amount) }}</p>
               </div>
             </div>
             <p class="mt-3 border-t border-red-100 pt-3 text-center text-sm font-semibold" :class="pair.result === 'Hòa' ? 'text-gray-600' : 'text-green-700'">{{ pair.result }}</p>
@@ -7933,10 +7935,12 @@ const challengeBattlePairs = computed(() => {
 
     const firstScore = firstTeam.score || 0;
     const secondScore = secondTeam.score || 0;
+    const firstAmount = firstScore === secondScore ? 0 : firstScore > secondScore ? 10000 : -10000;
+    const secondAmount = -firstAmount;
     return [{
       id: pairId,
-      first: { player: detail.player, teamName: firstTeam.name, score: firstScore },
-      second: { player: opponent.player, teamName: secondTeam.name, score: secondScore },
+      first: { player: detail.player, teamName: firstTeam.name, score: firstScore, amount: firstAmount },
+      second: { player: opponent.player, teamName: secondTeam.name, score: secondScore, amount: secondAmount },
       result: firstScore === secondScore
         ? "Hòa"
         : firstScore > secondScore

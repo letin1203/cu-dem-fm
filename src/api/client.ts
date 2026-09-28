@@ -425,6 +425,10 @@ class ApiClient {
     return this.get(`/tournaments/${tournamentId}/deadmatches?opponentTeamId=${encodeURIComponent(opponentTeamId)}`);
   }
 
+  async getTournamentDeadmatchHistory(tournamentId: string) {
+    return this.get(`/tournaments/${tournamentId}/deadmatches/history`);
+  }
+
   async joinTournamentDeadmatch(tournamentId: string, opponentTeamId: string) {
     return this.post(`/tournaments/${tournamentId}/deadmatches/${opponentTeamId}/join`, {});
   }

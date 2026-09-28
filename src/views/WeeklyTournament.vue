@@ -2180,6 +2180,13 @@
                     />
                   </svg>
                   Đội thi đấu ({{ getTournamentTeams(tournament).length }})
+                  <button
+                    type="button"
+                    class="ml-2 rounded bg-red-600 px-2 py-1 text-xs font-semibold text-white hover:bg-red-700"
+                    @click="openDeadmatchHistoryModal(tournament)"
+                  >
+                    ⚔️ Battle
+                  </button>
                 </h4>
 
                 <div
@@ -2189,7 +2196,7 @@
                   <div
                     v-for="team in getTournamentTeams(tournament)"
                     :key="team.id"
-                    class="relative bg-white rounded-lg p-4 border hover:shadow-md transition-shadow flex flex-col"
+                    class="relative bg-white/80 backdrop-blur-sm rounded-lg p-4 border hover:shadow-md transition-shadow flex flex-col"
                     :class="getTeamCardClass(team.name)"
                   >
                     <span
@@ -2239,7 +2246,7 @@
                       <div
                         v-for="player in team.players"
                         :key="player.id"
-                        class="flex items-center justify-between p-2 bg-gray-50 rounded text-sm"
+                        class="old-tournament-player-row grid w-full grid-cols-[minmax(0,1fr)_auto] items-center gap-2 p-2 bg-gray-50 rounded text-sm"
                         :class="{
                           'bg-yellow-100': isPlayerBetting(
                             tournament.id,
@@ -2250,7 +2257,7 @@
                           ),
                         }"
                       >
-                        <div class="flex items-center">
+                      <div class="flex min-w-0 justify-self-start items-center text-left">
                           <div
                             class="w-6 h-6 shrink-0 overflow-hidden bg-gray-300 rounded-full flex items-center justify-center mr-2 text-xs font-medium"
                           >
@@ -2264,12 +2271,34 @@
                               player.name.charAt(0).toUpperCase()
                             }}</span>
                           </div>
+                          <div class="min-w-0 text-left">
+                            <button
+                              type="button"
+                              class="block max-w-full truncate text-left font-medium text-gray-900 transition-colors hover:text-primary-700 hover:underline"
+                              :title="`Xem biến động tiền của ${player.name}`"
+                              @click="openTournamentPlayerMoneyHistory(tournament, player)"
+                            >{{ player.name }}</button>
+                            <div
+                              v-if="player.addedByUsername"
+                              class="truncate text-[10px] leading-4 text-gray-500"
+                            >
+                              Được thêm bởi {{ player.addedByUsername }}
+                            </div>
+                            <div
+                              v-if="player.friendOwnerName"
+                              class="truncate text-[10px] leading-4 text-blue-600"
+                            >
+                              Bạn của {{ player.friendOwnerName }}
+                            </div>
+                          </div>
                           <button
+                            v-if="getAcceptedBattleOpponentName(tournament.id, player.id)"
                             type="button"
-                            class="font-medium text-gray-900 transition-colors hover:text-primary-700 hover:underline"
-                            :title="`Xem biến động tiền của ${player.name}`"
-                            @click="openTournamentPlayerMoneyHistory(tournament, player)"
-                          >{{ player.name }}</button>
+                            class="ml-1 inline-flex animate-pulse align-middle text-sm"
+                            :title="`Đã Battle với ${getAcceptedBattleOpponentName(tournament.id, player.id)}`"
+                            @click="openChallengeBattleDetailsModal(tournament)"
+                            >⚔️</button
+                          >
                           <span
                             v-if="isPlayerWithWater(tournament.id, player.id)"
                             class="ml-1"
@@ -2277,7 +2306,7 @@
                             >💧</span
                           >
                         </div>
-                        <div class="flex items-center text-gray-600">
+                        <div class="flex shrink-0 justify-self-end items-center text-gray-600">
                           <span
                             class="text-xs mr-1 px-1.5 py-0.5 rounded"
                             :class="
@@ -2330,7 +2359,7 @@
                         v-if="tournament.status === 'COMPLETED'"
                         class="mt-3 pt-3 border-t border-gray-200 text-right"
                       >
-                        <span class="text-lg font-bold text-gray-600"
+                        <span class="text-lg font-bold text-blue-600"
                           >⚽: {{ team.score || 0 }}</span
                         >
                       </div>
@@ -5308,6 +5337,78 @@
   </div>
 
   <div
+    v-if="showDeadmatchHistoryModal"
+    class="fixed inset-0 z-[80] flex items-center justify-center overflow-y-auto overscroll-contain bg-black/50 p-4"
+  >
+    <div class="flex max-h-[90vh] w-full max-w-2xl flex-col overflow-hidden rounded-xl bg-white shadow-xl">
+      <div class="flex items-start justify-between border-b p-5">
+        <div>
+          <h3 class="text-lg font-semibold text-red-700">⚔️ Battle Deadmatch</h3>
+          <p class="mt-1 text-sm text-gray-600">Các cặp Deadmatch đã ghép của giải đấu và kết quả theo điểm đội.</p>
+        </div>
+        <button class="text-xl text-gray-400 hover:text-gray-700" @click="showDeadmatchHistoryModal = false">×</button>
+      </div>
+      <div class="min-h-0 overflow-y-auto p-5">
+        <div v-if="deadmatchHistoryLoading" class="py-10 text-center text-gray-500">Đang tải Deadmatch...</div>
+        <div v-else-if="!deadmatchHistoryPairs.length" class="py-10 text-center text-gray-500">Giải đấu này chưa có cặp Battle Deadmatch nào.</div>
+        <div v-else class="space-y-3">
+          <div v-for="pair in deadmatchHistoryPairs" :key="pair.id" class="rounded-lg border border-red-100 bg-red-50/30 p-4">
+            <div class="grid items-center gap-3 sm:grid-cols-[1fr_auto_1fr]">
+              <div class="min-w-0 text-left">
+                <p class="truncate font-semibold text-gray-900">{{ pair.first.player.name }}</p>
+                <p class="text-xs text-gray-500">{{ displayTeamName(pair.first.teamName) }} · ⚽ {{ pair.first.score }}</p>
+              </div>
+              <span class="text-center text-lg font-bold text-red-600">⚔️</span>
+              <div class="min-w-0 text-left sm:text-right">
+                <p class="truncate font-semibold text-gray-900">{{ pair.second.player.name }}</p>
+                <p class="text-xs text-gray-500">{{ displayTeamName(pair.second.teamName) }} · ⚽ {{ pair.second.score }}</p>
+              </div>
+            </div>
+            <p class="mt-3 border-t border-red-100 pt-3 text-center text-sm font-semibold" :class="pair.result === 'Hòa' ? 'text-gray-600' : 'text-green-700'">{{ pair.result }}</p>
+          </div>
+        </div>
+      </div>
+      <div class="flex justify-end border-t p-4"><button class="btn-primary" @click="showDeadmatchHistoryModal = false">Đóng</button></div>
+    </div>
+  </div>
+
+  <div
+    v-if="showChallengeBattleDetailsModal"
+    class="fixed inset-0 z-[80] flex items-center justify-center overflow-y-auto overscroll-contain bg-black/50 p-4"
+  >
+    <div class="flex max-h-[90vh] w-full max-w-2xl flex-col overflow-hidden rounded-xl bg-white shadow-xl">
+      <div class="flex items-start justify-between border-b p-5">
+        <div>
+          <h3 class="text-lg font-semibold text-red-700">⚔️ Chi tiết Battle</h3>
+          <p class="mt-1 text-sm text-gray-600">Các cặp cầu thủ đã Battle và kết quả theo điểm đội.</p>
+        </div>
+        <button class="text-xl text-gray-400 hover:text-gray-700" @click="showChallengeBattleDetailsModal = false">×</button>
+      </div>
+      <div class="min-h-0 overflow-y-auto p-5">
+        <div v-if="challengeBattleDetailsLoading" class="py-10 text-center text-gray-500">Đang tải Battle...</div>
+        <div v-else-if="!challengeBattlePairs.length" class="py-10 text-center text-gray-500">Giải đấu này chưa có cặp Battle nào.</div>
+        <div v-else class="space-y-3">
+          <div v-for="pair in challengeBattlePairs" :key="pair.id" class="rounded-lg border border-red-100 bg-red-50/30 p-4">
+            <div class="grid items-center gap-3 sm:grid-cols-[1fr_auto_1fr]">
+              <div class="min-w-0 text-left">
+                <p class="truncate font-semibold text-gray-900">{{ pair.first.player.name }}</p>
+                <p class="text-xs text-gray-500">{{ displayTeamName(pair.first.teamName) }} · ⚽ {{ pair.first.score }}</p>
+              </div>
+              <span class="text-center text-lg font-bold text-red-600">⚔️</span>
+              <div class="min-w-0 text-left sm:text-right">
+                <p class="truncate font-semibold text-gray-900">{{ pair.second.player.name }}</p>
+                <p class="text-xs text-gray-500">{{ displayTeamName(pair.second.teamName) }} · ⚽ {{ pair.second.score }}</p>
+              </div>
+            </div>
+            <p class="mt-3 border-t border-red-100 pt-3 text-center text-sm font-semibold" :class="pair.result === 'Hòa' ? 'text-gray-600' : 'text-green-700'">{{ pair.result }}</p>
+          </div>
+        </div>
+      </div>
+      <div class="flex justify-end border-t p-4"><button class="btn-primary" @click="showChallengeBattleDetailsModal = false">Đóng</button></div>
+    </div>
+  </div>
+
+  <div
     v-if="showFriendRegistrationGuideModal"
     class="fixed inset-0 z-[80] flex items-center justify-center overflow-y-auto overscroll-contain bg-black/50 p-4"
   >
@@ -5505,6 +5606,12 @@ const challengeAccepted = ref(false);
 const challengeSaving = ref(false);
 const autoOpenedIncomingChallengeIds = new Set<string>();
 const showDeadmatchModal = ref(false);
+const showDeadmatchHistoryModal = ref(false);
+const deadmatchHistoryLoading = ref(false);
+const deadmatchHistoryPairs = ref<any[]>([]);
+const showChallengeBattleDetailsModal = ref(false);
+const challengeBattleDetailsLoading = ref(false);
+const challengeBattleTournament = ref<Tournament | null>(null);
 const deadmatchTournament = ref<Tournament | null>(null);
 const deadmatchOpponentTeam = ref<any | null>(null);
 const deadmatchEntries = ref<any[]>([]);
@@ -7777,6 +7884,83 @@ const openDeadmatchModal = async (tournament: Tournament, opponentTeam: any): Pr
   await loadDeadmatches();
 };
 
+const openDeadmatchHistoryModal = async (tournament: Tournament): Promise<void> => {
+  showDeadmatchHistoryModal.value = true;
+  deadmatchHistoryLoading.value = true;
+  deadmatchHistoryPairs.value = [];
+  try {
+    const response = await apiClient.getTournamentDeadmatchHistory(tournament.id);
+    if (!response.success) {
+      throw new Error(response.error || "Không thể tải lịch sử Deadmatch");
+    }
+    deadmatchHistoryPairs.value = (response.data as any)?.pairs || [];
+  } catch (error: any) {
+    toast.error(
+      error.response?.data?.error || error.message || "Không thể tải lịch sử Deadmatch",
+    );
+  } finally {
+    deadmatchHistoryLoading.value = false;
+  }
+};
+
+const challengeBattlePairs = computed(() => {
+  const tournament = challengeBattleTournament.value;
+  if (!tournament) return [];
+
+  const details = attendanceDetailsMap.value.get(tournament.id) || [];
+  const detailsByPlayerId = new Map(
+    details.map((detail: any) => [detail.playerId, detail]),
+  );
+  const playersTeam = new Map<string, any>();
+  for (const team of getTournamentTeams(tournament)) {
+    for (const player of team.players || []) {
+      playersTeam.set(player.id, team);
+    }
+  }
+
+  const handledPairs = new Set<string>();
+  return details.flatMap((detail: any) => {
+    const challenge = detail.challenge;
+    if (challenge?.status !== "ACCEPTED" || !challenge.opponentPlayerId) return [];
+    const pairId = [detail.playerId, challenge.opponentPlayerId].sort().join(":");
+    if (handledPairs.has(pairId)) return [];
+    handledPairs.add(pairId);
+
+    const opponent = detailsByPlayerId.get(challenge.opponentPlayerId);
+    const firstTeam = playersTeam.get(detail.playerId);
+    const secondTeam = playersTeam.get(challenge.opponentPlayerId);
+    if (!opponent?.player || !firstTeam || !secondTeam) return [];
+
+    const firstScore = firstTeam.score || 0;
+    const secondScore = secondTeam.score || 0;
+    return [{
+      id: pairId,
+      first: { player: detail.player, teamName: firstTeam.name, score: firstScore },
+      second: { player: opponent.player, teamName: secondTeam.name, score: secondScore },
+      result: firstScore === secondScore
+        ? "Hòa"
+        : firstScore > secondScore
+          ? `${detail.player.name} thắng`
+          : `${opponent.player.name} thắng`,
+    }];
+  });
+});
+
+const openChallengeBattleDetailsModal = async (tournament: Tournament): Promise<void> => {
+  challengeBattleTournament.value = tournament;
+  showChallengeBattleDetailsModal.value = true;
+  challengeBattleDetailsLoading.value = true;
+  try {
+    await fetchAttendanceDetails(tournament.id, false);
+  } catch (error: any) {
+    toast.error(
+      error.response?.data?.error || error.message || "Không thể tải chi tiết Battle",
+    );
+  } finally {
+    challengeBattleDetailsLoading.value = false;
+  }
+};
+
 const joinDeadmatch = async (): Promise<void> => {
   if (!deadmatchTournament.value || !deadmatchOpponentTeam.value || deadmatchSaving.value) return;
   deadmatchSaving.value = true;
@@ -9884,16 +10068,16 @@ const getDetailedMoneyChange = (
 <style scoped>
 /* Reserve the battle-icon slot so every external attendance row aligns. */
 @media (min-width: 1024px) {
-  .bg-gray-50.p-2.text-sm > .flex.min-w-0.items-center {
+  .bg-gray-50.p-2.text-sm:not(.old-tournament-player-row) > .flex.min-w-0.items-center {
     position: relative;
   }
-  .bg-gray-50.p-2.text-sm > .flex.min-w-0.items-center::before {
+  .bg-gray-50.p-2.text-sm:not(.old-tournament-player-row) > .flex.min-w-0.items-center::before {
     content: "";
     display: inline-block;
     width: 1.75rem;
     flex: 0 0 1.75rem;
   }
-  .bg-gray-50.p-2.text-sm > .flex.min-w-0.items-center > button:first-child {
+  .bg-gray-50.p-2.text-sm:not(.old-tournament-player-row) > .flex.min-w-0.items-center > button:first-child {
     position: absolute;
     left: 0;
   }

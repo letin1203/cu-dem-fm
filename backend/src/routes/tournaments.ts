@@ -1363,6 +1363,62 @@ router.put('/:id/challenges/:challengeId/accept', authenticate, async (req: Auth
 });
 
 // Deadmatch is a FIFO queue for a specific pair of tournament teams.
+router.get('/:id/deadmatches/history', authenticate, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  try {
+    const tournament = await prisma.tournament.findUnique({
+      where: { id: req.params.id },
+      select: {
+        teams: { include: { team: { select: { id: true, name: true, score: true } } } },
+      },
+    });
+    if (!tournament) {
+      res.status(404).json({ success: false, error: 'Không tìm thấy giải đấu' });
+      return;
+    }
+
+    const entries = await prisma.tournamentDeadmatchEntry.findMany({
+      where: { tournamentId: req.params.id, status: 'MATCHED' },
+      include: { player: { select: { id: true, name: true, avatar: true } } },
+      orderBy: { matchedAt: 'asc' },
+    });
+    const teamsById = new Map(
+      tournament.teams.map((assignment) => [assignment.team.id, assignment.team]),
+    );
+    const entriesByMatchKey = new Map<string, typeof entries>();
+    for (const entry of entries) {
+      if (!entry.matchKey) continue;
+      entriesByMatchKey.set(entry.matchKey, [
+        ...(entriesByMatchKey.get(entry.matchKey) || []),
+        entry,
+      ]);
+    }
+    const pairs = [...entriesByMatchKey.entries()]
+      .filter(([, pairEntries]) => pairEntries.length === 2)
+      .map(([matchKey, pairEntries]) => {
+        const [first, second] = pairEntries;
+        const firstTeam = teamsById.get(first.teamId);
+        const secondTeam = teamsById.get(second.teamId);
+        const firstScore = firstTeam?.score ?? 0;
+        const secondScore = secondTeam?.score ?? 0;
+        const result = firstScore === secondScore
+          ? 'Hòa'
+          : firstScore > secondScore
+            ? `${first.player.name} thắng`
+            : `${second.player.name} thắng`;
+        return {
+          id: matchKey,
+          first: { player: first.player, teamName: firstTeam?.name || 'Đội chưa xác định', score: firstScore },
+          second: { player: second.player, teamName: secondTeam?.name || 'Đội chưa xác định', score: secondScore },
+          result,
+          matchedAt: first.matchedAt,
+        };
+      });
+    res.json({ success: true, data: { pairs } });
+  } catch (_error) {
+    res.status(500).json({ success: false, error: 'Không thể tải lịch sử Deadmatch' });
+  }
+});
+
 router.get('/:id/deadmatches', authenticate, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   const opponentTeamId = typeof req.query.opponentTeamId === 'string' ? req.query.opponentTeamId : '';
   if (!opponentTeamId) { res.status(400).json({ success: false, error: 'Thiếu đội đối thủ' }); return; }

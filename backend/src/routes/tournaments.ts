@@ -2512,7 +2512,9 @@ router.post('/:id/generate-teams', authenticate, authorize(['ADMIN', 'MOD']), as
 
     // Accepted challenges must always be on opposing teams. Resolve any pair
     // that landed together after the balancing pass by swapping the target
-    // with a compatible player from another team.
+    // with a same-tier, position-compatible player from another team. Keeping
+    // the tier identical is critical: otherwise this late challenge step can
+    // undo the Tier 1/2 distribution established above.
     const acceptedChallenges = await prisma.tournamentChallenge.findMany({
       where: { tournamentId, status: 'ACCEPTED' },
       select: { requesterPlayerId: true, targetPlayerId: true },
@@ -2527,13 +2529,13 @@ router.post('/:id/generate-teams', authenticate, authorize(['ADMIN', 'MOD']), as
       const targetIsGk = target.position === 'GK' || target.position === 'Goalkeeper';
       const destinationIndex = teams.findIndex((team, index) => index !== targetTeamIndex && team.players.some(player => {
         const playerIsGk = player.position === 'GK' || player.position === 'Goalkeeper';
-        return playerIsGk === targetIsGk && player.id !== challenge.requesterPlayerId && player.id !== challenge.targetPlayerId;
+        return playerIsGk === targetIsGk && player.tier === target.tier && player.id !== challenge.requesterPlayerId && player.id !== challenge.targetPlayerId;
       }));
       if (destinationIndex < 0) throw new Error('Không thể tách hai cầu thủ thách đấu sang hai đội khác nhau');
       const destination = teams[destinationIndex];
       const replacementIndex = destination.players.findIndex(player => {
         const playerIsGk = player.position === 'GK' || player.position === 'Goalkeeper';
-        return playerIsGk === targetIsGk && player.id !== challenge.requesterPlayerId && player.id !== challenge.targetPlayerId;
+        return playerIsGk === targetIsGk && player.tier === target.tier && player.id !== challenge.requesterPlayerId && player.id !== challenge.targetPlayerId;
       });
       const replacement = destination.players[replacementIndex];
       sourceTeam.players[targetIndex] = replacement;

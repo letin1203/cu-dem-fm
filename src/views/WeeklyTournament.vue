@@ -621,7 +621,7 @@
                         ),
                       }"
                     >
-                      <div class="flex items-center">
+                      <div class="flex min-w-0 items-center">
                         <div
                           class="w-6 h-6 shrink-0 overflow-hidden bg-gray-300 rounded-full flex items-center justify-center mr-2 text-xs font-medium"
                         >
@@ -635,9 +635,35 @@
                             player.name.charAt(0).toUpperCase()
                           }}</span>
                         </div>
-                        <span class="font-medium text-gray-900">{{
-                          player.name
-                        }}</span>
+                          <div class="min-w-0">
+                            <span class="truncate font-medium text-gray-900">{{
+                              player.name
+                            }}</span>
+                          <div
+                            v-if="player.addedByUsername"
+                            class="truncate text-[10px] leading-4 text-gray-500"
+                          >
+                            Được thêm bởi {{ player.addedByUsername }}
+                          </div>
+                          <div
+                            v-if="player.friendOwnerName"
+                            class="truncate text-[10px] leading-4 text-blue-600"
+                          >
+                            Bạn của {{ player.friendOwnerName }}
+                          </div>
+                        </div>
+                        <span
+                          v-if="
+                            ongoingTournament.status === 'ONGOING' &&
+                            getAcceptedBattleOpponentName(
+                              ongoingTournament.id,
+                              player.id,
+                            )
+                          "
+                          class="ml-1 inline-flex animate-pulse align-middle text-sm"
+                          :title="`Đang Battle với ${getAcceptedBattleOpponentName(ongoingTournament.id, player.id)}`"
+                          >⚔️</span
+                        >
                         <span
                           v-if="
                             isPlayerWithWater(ongoingTournament.id, player.id)
@@ -7429,6 +7455,21 @@ const isCurrentUsersAcceptedChallenge = (
     self.challenge.opponentPlayerId === player.id
   );
 };
+const getAcceptedBattleOpponentName = (
+  tournamentId: string,
+  playerId: string,
+): string | null => {
+  const details = attendanceDetailsMap.value.get(tournamentId) || [];
+  const playerDetail = details.find((item: any) => item.playerId === playerId);
+  const challenge = playerDetail?.challenge;
+  if (challenge?.status !== "ACCEPTED") return null;
+
+  return (
+    details.find(
+      (item: any) => item.playerId === challenge.opponentPlayerId,
+    )?.player?.name || "đối thủ"
+  );
+};
 const canShowChallengeIcon = (
   tournamentId: string,
   field: "FIELD_5" | "FIELD_7",
@@ -7578,13 +7619,22 @@ const getTournamentTeams = (tournament: Tournament): any[] => {
 
   // Create a map of team players from tournamentTeamPlayers
   const teamPlayersMap = new Map<string, any[]>();
+  const attendanceDetails = attendanceDetailsMap.value.get(tournament.id) || [];
 
   if (tournament.tournamentTeamPlayers) {
     tournament.tournamentTeamPlayers.forEach((ttp: any) => {
       if (!teamPlayersMap.has(ttp.teamId)) {
         teamPlayersMap.set(ttp.teamId, []);
       }
-      teamPlayersMap.get(ttp.teamId)!.push(ttp.player);
+      const attendance = attendanceDetails.find(
+        (item: any) => item.playerId === ttp.player.id,
+      );
+      teamPlayersMap.get(ttp.teamId)!.push({
+        ...ttp.player,
+        addedByUsername: attendance?.addedBy?.username || null,
+        friendOwnerName:
+          (attendance as any)?.player?.friendOwner?.player?.name || null,
+      });
     });
   }
 

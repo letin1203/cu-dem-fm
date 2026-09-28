@@ -482,6 +482,10 @@ class ApiClient {
     return this.post('/fund-contributions', { amount, reason });
   }
 
+  async createFundExpense(amount: number, reason: string) {
+    return this.post('/fund-contributions/expense', { amount, reason });
+  }
+
   async getPendingFundContributions() {
     return this.get('/fund-contributions/pending');
   }

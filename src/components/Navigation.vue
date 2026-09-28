@@ -342,7 +342,7 @@
             <p class="font-semibold">Công thức cập nhật quỹ</p>
             <p class="mt-1">
               Quỹ thay đổi = Thu/chi ròng của cầu thủ + Tiền tài trợ − Chi phí
-              sân − Chi phí phát sinh.
+              sân − Chi phí phát sinh + Khoản góp quỹ − Khoản chi quỹ.
             </p>
             <p class="mt-2">
               Tiền quỹ hiện tại = Tiền quỹ dự tính − Tổng số dư âm của các cầu
@@ -403,7 +403,7 @@
                   }}{{ formatMoney(entry.fundChange) }} ₫</strong
                 >
               </div>
-              <div v-if="entry.type === 'CONTRIBUTION'" class="mt-3 space-y-1 border-t pt-3 text-sm text-gray-600">
+              <div v-if="entry.type === 'CONTRIBUTION' || entry.type === 'EXPENSE'" class="mt-3 space-y-1 border-t pt-3 text-sm text-gray-600">
                 <p>Lý do: {{ entry.reason }}</p>
                 <p v-if="entry.approvedByUsername">Duyệt bởi: <strong class="text-gray-800">{{ entry.approvedByUsername }}</strong></p>
               </div>
@@ -477,6 +477,7 @@
         </div>
         <div class="flex justify-end gap-3 border-t p-4">
           <button @click="openFundContributionModal" class="btn-secondary">Góp quỹ</button>
+          <button v-if="isStaff" @click="openFundExpenseModal" class="btn-secondary text-red-600">Chi quỹ</button>
           <button
             v-if="isStaff"
             type="button"
@@ -503,6 +504,20 @@
           <label class="form-label mt-5 block">Lý do</label><textarea v-model="fundContributionReason" rows="3" class="form-input" :disabled="submittingFundContribution"></textarea>
         </div>
         <div class="flex justify-end gap-3 border-t p-4"><button type="button" class="btn-secondary" :disabled="submittingFundContribution" @click="showFundContributionModal = false">Hủy</button><button type="button" class="btn-primary" :disabled="submittingFundContribution || selectedFundContributionAmount < 1 || !fundContributionReason.trim()" @click="submitFundContribution">{{ submittingFundContribution ? 'Đang gửi...' : 'Xác nhận' }}</button></div>
+      </div>
+    </div>
+    <div v-if="showFundExpenseModal" class="fixed inset-0 z-[80] flex items-center justify-center overflow-y-auto overscroll-contain bg-black/50 p-4">
+      <div class="flex max-h-[90vh] w-full max-w-md flex-col overflow-hidden rounded-lg bg-white shadow-xl">
+        <div class="flex items-center justify-between border-b p-5"><div><h2 class="text-lg font-semibold text-gray-900">Chi quỹ</h2><p class="mt-1 text-sm text-gray-500">Khoản chi được trừ ngay khỏi Tiền quỹ dự tính.</p></div><button type="button" class="text-2xl text-gray-400 hover:text-gray-700" @click="showFundExpenseModal = false">×</button></div>
+        <div class="min-h-0 overflow-y-auto p-5">
+          <p class="form-label">Số tiền</p>
+          <div class="mt-2 grid grid-cols-2 gap-3"><button v-for="amount in fundExpenseAmounts" :key="amount" type="button" class="rounded-lg border px-4 py-3 font-medium transition-colors" :class="selectedFundExpenseAmount === amount ? 'border-red-600 bg-red-600 text-white' : 'border-gray-200 text-gray-700 hover:bg-gray-50'" @click="selectedFundExpenseAmount = amount">{{ formatMoney(amount) }} ₫</button></div>
+          <label class="form-label mt-5 block" for="fund-expense">Hoặc nhập số tiền khác</label>
+          <input id="fund-expense" v-model.number="selectedFundExpenseAmount" type="number" min="1" class="form-input mt-1 text-center" placeholder="Nhập số tiền" :disabled="submittingFundExpense">
+          <p class="mt-1 text-center text-xs text-gray-500">Đang nhập: {{ formatMoney(selectedFundExpenseAmount) }} ₫</p>
+          <label class="form-label mt-5 block" for="fund-expense-reason">Ghi chú</label><textarea id="fund-expense-reason" v-model="fundExpenseReason" rows="3" class="form-input mt-1" :disabled="submittingFundExpense" placeholder="Nhập ghi chú khoản chi"></textarea>
+        </div>
+        <div class="flex justify-end gap-3 border-t p-4"><button type="button" class="btn-secondary" :disabled="submittingFundExpense" @click="showFundExpenseModal = false">Hủy</button><button type="button" class="btn-primary bg-red-600 hover:bg-red-700" :disabled="submittingFundExpense || selectedFundExpenseAmount < 1 || !fundExpenseReason.trim()" @click="submitFundExpense">{{ submittingFundExpense ? 'Đang lưu...' : 'Xác nhận' }}</button></div>
       </div>
     </div>
     </Teleport>
@@ -539,10 +554,15 @@ const userMenuOpen = ref(false);
 const desktopUserMenu = ref<HTMLElement | null>(null);
 const showFundHistoryModal = ref(false);
 const showFundContributionModal = ref(false);
+const showFundExpenseModal = ref(false);
 const submittingFundContribution = ref(false);
+const submittingFundExpense = ref(false);
 const selectedFundContributionAmount = ref(100000);
 const fundContributionReason = ref("");
 const fundContributionAmounts = [50000, 100000, 200000, 500000];
+const selectedFundExpenseAmount = ref(0);
+const fundExpenseReason = ref("");
+const fundExpenseAmounts = [30000, 400000];
 const isStaff = computed(() => authStore.hasAnyRole(["admin", "mod"]));
 const fundHistoryLoading = ref(false);
 const exportingFundHistory = ref(false);
@@ -562,7 +582,7 @@ const fundHistory = ref<
     fundContribution: number;
     fundChange: number;
     balanceAfter: number;
-    type?: "TOURNAMENT" | "CONTRIBUTION";
+    type?: "TOURNAMENT" | "CONTRIBUTION" | "EXPENSE";
     reason?: string;
     approvedByUsername?: string | null;
   }>
@@ -700,23 +720,25 @@ async function exportFundHistory() {
         (total: number, cost: any) => total + toMoneyNumber(cost.amount),
         0,
       );
-      const isContribution = entry.type === "CONTRIBUTION";
+      const isFundTransaction =
+        entry.type === "CONTRIBUTION" || entry.type === "EXPENSE";
+      const isExpense = entry.type === "EXPENSE";
 
       return {
         "Thời gian": formatDateTimeForExport(entry.startDate),
-        "Loại": isContribution ? "Góp quỹ" : "Giải đấu",
+        "Loại": isFundTransaction ? (isExpense ? "Chi quỹ" : "Góp quỹ") : "Giải đấu",
         "Tên / giải đấu": entry.name || "",
         "Lý do": entry.reason || "",
         "Duyệt bởi": entry.approvedByUsername || "",
-        "Thu/chi ròng cầu thủ (đ)": isContribution ? "" : toMoneyNumber(entry.playerFundImpact),
-        "Tiền tài trợ (đ)": isContribution ? "" : toMoneyNumber(entry.sponsorMoney),
-        "Chi phí sân (đ)": isContribution ? "" : toMoneyNumber(entry.stadiumCost),
-        "Tổng chi phí phát sinh (đ)": isContribution ? "" : totalAdditionalCosts,
-        "Chi tiết chi phí phát sinh": additionalCosts
+        "Thu/chi ròng cầu thủ (đ)": isFundTransaction ? "" : toMoneyNumber(entry.playerFundImpact),
+        "Tiền tài trợ (đ)": isFundTransaction ? "" : toMoneyNumber(entry.sponsorMoney),
+        "Chi phí sân (đ)": isFundTransaction ? "" : toMoneyNumber(entry.stadiumCost),
+        "Tổng chi phí phát sinh (đ)": isFundTransaction ? "" : totalAdditionalCosts,
+        "Chi tiết chi phí phát sinh": isFundTransaction ? "" : additionalCosts
           .map((cost: any) => `${cost.description || "Chi phí phát sinh"}: ${toMoneyNumber(cost.amount).toLocaleString("vi-VN")} đ`)
           .join("\n"),
-        "Trích quỹ hỗ trợ chi phí (đ)": isContribution ? "" : toMoneyNumber(entry.fundContribution),
-        "Góp quỹ (đ)": isContribution ? toMoneyNumber(entry.amount ?? entry.fundChange) : "",
+        "Trích quỹ hỗ trợ chi phí (đ)": isFundTransaction ? "" : toMoneyNumber(entry.fundContribution),
+        "Góp/chi quỹ (đ)": isFundTransaction ? toMoneyNumber(entry.fundChange) : "",
         "Thay đổi quỹ (đ)": toMoneyNumber(entry.fundChange),
         "Số dư quỹ sau mốc (đ)": toMoneyNumber(entry.balanceAfter),
       };
@@ -816,6 +838,12 @@ function openFundContributionModal() {
   showFundContributionModal.value = true;
 }
 
+function openFundExpenseModal() {
+  selectedFundExpenseAmount.value = 0;
+  fundExpenseReason.value = "";
+  showFundExpenseModal.value = true;
+}
+
 async function submitFundContribution() {
   if (selectedFundContributionAmount.value < 1 || !fundContributionReason.value.trim()) return;
   submittingFundContribution.value = true;
@@ -831,6 +859,25 @@ async function submitFundContribution() {
     toast.error(error instanceof Error ? error.message : "Không thể góp quỹ");
   } finally {
     submittingFundContribution.value = false;
+  }
+}
+
+async function submitFundExpense() {
+  if (selectedFundExpenseAmount.value < 1 || !fundExpenseReason.value.trim()) return;
+  submittingFundExpense.value = true;
+  try {
+    const response = await apiClient.createFundExpense(
+      selectedFundExpenseAmount.value,
+      fundExpenseReason.value.trim(),
+    );
+    if (!response.success) throw new Error(response.error || "Không thể chi quỹ");
+    showFundExpenseModal.value = false;
+    toast.success(response.message || "Đã ghi nhận khoản chi quỹ");
+    await Promise.all([openFundHistoryModal(), systemStore.fetchSystemSettings()]);
+  } catch (error) {
+    toast.error(error instanceof Error ? error.message : "Không thể chi quỹ");
+  } finally {
+    submittingFundExpense.value = false;
   }
 }
 

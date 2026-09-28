@@ -39,6 +39,38 @@ router.post('/', authenticate, async (req: AuthenticatedRequest, res: Response):
   }
 });
 
+// Fund expenses are recorded as a negative approved contribution so they share
+// the same immutable history and are included in all existing fund totals.
+router.post('/expense', authenticate, authorize(['ADMIN', 'MOD']), async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  try {
+    const amount = Number(req.body?.amount);
+    const reason = String(req.body?.reason || '').trim();
+    if (!Number.isInteger(amount) || amount <= 0) {
+      res.status(400).json({ success: false, error: 'Số tiền chi quỹ không hợp lệ' });
+      return;
+    }
+    if (!reason) {
+      res.status(400).json({ success: false, error: 'Vui lòng nhập ghi chú chi quỹ' });
+      return;
+    }
+
+    const expense = await prisma.fundContribution.create({
+      data: {
+        userId: req.user!.id,
+        amount: -amount,
+        reason,
+        status: 'APPROVED',
+        approvedAt: new Date(),
+        approvedById: req.user!.id,
+      },
+      include: { user: { select: { username: true, player: { select: { name: true } } } } },
+    });
+    res.status(201).json({ success: true, data: expense, message: 'Đã ghi nhận khoản chi quỹ' });
+  } catch (_error) {
+    res.status(500).json({ success: false, error: 'Không thể tạo khoản chi quỹ' });
+  }
+});
+
 router.get('/pending', authenticate, authorize(['ADMIN', 'MOD']), async (_req: AuthenticatedRequest, res: Response): Promise<void> => {
   try {
     const contributions = await prisma.fundContribution.findMany({

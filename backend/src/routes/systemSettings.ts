@@ -66,18 +66,21 @@ router.get('/fund-history', authenticate, async (_req: AuthenticatedRequest, res
         fundChange,
       };
     });
-    const contributionHistory = approvedContributions.map((contribution) => ({
-      type: 'CONTRIBUTION',
+    const contributionHistory = approvedContributions.map((contribution) => {
+      const isExpense = contribution.amount < 0;
+      return {
+      type: isExpense ? 'EXPENSE' : 'CONTRIBUTION',
       id: contribution.id,
-      name: `Góp quỹ · ${contribution.user.player?.name || contribution.user.username}`,
+      name: `${isExpense ? 'Chi quỹ' : 'Góp quỹ'} · ${contribution.user.player?.name || contribution.user.username}`,
       reason: contribution.reason,
       approvedByUsername: contribution.approvedById
         ? approverUsernameById.get(contribution.approvedById) || null
         : null,
       startDate: contribution.approvedAt || contribution.requestedAt,
       fundChange: contribution.amount,
-      amount: contribution.amount,
-    }));
+      amount: Math.abs(contribution.amount),
+    };
+    });
     let balanceAfter = 0;
     const history = [...tournamentHistory, ...contributionHistory]
       .sort((first, second) => new Date(first.startDate).getTime() - new Date(second.startDate).getTime())

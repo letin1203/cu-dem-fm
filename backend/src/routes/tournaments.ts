@@ -1368,6 +1368,18 @@ router.get('/:id/deadmatches', authenticate, async (req: AuthenticatedRequest, r
   if (!opponentTeamId) { res.status(400).json({ success: false, error: 'Thiếu đội đối thủ' }); return; }
   const user = await prisma.user.findUnique({ where: { id: req.user!.id }, select: { playerId: true } });
   if (!user?.playerId) { res.status(400).json({ success: false, error: 'Tài khoản chưa liên kết cầu thủ' }); return; }
+  const tournament = await prisma.tournament.findUnique({ where: { id: req.params.id }, select: { startDate: true } });
+  if (!tournament) { res.status(404).json({ success: false, error: 'Không tìm thấy giải đấu' }); return; }
+
+  // A queue only has meaning before kick-off. Matched pairs stay valid for the
+  // result calculation, while every unmatched waiting entry is cleared as soon
+  // as Deadmatch data is loaded after the tournament starts.
+  if (Date.now() >= tournament.startDate.getTime()) {
+    await prisma.tournamentDeadmatchEntry.updateMany({
+      where: { tournamentId: req.params.id, status: 'WAITING' },
+      data: { status: 'CANCELLED', matchKey: null, matchedAt: null },
+    });
+  }
   const assignment = await prisma.tournamentTeamPlayer.findFirst({ where: { tournamentId: req.params.id, playerId: user.playerId }, select: { teamId: true } });
   if (!assignment) { res.status(400).json({ success: false, error: 'Bạn không thuộc đội thi đấu của giải này' }); return; }
   const entries = await prisma.tournamentDeadmatchEntry.findMany({
@@ -2763,7 +2775,7 @@ router.put('/:id/end', authenticate, authorize(['ADMIN', 'MOD']), async (req: Au
         const opponentTeam = tournament.tournamentTeamPlayers.find(assignment => assignment.playerId === opponentId)?.team;
         if (playerTeam && opponentTeam && playerTeam.score !== opponentTeam.score) {
           moneyChangeDetails.push({
-            description: playerTeam.score > opponentTeam.score ? 'Thắng thách đấu' : 'Thua thách đấu',
+            description: playerTeam.score > opponentTeam.score ? 'Battle thắng' : 'Battle thua',
             amount: playerTeam.score > opponentTeam.score ? 10000 : -10000,
           });
         }

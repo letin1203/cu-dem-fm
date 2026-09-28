@@ -26,11 +26,11 @@
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div class="bg-green-50 p-3 rounded border border-green-200">
                 <div class="text-green-800 font-medium">Đội thắng</div>
-                <div class="text-green-700">{{ selectedWinningTeam.name }} ({{ selectedWinningTeam.score }} điểm)</div>
+                <div class="text-green-700">{{ formatTeamName(selectedWinningTeam.name) }} ({{ selectedWinningTeam.score }} điểm)</div>
               </div>
               <div class="bg-red-50 p-3 rounded border border-red-200">
                 <div class="text-red-800 font-medium">Đội thua</div>
-                <div class="text-red-700">{{ selectedLosingTeam.name }} ({{ selectedLosingTeam.score }} điểm)</div>
+                <div class="text-red-700">{{ formatTeamName(selectedLosingTeam.name) }} ({{ selectedLosingTeam.score }} điểm)</div>
               </div>
             </div>
           </div>
@@ -45,7 +45,7 @@
               class="border border-gray-200 rounded-lg p-4"
             >
               <h5 class="font-medium text-gray-900 mb-3 flex items-center">
-                {{ team.name }}
+                {{ formatTeamName(team.name) }}
                 <span 
                   v-if="selectedWinningTeam && team.id === selectedWinningTeam.id"
                   class="ml-2 px-2 py-1 text-xs bg-green-100 text-green-800 rounded"
@@ -148,6 +148,8 @@ interface Props {
 }
 
 const props = defineProps<Props>()
+
+const formatTeamName = (name: string) => name.match(/Team\s*\d+/i)?.[0] || name
 
 const canEndTournament = computed(() => {
   return props.selectedWinningTeam && 

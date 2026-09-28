@@ -4417,7 +4417,7 @@
             <div class="flex items-center justify-between">
               <div class="flex-1">
                 <h4 class="font-semibold text-green-800">
-                  🏆 Đội thắng: {{ selectedWinningTeam.name }}
+                  🏆 Đội thắng: {{ displayTeamName(selectedWinningTeam.name) }}
                 </h4>
               </div>
               <div class="text-right">
@@ -4436,7 +4436,7 @@
             <div class="flex items-center justify-between">
               <div class="flex-1">
                 <h4 class="font-semibold text-red-800">
-                  😔 Đội thua: {{ selectedLosingTeam.name }}
+                  😔 Đội thua: {{ displayTeamName(selectedLosingTeam.name) }}
                 </h4>
               </div>
               <div class="text-right">
@@ -4476,6 +4476,9 @@
             </li>
             <li v-if="!getTournamentById(endTournamentId)?.selfFunded">
               • Cầu thủ đội thua: -10.000 ₫
+            </li>
+            <li v-if="!getTournamentById(endTournamentId)?.selfFunded">
+              • Battle: cầu thủ của đội điểm cao hơn +10.000 ₫, cầu thủ của đội điểm thấp hơn -10.000 ₫
             </li>
             <li v-if="!getTournamentById(endTournamentId)?.selfFunded">
               • Chi phí nước: -10.000 ₫
@@ -5239,7 +5242,7 @@
       <div class="space-y-2 border-b p-5 text-sm leading-6 text-gray-700">
         <p class="font-semibold">Luật Deadmatch</p>
         <p>Chỉ tham gia sau khi đã chia đội. Có thể hủy trước giờ diễn ra giải đấu.</p>
-        <p>Hai hàng chờ được ghép tự động theo thứ tự đăng ký. Khi kết thúc giải, người có đội điểm cao hơn nhận +10.000 ₫; đội thua bị trừ 10.000 ₫.</p>
+        <p>Hai hàng chờ được ghép tự động theo thứ tự đăng ký. Khi kết thúc giải, tất cả thành viên của đội điểm cao hơn +10.000 ₫; tất cả thành viên của đội có điểm thấp hơn -10.000 ₫.</p>
       </div>
       <div v-if="deadmatchLoading" class="p-8 text-center text-gray-500">Đang tải Deadmatch...</div>
       <div v-else class="grid gap-4 p-5 md:grid-cols-2">
@@ -5263,15 +5266,15 @@
       <div class="flex justify-end gap-3 border-t p-4">
         <button class="btn-secondary" :disabled="deadmatchSaving" @click="showDeadmatchModal = false">Đóng</button>
         <button
-          v-if="currentDeadmatchEntry"
+          v-if="currentDeadmatchEntry && canManageDeadmatch"
           class="btn-secondary text-red-600"
-          :disabled="deadmatchSaving || !canManageDeadmatch"
+          :disabled="deadmatchSaving"
           @click="cancelDeadmatch"
         >Hủy tham gia</button>
         <button
-          v-else
+          v-else-if="canManageDeadmatch"
           class="btn-primary bg-red-600 hover:bg-red-700"
-          :disabled="deadmatchSaving || !canManageDeadmatch"
+          :disabled="deadmatchSaving"
           @click="joinDeadmatch"
         >{{ deadmatchSaving ? 'Đang xử lý...' : 'Tham gia' }}</button>
       </div>
@@ -9782,6 +9785,27 @@ const getDetailedMoneyChange = (
       amount: -10000,
       description: "Cầu thủ đội thua",
     });
+  }
+
+  // Battle (thách đấu) is settled from the two players' actual team scores.
+  // Attendance details include the accepted challenge and its opponent ID.
+  const acceptedBattle = playerAttendance?.challenge?.status === "ACCEPTED"
+    ? playerAttendance.challenge
+    : null;
+  if (acceptedBattle?.opponentPlayerId) {
+    const opponentTeam = getTournamentTeams(tournament).find((candidate: any) =>
+      candidate.players?.some((candidatePlayer: any) =>
+        candidatePlayer.id === acceptedBattle.opponentPlayerId,
+      ),
+    );
+    if (opponentTeam && Number(team.score || 0) !== Number(opponentTeam.score || 0)) {
+      const wonBattle = Number(team.score || 0) > Number(opponentTeam.score || 0);
+      changes.push({
+        type: "battle",
+        amount: wonBattle ? 10000 : -10000,
+        description: wonBattle ? "Battle thắng" : "Battle thua",
+      });
+    }
   }
 
   // Water cost calculations

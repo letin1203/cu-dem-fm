@@ -774,9 +774,40 @@ const aiHealthEvents = [
   'phải làm việc khuya liên tục nên nhịp sinh hoạt chưa ổn định',
 ];
 
-const aiHealthReasons = aiHealthTimeframes.flatMap((timeframe) =>
-  aiHealthEvents.map((event) => `${timeframe} ${event}`),
-);
+const aiAdditionalHealthTimeframes = [
+  'Thứ Hai vừa rồi',
+  'Thứ Ba vừa rồi',
+  'Thứ Tư vừa rồi',
+  'Thứ Năm vừa rồi',
+  'Thứ Sáu vừa rồi',
+  'Sáng cuối tuần',
+  'Tối cuối tuần',
+  'Tuần trước',
+  'Vài ngày gần đây',
+  'Trong những ngày qua',
+];
+
+const aiAdditionalHealthEvents = [
+  'đã đi vật lý trị liệu nhẹ cho đầu gối nên cần theo dõi tải vận động',
+  'vừa đổi ca làm nên đồng hồ sinh học còn xáo trộn',
+  'có một đêm ngủ chập chờn nên mức hồi phục chưa tối ưu',
+  'đã ăn nhiều đồ cay nên dạ dày hơi nhạy cảm',
+  'vừa trải qua chuyến đi xa nên cơ thể cần thích nghi lại',
+  'đau mỏi lưng nhẹ vì ngồi làm việc lâu',
+  'đã tập giãn cơ đều nên độ linh hoạt có tín hiệu tích cực',
+  'bị dị ứng thời tiết nhẹ nên cần tránh quá tải',
+  'đã giảm cà phê buổi tối nên giấc ngủ đang được cải thiện',
+  'vừa nghỉ ngơi đầy đủ sau tuần làm việc căng thẳng',
+];
+
+const aiHealthReasons = [
+  ...aiHealthTimeframes.flatMap((timeframe) =>
+    aiHealthEvents.map((event) => `${timeframe} ${event}`),
+  ),
+  ...aiAdditionalHealthTimeframes.flatMap((timeframe) =>
+    aiAdditionalHealthEvents.map((event) => `${timeframe} ${event}`),
+  ),
+];
 const normalize = (text: string) =>
   text
     .normalize("NFD")
@@ -1096,6 +1127,8 @@ async function splitTeams() {
     ];
     const playerDelay = 3000;
     const tierLabels = ['Tier 1-2', 'Tier 3-4', 'Tier 5-6'];
+    const playerAiReasons = [...aiHealthReasons].sort(() => Math.random() - 0.5);
+    let playerAiReasonIndex = 0;
     for (let index = 0; index < stages.length; index++) {
       teamSplitStep.value = index + 1;
       const stagePlayers = preBalanceTeams.map((team) => team.filter(stages[index]));
@@ -1112,7 +1145,9 @@ async function splitTeams() {
           const battleNote = battlePartner
             ? ` · ⚔️ Đang Battle với ${battlePartner.name}, ưu tiên xếp khác đội.`
             : '';
-          const thought = `${player.name}: ${aiHealthReasons[Math.floor(Math.random() * aiHealthReasons.length)]} → Chia vào Đội ${teamIndex + 1}${battleNote}`;
+          const healthReason = playerAiReasons[playerAiReasonIndex % playerAiReasons.length];
+          playerAiReasonIndex += 1;
+          const thought = `${player.name}: ${healthReason} → Chia vào Đội ${teamIndex + 1}${battleNote}`;
           addAiThought(thought);
           await scrollMobileToSplitElement(aiThoughtBlockRef.value, pause);
           await animateMobileAiThought(thought, pause);

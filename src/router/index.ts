@@ -13,6 +13,7 @@ import DatabaseAdmin from '../views/DatabaseAdmin.vue'
 import MoneyTopUpApprovals from '../views/MoneyTopUpApprovals.vue'
 import Login from '../components/Login.vue'
 import ResetPassword from '../components/ResetPassword.vue'
+import Stats from '../views/Stats.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -55,6 +56,12 @@ const router = createRouter({
       path: '/players',
       name: 'players',
       component: Players,
+      meta: { requiresAuth: true, permission: 'canViewPlayers' }
+    },
+    {
+      path: '/stats',
+      name: 'stats',
+      component: Stats,
       meta: { requiresAuth: true, permission: 'canViewPlayers' }
     },
     {

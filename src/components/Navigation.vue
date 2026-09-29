@@ -540,6 +540,7 @@ import {
   UsersIcon,
   CogIcon,
   CircleStackIcon,
+  ChartBarIcon,
 } from "@heroicons/vue/24/outline";
 import type { UserRole } from "../types";
 
@@ -602,6 +603,12 @@ const navigationItems = [
     name: "Cầu thủ",
     path: "/players",
     icon: UsersIcon,
+    permission: "canViewPlayers",
+  },
+  {
+    name: "Stats",
+    path: "/stats",
+    icon: ChartBarIcon,
     permission: "canViewPlayers",
   },
   {

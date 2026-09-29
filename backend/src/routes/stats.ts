@@ -4,6 +4,99 @@ import { authenticate, AuthenticatedRequest } from '../middleware/auth';
 
 const router = Router();
 
+// Player leaderboards calculated from completed weekly tournaments and approved fund contributions.
+router.get('/leaderboard', authenticate, async (_req: AuthenticatedRequest, res: Response): Promise<void> => {
+  try {
+    const [players, teamAssignments, attendances, tournamentMoneyHistory] = await Promise.all([
+      prisma.player.findMany({
+        where: { isActive: true },
+        select: { id: true, name: true, avatar: true, position: true, tier: true },
+      }),
+      prisma.tournamentTeamPlayer.findMany({
+        where: { tournament: { status: 'COMPLETED' } },
+        select: {
+          playerId: true,
+          teamId: true,
+          tournament: {
+            select: {
+              winnerId: true,
+              loserId: true,
+              teams: { select: { teamId: true, team: { select: { score: true } } } },
+            },
+          },
+        },
+      }),
+      prisma.tournamentPlayerAttendance.findMany({
+        where: { status: 'ATTEND', tournament: { status: 'COMPLETED' } },
+        select: { playerId: true },
+      }),
+      prisma.playerMoneyHistory.findMany({
+        where: { amount: { lt: 0 }, tournament: { is: { status: 'COMPLETED' } } },
+        select: { playerId: true, amount: true, description: true },
+      }),
+    ]);
+
+    const totals = new Map(players.map((player) => [player.id, {
+      player,
+      wins: 0,
+      losses: 0,
+      contribution: 0,
+      attendance: 0,
+    }]));
+    for (const assignment of teamAssignments) {
+      const total = totals.get(assignment.playerId);
+      if (!total) continue;
+      const scoredTeams = assignment.tournament.teams
+        .map((tournamentTeam) => ({ teamId: tournamentTeam.teamId, score: tournamentTeam.team.score || 0 }));
+      const highestScore = Math.max(...scoredTeams.map((team) => team.score));
+      const lowestScore = Math.min(...scoredTeams.map((team) => team.score));
+      const winnerId = assignment.tournament.winnerId || (
+        highestScore !== lowestScore
+          ? scoredTeams.find((team) => team.score === highestScore)?.teamId
+          : null
+      );
+      const loserId = assignment.tournament.loserId || (
+        highestScore !== lowestScore
+          ? scoredTeams.find((team) => team.score === lowestScore)?.teamId
+          : null
+      );
+      if (assignment.teamId === winnerId) total.wins += 1;
+      if (assignment.teamId === loserId) total.losses += 1;
+    }
+    for (const attendance of attendances) {
+      const total = totals.get(attendance.playerId);
+      if (total) total.attendance += 1;
+    }
+    for (const history of tournamentMoneyHistory) {
+      // Friends use their owner's balance. Those extra records must not count
+      // as the owner's own contribution to the fund.
+      if (history.description.includes('(chi phí cho ')) continue;
+      const total = totals.get(history.playerId);
+      if (total) total.contribution += Math.abs(history.amount);
+    }
+
+    const createRanking = (metric: 'wins' | 'losses' | 'contribution' | 'attendance') =>
+      [...totals.values()]
+        .sort((first, second) =>
+          second[metric] - first[metric] || first.player.name.localeCompare(second.player.name, 'vi'),
+        )
+        .slice(0, 10)
+        .map((entry, index) => ({ rank: index + 1, player: entry.player, value: entry[metric] }));
+
+    res.json({
+      success: true,
+      data: {
+        wins: createRanking('wins'),
+        losses: createRanking('losses'),
+        contributions: createRanking('contribution'),
+        attendance: createRanking('attendance'),
+      },
+    });
+  } catch (_error) {
+    res.status(500).json({ success: false, error: 'Không thể tải bảng xếp hạng cầu thủ' });
+  }
+});
+
 // Get dashboard statistics
 router.get('/dashboard', authenticate, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   try {

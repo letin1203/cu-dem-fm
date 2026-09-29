@@ -532,6 +532,10 @@ class ApiClient {
     return this.get('/stats/dashboard');
   }
 
+  async getPlayerLeaderboard() {
+    return this.get('/stats/leaderboard');
+  }
+
   async getPlayerStats(params?: any) {
     return this.get('/stats/players', { params });
   }

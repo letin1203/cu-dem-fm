@@ -226,7 +226,7 @@
                   >{{ teamSplitStep + 1 }}</span
                 ><strong class="shrink-0">{{ teamSplitSteps[teamSplitStep]?.title }}</strong><div class="ml-6 hidden h-11 min-w-0 flex-1 overflow-hidden text-left lg:block"><TransitionGroup name="ai-thought" tag="div" class="space-y-1"><p v-for="thought in aiThoughts" :key="thought.id" class="truncate text-xs text-primary-700">🤖 {{ thought.text }}</p></TransitionGroup></div>
               </div>
-              <div ref="aiThoughtBlockRef" class="mb-4 h-24 overflow-hidden rounded-lg border border-primary-200 bg-primary-50 p-2 lg:hidden"><p class="mb-1 text-[10px] font-semibold uppercase tracking-wide text-primary-700">AI đang suy nghĩ</p><TransitionGroup name="ai-thought" tag="div"><p v-if="aiThoughts.length" :key="aiThoughts[aiThoughts.length - 1].id" class="max-h-16 overflow-hidden whitespace-normal break-words text-xs leading-4 text-primary-700">🤖 {{ aiThoughts[aiThoughts.length - 1].text }}</p></TransitionGroup></div>
+              <div ref="aiThoughtBlockRef" class="mb-4 h-24 overflow-hidden rounded-lg border border-primary-200 bg-primary-50 p-2 lg:hidden"><p class="mb-1 text-[10px] font-semibold uppercase tracking-wide text-primary-700">AI đang suy nghĩ</p><p class="max-h-16 overflow-hidden whitespace-normal break-words text-xs leading-4 text-primary-700">🤖 <template v-if="mobileAiThoughtAnimating || mobileAiThoughtWords.length"><span v-for="(word, wordIndex) in mobileAiThoughtWords" :key="`${aiThoughtSequence}-${wordIndex}`" class="ai-word-reveal">{{ word }}</span></template><template v-else>{{ aiThoughts[aiThoughts.length - 1]?.text }}</template></p></div>
               <div
                 class="grid gap-3"
                 :class="
@@ -682,7 +682,7 @@
   </div>
 </template>
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, ref } from "vue";
+import { computed, nextTick, onBeforeUnmount, onMounted, ref } from "vue";
 import { apiClient } from "../api/client";
 type Player = {
   id: string;
@@ -705,9 +705,12 @@ const players = ref<Player[]>([]),
   showTeamSplitProgressModal = ref(false),
   teamSplitStep = ref(0),
   processingTeams = ref<Player[][]>([]),
+  departingProcessingPlayerId = ref<string | null>(null),
   teamSplitComplete = ref(false),
   teamSplitRunning = ref(false),
   aiThoughts = ref<Array<{ id: number; text: string }>>([]),
+  mobileAiThoughtWords = ref<string[]>([]),
+  mobileAiThoughtAnimating = ref(false),
   aiThoughtSequence = ref(0),
   viewportWidth = ref(window.innerWidth),
   viewportHeight = ref(window.innerHeight),
@@ -817,21 +820,31 @@ const splitProgressGroups = computed(() => [
     label: "Tier 1-2",
     step: 1,
     players: selectedPlayers.value.filter(
-      (player) => player.tier <= 2 && !assignedProcessingPlayerIds.value.has(player.id),
+      (player) =>
+        player.tier <= 2 &&
+        !assignedProcessingPlayerIds.value.has(player.id) &&
+        player.id !== departingProcessingPlayerId.value,
     ),
   },
   {
     label: "Tier 3-4",
     step: 2,
     players: selectedPlayers.value.filter(
-      (player) => player.tier >= 3 && player.tier <= 4 && !assignedProcessingPlayerIds.value.has(player.id),
+      (player) =>
+        player.tier >= 3 &&
+        player.tier <= 4 &&
+        !assignedProcessingPlayerIds.value.has(player.id) &&
+        player.id !== departingProcessingPlayerId.value,
     ),
   },
   {
     label: "Tier 5-6",
     step: 3,
     players: selectedPlayers.value.filter(
-      (player) => player.tier >= 5 && !assignedProcessingPlayerIds.value.has(player.id),
+      (player) =>
+        player.tier >= 5 &&
+        !assignedProcessingPlayerIds.value.has(player.id) &&
+        player.id !== departingProcessingPlayerId.value,
     ),
   },
 ]);
@@ -969,6 +982,22 @@ async function scrollMobileToSplitElement(element: HTMLElement | null, pause: (m
   element.scrollIntoView({ behavior: 'smooth', block: 'center' });
   await pause(2000);
 }
+
+async function animateMobileAiThought(text: string, pause: (milliseconds: number) => Promise<unknown>) {
+  if (viewportWidth.value >= 1024) return;
+
+  const words = text.split(/\s+/).filter(Boolean);
+  const interval = Math.max(40, Math.floor(2000 / Math.max(words.length, 1)));
+  mobileAiThoughtWords.value = [];
+
+  for (const word of words) {
+    mobileAiThoughtWords.value = [...mobileAiThoughtWords.value, word];
+    await pause(interval);
+  }
+
+  // Give the user a moment to read the completed thought before moving on.
+  await pause(3000);
+}
 function togglePlayer(player: Player) {
   const index = selected.value.findIndex((p) => p.id === player.id);
   if (index >= 0) selected.value.splice(index, 1);
@@ -1010,7 +1039,10 @@ async function splitTeams() {
   teamSplitComplete.value = false;
   teamSplitRunning.value = true;
   processingTeams.value = Array.from({ length: teamCount.value }, () => []);
+  departingProcessingPlayerId.value = null;
   aiThoughts.value = [];
+  mobileAiThoughtWords.value = [];
+  mobileAiThoughtAnimating.value = false;
   addAiThought('AI đang rà soát thể trạng và lịch sinh hoạt của cầu thủ trong tuần qua...');
   try {
     const response = await apiClient.post("/tournaments/preview-teams", {
@@ -1072,15 +1104,29 @@ async function splitTeams() {
         for (let teamIndex = 0; teamIndex < stagePlayers.length; teamIndex++) {
           const player = stagePlayers[teamIndex][round];
           if (!player) continue;
-          addAiThought(
-            `${player.name}: ${aiHealthReasons[Math.floor(Math.random() * aiHealthReasons.length)]} → Chia vào Đội ${teamIndex + 1}`,
-          );
+          if (viewportWidth.value < 1024) {
+            mobileAiThoughtAnimating.value = true;
+            mobileAiThoughtWords.value = [];
+          }
+          const battlePartner = battlePartnerById.value[player.id];
+          const battleNote = battlePartner
+            ? ` · ⚔️ Đang Battle với ${battlePartner.name}, ưu tiên xếp khác đội.`
+            : '';
+          const thought = `${player.name}: ${aiHealthReasons[Math.floor(Math.random() * aiHealthReasons.length)]} → Chia vào Đội ${teamIndex + 1}${battleNote}`;
+          addAiThought(thought);
           await scrollMobileToSplitElement(aiThoughtBlockRef.value, pause);
+          await animateMobileAiThought(thought, pause);
           await scrollMobileToSplitElement(splitTierGroupRefs.value[tierLabels[index]], pause);
+          departingProcessingPlayerId.value = player.id;
+          await nextTick();
+          if (viewportWidth.value < 1024) await pause(2000);
           await scrollMobileToSplitElement(splitTeamRefs.value[teamIndex], pause);
           const nextTeams = processingTeams.value.map((team) => [...team]);
           nextTeams[teamIndex].push(player);
           processingTeams.value = nextTeams;
+          departingProcessingPlayerId.value = null;
+          await nextTick();
+          if (viewportWidth.value < 1024) await pause(2000);
           // Mobile waits at each scroll destination (AI → Tier → Team), rather
           // than imposing the desktop's fixed three-second delay per player.
           await pause(viewportWidth.value < 1024 ? 0 : playerDelay);
@@ -1186,5 +1232,28 @@ onBeforeUnmount(() => window.removeEventListener('resize', updateViewport));
 .ai-thought-leave-to {
   opacity: 0;
   transform: translateY(-24px);
+}
+.ai-word-reveal {
+  display: inline-block;
+  margin-right: 0.25rem;
+  animation: ai-word-reveal 0.22s ease-out both;
+}
+@keyframes ai-word-reveal {
+  from {
+    opacity: 0;
+    transform: translateX(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+@media (max-width: 1023px) {
+  .split-chip-enter-active,
+  .split-chip-leave-active,
+  .team-chip-enter-active,
+  .team-chip-leave-active {
+    transition-duration: 2s;
+  }
 }
 </style>

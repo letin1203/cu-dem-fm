@@ -9428,7 +9428,7 @@ const loadPinnedPoll = async (): Promise<void> => {
     pinnedPollSelectedOptionIds.value = response.data.options
       .filter((option: any) => option.selected)
       .map((option: any) => option.id);
-    showPinnedPollModal.value = true;
+    showPinnedPollModal.value = pinnedPollSelectedOptionIds.value.length === 0;
   } catch {
     // A poll must never block the weekly tournament page from loading.
   }
@@ -9442,6 +9442,7 @@ const submitPinnedPollVote = async (): Promise<void> => {
     if (!response.success) throw new Error(response.error || 'Không thể gửi bình chọn');
     pinnedPoll.value = response.data;
     pinnedPollSelectedOptionIds.value = response.data.options.filter((option: any) => option.selected).map((option: any) => option.id);
+    showPinnedPollModal.value = false;
     toast.success('Đã ghi nhận bình chọn');
   } catch (error: any) {
     toast.error(error?.message || 'Không thể gửi bình chọn');

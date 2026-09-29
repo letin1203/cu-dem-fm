@@ -224,7 +224,7 @@
                 <span
                   class="flex h-7 w-7 items-center justify-center rounded-full bg-primary-600 text-sm font-bold text-white"
                   >{{ teamSplitStep + 1 }}</span
-                ><strong class="shrink-0">{{ teamSplitSteps[teamSplitStep]?.title }}</strong><div class="ml-6 hidden h-16 min-w-0 flex-1 overflow-hidden text-left lg:block"><TransitionGroup name="ai-thought" tag="div" class="space-y-0"><p v-for="thought in aiThoughts.slice(-2)" :key="thought.id" class="line-clamp-2 h-8 text-xs leading-4 text-primary-700">🤖 <template v-if="desktopAiThoughtAnimating && thought.id === aiThoughtSequence"><span v-for="(word, wordIndex) in desktopAiThoughtWords" :key="`${thought.id}-${wordIndex}`" class="ai-word-reveal">{{ word }}</span></template><template v-else>{{ thought.text }}</template></p></TransitionGroup></div>
+                ><strong class="shrink-0">{{ isAssigningGoalkeeper ? 'Đang phân chia GK' : teamSplitSteps[teamSplitStep]?.title }}</strong><div class="ml-6 hidden h-16 min-w-0 flex-1 overflow-hidden text-left lg:block"><TransitionGroup name="ai-thought" tag="div" class="space-y-0"><p v-for="thought in aiThoughts.slice(-2)" :key="thought.id" class="line-clamp-2 h-8 text-xs leading-4 text-primary-700">🤖 <template v-if="desktopAiThoughtAnimating && thought.id === aiThoughtSequence"><span v-for="(word, wordIndex) in desktopAiThoughtWords" :key="`${thought.id}-${wordIndex}`" class="ai-word-reveal">{{ word }}</span></template><template v-else>{{ thought.text }}</template></p></TransitionGroup></div>
               </div>
               <div ref="aiThoughtBlockRef" class="mb-4 h-24 overflow-hidden rounded-lg border border-primary-200 bg-primary-50 p-2 lg:hidden"><p class="mb-1 text-[10px] font-semibold uppercase tracking-wide text-primary-700">AI đang suy nghĩ</p><p class="max-h-16 overflow-hidden whitespace-normal break-words text-xs leading-4 text-primary-700">🤖 <template v-if="mobileAiThoughtAnimating || mobileAiThoughtWords.length"><span v-for="(word, wordIndex) in mobileAiThoughtWords" :key="`${aiThoughtSequence}-${wordIndex}`" class="ai-word-reveal">{{ word }}</span></template><template v-else>{{ aiThoughts[aiThoughts.length - 1]?.text }}</template></p></div>
               <div
@@ -705,6 +705,7 @@ const players = ref<Player[]>([]),
   teamCount = ref(3),
   showTeamSplitProgressModal = ref(false),
   teamSplitStep = ref(0),
+  isAssigningGoalkeeper = ref(false),
   processingTeams = ref<Player[][]>([]),
   departingProcessingPlayerId = ref<string | null>(null),
   swappingProcessingPlayerIds = ref<Set<string>>(new Set()),
@@ -1088,6 +1089,7 @@ async function splitTeams() {
   showTeamSplitProgressModal.value = true;
   showTeamResultModal.value = false;
   teamSplitStep.value = 0;
+  isAssigningGoalkeeper.value = false;
   teamSplitComplete.value = false;
   teamSplitRunning.value = true;
   processingTeams.value = Array.from({ length: teamCount.value }, () => []);
@@ -1160,6 +1162,7 @@ async function splitTeams() {
         for (let teamIndex = 0; teamIndex < stagePlayers.length; teamIndex++) {
           const player = stagePlayers[teamIndex][round];
           if (!player) continue;
+          isAssigningGoalkeeper.value = isGoalkeeper(player);
           if (viewportWidth.value < 1024) {
             mobileAiThoughtAnimating.value = true;
             mobileAiThoughtWords.value = [];
@@ -1189,6 +1192,7 @@ async function splitTeams() {
       }
     }
     teamSplitStep.value = 4;
+    isAssigningGoalkeeper.value = false;
     for (const swap of swaps) {
       const firstName = selected.value.find((player) => player.id === swap.firstId)?.name || 'Cầu thủ';
       const secondName = selected.value.find((player) => player.id === swap.secondId)?.name || 'cầu thủ khác';

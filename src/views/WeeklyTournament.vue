@@ -4850,6 +4850,43 @@
     </div>
   </div>
 
+  <!-- Team Split Progress Modal -->
+  <div
+    v-if="showLiveTeamSplitModal"
+    class="fixed inset-0 z-[70] flex items-center justify-center overflow-y-auto bg-black/50 p-4"
+  >
+    <div class="flex max-h-[90vh] w-full max-w-7xl flex-col overflow-hidden rounded-xl bg-white shadow-xl">
+      <div class="border-b p-5">
+        <h2 class="text-lg font-semibold text-primary-700">Đang thực hiện chia team</h2>
+        <p class="mt-1 text-sm text-gray-500">{{ liveTeamSplitDescription }}</p>
+      </div>
+      <div class="min-h-0 space-y-5 overflow-y-auto p-5">
+        <div class="rounded-lg border border-gray-200 bg-gray-50 p-4">
+          <div class="mb-3 flex items-center gap-3">
+            <span class="flex h-7 w-7 items-center justify-center rounded-full bg-primary-600 text-sm font-bold text-white">{{ liveTeamSplitStage }}</span>
+            <strong>{{ liveTeamSplitTitle }}</strong>
+            <div class="hidden min-w-0 flex-1 overflow-hidden text-left lg:block">
+              <p class="line-clamp-2 text-xs leading-4 text-primary-700">🤖 {{ liveTeamSplitThought }}</p>
+            </div>
+          </div>
+          <div class="mb-4 rounded-lg border border-primary-200 bg-primary-50 p-2 lg:hidden">
+            <p class="mb-1 text-[10px] font-semibold uppercase tracking-wide text-primary-700">AI đang suy nghĩ</p>
+            <p class="min-h-8 text-xs leading-4 text-primary-700">🤖 {{ liveTeamSplitThought }}</p>
+          </div>
+          <div class="grid gap-3" :class="teamGridClass(liveTeamSplitTeams.length)">
+            <div v-for="(team, index) in liveTeamSplitTeams" :key="index" class="flex min-h-32 flex-col rounded-lg border bg-white p-3" :class="getLiveTeamBorderClass(index)">
+              <div class="mb-3 flex items-center gap-2"><span class="flex h-7 w-7 items-center justify-center rounded-full text-sm font-bold text-white" :class="getLiveTeamNumberClass(index)">{{ index + 1 }}</span><div><p class="text-sm font-semibold">Team {{ index + 1 }} <span class="font-medium" :class="getLiveTeamTextClass(index)">- {{ getTeamShirtLabel(index) }}</span></p><p class="text-xs text-gray-500">{{ team.length }} cầu thủ</p></div></div>
+              <TransitionGroup name="live-team-chip" tag="div" class="space-y-1"><div v-for="player in team" :key="player.id" class="flex items-center justify-between rounded p-1.5 text-xs" :class="isGoalkeeper(player.position) ? 'border border-green-300 bg-green-100' : 'bg-gray-50'"><div class="flex min-w-0 items-center"><img v-if="player.avatar" :src="player.avatar" class="mr-1.5 h-6 w-6 rounded-full object-cover" /><span v-else class="mr-1.5 flex h-6 w-6 items-center justify-center rounded-full bg-gray-200">{{ player.name?.[0] }}</span><span class="truncate font-medium">{{ player.name }}</span><span v-if="player.challenge" class="ml-1 text-red-600">⚔️</span><span v-if="player.hasBet" class="ml-1">⭐</span></div><span :class="player.tier <= 3 ? 'font-bold' : 'text-gray-600'">{{ getPositionLabel(player.position) }} · T{{ player.tier }}</span></div></TransitionGroup>
+              <p v-if="!team.length" class="py-7 text-center text-xs text-gray-400">Đang chờ</p>
+              <div v-if="team.length" class="mt-auto flex justify-between border-t pt-2 text-[10px]"><span class="rounded border border-primary-300 bg-primary-50 px-1.5 py-0.5 font-bold text-primary-700">Tổng tier: {{ team.reduce((sum, player) => sum + player.tier, 0) }}</span><span class="rounded border border-red-300 bg-red-50 px-1.5 py-0.5 font-bold text-red-700">TB: {{ (team.reduce((sum, player) => sum + player.tier, 0) / team.length).toFixed(2) }}</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div v-if="liveTeamSplitDone" class="flex justify-end border-t p-4"><button type="button" class="btn-primary" @click="closeLiveTeamSplitModal">Xem kết quả</button></div>
+    </div>
+  </div>
+
   <!-- Clear Teams Confirmation Modal -->
   <div
     v-if="showClearTeamsModal"
@@ -5888,6 +5925,13 @@ const teamCountModalTournamentId = ref<string | null>(null);
 const selectedTeamCount = ref<2 | 3 | 4>(2);
 const teamCountOptions: Array<2 | 3 | 4> = [2, 3, 4];
 const selectedTeamField = ref<"FIELD_5" | "FIELD_7">("FIELD_5");
+const showLiveTeamSplitModal = ref(false);
+const liveTeamSplitTeams = ref<any[][]>([]);
+const liveTeamSplitTitle = ref('Phân loại theo Tier');
+const liveTeamSplitDescription = ref('Tách cầu thủ thành các nhóm để chuẩn bị chia đội.');
+const liveTeamSplitThought = ref('AI đang phân tích danh sách cầu thủ...');
+const liveTeamSplitStage = ref(1);
+const liveTeamSplitDone = ref(false);
 const mobileTeamPreviewField = ref<"FIELD_5" | "FIELD_7">("FIELD_5");
 
 const showDeleteCostModal = ref(false);
@@ -8042,6 +8086,19 @@ const isTeamGoalkeeper = (players: any[], player: any): boolean =>
   (!players.some((teamPlayer) => isGoalkeeper(teamPlayer.position)) &&
     isGoalkeeper(player.positionSecond));
 
+const getLiveTeamBorderClass = (index: number): string =>
+  ['border-green-300', 'border-orange-300', 'border-blue-300', 'border-gray-300'][index] || 'border-gray-300';
+const getLiveTeamNumberClass = (index: number): string =>
+  ['bg-green-600', 'bg-orange-500', 'bg-blue-600', 'bg-gray-500'][index] || 'bg-gray-500';
+const getLiveTeamTextClass = (index: number): string =>
+  ['text-green-700', 'text-orange-700', 'text-blue-700', 'text-gray-700'][index] || 'text-gray-700';
+const getTeamShirtLabel = (index: number): string =>
+  ['Áo xanh lá', 'Áo cam', 'Áo xanh dương', 'Áo trắng'][index] || 'Áo trắng';
+const closeLiveTeamSplitModal = (): void => {
+  if (!liveTeamSplitDone.value) return;
+  showLiveTeamSplitModal.value = false;
+};
+
 const openTeamCountModal = (tournamentId: string): void => {
   if (!canGenerateTeams(tournamentId) || teamGenerationLoading.value) return;
   selectedTeamField.value = canGenerateTeams(tournamentId, "FIELD_5")
@@ -8066,6 +8123,50 @@ const confirmGenerateRandomTeams = async (): Promise<void> => {
   );
 };
 
+const playLiveTeamSplit = async (finalTeams: Array<{ players?: any[] }>): Promise<void> => {
+  const pause = (milliseconds: number) => new Promise((resolve) => setTimeout(resolve, milliseconds));
+  const teams = finalTeams.map((team) => [...(team.players || [])]);
+  liveTeamSplitTeams.value = teams.map(() => []);
+  liveTeamSplitDone.value = false;
+  liveTeamSplitStage.value = 1;
+  liveTeamSplitTitle.value = 'Phân loại theo Tier';
+  liveTeamSplitDescription.value = 'Tách cầu thủ thành các nhóm để chuẩn bị chia đội.';
+  liveTeamSplitThought.value = 'AI đang rà soát danh sách cầu thủ tham gia...';
+  showLiveTeamSplitModal.value = true;
+  await pause(500);
+
+  const groups = [
+    { title: 'Đang phân chia GK', description: 'Ưu tiên phân bổ thủ môn cho các đội.', filter: (player: any) => isGoalkeeper(player.position) },
+    { title: 'Rải đều Tier 1–2', description: 'Rải đều các cầu thủ Tier 1 và Tier 2.', filter: (player: any) => !isGoalkeeper(player.position) && player.tier <= 2 },
+    { title: 'Cân bằng Tier 3–4', description: 'Bổ sung nhóm Tier trung bình để cân bằng đội.', filter: (player: any) => !isGoalkeeper(player.position) && player.tier >= 3 && player.tier <= 4 },
+    { title: 'Cân bằng Tier 5–6', description: 'Hoàn thiện đội hình và tối ưu Tier trung bình.', filter: (player: any) => !isGoalkeeper(player.position) && player.tier >= 5 },
+  ];
+
+  for (let groupIndex = 0; groupIndex < groups.length; groupIndex += 1) {
+    const group = groups[groupIndex];
+    liveTeamSplitStage.value = groupIndex + 1;
+    liveTeamSplitTitle.value = group.title;
+    liveTeamSplitDescription.value = group.description;
+    const perTeam = teams.map((team) => team.filter(group.filter));
+    const rounds = Math.max(0, ...perTeam.map((team) => team.length));
+    for (let round = 0; round < rounds; round += 1) for (let teamIndex = 0; teamIndex < perTeam.length; teamIndex += 1) {
+      const player = perTeam[teamIndex][round];
+      if (!player) continue;
+      liveTeamSplitThought.value = `${player.name}: AI đánh giá Tier ${player.tier} và vị trí ${getPositionLabel(player.position)} → Chia vào Đội ${teamIndex + 1}`;
+      await pause(900);
+      const next = liveTeamSplitTeams.value.map((team) => [...team]);
+      next[teamIndex].push(player);
+      liveTeamSplitTeams.value = next;
+      await pause(700);
+    }
+  }
+  liveTeamSplitStage.value = 5;
+  liveTeamSplitTitle.value = 'Chốt kết quả';
+  liveTeamSplitDescription.value = 'Đội hình đã được lưu cho giải đấu.';
+  liveTeamSplitThought.value = 'AI đã hoàn tất chia đội cân bằng.';
+  liveTeamSplitDone.value = true;
+};
+
 const generateRandomTeams = async (
   tournamentId: string,
   teamCount: 2 | 3 | 4,
@@ -8088,13 +8189,14 @@ const generateRandomTeams = async (
     if (response.success) {
       // Show success message with team details
       const data = response.data as any;
+      closeTeamCountModal();
+      await playLiveTeamSplit(data.teams || []);
       toast.success(
         `Đã chia ${data.playerCount} cầu thủ Sân ${field === "FIELD_5" ? "5" : "7"} thành ${data.teamCount} đội!`,
       );
 
       // Refresh tournament data
       await fetchData();
-      closeTeamCountModal();
     }
   } catch (err: any) {
     console.error("Generate teams error:", err);
@@ -10122,6 +10224,18 @@ const getDetailedMoneyChange = (
 </script>
 
 <style scoped>
+.live-team-chip-enter-active,
+.live-team-chip-leave-active {
+  transition: all 0.7s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.live-team-chip-enter-from {
+  opacity: 0;
+  transform: translateY(-18px) scale(0.78);
+}
+.live-team-chip-leave-to {
+  opacity: 0;
+  transform: translateY(18px) scale(0.78);
+}
 /* Reserve the battle-icon slot so every external attendance row aligns. */
 @media (min-width: 1024px) {
   .bg-gray-50.p-2.text-sm:not(.old-tournament-player-row) > .flex.min-w-0.items-center {

@@ -224,7 +224,7 @@
                 <span
                   class="flex h-7 w-7 items-center justify-center rounded-full bg-primary-600 text-sm font-bold text-white"
                   >{{ teamSplitStep + 1 }}</span
-                ><strong class="shrink-0">{{ teamSplitSteps[teamSplitStep]?.title }}</strong><div class="ml-6 hidden h-11 min-w-0 flex-1 overflow-hidden text-left lg:block"><TransitionGroup name="ai-thought" tag="div" class="space-y-1"><p v-for="thought in aiThoughts" :key="thought.id" class="truncate text-xs text-primary-700">🤖 {{ thought.text }}</p></TransitionGroup></div>
+                ><strong class="shrink-0">{{ teamSplitSteps[teamSplitStep]?.title }}</strong><div class="ml-6 hidden h-16 min-w-0 flex-1 overflow-hidden text-left lg:block"><TransitionGroup name="ai-thought" tag="div" class="space-y-0"><p v-for="thought in aiThoughts.slice(-2)" :key="thought.id" class="line-clamp-2 h-8 text-xs leading-4 text-primary-700">🤖 <template v-if="desktopAiThoughtAnimating && thought.id === aiThoughtSequence"><span v-for="(word, wordIndex) in desktopAiThoughtWords" :key="`${thought.id}-${wordIndex}`" class="ai-word-reveal">{{ word }}</span></template><template v-else>{{ thought.text }}</template></p></TransitionGroup></div>
               </div>
               <div ref="aiThoughtBlockRef" class="mb-4 h-24 overflow-hidden rounded-lg border border-primary-200 bg-primary-50 p-2 lg:hidden"><p class="mb-1 text-[10px] font-semibold uppercase tracking-wide text-primary-700">AI đang suy nghĩ</p><p class="max-h-16 overflow-hidden whitespace-normal break-words text-xs leading-4 text-primary-700">🤖 <template v-if="mobileAiThoughtAnimating || mobileAiThoughtWords.length"><span v-for="(word, wordIndex) in mobileAiThoughtWords" :key="`${aiThoughtSequence}-${wordIndex}`" class="ai-word-reveal">{{ word }}</span></template><template v-else>{{ aiThoughts[aiThoughts.length - 1]?.text }}</template></p></div>
               <div
@@ -711,6 +711,8 @@ const players = ref<Player[]>([]),
   aiThoughts = ref<Array<{ id: number; text: string }>>([]),
   mobileAiThoughtWords = ref<string[]>([]),
   mobileAiThoughtAnimating = ref(false),
+  desktopAiThoughtWords = ref<string[]>([]),
+  desktopAiThoughtAnimating = ref(false),
   aiThoughtSequence = ref(0),
   viewportWidth = ref(window.innerWidth),
   viewportHeight = ref(window.innerHeight),
@@ -1029,6 +1031,19 @@ async function animateMobileAiThought(text: string, pause: (milliseconds: number
   // Give the user a moment to read the completed thought before moving on.
   await pause(3000);
 }
+
+async function animateDesktopAiThought(text: string, pause: (milliseconds: number) => Promise<unknown>) {
+  if (viewportWidth.value < 1024) return;
+
+  const words = text.split(/\s+/).filter(Boolean);
+  const interval = Math.max(40, Math.floor(2000 / Math.max(words.length, 1)));
+  desktopAiThoughtWords.value = [];
+
+  for (const word of words) {
+    desktopAiThoughtWords.value = [...desktopAiThoughtWords.value, word];
+    await pause(interval);
+  }
+}
 function togglePlayer(player: Player) {
   const index = selected.value.findIndex((p) => p.id === player.id);
   if (index >= 0) selected.value.splice(index, 1);
@@ -1074,6 +1089,8 @@ async function splitTeams() {
   aiThoughts.value = [];
   mobileAiThoughtWords.value = [];
   mobileAiThoughtAnimating.value = false;
+  desktopAiThoughtWords.value = [];
+  desktopAiThoughtAnimating.value = false;
   addAiThought('AI đang rà soát thể trạng và lịch sinh hoạt của cầu thủ trong tuần qua...');
   try {
     const response = await apiClient.post("/tournaments/preview-teams", {
@@ -1125,7 +1142,6 @@ async function splitTeams() {
       (player: Player) => player.tier >= 3 && player.tier <= 4,
       (player: Player) => player.tier >= 5,
     ];
-    const playerDelay = 3000;
     const tierLabels = ['Tier 1-2', 'Tier 3-4', 'Tier 5-6'];
     const playerAiReasons = [...aiHealthReasons].sort(() => Math.random() - 0.5);
     let playerAiReasonIndex = 0;
@@ -1140,6 +1156,9 @@ async function splitTeams() {
           if (viewportWidth.value < 1024) {
             mobileAiThoughtAnimating.value = true;
             mobileAiThoughtWords.value = [];
+          } else {
+            desktopAiThoughtAnimating.value = true;
+            desktopAiThoughtWords.value = [];
           }
           const battlePartner = battlePartnerById.value[player.id];
           const battleNote = battlePartner
@@ -1151,20 +1170,18 @@ async function splitTeams() {
           addAiThought(thought);
           await scrollMobileToSplitElement(aiThoughtBlockRef.value, pause);
           await animateMobileAiThought(thought, pause);
+          await animateDesktopAiThought(thought, pause);
           await scrollMobileToSplitElement(splitTierGroupRefs.value[tierLabels[index]], pause);
           departingProcessingPlayerId.value = player.id;
           await nextTick();
-          if (viewportWidth.value < 1024) await pause(2000);
+          await pause(2000);
           await scrollMobileToSplitElement(splitTeamRefs.value[teamIndex], pause);
           const nextTeams = processingTeams.value.map((team) => [...team]);
           nextTeams[teamIndex].push(player);
           processingTeams.value = nextTeams;
           departingProcessingPlayerId.value = null;
           await nextTick();
-          if (viewportWidth.value < 1024) await pause(2000);
-          // Mobile waits at each scroll destination (AI → Tier → Team), rather
-          // than imposing the desktop's fixed three-second delay per player.
-          await pause(viewportWidth.value < 1024 ? 0 : playerDelay);
+          await pause(2000);
         }
       }
     }
@@ -1289,6 +1306,18 @@ onBeforeUnmount(() => window.removeEventListener('resize', updateViewport));
   .team-chip-enter-active,
   .team-chip-leave-active {
     transition-duration: 2s;
+  }
+}
+@media (min-width: 1024px) {
+  .split-chip-enter-active,
+  .split-chip-leave-active,
+  .team-chip-enter-active,
+  .team-chip-leave-active {
+    transition-duration: 2s;
+  }
+  .ai-thought-enter-active,
+  .ai-thought-leave-active {
+    transition-duration: 0s;
   }
 }
 </style>

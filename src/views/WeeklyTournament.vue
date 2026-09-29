@@ -612,10 +612,7 @@
                       :key="player.id"
                       class="flex items-center justify-between p-2 bg-gray-50 rounded text-sm"
                       :class="{
-                        'bg-yellow-100': isPlayerBetting(
-                          ongoingTournament.id,
-                          player.id,
-                        ),
+                        'bg-green-100 ring-1 ring-green-300': isTeamGoalkeeper(team.players, player),
                         'border-2 border-red-500': isCurrentUserPlayer(
                           player.id,
                         ),
@@ -639,6 +636,7 @@
                             <span class="truncate font-medium text-gray-900">{{
                               player.name
                             }}</span>
+                            <span v-if="isPlayerBetting(ongoingTournament.id, player.id)" class="ml-1" title="Ngôi sao hy vọng">⭐</span>
                           <div
                             v-if="player.addedByUsername"
                             class="truncate text-[10px] leading-4 text-gray-500"
@@ -654,7 +652,6 @@
                         </div>
                         <span
                           v-if="
-                            ongoingTournament.status === 'ONGOING' &&
                             getAcceptedBattleOpponentName(
                               ongoingTournament.id,
                               player.id,
@@ -662,7 +659,7 @@
                           "
                           class="ml-1 inline-flex animate-pulse align-middle text-sm"
                           :title="`Đang Battle với ${getAcceptedBattleOpponentName(ongoingTournament.id, player.id)}`"
-                          >⚔️</span
+                          >⚔️ {{ getAcceptedBattlePairNumber(ongoingTournament.id, player.id) }}</span
                         >
                         <span
                           v-if="
@@ -688,7 +685,7 @@
                             }}</template
                           ></span
                         >
-                        <span class="text-xs">T{{ player.tier }}</span>
+                        <span class="text-xs" :class="player.tier <= 3 ? 'font-bold' : ''">T{{ player.tier }}</span>
                       </div>
                     </div>
                   </div>
@@ -700,7 +697,7 @@
                       class="pt-3 border-t border-gray-200"
                     >
                       <div class="flex justify-between text-xs text-gray-600">
-                        <span
+                        <span class="rounded-md border-2 border-primary-400 bg-primary-50 px-2 py-1 font-bold text-primary-700"
                           >Tổng tier:
                           {{
                             team.players.reduce(
@@ -709,16 +706,16 @@
                             )
                           }}</span
                         >
-                        <span
+                        <span class="rounded-md border-2 border-red-400 bg-red-50 px-2 py-1 font-bold text-red-700"
                           >Trung bình:
-                          <strong>{{
+                          {{
                             (
                               team.players.reduce(
                                 (sum: number, p: any) => sum + p.tier,
                                 0,
                               ) / team.players.length
-                            ).toFixed(1)
-                          }}</strong></span
+                            ).toFixed(2)
+                          }}</span
                         >
                       </div>
                     </div>
@@ -2248,10 +2245,7 @@
                         :key="player.id"
                         class="old-tournament-player-row grid w-full grid-cols-[minmax(0,1fr)_auto] items-center gap-2 p-2 bg-gray-50 rounded text-sm"
                         :class="{
-                          'bg-yellow-100': isPlayerBetting(
-                            tournament.id,
-                            player.id,
-                          ),
+                          'bg-green-100 ring-1 ring-green-300': isTeamGoalkeeper(team.players, player),
                           'border-2 border-red-500': isCurrentUserPlayer(
                             player.id,
                           ),
@@ -2278,6 +2272,7 @@
                               :title="`Xem biến động tiền của ${player.name}`"
                               @click="openTournamentPlayerMoneyHistory(tournament, player)"
                             >{{ player.name }}</button>
+                            <span v-if="isPlayerBetting(tournament.id, player.id)" class="ml-1" title="Ngôi sao hy vọng">⭐</span>
                             <div
                               v-if="player.addedByUsername"
                               class="truncate text-[10px] leading-4 text-gray-500"
@@ -2297,7 +2292,7 @@
                             class="ml-1 inline-flex animate-pulse align-middle text-sm"
                             :title="`Đã Battle với ${getAcceptedBattleOpponentName(tournament.id, player.id)}`"
                             @click="openChallengeBattleDetailsModal(tournament)"
-                            >⚔️</button
+                            >⚔️ {{ getAcceptedBattlePairNumber(tournament.id, player.id) }}</button
                           >
                           <span
                             v-if="isPlayerWithWater(tournament.id, player.id)"
@@ -2321,7 +2316,7 @@
                               }}</template
                             ></span
                           >
-                          <span class="text-xs">T{{ player.tier }}</span>
+                          <span class="text-xs" :class="player.tier <= 3 ? 'font-bold' : ''">T{{ player.tier }}</span>
                         </div>
                       </div>
                     </div>
@@ -2333,7 +2328,7 @@
                         class="pt-3 border-t border-gray-200"
                       >
                         <div class="flex justify-between text-xs text-gray-600">
-                          <span
+                          <span class="rounded-md border-2 border-primary-400 bg-primary-50 px-2 py-1 font-bold text-primary-700"
                             >Tổng tier:
                             {{
                               team.players.reduce(
@@ -2342,16 +2337,16 @@
                               )
                             }}</span
                           >
-                          <span
+                          <span class="rounded-md border-2 border-red-400 bg-red-50 px-2 py-1 font-bold text-red-700"
                             >Trung bình:
-                            <strong>{{
+                            {{
                               (
                                 team.players.reduce(
                                   (sum: number, p: any) => sum + p.tier,
                                   0,
                                 ) / team.players.length
-                              ).toFixed(1)
-                            }}</strong></span
+                              ).toFixed(2)
+                            }}</span
                           >
                         </div>
                       </div>
@@ -2627,7 +2622,7 @@
             </li>
             <li>
               • Khi đã chọn, nút hiển thị dấu ✓ và dòng cầu thủ trong danh sách
-              đội được tô vàng nhạt.
+              đội sẽ hiển thị biểu tượng ⭐ bên cạnh tên.
             </li>
             <li>
               • Ngôi sao hy vọng thắng: +10.000 ₫; Ngôi sao hy vọng thua:
@@ -7578,6 +7573,20 @@ const getAcceptedBattleOpponentName = (
       (item: any) => item.playerId === challenge.opponentPlayerId,
     )?.player?.name || "đối thủ"
   );
+};
+const getAcceptedBattlePairNumber = (
+  tournamentId: string,
+  playerId: string,
+): number | null => {
+  const details = attendanceDetailsMap.value.get(tournamentId) || [];
+  const pairs = Array.from(new Set(
+    details.flatMap((detail: any) => detail.challenge?.status === "ACCEPTED" && detail.challenge?.opponentPlayerId
+      ? [[detail.playerId, detail.challenge.opponentPlayerId].sort().join(":")]
+      : [],
+    ),
+  )).sort();
+  const pairIndex = pairs.findIndex((pair) => pair.split(":").includes(playerId));
+  return pairIndex >= 0 ? pairIndex + 1 : null;
 };
 const canShowChallengeIcon = (
   tournamentId: string,

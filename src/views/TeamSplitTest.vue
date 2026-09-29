@@ -90,6 +90,14 @@
             >
               ⚔️</button
             ><button
+              type="button"
+              class="flex h-9 w-9 items-center justify-center rounded-lg border border-yellow-300 bg-yellow-50 text-lg text-yellow-600 transition hover:bg-yellow-100 disabled:cursor-not-allowed disabled:opacity-50"
+              :disabled="!selectedPlayers.length"
+              title="Random Ngôi sao hy vọng"
+              @click="randomizeHopeStars"
+            >
+              ⭐</button
+            ><button
               class="btn-secondary text-red-600"
               :disabled="!selectedPlayers.length"
               @click="clearAll"
@@ -142,6 +150,11 @@
                 @click.stop="showBattlePairsModal = true"
               >
                 ⚔️</button
+              ><span
+                v-if="hopeStarPlayerIds.has(player.id)"
+                class="text-sm"
+                title="Ngôi sao hy vọng"
+                >⭐</span
               ><span class="text-xs text-gray-500">T{{ player.tier }}</span>
             </button></TransitionGroup
           >
@@ -276,6 +289,12 @@
                         :title="`Cặp Battle #${battlePairNumberByPlayerId[player.id]}`"
                         >⚔️ {{ battlePairNumberByPlayerId[player.id] }}</span
                       >
+                      <span
+                        v-if="hopeStarPlayerIds.has(player.id)"
+                        class="ml-1 shrink-0 text-sm"
+                        title="Ngôi sao hy vọng"
+                        >⭐</span
+                      >
                     </div>
                     <span
                       class="text-xs text-gray-600"
@@ -304,7 +323,10 @@
               </div>
             </div>
           </div>
-          <div class="flex justify-end border-t p-4">
+          <div class="flex justify-end gap-3 border-t p-4">
+            <button class="btn-secondary" @click="openTestMoneyModal">
+              Thử tính tiền
+            </button>
             <button class="btn-primary" @click="showTeamResultModal = false">
               Đóng
             </button>
@@ -369,6 +391,19 @@
         </div>
       </div>
     </Teleport>
+    <Teleport to="body">
+      <div v-if="showTestMoneyModal" class="fixed inset-0 z-[90] flex items-center justify-center overflow-y-auto bg-black/50 p-4">
+        <div class="flex max-h-[90vh] w-full max-w-4xl flex-col overflow-hidden rounded-xl bg-white shadow-xl">
+          <div class="flex items-center justify-between border-b p-5"><div><h2 class="text-lg font-semibold text-gray-900">Chi tiết biến động tiền</h2><p class="mt-1 text-sm text-gray-500">Mô phỏng trên trình duyệt, không lưu vào hệ thống.</p></div><button type="button" class="text-2xl text-gray-400 hover:text-gray-700" @click="showTestMoneyModal = false">×</button></div>
+          <div class="min-h-0 space-y-5 overflow-y-auto p-5">
+            <div class="grid gap-3 sm:grid-cols-3 lg:grid-cols-4"><div v-for="(team, index) in teams" :key="index" class="rounded-lg border p-3" :class="index === simulatedWinnerIndex ? 'border-green-300 bg-green-50' : index === simulatedLoserIndex ? 'border-red-300 bg-red-50' : 'border-gray-200'"><div class="flex items-center justify-between font-semibold"><span>Team {{ index + 1 }}</span><span>⚽ {{ simulatedScores[index] }}</span></div><p class="mt-1 text-xs" :class="index === simulatedWinnerIndex ? 'text-green-700' : index === simulatedLoserIndex ? 'text-red-700' : 'text-gray-500'">{{ index === simulatedWinnerIndex ? '🏆 Đội thắng' : index === simulatedLoserIndex ? '😔 Đội thua' : 'Hòa thứ hạng giữa' }}</p></div></div>
+            <div class="rounded-lg border border-primary-200 bg-primary-50 p-4 text-xs text-primary-800"><p class="mb-1 font-semibold">💰 Cách tính tiền mô phỏng</p><ul class="list-disc space-y-1 pl-4"><li>Chi phí giải: -50.000 ₫ mỗi cầu thủ; GK giảm 50%.</li><li>Đội thua: -10.000 ₫; Ngôi sao hy vọng thắng +10.000 ₫, thua -10.000 ₫.</li><li>Battle: cầu thủ thuộc đội có điểm cao hơn +10.000 ₫, điểm thấp hơn -10.000 ₫.</li></ul></div>
+            <div v-for="(team, teamIndex) in teams" :key="`money-${teamIndex}`"><h3 class="mb-2 font-semibold" :class="teamTextClass(teamIndex)">Team {{ teamIndex + 1 }}</h3><div v-for="player in team" :key="player.id" class="mb-2 rounded-lg border border-gray-100 bg-gray-50 p-3"><div class="flex items-center justify-between gap-3"><div class="flex min-w-0 items-center"><img v-if="player.avatar" :src="player.avatar" class="mr-2 h-7 w-7 rounded-full object-cover"><span v-else class="mr-2 flex h-7 w-7 items-center justify-center rounded-full bg-gray-200 text-xs">{{ player.name[0] }}</span><span class="truncate font-medium">{{ player.name }}</span></div><span class="text-xs text-gray-500">{{ player.position }} · T{{ player.tier }}</span></div><div class="mt-2 space-y-1 border-t pt-2 text-xs"><div v-for="change in getTestMoneyChanges(player, teamIndex).changes" :key="change.description" class="flex justify-between gap-3"><span class="text-gray-600">{{ change.description }}</span><span :class="change.amount >= 0 ? 'text-green-600' : 'text-red-600'">{{ change.amount >= 0 ? '+' : '' }}{{ change.amount.toLocaleString('vi-VN') }} ₫</span></div><div class="flex justify-between border-t pt-1 font-semibold"><span>Tổng thay đổi</span><span :class="getTestMoneyChanges(player, teamIndex).total >= 0 ? 'text-green-600' : 'text-red-600'">{{ getTestMoneyChanges(player, teamIndex).total >= 0 ? '+' : '' }}{{ getTestMoneyChanges(player, teamIndex).total.toLocaleString('vi-VN') }} ₫</span></div></div></div></div>
+          </div>
+          <div class="flex justify-end border-t p-4"><button type="button" class="btn-primary" @click="showTestMoneyModal = false">Đóng</button></div>
+        </div>
+      </div>
+    </Teleport>
   </div>
 </template>
 <script setup lang="ts">
@@ -394,7 +429,10 @@ const players = ref<Player[]>([]),
   teamCount = ref(3),
   showTeamResultModal = ref(false),
   showBattlePairsModal = ref(false),
-  battlePairs = ref<Array<{ firstId: string; secondId: string }>>([]);
+  showTestMoneyModal = ref(false),
+  simulatedScores = ref<number[]>([]),
+  battlePairs = ref<Array<{ firstId: string; secondId: string }>>([]),
+  hopeStarPlayerIds = ref<Set<string>>(new Set());
 const positions = ["GK", "DEF", "MID", "FWD"];
 const randomOptions = [20, 24, 28, 32];
 const normalize = (text: string) =>
@@ -439,6 +477,16 @@ const battlePairNumberByPlayerId = computed<Record<string, number>>(() =>
     return result;
   }, {}),
 );
+const simulatedWinnerIndex = computed(() =>
+  simulatedScores.value.length
+    ? simulatedScores.value.indexOf(Math.max(...simulatedScores.value))
+    : -1,
+);
+const simulatedLoserIndex = computed(() =>
+  simulatedScores.value.length
+    ? simulatedScores.value.indexOf(Math.min(...simulatedScores.value))
+    : -1,
+);
 const battleGroup = (player: Player) => (player.tier <= 2 ? 1 : 2);
 function randomizeBattles() {
   const targetParticipants = Math.max(
@@ -463,6 +511,42 @@ function randomizeBattles() {
   }
   battlePairs.value = pairs;
 }
+function randomizeHopeStars() {
+  if (!selected.value.length) return;
+  const maximum = Math.max(1, Math.floor(selected.value.length / 4));
+  const count = 1 + Math.floor(Math.random() * maximum);
+  hopeStarPlayerIds.value = new Set(
+    [...selected.value]
+      .sort(() => Math.random() - 0.5)
+      .slice(0, count)
+      .map((player) => player.id),
+  );
+}
+function openTestMoneyModal() {
+  const ranking = teams.value.map((_, index) => index).sort(() => Math.random() - 0.5);
+  const scores = Array.from({ length: teams.value.length }, () => 0);
+  // Make every score distinct so the simulation always has exactly one winner and loser.
+  ranking.forEach((teamIndex, rank) => { scores[teamIndex] = (teams.value.length - rank) * 2; });
+  simulatedScores.value = scores;
+  showTestMoneyModal.value = true;
+}
+function getTestMoneyChanges(player: Player, teamIndex: number) {
+  const changes: Array<{ description: string; amount: number }> = [];
+  const goalkeeper = player.position === 'GK' || player.position === 'Goalkeeper';
+  changes.push({ description: goalkeeper ? 'Chi phí giải đấu (GK giảm 50%)' : 'Chi phí giải đấu', amount: goalkeeper ? -25000 : -50000 });
+  if (teamIndex === simulatedLoserIndex.value) changes.push({ description: 'Đội thua', amount: -10000 });
+  if (hopeStarPlayerIds.value.has(player.id)) changes.push({ description: 'Ngôi sao hy vọng', amount: teamIndex === simulatedWinnerIndex.value ? 10000 : -10000 });
+  const pair = battlePairs.value.find((item) => item.firstId === player.id || item.secondId === player.id);
+  if (pair) {
+    const opponentId = pair.firstId === player.id ? pair.secondId : pair.firstId;
+    const opponentTeamIndex = teams.value.findIndex((team) => team.some((candidate) => candidate.id === opponentId));
+    if (opponentTeamIndex >= 0) {
+      const amount = simulatedScores.value[teamIndex] > simulatedScores.value[opponentTeamIndex] ? 10000 : -10000;
+      changes.push({ description: `Battle với ${selected.value.find((candidate) => candidate.id === opponentId)?.name || 'đối thủ'}`, amount });
+    }
+  }
+  return { changes, total: changes.reduce((sum, change) => sum + change.amount, 0) };
+}
 function togglePlayer(player: Player) {
   const index = selected.value.findIndex((p) => p.id === player.id);
   if (index >= 0) selected.value.splice(index, 1);
@@ -470,12 +554,14 @@ function togglePlayer(player: Player) {
   battlePairs.value = battlePairs.value.filter(
     (pair) => pair.firstId !== player.id && pair.secondId !== player.id,
   );
+  hopeStarPlayerIds.value.delete(player.id);
   teams.value = [];
 }
 function clearAll() {
   selected.value = [];
   teams.value = [];
   battlePairs.value = [];
+  hopeStarPlayerIds.value = new Set();
 }
 async function selectRandom() {
   if (!randomCount.value) return;
@@ -485,6 +571,7 @@ async function selectRandom() {
   teams.value = [];
   selected.value = [];
   battlePairs.value = [];
+  hopeStarPlayerIds.value = new Set();
   await new Promise((resolve) => setTimeout(resolve, 1000));
   const shuffled = candidates.sort(() => Math.random() - 0.5);
   selected.value = shuffled.slice(

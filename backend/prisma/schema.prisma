@@ -31,6 +31,8 @@ model User {
   friends  Player[] @relation("PlayerFriendOwner")
   fundContributions FundContribution[]
   attendancesAdded TournamentPlayerAttendance[] @relation("TournamentAttendanceAddedBy")
+  pollVotes PollVote[]
+  pollsCreated Poll[]
 
   @@map("users")
 }
@@ -377,6 +379,49 @@ model TournamentDeadmatchEntry {
   @@index([tournamentId, teamId, opponentTeamId, status, queueNumber])
   @@index([tournamentId, matchKey])
   @@map("tournament_deadmatch_entries")
+}
+
+model Poll {
+  id            String       @id @default(cuid())
+  question      String
+  allowMultiple Boolean      @default(false)
+  isPinned      Boolean      @default(false)
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+  createdBy     User         @relation(fields: [createdById], references: [id], onDelete: Cascade)
+  createdById   String
+  options       PollOption[]
+  votes         PollVote[]
+
+  @@index([isPinned, createdAt])
+  @@map("polls")
+}
+
+model PollOption {
+  id        String     @id @default(cuid())
+  label     String
+  sortOrder Int
+  poll      Poll       @relation(fields: [pollId], references: [id], onDelete: Cascade)
+  pollId    String
+  votes     PollVote[]
+
+  @@unique([pollId, sortOrder])
+  @@map("poll_options")
+}
+
+model PollVote {
+  id       String     @id @default(cuid())
+  poll     Poll       @relation(fields: [pollId], references: [id], onDelete: Cascade)
+  pollId   String
+  option   PollOption @relation(fields: [optionId], references: [id], onDelete: Cascade)
+  optionId String
+  user     User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId   String
+  createdAt DateTime  @default(now())
+
+  @@unique([pollId, optionId, userId])
+  @@index([pollId, userId])
+  @@map("poll_votes")
 }
 
 

@@ -19,6 +19,7 @@ import { matchRoutes } from './routes/matches';
 import { statsRoutes } from './routes/stats';
 import { systemSettingsRoutes } from './routes/systemSettings';
 import { additionalCostsRoutes } from './routes/additionalCosts';
+import { pollRoutes } from './routes/polls';
 import databaseRoutes from './routes/database';
 import { assignMissingPlayerAvatars } from './lib/avatars';
 import { syncKnownPlayerRoster } from './lib/roster';
@@ -111,6 +112,7 @@ app.use('/api/matches', matchRoutes);
 app.use('/api/stats', statsRoutes);
 app.use('/api/system-settings', systemSettingsRoutes);
 app.use('/api/additional-costs', additionalCostsRoutes);
+app.use('/api/polls', pollRoutes);
 app.use('/api/database', databaseRoutes);
 
 // Health check under API

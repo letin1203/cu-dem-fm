@@ -5531,6 +5531,13 @@
       </div>
     </form>
   </div>
+  <div v-if="showPinnedPollModal && pinnedPoll" class="fixed inset-0 z-[95] flex items-center justify-center overflow-y-auto bg-black/50 p-4">
+    <div class="w-full max-w-lg rounded-xl bg-white shadow-xl" @click.stop>
+      <div class="flex items-center justify-between border-b p-5"><div><h3 class="text-lg font-semibold text-primary-700">📊 Bình chọn</h3><p class="mt-1 text-gray-900">{{ pinnedPoll.question }}</p></div><button type="button" class="text-2xl text-gray-400" @click="showPinnedPollModal = false">×</button></div>
+      <div class="space-y-2 p-5"><label v-for="option in pinnedPoll.options" :key="option.id" class="flex cursor-pointer items-center justify-between rounded-lg border p-3" :class="pinnedPollSelectedOptionIds.includes(option.id) ? 'border-primary-500 bg-primary-50' : 'border-gray-200'"><span class="flex items-center gap-3"><input v-if="pinnedPoll.allowMultiple" v-model="pinnedPollSelectedOptionIds" type="checkbox" :value="option.id"><input v-else type="radio" name="pinned-poll" :checked="pinnedPollSelectedOptionIds[0] === option.id" @change="pinnedPollSelectedOptionIds = [option.id]">{{ option.label }}</span><span class="text-sm text-gray-500">{{ option.voteCount }} phiếu</span></label></div>
+      <div class="flex justify-end gap-3 border-t p-4"><button type="button" class="btn-secondary" @click="showPinnedPollModal = false">Đóng</button><button type="button" class="btn-primary" :disabled="pinnedPollSaving || !pinnedPollSelectedOptionIds.length" @click="submitPinnedPollVote">{{ pinnedPollSaving ? 'Đang gửi...' : 'Bình chọn' }}</button></div>
+    </div>
+  </div>
 </template>
 
 <script setup lang="ts">
@@ -5607,6 +5614,10 @@ const showDeadmatchHistoryModal = ref(false);
 const deadmatchHistoryLoading = ref(false);
 const deadmatchHistoryPairs = ref<any[]>([]);
 const showChallengeBattleDetailsModal = ref(false);
+const showPinnedPollModal = ref(false);
+const pinnedPoll = ref<any | null>(null);
+const pinnedPollSelectedOptionIds = ref<string[]>([]);
+const pinnedPollSaving = ref(false);
 const challengeBattleDetailsLoading = ref(false);
 const challengeBattleTournament = ref<Tournament | null>(null);
 const deadmatchTournament = ref<Tournament | null>(null);
@@ -9409,9 +9420,40 @@ const handleChallengeVisibilityChange = (): void => {
   if (document.visibilityState === "visible") void pollIncomingChallenges();
 };
 
+const loadPinnedPoll = async (): Promise<void> => {
+  try {
+    const response = await apiClient.get<any>('/polls/pinned');
+    if (!response.success || !response.data) return;
+    pinnedPoll.value = response.data;
+    pinnedPollSelectedOptionIds.value = response.data.options
+      .filter((option: any) => option.selected)
+      .map((option: any) => option.id);
+    showPinnedPollModal.value = true;
+  } catch {
+    // A poll must never block the weekly tournament page from loading.
+  }
+};
+
+const submitPinnedPollVote = async (): Promise<void> => {
+  if (!pinnedPoll.value || pinnedPollSaving.value) return;
+  pinnedPollSaving.value = true;
+  try {
+    const response = await apiClient.post<any>(`/polls/${pinnedPoll.value.id}/vote`, { optionIds: pinnedPollSelectedOptionIds.value });
+    if (!response.success) throw new Error(response.error || 'Không thể gửi bình chọn');
+    pinnedPoll.value = response.data;
+    pinnedPollSelectedOptionIds.value = response.data.options.filter((option: any) => option.selected).map((option: any) => option.id);
+    toast.success('Đã ghi nhận bình chọn');
+  } catch (error: any) {
+    toast.error(error?.message || 'Không thể gửi bình chọn');
+  } finally {
+    pinnedPollSaving.value = false;
+  }
+};
+
 // Initialize
 onMounted(async () => {
   await fetchData();
+  void loadPinnedPoll();
   document.addEventListener("visibilitychange", handleChallengeVisibilityChange);
   window.addEventListener(
     "pending-money-top-ups-changed",

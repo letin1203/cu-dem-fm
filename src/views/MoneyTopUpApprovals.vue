@@ -1,13 +1,14 @@
 <template>
   <div class="space-y-6">
     <div class="flex items-center justify-between gap-3">
-      <div><h1 class="text-2xl sm:text-3xl font-bold text-gray-900">Duyệt</h1><p class="text-sm text-gray-500 mt-1">{{ activeTab === 'top-up' ? 'Các yêu cầu nạp tiền đang chờ duyệt.' : activeTab === 'password' ? 'Các yêu cầu đổi mật khẩu đang chờ xử lý.' : 'Danh sách cầu thủ đã chuyển sang inactive.' }}</p></div>
+      <div><h1 class="text-2xl sm:text-3xl font-bold text-gray-900">Duyệt</h1><p class="text-sm text-gray-500 mt-1">{{ activeTab === 'top-up' ? 'Các yêu cầu nạp tiền đang chờ duyệt.' : activeTab === 'password' ? 'Các yêu cầu đổi mật khẩu đang chờ xử lý.' : activeTab === 'polls' ? 'Tạo và quản lý các bình chọn cho toàn bộ cầu thủ.' : 'Danh sách cầu thủ đã chuyển sang inactive.' }}</p></div>
       <button @click="loadActiveTab" :disabled="loading" class="btn-secondary">{{ loading ? 'Đang tải...' : 'Tải lại' }}</button>
     </div>
     <div class="flex border-b border-gray-200">
       <button class="border-b-2 px-4 py-2 text-sm font-medium" :class="activeTab === 'top-up' ? 'border-primary-600 text-primary-600' : 'border-transparent text-gray-500'" @click="activeTab = 'top-up'; loadPending()">Nạp tiền</button>
       <button v-if="authStore.hasRole('admin')" class="border-b-2 px-4 py-2 text-sm font-medium" :class="activeTab === 'password' ? 'border-primary-600 text-primary-600' : 'border-transparent text-gray-500'" @click="activeTab = 'password'; loadPasswordRequests()">Quên mật khẩu</button>
       <button v-if="authStore.hasAnyRole(['admin', 'mod'])" class="border-b-2 px-4 py-2 text-sm font-medium" :class="activeTab === 'inactive' ? 'border-primary-600 text-primary-600' : 'border-transparent text-gray-500'" @click="activeTab = 'inactive'; loadInactivePlayers()">Cầu thủ inactive</button>
+      <button v-if="authStore.hasAnyRole(['admin', 'mod'])" class="border-b-2 px-4 py-2 text-sm font-medium" :class="activeTab === 'polls' ? 'border-primary-600 text-primary-600' : 'border-transparent text-gray-500'" @click="activeTab = 'polls'; loadPolls()">Quản lý bình chọn</button>
     </div>
     <div class="card p-0 overflow-hidden">
       <div v-if="loading" class="flex justify-center py-10"><div class="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div></div>
@@ -21,6 +22,11 @@
         <div v-if="!inactivePlayers.length" class="py-8 text-center text-gray-500">Không có cầu thủ inactive.</div>
         <div v-else class="space-y-3"><div v-for="player in inactivePlayers" :key="player.id" class="flex flex-col gap-3 rounded-lg border border-gray-200 p-4 sm:flex-row sm:items-center sm:justify-between"><div><p class="font-semibold text-gray-900">{{ player.name }}</p><p class="mt-1 text-sm text-gray-500">{{ player.position }} · Tier {{ player.tier }} · {{ player.yearOfBirth }}</p></div><button type="button" class="btn-primary" :disabled="activatingPlayerId === player.id" @click="activatePlayer(player.id)">{{ activatingPlayerId === player.id ? 'Đang Active...' : 'Active' }}</button></div></div>
         <div v-if="inactivePagination.pages > 1" class="mt-6 flex items-center justify-center gap-3"><button type="button" class="btn-secondary" :disabled="inactivePagination.page <= 1" @click="loadInactivePlayers(inactivePagination.page - 1)">Trước</button><span class="text-sm text-gray-600">Trang {{ inactivePagination.page }} / {{ inactivePagination.pages }}</span><button type="button" class="btn-secondary" :disabled="inactivePagination.page >= inactivePagination.pages" @click="loadInactivePlayers(inactivePagination.page + 1)">Sau</button></div>
+      </div>
+      <div v-else-if="activeTab === 'polls'" class="p-6">
+        <div class="mb-5 flex justify-end"><button type="button" class="btn-primary" @click="openCreatePollModal">Tạo bình chọn</button></div>
+        <div v-if="!polls.length" class="py-8 text-center text-gray-500">Chưa có bình chọn nào.</div>
+        <div v-else class="space-y-3"><div v-for="poll in polls" :key="poll.id" class="rounded-lg border p-4" :class="poll.isPinned ? 'border-primary-300 bg-primary-50' : 'border-gray-200'"><div class="flex items-start justify-between gap-3"><div><p class="font-semibold text-gray-900">{{ poll.question }}</p><p class="mt-1 text-xs text-gray-500">{{ poll.allowMultiple ? 'Cho phép nhiều lựa chọn' : 'Chỉ một lựa chọn' }} · {{ poll.createdBy?.username || '' }}</p></div><span v-if="poll.isPinned" class="rounded-full bg-primary-600 px-2 py-1 text-xs font-semibold text-white">PINNED</span></div><div class="mt-3 space-y-1 text-sm text-gray-600"><div v-for="option in poll.options" :key="option.id" class="flex justify-between"><span>{{ option.label }}</span><strong>{{ option.voteCount }} phiếu</strong></div></div></div></div>
       </div>
       <div v-else class="divide-y divide-gray-200">
         <template v-if="activeTab === 'top-up'"><div v-for="request in requests" :key="request.id" class="p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
@@ -39,6 +45,7 @@
       </div>
     </div>
     <ConfirmationModal :is-open="Boolean(deleteRequestId)" title="Xóa yêu cầu nạp tiền" message="Yêu cầu nạp tiền này sẽ bị xóa và không cộng vào số dư cầu thủ." confirm-label="Xóa yêu cầu" :loading="Boolean(deletingId)" @cancel="deleteRequestId = null" @confirm="deleteTopUpRequest" />
+    <div v-if="showCreatePollModal" class="fixed inset-0 z-[80] flex items-center justify-center overflow-y-auto bg-black/50 p-4"><div class="flex max-h-[90vh] w-full max-w-lg flex-col overflow-hidden rounded-xl bg-white shadow-xl"><div class="flex items-center justify-between border-b p-5"><div><h2 class="text-lg font-semibold">Tạo bình chọn</h2><p class="mt-1 text-sm text-gray-500">Bình chọn Pin sẽ hiện khi người dùng vào Đá hằng tuần.</p></div><button type="button" class="text-2xl text-gray-400" @click="showCreatePollModal = false">×</button></div><div class="min-h-0 space-y-4 overflow-y-auto p-5"><label class="block text-sm font-medium">Câu hỏi<textarea v-model="pollForm.question" class="form-input mt-1 min-h-20 w-full" placeholder="Nhập câu hỏi bình chọn" /></label><label class="flex items-center justify-between gap-3 rounded-lg bg-gray-50 p-3"><span><strong class="block">Cho phép nhiều lựa chọn</strong><span class="text-xs text-gray-500">User có thể chọn nhiều đáp án.</span></span><button type="button" role="switch" :aria-checked="pollForm.allowMultiple" class="relative h-6 w-11 rounded-full transition" :class="pollForm.allowMultiple ? 'bg-primary-600' : 'bg-gray-300'" @click="pollForm.allowMultiple = !pollForm.allowMultiple"><span class="absolute top-1 h-4 w-4 rounded-full bg-white transition" :class="pollForm.allowMultiple ? 'left-6' : 'left-1'" /></button></label><label class="flex items-center justify-between gap-3 rounded-lg bg-gray-50 p-3"><span><strong class="block">Pin bình chọn</strong><span class="text-xs text-gray-500">Chỉ một bình chọn được Pin.</span></span><button type="button" role="switch" :aria-checked="pollForm.isPinned" class="relative h-6 w-11 rounded-full transition" :class="pollForm.isPinned ? 'bg-primary-600' : 'bg-gray-300'" @click="pollForm.isPinned = !pollForm.isPinned"><span class="absolute top-1 h-4 w-4 rounded-full bg-white transition" :class="pollForm.isPinned ? 'left-6' : 'left-1'" /></button></label><p v-if="pollForm.isPinned && polls.some(poll => poll.isPinned)" class="rounded-lg bg-amber-50 p-3 text-xs text-amber-800">Đang có bình chọn được Pin. Khi tạo mới, bình chọn cũ sẽ tự động bỏ Pin.</p><div><p class="mb-2 text-sm font-medium">Lựa chọn</p><div class="space-y-2"><input v-for="(_, index) in pollForm.options" :key="index" v-model="pollForm.options[index]" class="form-input w-full" :placeholder="`Lựa chọn ${index + 1}`"><button type="button" class="text-sm font-medium text-primary-700" @click="pollForm.options.push('')">+ Thêm lựa chọn</button></div></div></div><div class="flex justify-end gap-3 border-t p-4"><button type="button" class="btn-secondary" @click="showCreatePollModal = false">Hủy</button><button type="button" class="btn-primary" :disabled="pollSaving" @click="createPoll">{{ pollSaving ? 'Đang tạo...' : 'Tạo bình chọn' }}</button></div></div></div>
   </div>
 </template>
 
@@ -55,7 +62,7 @@ interface FundRequest { id: string; amount: number; reason: string; requestedAt:
 const toast = useToast()
 const authStore = useAuthStore()
 const systemStore = useSystemStore()
-const activeTab = ref<'top-up' | 'password' | 'inactive'>('top-up')
+const activeTab = ref<'top-up' | 'password' | 'inactive' | 'polls'>('top-up')
 const requests = ref<TopUpRequest[]>([])
 const fundRequests = ref<FundRequest[]>([])
 const loading = ref(false)
@@ -71,6 +78,10 @@ const passwordRequestNameFilter = ref('')
 const inactivePlayers = ref<any[]>([])
 const inactivePagination = ref({ page: 1, pages: 0, total: 0 })
 const activatingPlayerId = ref<string | null>(null)
+const polls = ref<any[]>([])
+const showCreatePollModal = ref(false)
+const pollSaving = ref(false)
+const pollForm = ref({ question: '', allowMultiple: false, isPinned: false, options: ['', ''] })
 let pendingRefreshInFlight = false
 let pendingRefreshTimer: ReturnType<typeof setInterval> | null = null
 const formatDate = (date: string | Date) => new Date(date).toLocaleString('vi-VN')
@@ -147,7 +158,25 @@ const activatePlayer = async (id: string) => {
   catch (err) { toast.error(err instanceof Error ? err.message : 'Không thể Active cầu thủ') }
   finally { activatingPlayerId.value = null }
 }
-const loadActiveTab = () => activeTab.value === 'top-up' ? loadPending() : activeTab.value === 'password' ? loadPasswordRequests() : loadInactivePlayers()
+const loadPolls = async () => {
+  loading.value = true; error.value = null
+  try { const response = await apiClient.get<any[]>('/polls'); if (!response.success) throw new Error(response.error || 'Không thể tải bình chọn'); polls.value = response.data || [] }
+  catch (err) { error.value = err instanceof Error ? err.message : 'Không thể tải bình chọn' }
+  finally { loading.value = false }
+}
+const openCreatePollModal = () => { pollForm.value = { question: '', allowMultiple: false, isPinned: false, options: ['', ''] }; showCreatePollModal.value = true }
+const createPoll = async () => {
+  pollSaving.value = true
+  try {
+    const response = await apiClient.post('/polls', { ...pollForm.value, options: pollForm.value.options.filter(option => option.trim()) })
+    if (!response.success) throw new Error(response.error || 'Không thể tạo bình chọn')
+    showCreatePollModal.value = false
+    await loadPolls()
+    toast.success('Đã tạo bình chọn')
+  } catch (err) { toast.error(err instanceof Error ? err.message : 'Không thể tạo bình chọn') }
+  finally { pollSaving.value = false }
+}
+const loadActiveTab = () => activeTab.value === 'top-up' ? loadPending() : activeTab.value === 'password' ? loadPasswordRequests() : activeTab.value === 'polls' ? loadPolls() : loadInactivePlayers()
 const filteredPasswordRequests = computed(() => {
   const query = passwordRequestNameFilter.value.trim().toLocaleLowerCase('vi')
   if (!query) return passwordRequests.value

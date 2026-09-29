@@ -47,6 +47,37 @@ router.get('/', authenticate, authorize(['ADMIN', 'MOD']), async (req: Authentic
   }
 });
 
+router.get('/:id', authenticate, authorize(['ADMIN', 'MOD']), async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  try {
+    const poll = await prisma.poll.findUnique({
+      where: { id: req.params.id },
+      include: {
+        createdBy: { select: { username: true } },
+        options: {
+          orderBy: { sortOrder: 'asc' },
+          include: {
+            _count: { select: { votes: true } },
+            votes: {
+              orderBy: { createdAt: 'asc' },
+              include: { user: { select: { username: true, player: { select: { name: true, avatar: true } } } } },
+            },
+          },
+        },
+      },
+    });
+    if (!poll) { res.status(404).json({ success: false, error: 'Không tìm thấy bình chọn' }); return; }
+    res.json({ success: true, data: {
+      ...poll,
+      options: poll.options.map((option) => ({
+        id: option.id, label: option.label, sortOrder: option.sortOrder, voteCount: option._count.votes,
+        votes: option.votes.map((vote) => ({ id: vote.id, createdAt: vote.createdAt, username: vote.user.username, player: vote.user.player })),
+      })),
+    } });
+  } catch (error) {
+    res.status(500).json({ success: false, error: 'Không thể tải chi tiết bình chọn' });
+  }
+});
+
 router.post('/', authenticate, authorize(['ADMIN', 'MOD']), async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   try {
     const input = pollSchema.parse(req.body);

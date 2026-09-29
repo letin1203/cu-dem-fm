@@ -250,9 +250,10 @@
                     tag="div"
                     class="space-y-1"
                     ><div
-                      v-for="player in team"
+                      v-for="player in visibleProcessingTeamPlayers(team)"
                       :key="player.id"
-                      class="flex items-center justify-between rounded bg-gray-50 p-1.5 text-xs"
+                      class="flex items-center justify-between rounded p-1.5 text-xs"
+                      :class="isGoalkeeper(player) ? 'border border-green-300 bg-green-100' : 'bg-gray-50'"
                     >
                       <div class="flex min-w-0 items-center"><img
                         v-if="player.avatar"
@@ -262,7 +263,7 @@
                         v-else
                         class="mr-1.5 flex h-6 w-6 items-center justify-center rounded-full bg-gray-200 text-xs"
                         >{{ player.name[0] }}</span
-                      ><span class="truncate font-medium">{{ player.name }}</span></div><span :class="player.tier <= 3 ? 'font-bold' : 'text-gray-600'">{{ player.position }} · T{{ player.tier }}</span>
+                      ><span class="truncate font-medium">{{ player.name }}</span><span v-if="battlePairNumberByPlayerId[player.id]" class="ml-1 shrink-0 text-xs text-red-600" :title="`Cặp Battle #${battlePairNumberByPlayerId[player.id]}`">⚔️ {{ battlePairNumberByPlayerId[player.id] }}</span><span v-if="hopeStarPlayerIds.has(player.id)" class="ml-1 shrink-0 text-sm" title="Ngôi sao hy vọng">⭐</span></div><span :class="player.tier <= 3 ? 'font-bold' : 'text-gray-600'">{{ player.position }} · T{{ player.tier }}</span>
                     </div></TransitionGroup
                   >
                   <p
@@ -706,6 +707,7 @@ const players = ref<Player[]>([]),
   teamSplitStep = ref(0),
   processingTeams = ref<Player[][]>([]),
   departingProcessingPlayerId = ref<string | null>(null),
+  swappingProcessingPlayerIds = ref<Set<string>>(new Set()),
   teamSplitComplete = ref(false),
   teamSplitRunning = ref(false),
   aiThoughts = ref<Array<{ id: number; text: string }>>([]),
@@ -848,6 +850,10 @@ const teamSplitModalStyle = computed(() => {
 const assignedProcessingPlayerIds = computed(
   () => new Set(processingTeams.value.flat().map((player) => player.id)),
 );
+const visibleProcessingTeamPlayers = (team: Player[]) =>
+  team.filter((player) => !swappingProcessingPlayerIds.value.has(player.id));
+const isGoalkeeper = (player: Player) =>
+  player.position === 'GK' || player.position === 'Goalkeeper';
 const splitProgressGroups = computed(() => [
   {
     label: "Tier 1-2",
@@ -1086,6 +1092,7 @@ async function splitTeams() {
   teamSplitRunning.value = true;
   processingTeams.value = Array.from({ length: teamCount.value }, () => []);
   departingProcessingPlayerId.value = null;
+  swappingProcessingPlayerIds.value = new Set();
   aiThoughts.value = [];
   mobileAiThoughtWords.value = [];
   mobileAiThoughtAnimating.value = false;
@@ -1160,13 +1167,9 @@ async function splitTeams() {
             desktopAiThoughtAnimating.value = true;
             desktopAiThoughtWords.value = [];
           }
-          const battlePartner = battlePartnerById.value[player.id];
-          const battleNote = battlePartner
-            ? ` · ⚔️ Đang Battle với ${battlePartner.name}, ưu tiên xếp khác đội.`
-            : '';
           const healthReason = playerAiReasons[playerAiReasonIndex % playerAiReasons.length];
           playerAiReasonIndex += 1;
-          const thought = `${player.name}: ${healthReason} → Chia vào Đội ${teamIndex + 1}${battleNote}`;
+          const thought = `${player.name}: ${healthReason} → Chia vào Đội ${teamIndex + 1}`;
           addAiThought(thought);
           await scrollMobileToSplitElement(aiThoughtBlockRef.value, pause);
           await animateMobileAiThought(thought, pause);
@@ -1187,11 +1190,28 @@ async function splitTeams() {
     }
     teamSplitStep.value = 4;
     for (const swap of swaps) {
-      processingTeams.value = swapTeamsByPlayerIds(processingTeams.value, swap.firstId, swap.secondId);
       const firstName = selected.value.find((player) => player.id === swap.firstId)?.name || 'Cầu thủ';
       const secondName = selected.value.find((player) => player.id === swap.secondId)?.name || 'cầu thủ khác';
-      addAiThought(`Cân bằng Tier: hoán đổi ${firstName} ↔ ${secondName}`);
-      await pause(1500);
+      const thought = `Cân bằng Tier: hoán đổi ${firstName} ↔ ${secondName}`;
+      if (viewportWidth.value < 1024) {
+        mobileAiThoughtAnimating.value = true;
+        mobileAiThoughtWords.value = [];
+      } else {
+        desktopAiThoughtAnimating.value = true;
+        desktopAiThoughtWords.value = [];
+      }
+      addAiThought(thought);
+      await scrollMobileToSplitElement(aiThoughtBlockRef.value, pause);
+      await animateMobileAiThought(thought, pause);
+      await animateDesktopAiThought(thought, pause);
+      await pause(3000);
+      swappingProcessingPlayerIds.value = new Set([swap.firstId, swap.secondId]);
+      await nextTick();
+      await pause(2000);
+      processingTeams.value = swapTeamsByPlayerIds(processingTeams.value, swap.firstId, swap.secondId);
+      swappingProcessingPlayerIds.value = new Set();
+      await nextTick();
+      await pause(2000);
     }
     await pause(5000);
     teams.value = finalTeams;

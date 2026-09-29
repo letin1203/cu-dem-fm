@@ -132,7 +132,16 @@ export function generateBalancedTeams(
   // so it cannot disturb GK/Tier distribution unless an equivalent swap is
   // available. Strong Tier 1/2 players may only be exchanged with their own
   // tier, preserving their even distribution.
-  for (const pair of battlePairs) {
+  const battlePartnerById = new Map<string, string>();
+  battlePairs.forEach((pair) => {
+    battlePartnerById.set(pair.firstId, pair.secondId);
+    battlePartnerById.set(pair.secondId, pair.firstId);
+  });
+
+  // Resolving one pair can affect a later pair. Re-check the complete list
+  // until every feasible pair is separated, while never creating a new pair
+  // on the same team as a side effect.
+  for (let pass = 0; pass < battlePairs.length; pass++) for (const pair of battlePairs) {
     const firstTeamIndex = teams.findIndex((team) => team.players.some((player) => player.id === pair.firstId));
     const secondTeamIndex = teams.findIndex((team) => team.players.some((player) => player.id === pair.secondId));
     if (firstTeamIndex < 0 || secondTeamIndex < 0 || firstTeamIndex !== secondTeamIndex) continue;
@@ -152,6 +161,10 @@ export function generateBalancedTeams(
           const replacement = teams[destinationIndex].players[replacementIndex];
           if (isGoalkeeper(player) !== isGoalkeeper(replacement)) continue;
           if ((player.tier <= 2 || replacement.tier <= 2) && player.tier !== replacement.tier) continue;
+          const playerPartnerId = battlePartnerById.get(player.id);
+          const replacementPartnerId = battlePartnerById.get(replacement.id);
+          if (playerPartnerId && teams[destinationIndex].players.some((candidate) => candidate.id === playerPartnerId)) continue;
+          if (replacementPartnerId && teams[sourceIndex].players.some((candidate) => candidate.id === replacementPartnerId && candidate.id !== player.id)) continue;
           const next = [...totals];
           next[sourceIndex] += replacement.tier - player.tier;
           next[destinationIndex] += player.tier - replacement.tier;
@@ -168,6 +181,37 @@ export function generateBalancedTeams(
     teams[sourceIndex].totalTier += replacement.tier - moved.tier;
     teams[bestMove.destinationIndex].totalTier += moved.tier - replacement.tier;
     trace?.swaps.push({ firstId: moved.id, secondId: replacement.id });
+  }
+
+  // A Battle separation can slightly disturb the tier balance. Make one final
+  // balancing pass, but reject every swap that would put a Battle pair back
+  // together.
+  for (let iteration = 0; iteration < 100; iteration++) {
+    const totals = teams.map((team) => team.totalTier);
+    const spread = averageSpread(totals);
+    let best: { a: number; b: number; ai: number; bi: number; spread: number } | null = null;
+    for (let a = 0; a < teams.length; a++) for (let b = a + 1; b < teams.length; b++) {
+      for (let ai = 0; ai < teams[a].players.length; ai++) for (let bi = 0; bi < teams[b].players.length; bi++) {
+        const first = teams[a].players[ai]; const second = teams[b].players[bi];
+        if (teams[a].lockedPlayers.has(first.id) || teams[b].lockedPlayers.has(second.id) || isGoalkeeper(first) !== isGoalkeeper(second)) continue;
+        const firstPartnerId = battlePartnerById.get(first.id);
+        const secondPartnerId = battlePartnerById.get(second.id);
+        if (firstPartnerId && teams[b].players.some((candidate) => candidate.id === firstPartnerId)) continue;
+        if (secondPartnerId && teams[a].players.some((candidate) => candidate.id === secondPartnerId)) continue;
+        const next = [...totals];
+        next[a] += second.tier - first.tier; next[b] += first.tier - second.tier;
+        const nextSpread = averageSpread(next);
+        if (nextSpread < spread && (!best || nextSpread < best.spread)) best = { a, b, ai, bi, spread: nextSpread };
+      }
+    }
+    if (!best) break;
+    const first = teams[best.a].players[best.ai];
+    const second = teams[best.b].players[best.bi];
+    teams[best.a].players[best.ai] = second;
+    teams[best.b].players[best.bi] = first;
+    teams[best.a].totalTier += second.tier - first.tier;
+    teams[best.b].totalTier += first.tier - second.tier;
+    trace?.swaps.push({ firstId: first.id, secondId: second.id });
   }
   return teams;
 }

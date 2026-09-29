@@ -6,9 +6,25 @@
     </div>
 
     <div class="grid gap-6 lg:grid-cols-[240px_minmax(0,1fr)]">
-      <aside class="rounded-xl border border-gray-200 bg-white p-3 shadow-sm">
-        <p class="px-3 pb-2 text-xs font-semibold uppercase tracking-wide text-gray-500">Cầu thủ</p>
-        <div class="flex gap-2 overflow-x-auto lg:block lg:space-y-1">
+      <aside ref="criteriaPanel" class="rounded-xl border border-gray-200 bg-white p-3 shadow-sm">
+        <details ref="mobileCriteriaDetails" class="group lg:hidden">
+          <summary class="flex cursor-pointer list-none items-center justify-between rounded-lg px-3 py-2 text-sm font-semibold text-gray-800 hover:bg-primary-50">
+            <span>Cầu thủ · {{ activeCriterion.label }}</span><span class="text-primary-600 transition-transform group-open:rotate-180">⌄</span>
+          </summary>
+          <div class="mt-2 space-y-1 border-t border-gray-100 pt-2">
+            <button
+              v-for="criterion in criteria"
+              :key="criterion.id"
+              type="button"
+              class="flex w-full items-center gap-3 rounded-lg px-3 py-3 text-left text-sm font-medium transition-colors"
+              :class="selectedCriterion === criterion.id ? 'bg-primary-600 text-white shadow-sm' : 'text-gray-700 hover:bg-primary-50 hover:text-primary-700'"
+              @click="selectMobileCriterion(criterion.id)"
+            ><span class="text-lg">{{ criterion.icon }}</span>{{ criterion.label }}</button>
+          </div>
+        </details>
+        <div class="hidden lg:block">
+          <p class="px-3 pb-2 text-xs font-semibold uppercase tracking-wide text-gray-500">Cầu thủ</p>
+          <div class="space-y-1">
           <button
             v-for="criterion in criteria"
             :key="criterion.id"
@@ -20,13 +36,19 @@
             <span class="text-lg">{{ criterion.icon }}</span>
             {{ criterion.label }}
           </button>
+          </div>
         </div>
       </aside>
 
       <main class="min-w-0 rounded-xl border border-gray-200 bg-white p-5 shadow-sm sm:p-6">
-        <div class="flex items-start justify-between gap-4">
+        <div>
           <div>
-            <h2 class="text-xl font-bold text-gray-900">{{ activeCriterion.label }}</h2>
+            <div class="flex items-center gap-2">
+              <h2 class="text-xl font-bold text-gray-900">{{ activeCriterion.label }}</h2>
+              <button type="button" class="inline-flex h-8 w-8 items-center justify-center rounded-full text-primary-600 transition-colors hover:bg-primary-50 disabled:opacity-50" :disabled="loading" title="Làm mới" aria-label="Làm mới" @click="loadLeaderboard">
+                <ArrowPathIcon class="h-5 w-5" :class="{ 'animate-spin': loading }" />
+              </button>
+            </div>
             <p class="mt-1 text-sm text-gray-500">
               <template v-if="selectedCriterion === 'contributions'">
                 Top 10 cầu thủ <strong class="font-semibold text-gray-700">“góp quỹ”</strong> nhiều nhất
@@ -34,7 +56,6 @@
               <template v-else>Top 10 cầu thủ {{ activeCriterion.description }}</template>
             </p>
           </div>
-          <button type="button" class="btn-secondary text-sm" :disabled="loading" @click="loadLeaderboard">Làm mới</button>
         </div>
 
         <div v-if="loading" class="flex justify-center py-20"><div class="h-8 w-8 animate-spin rounded-full border-4 border-primary-100 border-t-primary-600"></div></div>
@@ -45,7 +66,7 @@
               v-for="entry in podiumEntries"
               :key="entry.player.id"
               class="relative flex min-h-48 flex-col items-center justify-center rounded-xl border p-5 text-center"
-              :class="podiumClass(entry.rank)"
+              :class="[podiumClass(entry.rank), podiumOrderClass(entry.rank)]"
             >
               <span class="absolute left-4 top-4 text-2xl">{{ medal(entry.rank) }}</span>
               <span class="rounded-full px-2 py-1 text-xs font-bold" :class="rankBadgeClass(entry.rank)">TOP {{ entry.rank }}</span>
@@ -77,8 +98,9 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, nextTick, onMounted, ref } from 'vue'
 import { apiClient } from '../api/client'
+import { ArrowPathIcon } from '@heroicons/vue/24/outline'
 
 type CriterionId = 'wins' | 'losses' | 'contributions' | 'attendance'
 type LeaderboardEntry = {
@@ -95,23 +117,45 @@ const criteria: Array<{ id: CriterionId; label: string; description: string; ico
 ]
 
 const selectedCriterion = ref<CriterionId>('wins')
+const criteriaPanel = ref<HTMLElement | null>(null)
+const mobileCriteriaDetails = ref<HTMLDetailsElement | null>(null)
 const loading = ref(true)
 const error = ref('')
 const leaderboards = ref<Record<CriterionId, LeaderboardEntry[]>>({ wins: [], losses: [], contributions: [], attendance: [] })
 const activeCriterion = computed(() => criteria.find((criterion) => criterion.id === selectedCriterion.value)!)
 const currentEntries = computed(() => leaderboards.value[selectedCriterion.value] || [])
-const podiumEntries = computed(() => {
-  const entries = currentEntries.value.slice(0, 3)
-  // Display silver, gold, bronze so the winner stands in the centre of the podium.
-  return [entries[1], entries[0], entries[2]].filter(Boolean) as LeaderboardEntry[]
-})
+const podiumEntries = computed(() => currentEntries.value.slice(0, 3))
 const remainingEntries = computed(() => currentEntries.value.slice(3, 10))
 
 const medal = (rank: number) => ['🥇', '🥈', '🥉'][rank - 1] || ''
 const rankBadgeClass = (rank: number) => rank === 1 ? 'bg-amber-100 text-amber-800' : rank === 2 ? 'bg-slate-100 text-slate-700' : 'bg-orange-100 text-orange-800'
 const rankTextClass = (rank: number) => rank === 1 ? 'text-amber-600' : rank === 2 ? 'text-slate-600' : 'text-orange-700'
 const podiumClass = (rank: number) => rank === 1 ? 'border-amber-300 bg-amber-50 sm:-translate-y-3' : rank === 2 ? 'border-slate-300 bg-slate-50' : 'border-orange-300 bg-orange-50'
+const podiumOrderClass = (rank: number) => rank === 1 ? 'order-1 sm:order-2' : rank === 2 ? 'order-2 sm:order-1' : 'order-3'
 const displayValue = (value: number) => selectedCriterion.value === 'contributions' ? `${value.toLocaleString('vi-VN')} ₫` : `${value} lần`
+
+async function selectMobileCriterion(criterion: CriterionId) {
+  selectedCriterion.value = criterion
+  if (mobileCriteriaDetails.value) mobileCriteriaDetails.value.open = false
+  await nextTick()
+  scrollToCriteriaPanel()
+}
+
+function scrollToCriteriaPanel() {
+  if (!criteriaPanel.value) return
+  const startY = window.scrollY
+  const targetY = Math.max(0, criteriaPanel.value.getBoundingClientRect().top + startY - 12)
+  const distance = targetY - startY
+  const duration = 1000
+  const startedAt = performance.now()
+  const animate = (now: number) => {
+    const progress = Math.min((now - startedAt) / duration, 1)
+    const easedProgress = 1 - Math.pow(1 - progress, 3)
+    window.scrollTo(0, startY + distance * easedProgress)
+    if (progress < 1) window.requestAnimationFrame(animate)
+  }
+  window.requestAnimationFrame(animate)
+}
 
 async function loadLeaderboard() {
   loading.value = true

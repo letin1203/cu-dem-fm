@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { prisma } from '../lib/prisma';
 import { createTournamentSchema, updateTournamentSchema, paginationSchema, updateAttendanceSchema, updateTeamScoreSchema, updateTournamentScoresSchema } from '../schemas/validation';
 import { authenticate, authorize, AuthenticatedRequest } from '../middleware/auth';
+import { generateBalancedTeams } from '../services/teamGeneration';
 
 const router = Router();
 
@@ -2210,6 +2211,45 @@ router.put('/:id/scores', authenticate, authorize(['ADMIN', 'MOD']), async (req:
   }
 });
 
+// Preview exactly the same team-splitting algorithm without creating teams or
+// changing any tournament data. Used by the Test chia team page.
+router.post('/preview-teams', authenticate, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  try {
+    const { playerIds, teamCount, battlePairs = [] } = req.body || {};
+    if (!Array.isArray(playerIds) || playerIds.length < 10 || ![2, 3, 4].includes(teamCount)) {
+      res.status(400).json({ success: false, error: 'Danh sách cầu thủ hoặc số đội không hợp lệ' });
+      return;
+    }
+    const uniqueIds = [...new Set(playerIds)];
+    const players = await prisma.player.findMany({
+      where: { id: { in: uniqueIds }, isActive: true, friendOwnerId: null },
+      select: { id: true, name: true, position: true, positionSecond: true, tier: true, avatar: true },
+    });
+    if (players.length !== uniqueIds.length) {
+      res.status(400).json({ success: false, error: 'Có cầu thủ không còn hoạt động hoặc không hợp lệ' });
+      return;
+    }
+    const validPlayerIds = new Set(uniqueIds);
+    const validBattlePairs = Array.isArray(battlePairs)
+      ? battlePairs.filter((pair: unknown): pair is { firstId: string; secondId: string } => {
+          if (!pair || typeof pair !== 'object') return false;
+          const candidate = pair as { firstId?: unknown; secondId?: unknown };
+          return typeof candidate.firstId === 'string' && typeof candidate.secondId === 'string' &&
+            candidate.firstId !== candidate.secondId && validPlayerIds.has(candidate.firstId) && validPlayerIds.has(candidate.secondId);
+        })
+      : [];
+    const generated = generateBalancedTeams(players, teamCount, validBattlePairs);
+    res.json({ success: true, data: { teams: generated.map((team, index) => ({
+      name: `Team ${index + 1}`,
+      players: team.players,
+      totalTier: team.totalTier,
+    })) } });
+  } catch (error) {
+    console.error('Preview teams error:', error);
+    res.status(500).json({ success: false, error: 'Không thể xem trước kết quả chia đội' });
+  }
+});
+
 // Generate random balanced teams for a tournament
 router.post('/:id/generate-teams', authenticate, authorize(['ADMIN', 'MOD']), async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   try {
@@ -2577,6 +2617,18 @@ router.post('/:id/generate-teams', authenticate, authorize(['ADMIN', 'MOD']), as
       teamA.totalTier += playerB.tier - playerA.tier;
       teamB.totalTier += playerA.tier - playerB.tier;
     }
+
+    // Use the shared generator for the final result. The legacy setup above is
+    // retained temporarily for compatibility with this route's surrounding
+    // flow; persistence and the test preview both use this same result.
+    const generatedTeams = generateBalancedTeams(sortedPlayers, teamCount);
+    teams.splice(0, teams.length, ...generatedTeams.map((generated, index) => ({
+      name: `Team ${index + 1} - ${dateStr} (${teamNameSuffix})`,
+      players: generated.players,
+      totalTier: generated.totalTier,
+      tier9Plus: generated.players.filter(player => player.tier <= 2).length,
+      lockedPlayers: generated.lockedPlayers,
+    })));
 
     // Accepted challenges must always be on opposing teams. Resolve any pair
     // that landed together after the balancing pass by swapping the target

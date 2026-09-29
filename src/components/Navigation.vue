@@ -188,6 +188,7 @@
                 >
                   Hồ sơ cầu thủ
                 </router-link>
+                <router-link to="/test-chia-team" @click="userMenuOpen = false" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Test chia team</router-link>
                 <router-link
                   v-if="authStore.hasPermission('canManageUsers')"
                   to="/users"
@@ -299,6 +300,7 @@
           >
             Hồ sơ cầu thủ
           </router-link>
+          <router-link to="/test-chia-team" @click="mobileMenuOpen = false" class="block px-3 py-2 text-base font-medium text-gray-600 transition-colors hover:bg-primary-50 hover:text-primary-600">Test chia team</router-link>
           <button
             @click="handleLogout"
             :disabled="isLoggingOut"

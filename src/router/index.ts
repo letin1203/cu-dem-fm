@@ -14,6 +14,7 @@ import MoneyTopUpApprovals from '../views/MoneyTopUpApprovals.vue'
 import Login from '../components/Login.vue'
 import ResetPassword from '../components/ResetPassword.vue'
 import Stats from '../views/Stats.vue'
+import TeamSplitTest from '../views/TeamSplitTest.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -64,6 +65,7 @@ const router = createRouter({
       component: Stats,
       meta: { requiresAuth: true, permission: 'canViewPlayers' }
     },
+    { path: '/test-chia-team', name: 'teamSplitTest', component: TeamSplitTest, meta: { requiresAuth: true } },
     {
       path: '/my-profile',
       name: 'playerProfile',

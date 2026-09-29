@@ -17,6 +17,10 @@ export interface TeamBattlePair {
   secondId: string;
 }
 
+export interface TeamGenerationTrace {
+  swaps: Array<{ firstId: string; secondId: string }>;
+}
+
 const isGoalkeeper = (player: TeamGenerationPlayer) =>
   player.position === 'GK' || player.position === 'Goalkeeper';
 
@@ -29,6 +33,7 @@ export function generateBalancedTeams(
   inputPlayers: TeamGenerationPlayer[],
   teamCount: number,
   battlePairs: TeamBattlePair[] = [],
+  trace?: TeamGenerationTrace,
 ): GeneratedTeam[] {
   const players = [...inputPlayers].sort((a, b) => a.tier - b.tier);
   const teams: GeneratedTeam[] = Array.from({ length: teamCount }, () => ({
@@ -120,6 +125,7 @@ export function generateBalancedTeams(
     teams[best.b].players[best.bi] = first;
     teams[best.a].totalTier += second.tier - first.tier;
     teams[best.b].totalTier += first.tier - second.tier;
+    trace?.swaps.push({ firstId: first.id, secondId: second.id });
   }
 
   // A Battle pair must be on opposing teams. Do this after normal balancing
@@ -161,6 +167,7 @@ export function generateBalancedTeams(
     teams[bestMove.destinationIndex].players[bestMove.replacementIndex] = moved;
     teams[sourceIndex].totalTier += replacement.tier - moved.tier;
     teams[bestMove.destinationIndex].totalTier += moved.tier - replacement.tier;
+    trace?.swaps.push({ firstId: moved.id, secondId: replacement.id });
   }
   return teams;
 }

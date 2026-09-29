@@ -2238,12 +2238,13 @@ router.post('/preview-teams', authenticate, async (req: AuthenticatedRequest, re
             candidate.firstId !== candidate.secondId && validPlayerIds.has(candidate.firstId) && validPlayerIds.has(candidate.secondId);
         })
       : [];
-    const generated = generateBalancedTeams(players, teamCount, validBattlePairs);
+    const trace = { swaps: [] as Array<{ firstId: string; secondId: string }> };
+    const generated = generateBalancedTeams(players, teamCount, validBattlePairs, trace);
     res.json({ success: true, data: { teams: generated.map((team, index) => ({
       name: `Team ${index + 1}`,
       players: team.players,
       totalTier: team.totalTier,
-    })) } });
+    })), swaps: trace.swaps } });
   } catch (error) {
     console.error('Preview teams error:', error);
     res.status(500).json({ success: false, error: 'Không thể xem trước kết quả chia đội' });

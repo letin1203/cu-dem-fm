@@ -183,6 +183,7 @@
               <div
                 v-for="group in splitProgressGroups"
                 :key="group.label"
+                :ref="(element) => setSplitTierGroupRef(group.label, element as HTMLElement | null)"
                 class="rounded-lg border p-3"
                 :class="
                   teamSplitStep >= group.step
@@ -223,8 +224,9 @@
                 <span
                   class="flex h-7 w-7 items-center justify-center rounded-full bg-primary-600 text-sm font-bold text-white"
                   >{{ teamSplitStep + 1 }}</span
-                ><strong class="shrink-0">{{ teamSplitSteps[teamSplitStep]?.title }}</strong><div class="ml-6 h-11 min-w-0 flex-1 overflow-hidden text-left"><TransitionGroup name="ai-thought" tag="div" class="space-y-1"><p v-for="thought in aiThoughts" :key="thought.id" class="truncate text-xs text-primary-700">🤖 {{ thought.text }}</p></TransitionGroup></div>
+                ><strong class="shrink-0">{{ teamSplitSteps[teamSplitStep]?.title }}</strong><div class="ml-6 hidden h-11 min-w-0 flex-1 overflow-hidden text-left lg:block"><TransitionGroup name="ai-thought" tag="div" class="space-y-1"><p v-for="thought in aiThoughts" :key="thought.id" class="truncate text-xs text-primary-700">🤖 {{ thought.text }}</p></TransitionGroup></div>
               </div>
+              <div ref="aiThoughtBlockRef" class="mb-4 h-24 overflow-hidden rounded-lg border border-primary-200 bg-primary-50 p-2 lg:hidden"><p class="mb-1 text-[10px] font-semibold uppercase tracking-wide text-primary-700">AI đang suy nghĩ</p><TransitionGroup name="ai-thought" tag="div" class="space-y-0.5"><p v-for="thought in aiThoughts" :key="thought.id" class="truncate text-xs text-primary-700">🤖 {{ thought.text }}</p></TransitionGroup></div>
               <div
                 class="grid gap-3"
                 :class="
@@ -238,6 +240,7 @@
                 <div
                   v-for="(team, index) in processingTeams"
                   :key="index"
+                  :ref="(element) => setSplitTeamRef(index, element as HTMLElement | null)"
                   class="flex min-h-32 flex-col rounded-lg border bg-white p-3"
                   :class="teamClass(index)"
                 >
@@ -708,6 +711,9 @@ const players = ref<Player[]>([]),
   aiThoughtSequence = ref(0),
   viewportWidth = ref(window.innerWidth),
   viewportHeight = ref(window.innerHeight),
+  splitTierGroupRefs = ref<Record<string, HTMLElement | null>>({}),
+  splitTeamRefs = ref<Record<number, HTMLElement | null>>({}),
+  aiThoughtBlockRef = ref<HTMLElement | null>(null),
   showTeamResultModal = ref(false),
   showBattlePairsModal = ref(false),
   showTestMoneyModal = ref(false),
@@ -874,7 +880,7 @@ function randomizeHopeStars() {
 }
 function addAiThought(text: string) {
   aiThoughtSequence.value += 1;
-  aiThoughts.value = [...aiThoughts.value, { id: aiThoughtSequence.value, text }].slice(-2);
+  aiThoughts.value = [...aiThoughts.value, { id: aiThoughtSequence.value, text }].slice(-4);
 }
 function openTestMoneyModal() {
   const ranking = teams.value
@@ -930,6 +936,17 @@ function getTestMoneyChanges(player: Player, teamIndex: number) {
     changes,
     total: changes.reduce((sum, change) => sum + change.amount, 0),
   };
+}
+function setSplitTierGroupRef(label: string, element: HTMLElement | null) {
+  splitTierGroupRefs.value[label] = element;
+}
+function setSplitTeamRef(index: number, element: HTMLElement | null) {
+  splitTeamRefs.value[index] = element;
+}
+async function scrollMobileToSplitElement(element: HTMLElement | null, pause: (milliseconds: number) => Promise<unknown>) {
+  if (viewportWidth.value >= 1024 || !element) return;
+  element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  await pause(650);
 }
 function togglePlayer(player: Player) {
   const index = selected.value.findIndex((p) => p.id === player.id);
@@ -997,8 +1014,8 @@ async function splitTeams() {
     );
     const pause = (milliseconds: number) =>
       new Promise((resolve) => setTimeout(resolve, milliseconds));
-    // Keep the visualization slow enough to follow: approximately 60 seconds
-    // from opening this modal until the final result is shown.
+    // Each player is shown for a full three seconds so the allocation is easy
+    // to follow, regardless of the total number of selected players.
     await pause(5000);
     const swapTeamsByPlayerIds = (sourceTeams: Player[][], firstId: string, secondId: string): Player[][] => {
       const nextTeams = sourceTeams.map((team) => [...team]);
@@ -1024,10 +1041,8 @@ async function splitTeams() {
       (player: Player) => player.tier >= 3 && player.tier <= 4,
       (player: Player) => player.tier >= 5,
     ];
-    const playerDelay = Math.max(
-      650,
-      Math.round(Math.max(10000, 50000 - swaps.length * 1500) / selectedPlayers.value.length),
-    );
+    const playerDelay = 3000;
+    const tierLabels = ['Tier 1-2', 'Tier 3-4', 'Tier 5-6'];
     for (let index = 0; index < stages.length; index++) {
       teamSplitStep.value = index + 1;
       const stagePlayers = preBalanceTeams.map((team) => team.filter(stages[index]));
@@ -1036,10 +1051,13 @@ async function splitTeams() {
         for (let teamIndex = 0; teamIndex < stagePlayers.length; teamIndex++) {
           const player = stagePlayers[teamIndex][round];
           if (!player) continue;
+          addAiThought(`${player.name} hôm nay ${aiFormFactors[Math.floor(Math.random() * aiFormFactors.length)]} → Chia vào Đội ${teamIndex + 1}`);
+          await scrollMobileToSplitElement(aiThoughtBlockRef.value, pause);
+          await scrollMobileToSplitElement(splitTierGroupRefs.value[tierLabels[index]], pause);
+          await scrollMobileToSplitElement(splitTeamRefs.value[teamIndex], pause);
           const nextTeams = processingTeams.value.map((team) => [...team]);
           nextTeams[teamIndex].push(player);
           processingTeams.value = nextTeams;
-          addAiThought(`${player.name} hôm nay ${aiFormFactors[Math.floor(Math.random() * aiFormFactors.length)]} → Chia vào Đội ${teamIndex + 1}`);
           await pause(playerDelay);
         }
       }

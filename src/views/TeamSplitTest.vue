@@ -226,7 +226,7 @@
                   >{{ teamSplitStep + 1 }}</span
                 ><strong class="shrink-0">{{ teamSplitSteps[teamSplitStep]?.title }}</strong><div class="ml-6 hidden h-11 min-w-0 flex-1 overflow-hidden text-left lg:block"><TransitionGroup name="ai-thought" tag="div" class="space-y-1"><p v-for="thought in aiThoughts" :key="thought.id" class="truncate text-xs text-primary-700">🤖 {{ thought.text }}</p></TransitionGroup></div>
               </div>
-              <div ref="aiThoughtBlockRef" class="mb-4 h-24 overflow-hidden rounded-lg border border-primary-200 bg-primary-50 p-2 lg:hidden"><p class="mb-1 text-[10px] font-semibold uppercase tracking-wide text-primary-700">AI đang suy nghĩ</p><TransitionGroup name="ai-thought" tag="div" class="space-y-0.5"><p v-for="thought in aiThoughts" :key="thought.id" class="truncate text-xs text-primary-700">🤖 {{ thought.text }}</p></TransitionGroup></div>
+              <div ref="aiThoughtBlockRef" class="mb-4 h-24 overflow-hidden rounded-lg border border-primary-200 bg-primary-50 p-2 lg:hidden"><p class="mb-1 text-[10px] font-semibold uppercase tracking-wide text-primary-700">AI đang suy nghĩ</p><TransitionGroup name="ai-thought" tag="div"><p v-if="aiThoughts.length" :key="aiThoughts[aiThoughts.length - 1].id" class="max-h-16 overflow-hidden whitespace-normal break-words text-xs leading-4 text-primary-700">🤖 {{ aiThoughts[aiThoughts.length - 1].text }}</p></TransitionGroup></div>
               <div
                 class="grid gap-3"
                 :class="
@@ -745,14 +745,35 @@ const teamSplitSteps = [
       "Đảm bảo các cặp Battle ở hai đội khác nhau rồi hiển thị kết quả.",
   },
 ];
-const aiFormFactors = [
-  'đang có phong độ cao',
-  'vừa khởi động rất sung',
-  'được AI đánh giá di chuyển tốt',
-  'có chỉ số phối hợp tích cực',
-  'hôm nay trông rất tự tin',
-  'được dự báo có thể bùng nổ',
+const aiHealthTimeframes = [
+  'Đầu tuần',
+  'Hôm qua',
+  'Hôm kia',
+  'Ba ngày trước',
+  'Cuối tuần qua',
+  'Sáng hôm qua',
+  'Tối qua',
+  'Trong tuần vừa rồi',
+  'Mấy hôm trước',
+  'Gần đây',
 ];
+
+const aiHealthEvents = [
+  'vừa đi massage cổ vai gáy nên cơ thể đang thư giãn',
+  'đã thức tới 4 giờ sáng nên cần giữ sức',
+  'ngủ đủ tám tiếng liên tiếp nên thể trạng khá ổn định',
+  'hơi đau đầu do thay đổi thời tiết',
+  'vừa tập gym nhẹ nên cơ bắp còn căng',
+  'đã đi bộ nhiều nên đôi chân cần được cân bằng tải',
+  'ăn uống thất thường nên năng lượng có thể dao động',
+  'vừa cảm lạnh nhẹ và đang trong giai đoạn hồi phục',
+  'đã uống đủ nước đều đặn nên cơ thể có tín hiệu tốt',
+  'phải làm việc khuya liên tục nên nhịp sinh hoạt chưa ổn định',
+];
+
+const aiHealthReasons = aiHealthTimeframes.flatMap((timeframe) =>
+  aiHealthEvents.map((event) => `${timeframe} ${event}`),
+);
 const normalize = (text: string) =>
   text
     .normalize("NFD")
@@ -946,7 +967,7 @@ function setSplitTeamRef(index: number, element: HTMLElement | null) {
 async function scrollMobileToSplitElement(element: HTMLElement | null, pause: (milliseconds: number) => Promise<unknown>) {
   if (viewportWidth.value >= 1024 || !element) return;
   element.scrollIntoView({ behavior: 'smooth', block: 'center' });
-  await pause(650);
+  await pause(2000);
 }
 function togglePlayer(player: Player) {
   const index = selected.value.findIndex((p) => p.id === player.id);
@@ -990,7 +1011,7 @@ async function splitTeams() {
   teamSplitRunning.value = true;
   processingTeams.value = Array.from({ length: teamCount.value }, () => []);
   aiThoughts.value = [];
-  addAiThought('AI đang phân tích Tier, vị trí và phong độ hôm nay...');
+  addAiThought('AI đang rà soát thể trạng và lịch sinh hoạt của cầu thủ trong tuần qua...');
   try {
     const response = await apiClient.post("/tournaments/preview-teams", {
       playerIds: selectedPlayers.value.map((player) => player.id),
@@ -1051,14 +1072,18 @@ async function splitTeams() {
         for (let teamIndex = 0; teamIndex < stagePlayers.length; teamIndex++) {
           const player = stagePlayers[teamIndex][round];
           if (!player) continue;
-          addAiThought(`${player.name} hôm nay ${aiFormFactors[Math.floor(Math.random() * aiFormFactors.length)]} → Chia vào Đội ${teamIndex + 1}`);
+          addAiThought(
+            `${player.name}: ${aiHealthReasons[Math.floor(Math.random() * aiHealthReasons.length)]} → Chia vào Đội ${teamIndex + 1}`,
+          );
           await scrollMobileToSplitElement(aiThoughtBlockRef.value, pause);
           await scrollMobileToSplitElement(splitTierGroupRefs.value[tierLabels[index]], pause);
           await scrollMobileToSplitElement(splitTeamRefs.value[teamIndex], pause);
           const nextTeams = processingTeams.value.map((team) => [...team]);
           nextTeams[teamIndex].push(player);
           processingTeams.value = nextTeams;
-          await pause(playerDelay);
+          // Mobile waits at each scroll destination (AI → Tier → Team), rather
+          // than imposing the desktop's fixed three-second delay per player.
+          await pause(viewportWidth.value < 1024 ? 0 : playerDelay);
         }
       }
     }

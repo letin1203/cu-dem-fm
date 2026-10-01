@@ -2243,7 +2243,7 @@
                       <div
                         v-for="player in team.players"
                         :key="player.id"
-                        class="old-tournament-player-row grid w-full grid-cols-[minmax(0,1fr)_auto] items-center gap-2 p-2 bg-gray-50 rounded text-sm"
+                        class="old-tournament-player-row grid min-h-14 w-full grid-cols-[minmax(0,1fr)_auto] items-center gap-2 rounded bg-gray-50 p-2 text-sm"
                         :class="{
                           'bg-green-100 ring-1 ring-green-300': isTeamGoalkeeper(team.players, player),
                           'border-2 border-red-500': isCurrentUserPlayer(
@@ -2266,13 +2266,29 @@
                             }}</span>
                           </div>
                           <div class="min-w-0 text-left">
-                            <button
-                              type="button"
-                              class="block max-w-full truncate text-left font-medium text-gray-900 transition-colors hover:text-primary-700 hover:underline"
-                              :title="`Xem biến động tiền của ${player.name}`"
-                              @click="openTournamentPlayerMoneyHistory(tournament, player)"
-                            >{{ player.name }}</button>
-                            <span v-if="isPlayerBetting(tournament.id, player.id)" class="ml-1" title="Ngôi sao hy vọng">⭐</span>
+                            <div class="flex min-w-0 items-center">
+                              <button
+                                type="button"
+                                class="max-w-full truncate text-left font-medium text-gray-900 transition-colors hover:text-primary-700 hover:underline"
+                                :title="`Xem biến động tiền của ${player.name}`"
+                                @click="openTournamentPlayerMoneyHistory(tournament, player)"
+                              >{{ player.name }}</button>
+                              <span v-if="isPlayerBetting(tournament.id, player.id)" class="ml-1 shrink-0" title="Ngôi sao hy vọng">⭐</span>
+                              <button
+                                v-if="getAcceptedBattleOpponentName(tournament.id, player.id)"
+                                type="button"
+                                class="ml-1 inline-flex shrink-0 animate-pulse align-middle text-sm"
+                                :title="`Đã Battle với ${getAcceptedBattleOpponentName(tournament.id, player.id)}`"
+                                @click="openChallengeBattleDetailsModal(tournament)"
+                                >⚔️ {{ getAcceptedBattlePairNumber(tournament.id, player.id) }}</button
+                              >
+                              <span
+                                v-if="isPlayerWithWater(tournament.id, player.id)"
+                                class="ml-1 shrink-0"
+                                title="Đã đăng ký uống nước"
+                                >💧</span
+                              >
+                            </div>
                             <div
                               v-if="player.addedByUsername"
                               class="truncate text-[10px] leading-4 text-gray-500"
@@ -2286,20 +2302,6 @@
                               Bạn của {{ player.friendOwnerName }}
                             </div>
                           </div>
-                          <button
-                            v-if="getAcceptedBattleOpponentName(tournament.id, player.id)"
-                            type="button"
-                            class="ml-1 inline-flex animate-pulse align-middle text-sm"
-                            :title="`Đã Battle với ${getAcceptedBattleOpponentName(tournament.id, player.id)}`"
-                            @click="openChallengeBattleDetailsModal(tournament)"
-                            >⚔️ {{ getAcceptedBattlePairNumber(tournament.id, player.id) }}</button
-                          >
-                          <span
-                            v-if="isPlayerWithWater(tournament.id, player.id)"
-                            class="ml-1"
-                            title="Đã đăng ký uống nước"
-                            >💧</span
-                          >
                         </div>
                         <div class="flex shrink-0 justify-self-end items-center text-gray-600">
                           <span
@@ -2309,12 +2311,7 @@
                                 ? 'bg-green-100 text-green-700 font-semibold'
                                 : ''
                             "
-                            >{{ getPositionLabel(player.position)
-                            }}<template v-if="player.positionSecond"
-                              >-{{
-                                getPositionLabel(player.positionSecond)
-                              }}</template
-                            ></span
+                            >{{ getPositionLabel(player.position) }}</span
                           >
                           <span class="text-xs" :class="player.tier <= 3 ? 'font-bold' : ''">T{{ player.tier }}</span>
                         </div>

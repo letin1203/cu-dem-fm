@@ -1181,7 +1181,7 @@
                   >
                     <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 6h18M6 12h12m-9 6h6M7 4l-2 2 2 2m10 8 2 2-2 2" /></svg>
                   </button>
-                  <button type="button" class="rounded p-1 text-red-600 hover:bg-red-100" title="Xem các cặp thách đấu" aria-label="Xem các cặp thách đấu" @click="openChallengePairsModal(ongoingTournament.id)">⚔️</button>
+                  <button type="button" class="inline-flex h-4 w-4 items-center justify-center rounded text-xs leading-none text-red-600 hover:bg-red-100" title="Xem các cặp thách đấu" aria-label="Xem các cặp thách đấu" @click="openChallengePairsModal(ongoingTournament.id)">⚔️</button>
                   <button
                     v-if="authStore.hasAnyRole(['admin', 'mod'])"
                     type="button"
@@ -1490,7 +1490,7 @@
                   >
                     <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 6h18M6 12h12m-9 6h6M7 4l-2 2 2 2m10 8 2 2-2 2" /></svg>
                   </button>
-                  <button type="button" class="rounded p-1 text-red-600 hover:bg-red-100" title="Xem các cặp thách đấu" aria-label="Xem các cặp thách đấu" @click="openChallengePairsModal(ongoingTournament.id)">⚔️</button>
+                  <button type="button" class="inline-flex h-4 w-4 items-center justify-center rounded text-xs leading-none text-red-600 hover:bg-red-100" title="Xem các cặp thách đấu" aria-label="Xem các cặp thách đấu" @click="openChallengePairsModal(ongoingTournament.id)">⚔️</button>
                   <button
                     v-if="authStore.hasAnyRole(['admin', 'mod'])"
                     type="button"
@@ -1636,7 +1636,7 @@
                     'border-2 border-red-500': isCurrentUserPlayer(player.id),
                   }"
                 >
-                  <div class="flex min-w-0 items-center">
+                  <div class="flex min-w-0 items-center mobile-team-preview-player-content">
                     <button
                       v-if="
                         canShowChallengeIcon(
@@ -1646,7 +1646,7 @@
                         )
                       "
                       type="button"
-                      class="mr-1 text-sm"
+                      class="mr-1 inline-flex h-6 w-6 shrink-0 items-center justify-center text-sm"
                       :class="
                         isPendingOutgoingChallengeTarget(
                           ongoingTournament.id,
@@ -1704,7 +1704,7 @@
                       ✕
                     </button>
                     <div
-                      class="mr-2 flex h-6 w-6 shrink-0 items-center justify-center overflow-hidden rounded-full bg-gray-300 text-xs font-medium"
+                      class="mobile-team-preview-avatar mr-2 flex h-6 w-6 shrink-0 items-center justify-center overflow-hidden rounded-full bg-gray-300 text-xs font-medium"
                     >
                       <img
                         v-if="player.avatar"
@@ -10250,6 +10250,11 @@ const getDetailedMoneyChange = (
   .bg-gray-50.p-2.text-sm:not(.old-tournament-player-row) > .flex.min-w-0.items-center > button:first-child {
     position: absolute;
     left: 0;
+  }
+}
+@media (max-width: 1023px) {
+  .mobile-team-preview-player-content:not(:has(> button)) .mobile-team-preview-avatar {
+    margin-left: 1.75rem;
   }
 }
 </style>

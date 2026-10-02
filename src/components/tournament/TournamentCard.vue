@@ -277,7 +277,7 @@
                   <div class="w-6 h-6 bg-gray-300 rounded-full flex items-center justify-center mr-2 text-xs font-medium">
                     {{ player.name.charAt(0).toUpperCase() }}
                   </div>
-                  <span class="font-medium text-gray-900">{{ player.name }}</span>
+                  <span class="font-normal text-gray-900">{{ player.name }}</span>
                 </div>
                 <div class="flex items-center text-gray-600">
                   <span class="text-xs mr-1">{{ player.position }}</span>

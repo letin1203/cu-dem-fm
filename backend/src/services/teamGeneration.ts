@@ -23,6 +23,7 @@ export interface TeamGenerationTrace {
 
 const isGoalkeeper = (player: TeamGenerationPlayer) =>
   player.position === 'GK' || player.position === 'Goalkeeper';
+const shuffled = <T>(items: T[]) => [...items].sort(() => Math.random() - 0.5);
 
 /**
  * Single source of truth for random team splitting. Tier 1/2 and the first
@@ -39,9 +40,9 @@ export function generateBalancedTeams(
   const teams: GeneratedTeam[] = Array.from({ length: teamCount }, () => ({
     players: [], totalTier: 0, lockedPlayers: new Set<string>(),
   }));
-  const targets = teams.map((_, index) =>
-    Math.floor(players.length / teamCount) + (index < players.length % teamCount ? 1 : 0),
-  );
+  const teamOrder = shuffled(teams.map((_, index) => index));
+  const targets = teams.map(() => Math.floor(players.length / teamCount));
+  teamOrder.slice(0, players.length % teamCount).forEach((teamIndex) => { targets[teamIndex] += 1; });
   const add = (teamIndex: number, player: TeamGenerationPlayer, lock = false) => {
     teams[teamIndex].players.push(player);
     teams[teamIndex].totalTier += player.tier;
@@ -52,7 +53,7 @@ export function generateBalancedTeams(
 
   primaryGks.forEach((player, index) => {
     if (index < teamCount) {
-      add(index, player, true);
+      add(teamOrder[index], player, true);
       return;
     }
     const minGk = Math.min(...teams.map((team) => team.players.filter(isGoalkeeper).length));
@@ -69,8 +70,6 @@ export function generateBalancedTeams(
 
   const countTier = (team: GeneratedTeam, tier: number) =>
     team.players.filter((player) => player.tier === tier).length;
-  const shuffled = <T>(items: T[]) => [...items].sort(() => Math.random() - 0.5);
-
   for (let tier = 1; tier <= 6; tier++) {
     for (const player of shuffled(remaining.filter((candidate) => candidate.tier === tier))) {
       const eligible = teams
@@ -87,9 +86,17 @@ export function generateBalancedTeams(
           const tierOneDifference = countTier(a.team, 1) - countTier(b.team, 1);
           if (tierOneDifference) return tierOneDifference;
         }
+        // Tier 3 is the first flexible balancing tier. Teams that already
+        // received more Tier 1–2 players should receive fewer Tier 3 players.
+        if (tier === 3) {
+          const lowTierDifference = a.team.players.filter((player) => player.tier <= 2).length
+            - b.team.players.filter((player) => player.tier <= 2).length;
+          if (lowTierDifference) return lowTierDifference;
+        }
         const capacityDifference = a.team.players.length / targets[a.index] - b.team.players.length / targets[b.index];
         if (capacityDifference) return capacityDifference;
-        return a.team.totalTier - b.team.totalTier;
+        const tierDifference = a.team.totalTier - b.team.totalTier;
+        return tierDifference || Math.random() - 0.5;
       });
       add(candidates[0].index, player);
     }
@@ -259,5 +266,13 @@ export function generateBalancedTeams(
     teams[best.b].totalTier += first.tier - second.tier;
     trace?.swaps.push({ firstId: first.id, secondId: second.id });
   }
+  teams.forEach((team) => {
+    team.players.sort((first, second) => {
+      const goalkeeperDifference = Number(isGoalkeeper(second)) - Number(isGoalkeeper(first));
+      if (goalkeeperDifference) return goalkeeperDifference;
+      const tierDifference = first.tier - second.tier;
+      return tierDifference || first.name.localeCompare(second.name, 'vi');
+    });
+  });
   return teams;
 }

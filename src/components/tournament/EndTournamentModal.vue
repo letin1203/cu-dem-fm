@@ -68,7 +68,7 @@
                 >
                   <div class="flex justify-between items-start mb-2">
                     <div>
-                      <div class="font-medium text-gray-900">{{ player.name }}</div>
+                      <div class="font-normal text-gray-900">{{ player.name }}</div>
                       <div class="text-sm text-gray-600">Hiện tại: {{ player.money.toLocaleString('vi-VN') }} ₫</div>
                     </div>
                   </div>

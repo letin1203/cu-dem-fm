@@ -74,7 +74,7 @@
                 <img v-if="entry.player.avatar" :src="entry.player.avatar" :alt="entry.player.name" class="h-full w-full object-cover">
                 <span v-else class="flex h-full w-full items-center justify-center text-xl font-bold text-gray-500">{{ entry.player.name.charAt(0) }}</span>
               </div>
-              <p class="mt-3 max-w-full truncate font-semibold text-gray-900">{{ entry.player.name }}</p>
+              <p class="mt-3 max-w-full truncate font-normal text-gray-900">{{ entry.player.name }}</p>
               <p class="mt-1 text-lg font-bold" :class="rankTextClass(entry.rank)">{{ displayValue(entry.value) }}</p>
             </article>
           </div>
@@ -86,7 +86,7 @@
                 <img v-if="entry.player.avatar" :src="entry.player.avatar" :alt="entry.player.name" class="h-full w-full object-cover">
                 <span v-else class="flex h-full w-full items-center justify-center font-semibold text-gray-500">{{ entry.player.name.charAt(0) }}</span>
               </div>
-              <div class="min-w-0 flex-1"><p class="truncate font-medium text-gray-900">{{ entry.player.name }}</p><p class="text-xs text-gray-500">{{ entry.player.position }} · Tier {{ entry.player.tier }}</p></div>
+              <div class="min-w-0 flex-1"><p class="truncate font-normal text-gray-900">{{ entry.player.name }}</p><p class="text-xs text-gray-500">{{ entry.player.position }} · Tier {{ entry.player.tier }}</p></div>
               <strong class="whitespace-nowrap text-primary-700">{{ displayValue(entry.value) }}</strong>
             </div>
           </div>

@@ -48,7 +48,7 @@
             <div class="flex-1 min-w-0">
               <!-- Player Name Row with Water Toggle Button -->
               <div class="flex items-center justify-between w-full">
-                <h4 class="font-semibold text-gray-900 truncate">{{ player.name }}</h4>
+                <h4 class="font-normal text-gray-900 truncate">{{ player.name }}</h4>
                 
                 <!-- Water Toggle Button (right aligned) -->
                 <div class="flex items-center ml-4">

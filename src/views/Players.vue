@@ -114,7 +114,7 @@
                 </span>
               </div>
               <div>
-                <button type="button" class="text-left text-sm font-medium text-gray-900 hover:text-primary-700 hover:underline" @click="openPlayerProfile(player)">{{ index + 1 }}. {{ player.name }}</button>
+                <button type="button" class="text-left text-sm font-normal text-gray-900 hover:text-primary-700 hover:underline" @click="openPlayerProfile(player)">{{ index + 1 }}. {{ player.name }}</button>
                 <div class="text-xs text-gray-500">{{ displayPosition(player.position) }}<template v-if="player.positionSecond">-{{ displayPosition(player.positionSecond) }}</template> • {{ player.yearOfBirth }}</div>
               </div>
             </div>
@@ -219,7 +219,7 @@
                     </div>
                   </div>
                   <div class="ml-4">
-                    <button type="button" class="text-left text-sm font-medium text-gray-900 hover:text-primary-700 hover:underline" @click="openPlayerProfile(player)">{{ player.name }}</button>
+                    <button type="button" class="text-left text-sm font-normal text-gray-900 hover:text-primary-700 hover:underline" @click="openPlayerProfile(player)">{{ player.name }}</button>
                   </div>
                 </div>
               </td>

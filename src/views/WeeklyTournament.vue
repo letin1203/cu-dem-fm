@@ -633,7 +633,7 @@
                           }}</span>
                         </div>
                           <div class="min-w-0">
-                            <span class="truncate font-medium text-gray-900">{{
+                            <span class="truncate font-normal text-gray-900">{{
                               player.name
                             }}</span>
                             <span v-if="isPlayerBetting(ongoingTournament.id, player.id)" class="ml-1" title="Ngôi sao hy vọng">⭐</span>
@@ -1379,7 +1379,7 @@
                           }}</span>
                         </div>
                         <div class="min-w-0">
-                          <div class="truncate font-medium text-gray-900">
+                          <div class="truncate font-normal text-gray-900">
                             {{ player.name }}
                             <button
                               v-if="player.challenge?.status === 'ACCEPTED'"
@@ -1716,7 +1716,7 @@
                       }}</span>
                     </div>
                     <div class="min-w-0">
-                      <div class="truncate font-medium text-gray-900">
+                      <div class="truncate font-normal text-gray-900">
                         {{ player.name }}
                         <button
                           v-if="player.challenge?.status === 'ACCEPTED'"
@@ -2269,7 +2269,7 @@
                             <div class="flex min-w-0 items-center">
                               <button
                                 type="button"
-                                class="max-w-full truncate text-left font-medium text-gray-900 transition-colors hover:text-primary-700 hover:underline"
+                                class="max-w-full truncate text-left font-normal text-gray-900 transition-colors hover:text-primary-700 hover:underline"
                                 :title="`Xem biến động tiền của ${player.name}`"
                                 @click="openTournamentPlayerMoneyHistory(tournament, player)"
                               >{{ player.name }}</button>
@@ -2816,7 +2816,7 @@
           >
             <div class="flex justify-between gap-3">
               <div class="min-w-0">
-                <p class="font-medium text-gray-900">{{ item.player.name }}</p>
+                <p class="font-normal text-gray-900">{{ item.player.name }}</p>
                 <p class="text-xs text-gray-500">{{ item.description }}</p>
               </div>
               <span
@@ -4830,6 +4830,15 @@
           Hủy
         </button>
         <button
+          v-if="authStore.currentUser?.role === 'admin'"
+          type="button"
+          class="btn-secondary"
+          :disabled="teamGenerationLoading || !canGenerateTeams(teamCountModalTournamentId || '', selectedTeamField)"
+          @click="previewGenerateRandomTeams"
+        >
+          Test chia đội
+        </button>
+        <button
           type="button"
           class="btn-primary"
           :disabled="
@@ -4848,41 +4857,26 @@
   </div>
 
   <!-- Team Split Progress Modal -->
-  <div
-    v-if="showLiveTeamSplitModal"
-    class="fixed inset-0 z-[70] flex items-center justify-center overflow-y-auto bg-black/50 p-4"
-  >
-    <div class="flex max-h-[90vh] w-full max-w-7xl flex-col overflow-hidden rounded-xl bg-white shadow-xl">
-      <div class="border-b p-5">
-        <h2 class="text-lg font-semibold text-primary-700">Đang thực hiện chia team</h2>
-        <p class="mt-1 text-sm text-gray-500">{{ liveTeamSplitDescription }}</p>
-      </div>
-      <div class="min-h-0 space-y-5 overflow-y-auto p-5">
-        <div class="rounded-lg border border-gray-200 bg-gray-50 p-4">
-          <div class="mb-3 flex items-center gap-3">
-            <span class="flex h-7 w-7 items-center justify-center rounded-full bg-primary-600 text-sm font-bold text-white">{{ liveTeamSplitStage }}</span>
-            <strong>{{ liveTeamSplitTitle }}</strong>
-            <div class="hidden min-w-0 flex-1 overflow-hidden text-left lg:block">
-              <p class="line-clamp-2 text-xs leading-4 text-primary-700">🤖 {{ liveTeamSplitThought }}</p>
-            </div>
-          </div>
-          <div class="mb-4 rounded-lg border border-primary-200 bg-primary-50 p-2 lg:hidden">
-            <p class="mb-1 text-[10px] font-semibold uppercase tracking-wide text-primary-700">AI đang suy nghĩ</p>
-            <p class="min-h-8 text-xs leading-4 text-primary-700">🤖 {{ liveTeamSplitThought }}</p>
-          </div>
+  <TeamSplitProgressModal ref="liveTeamSplitModalRef" v-if="showLiveTeamSplitModal" :model-value="true" :team-count="liveTeamSplitTeams.length" :stage="liveTeamSplitStage" :title="liveTeamSplitTitle" :description="liveTeamSplitDescription" :is-assigning-goalkeeper="liveTeamSplitTitle === 'Đang phân chia GK'" :desktop-ai-words="liveDesktopAiWords" :mobile-ai-words="liveMobileAiWords" :ai-sequence="liveAiSequence" max-width-class="max-w-7xl">
+      <template #groups>
+        <div class="grid gap-3 md:grid-cols-3">
+          <div v-for="group in liveSplitProgressGroups" :key="group.label" class="rounded-lg border p-3" :class="liveTeamSplitStage >= group.step ? 'border-primary-300 bg-primary-50' : 'border-gray-200 bg-gray-50 opacity-60'"><p class="mb-3 text-center text-sm font-semibold text-gray-800">{{ group.label }}</p><TransitionGroup name="live-split-chip" tag="div" class="flex flex-wrap justify-center gap-2"><div v-for="player in group.players" :key="player.id" class="w-16 text-center"><img v-if="player.avatar" :src="player.avatar" class="mx-auto h-9 w-9 rounded-full object-cover" /><span v-else class="mx-auto flex h-9 w-9 items-center justify-center rounded-full bg-gray-200 text-xs">{{ player.name?.[0] }}</span><span class="mt-1 block truncate text-[10px] font-medium">{{ player.name }}</span></div></TransitionGroup></div>
+        </div>
+      </template>
+      <template #teams>
           <div class="grid gap-3" :class="teamGridClass(liveTeamSplitTeams.length)">
             <div v-for="(team, index) in liveTeamSplitTeams" :key="index" class="flex min-h-32 flex-col rounded-lg border bg-white p-3" :class="getLiveTeamBorderClass(index)">
               <div class="mb-3 flex items-center gap-2"><span class="flex h-7 w-7 items-center justify-center rounded-full text-sm font-bold text-white" :class="getLiveTeamNumberClass(index)">{{ index + 1 }}</span><div><p class="text-sm font-semibold">Team {{ index + 1 }} <span class="font-medium" :class="getLiveTeamTextClass(index)">- {{ getTeamShirtLabel(index) }}</span></p><p class="text-xs text-gray-500">{{ team.length }} cầu thủ</p></div></div>
-              <TransitionGroup name="live-team-chip" tag="div" class="space-y-1"><div v-for="player in team" :key="player.id" class="flex items-center justify-between rounded p-1.5 text-xs" :class="isGoalkeeper(player.position) ? 'border border-green-300 bg-green-100' : 'bg-gray-50'"><div class="flex min-w-0 items-center"><img v-if="player.avatar" :src="player.avatar" class="mr-1.5 h-6 w-6 rounded-full object-cover" /><span v-else class="mr-1.5 flex h-6 w-6 items-center justify-center rounded-full bg-gray-200">{{ player.name?.[0] }}</span><span class="truncate font-medium">{{ player.name }}</span><span v-if="player.challenge" class="ml-1 text-red-600">⚔️</span><span v-if="player.hasBet" class="ml-1">⭐</span></div><span :class="player.tier <= 3 ? 'font-bold' : 'text-gray-600'">{{ getPositionLabel(player.position) }} · T{{ player.tier }}</span></div></TransitionGroup>
+              <TransitionGroup name="live-team-chip" tag="div" class="space-y-1"><div v-for="player in team" :key="player.id" class="flex items-center justify-between rounded p-1.5 text-xs" :class="isGoalkeeper(player.position) ? 'border border-green-300 bg-green-100' : 'bg-gray-50'"><div class="flex min-w-0 items-center"><img v-if="player.avatar" :src="player.avatar" class="mr-1.5 h-6 w-6 rounded-full object-cover" /><span v-else class="mr-1.5 flex h-6 w-6 items-center justify-center rounded-full bg-gray-200">{{ player.name?.[0] }}</span><span class="truncate">{{ player.name }}</span><span v-if="player.challenge" class="ml-1 text-red-600">⚔️</span><span v-if="player.hasBet" class="ml-1">⭐</span></div><span class="text-gray-600">{{ getPositionLabel(player.position) }} · <span :class="player.tier <= 3 ? 'font-bold text-gray-900' : ''">T{{ player.tier }}</span></span></div></TransitionGroup>
               <p v-if="!team.length" class="py-7 text-center text-xs text-gray-400">Đang chờ</p>
               <div v-if="team.length" class="mt-auto flex justify-between border-t pt-2 text-[10px]"><span class="rounded border border-primary-300 bg-primary-50 px-1.5 py-0.5 font-bold text-primary-700">Tổng tier: {{ team.reduce((sum, player) => sum + player.tier, 0) }}</span><span class="rounded border border-red-300 bg-red-50 px-1.5 py-0.5 font-bold text-red-700">TB: {{ (team.reduce((sum, player) => sum + player.tier, 0) / team.length).toFixed(2) }}</span></div>
             </div>
           </div>
-        </div>
-      </div>
-      <div v-if="liveTeamSplitDone" class="flex justify-end border-t p-4"><button type="button" class="btn-primary" @click="closeLiveTeamSplitModal">Xem kết quả</button></div>
-    </div>
-  </div>
+      </template>
+      <template v-if="liveTeamSplitDone" #footer><div class="flex justify-end"><button type="button" class="btn-primary" @click="closeLiveTeamSplitModal">Xem kết quả</button></div></template>
+  </TeamSplitProgressModal>
+
+  <div v-if="showLivePreviewResultModal" class="fixed inset-0 z-[86] flex items-center justify-center bg-black/50 p-4"><div class="flex max-h-[90vh] w-full max-w-7xl flex-col overflow-hidden rounded-xl bg-white shadow-xl"><div class="flex items-start justify-between border-b p-5"><div><h2 class="text-lg font-semibold text-primary-700">Kết quả chia team</h2><p class="mt-1 text-sm text-gray-500">Kết quả test — chưa lưu vào giải đấu.</p></div><button type="button" class="text-2xl text-gray-400" @click="showLivePreviewResultModal = false">×</button></div><div class="min-h-0 overflow-y-auto p-5"><div class="grid gap-3" :class="teamGridClass(liveTeamSplitTeams.length)"><div v-for="(team, index) in liveTeamSplitTeams" :key="index" class="flex min-h-32 flex-col rounded-lg border bg-white p-3" :class="getLiveTeamBorderClass(index)"><div class="mb-3 flex items-center gap-2"><span class="flex h-7 w-7 items-center justify-center rounded-full text-sm font-bold text-white" :class="getLiveTeamNumberClass(index)">{{ index + 1 }}</span><div><p class="text-sm font-semibold">Team {{ index + 1 }} <span class="font-medium" :class="getLiveTeamTextClass(index)">- {{ getTeamShirtLabel(index) }}</span></p><p class="text-xs text-gray-500">{{ team.length }} cầu thủ</p></div></div><div class="space-y-1"><div v-for="player in team" :key="player.id" class="flex items-center justify-between rounded bg-gray-50 p-1.5 text-xs" :class="isGoalkeeper(player.position) ? 'border border-green-300 bg-green-100' : 'bg-gray-50'"><span class="flex min-w-0 items-center"><img v-if="player.avatar" :src="player.avatar" class="mr-1.5 h-6 w-6 rounded-full object-cover"><span class="truncate font-medium">{{ player.name }}</span></span><span :class="player.tier <= 3 ? 'font-bold' : 'text-gray-600'">{{ getPositionLabel(player.position) }} · T{{ player.tier }}</span></div></div><div class="mt-auto flex justify-between border-t pt-2 text-[10px]"><span class="rounded border border-primary-300 bg-primary-50 px-1.5 py-0.5 font-bold text-primary-700">Tổng tier: {{ team.reduce((sum, player) => sum + player.tier, 0) }}</span><span class="rounded border border-red-300 bg-red-50 px-1.5 py-0.5 font-bold text-red-700">TB: {{ (team.reduce((sum, player) => sum + player.tier, 0) / team.length).toFixed(2) }}</span></div></div></div></div><div class="flex justify-end border-t p-4"><button type="button" class="btn-primary" @click="showLivePreviewResultModal = false">Đóng</button></div></div></div>
 
   <!-- Clear Teams Confirmation Modal -->
   <div
@@ -5575,7 +5569,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onBeforeUnmount } from "vue";
+import { ref, computed, onMounted, onBeforeUnmount, nextTick } from "vue";
 import { useToast } from "vue-toastification";
 import { useTournamentsStore } from "../stores/tournaments";
 import { useAuthStore } from "../stores/auth";
@@ -5591,6 +5585,7 @@ import type {
 } from "../types";
 import { apiClient } from "../api/client";
 import { formatMoney } from "../utils/money";
+import TeamSplitProgressModal from "../components/TeamSplitProgressModal.vue";
 
 const toast = useToast();
 const tournamentsStore = useTournamentsStore();
@@ -5929,6 +5924,18 @@ const liveTeamSplitDescription = ref('Tách cầu thủ thành các nhóm để 
 const liveTeamSplitThought = ref('AI đang phân tích danh sách cầu thủ...');
 const liveTeamSplitStage = ref(1);
 const liveTeamSplitDone = ref(false);
+const liveSplitAllPlayers = ref<any[]>([]);
+const liveSplitDepartingPlayerIds = ref<Set<string>>(new Set());
+const liveSplitProcessedPlayerIds = ref<Set<string>>(new Set());
+const liveMobileAiWords = ref<string[]>([]);
+const liveDesktopAiWords = ref<string[]>([]);
+const liveAiSequence = ref(0);
+const liveTeamSplitModalRef = ref<{ scrollToAiThought: () => Promise<void> } | null>(null);
+const liveTeamSplitContentRef = ref<HTMLElement | null>(null);
+const liveAiThoughtRef = ref<HTMLElement | null>(null);
+const showLivePreviewResultModal = ref(false);
+const livePreviewMode = ref(false);
+const livePlayerStatsInsights = ref<Record<string, { wins: number; losses: number; contribution: number; attendance: number }>>({});
 const mobileTeamPreviewField = ref<"FIELD_5" | "FIELD_7">("FIELD_5");
 
 const showDeleteCostModal = ref(false);
@@ -8091,9 +8098,70 @@ const getLiveTeamTextClass = (index: number): string =>
   ['text-green-700', 'text-orange-700', 'text-blue-700', 'text-gray-700'][index] || 'text-gray-700';
 const getTeamShirtLabel = (index: number): string =>
   ['Áo xanh lá', 'Áo cam', 'Áo xanh dương', 'Áo trắng'][index] || 'Áo trắng';
+const getLivePlayerStatsInsight = (player: any): string => {
+  const stats = livePlayerStatsInsights.value[player.id];
+  if (!stats || (!stats.wins && !stats.losses && !stats.contribution && !stats.attendance)) return 'chưa có dữ liệu Stats từ các giải đã hoàn thành';
+  return `Thắng ${stats.wins} · thua ${stats.losses} · góp quỹ ${Math.round(stats.contribution / 1000).toLocaleString('vi-VN')}K · tham gia ${stats.attendance} giải`;
+};
+const loadLivePlayerStatsInsights = async (): Promise<void> => {
+  if (Object.keys(livePlayerStatsInsights.value).length) return;
+  try {
+    const response = await apiClient.getPlayerLeaderboard();
+    const metrics = (response.data as any)?.metrics;
+    if (Array.isArray(metrics)) livePlayerStatsInsights.value = metrics.reduce((result: Record<string, { wins: number; losses: number; contribution: number; attendance: number }>, metric: any) => {
+      result[metric.playerId] = { wins: Number(metric.wins) || 0, losses: Number(metric.losses) || 0, contribution: Number(metric.contribution) || 0, attendance: Number(metric.attendance) || 0 };
+      return result;
+    }, {});
+  } catch { /* Animation remains available if Stats cannot be loaded. */ }
+};
+const liveSplitProgressGroups = computed(() => {
+  const visible = (filter: (player: any) => boolean) => liveSplitAllPlayers.value.filter(
+    (player) => filter(player) && !liveSplitDepartingPlayerIds.value.has(player.id) && !liveSplitProcessedPlayerIds.value.has(player.id),
+  );
+  return [
+    { label: 'Tier 1–2', step: 2, players: visible((player) => !isGoalkeeper(player.position) && player.tier <= 2) },
+    { label: 'Tier 3–4', step: 3, players: visible((player) => !isGoalkeeper(player.position) && player.tier >= 3 && player.tier <= 4) },
+    { label: 'Tier 5–6', step: 4, players: visible((player) => !isGoalkeeper(player.position) && player.tier >= 5) },
+  ];
+});
+
+const smoothScrollLiveProgressTo = (element: HTMLElement | null, alignment: 'start' | 'center' = 'start'): Promise<void> => {
+  const container = liveTeamSplitContentRef.value;
+  if (!element || !container || window.innerWidth >= 1024) return Promise.resolve();
+  const offset = element.getBoundingClientRect().top - container.getBoundingClientRect().top;
+  const target = alignment === 'center' ? offset - (container.clientHeight - element.clientHeight) / 2 : offset - 8;
+  const from = container.scrollTop;
+  const to = Math.max(0, Math.min(container.scrollHeight - container.clientHeight, from + target));
+  const distance = to - from;
+  if (Math.abs(distance) < 2) return Promise.resolve();
+  const duration = Math.min(1100, Math.max(550, Math.abs(distance) * 1.25));
+  const start = performance.now();
+  return new Promise((resolve) => {
+    const tick = (now: number) => {
+      const progress = Math.min(1, (now - start) / duration);
+      const eased = progress < 0.5 ? 4 * progress * progress * progress : 1 - Math.pow(-2 * progress + 2, 3) / 2;
+      container.scrollTop = from + distance * eased;
+      if (progress < 1) requestAnimationFrame(tick);
+      else resolve();
+    };
+    requestAnimationFrame(tick);
+  });
+};
+
+const animateLiveAiThought = async (thought: string, pause: (milliseconds: number) => Promise<unknown>): Promise<void> => {
+  const words = thought.match(/[^\s]+|\n/g) || [];
+  const target = window.innerWidth < 1024 ? liveMobileAiWords : liveDesktopAiWords;
+  target.value = [];
+  const interval = Math.max(40, Math.floor(2000 / Math.max(words.length, 1)));
+  for (const word of words) {
+    target.value = [...target.value, word];
+    await pause(interval);
+  }
+};
 const closeLiveTeamSplitModal = (): void => {
   if (!liveTeamSplitDone.value) return;
   showLiveTeamSplitModal.value = false;
+  if (livePreviewMode.value) showLivePreviewResultModal.value = true;
 };
 
 const openTeamCountModal = (tournamentId: string): void => {
@@ -8120,17 +8188,46 @@ const confirmGenerateRandomTeams = async (): Promise<void> => {
   );
 };
 
-const playLiveTeamSplit = async (finalTeams: Array<{ players?: any[] }>): Promise<void> => {
+const previewGenerateRandomTeams = async (): Promise<void> => {
+  const tournamentId = teamCountModalTournamentId.value;
+  if (!tournamentId || teamGenerationLoading.value || !canGenerateTeams(tournamentId, selectedTeamField.value)) return;
+  try {
+    teamGenerationLoading.value = true;
+    if (!attendanceDetailsMap.value.has(tournamentId)) await fetchAttendanceDetails(tournamentId);
+    const playerIds = getTeamPreviewPlayers(tournamentId, selectedTeamField.value).map((player: any) => player.id);
+    const response = await apiClient.post('/tournaments/preview-teams', { playerIds, teamCount: selectedTeamCount.value });
+    if (!response.success || !response.data) {
+      toast.error('Không thể tạo kết quả test');
+      return;
+    }
+    livePreviewMode.value = true;
+    closeTeamCountModal();
+    await playLiveTeamSplit((response.data as any).teams || [], (response.data as any).swaps || []);
+    toast.info('Đây là kết quả test, chưa được lưu vào giải đấu.');
+  } catch (err: any) {
+    toast.error(err.response?.data?.error || 'Không thể test chia đội');
+  } finally {
+    teamGenerationLoading.value = false;
+  }
+};
+
+const playLiveTeamSplit = async (finalTeams: Array<{ players?: any[] }>, swaps: Array<{ firstId: string; secondId: string }> = []): Promise<void> => {
   const pause = (milliseconds: number) => new Promise((resolve) => setTimeout(resolve, milliseconds));
   const teams = finalTeams.map((team) => [...(team.players || [])]);
+  await loadLivePlayerStatsInsights();
   liveTeamSplitTeams.value = teams.map(() => []);
+  liveSplitAllPlayers.value = teams.flat();
+  liveSplitDepartingPlayerIds.value = new Set();
+  liveSplitProcessedPlayerIds.value = new Set();
+  liveMobileAiWords.value = [];
+  liveDesktopAiWords.value = [];
   liveTeamSplitDone.value = false;
   liveTeamSplitStage.value = 1;
   liveTeamSplitTitle.value = 'Phân loại theo Tier';
   liveTeamSplitDescription.value = 'Tách cầu thủ thành các nhóm để chuẩn bị chia đội.';
   liveTeamSplitThought.value = 'AI đang rà soát danh sách cầu thủ tham gia...';
   showLiveTeamSplitModal.value = true;
-  await pause(500);
+  await nextTick();
 
   const groups = [
     { title: 'Đang phân chia GK', description: 'Ưu tiên phân bổ thủ môn cho các đội.', filter: (player: any) => isGoalkeeper(player.position) },
@@ -8146,21 +8243,60 @@ const playLiveTeamSplit = async (finalTeams: Array<{ players?: any[] }>): Promis
     liveTeamSplitDescription.value = group.description;
     const perTeam = teams.map((team) => team.filter(group.filter));
     const rounds = Math.max(0, ...perTeam.map((team) => team.length));
-    for (let round = 0; round < rounds; round += 1) for (let teamIndex = 0; teamIndex < perTeam.length; teamIndex += 1) {
-      const player = perTeam[teamIndex][round];
-      if (!player) continue;
-      liveTeamSplitThought.value = `${player.name}: AI đánh giá Tier ${player.tier} và vị trí ${getPositionLabel(player.position)} → Chia vào Đội ${teamIndex + 1}`;
-      await pause(900);
+    for (let round = 0; round < rounds; round += 1) {
+      const assignments = perTeam.map((team, teamIndex) => ({ player: team[round], teamIndex })).filter((item) => item.player);
+      if (!assignments.length) continue;
+      const thought = assignments.map(({ player, teamIndex }) => `🤖 ${player.name}: ${getLivePlayerStatsInsight(player)} → Team ${teamIndex + 1}`).join('\n');
+      liveTeamSplitThought.value = thought;
+      liveAiSequence.value += 1;
+      await liveTeamSplitModalRef.value?.scrollToAiThought();
+      await pause(2000);
+      await animateLiveAiThought(thought, pause);
+      await pause(3000);
+      liveSplitDepartingPlayerIds.value = new Set(assignments.map(({ player }) => player.id));
+      await nextTick();
+      await pause(2000);
       const next = liveTeamSplitTeams.value.map((team) => [...team]);
-      next[teamIndex].push(player);
+      assignments.forEach(({ player, teamIndex }) => next[teamIndex].push(player));
       liveTeamSplitTeams.value = next;
+      liveSplitProcessedPlayerIds.value = new Set([...liveSplitProcessedPlayerIds.value, ...assignments.map(({ player }) => player.id)]);
+      liveSplitDepartingPlayerIds.value = new Set();
+      await nextTick();
       await pause(700);
+    }
+    if (groupIndex === 2) {
+      const available = new Set(liveTeamSplitTeams.value.flat().map((player) => player.id));
+      for (const swap of swaps.filter((item) => available.has(item.firstId) && available.has(item.secondId))) {
+        const firstTeam = liveTeamSplitTeams.value.findIndex((team) => team.some((player) => player.id === swap.firstId));
+        const secondTeam = liveTeamSplitTeams.value.findIndex((team) => team.some((player) => player.id === swap.secondId));
+        if (firstTeam < 0 || secondTeam < 0 || firstTeam === secondTeam) continue;
+        const first = liveTeamSplitTeams.value[firstTeam].find((player) => player.id === swap.firstId);
+        const second = liveTeamSplitTeams.value[secondTeam].find((player) => player.id === swap.secondId);
+        if (!first || !second) continue;
+        liveTeamSplitStage.value = 4;
+        liveTeamSplitTitle.value = 'Cân bằng Tier tạm thời';
+        const thought = `🤖 Cân bằng Tier: ${first.name} (T${first.tier}, Team ${firstTeam + 1}) ↔ ${second.name} (T${second.tier}, Team ${secondTeam + 1})`;
+        liveTeamSplitThought.value = thought;
+        liveAiSequence.value += 1;
+        await liveTeamSplitModalRef.value?.scrollToAiThought();
+        await pause(2000);
+        await animateLiveAiThought(thought, pause);
+        await pause(3000);
+        const next = liveTeamSplitTeams.value.map((team) => [...team]);
+        next[firstTeam] = next[firstTeam].map((player) => player.id === first.id ? second : player);
+        next[secondTeam] = next[secondTeam].map((player) => player.id === second.id ? first : player);
+        liveTeamSplitTeams.value = next;
+        await nextTick();
+        await pause(2000);
+      }
     }
   }
   liveTeamSplitStage.value = 5;
   liveTeamSplitTitle.value = 'Chốt kết quả';
   liveTeamSplitDescription.value = 'Đội hình đã được lưu cho giải đấu.';
   liveTeamSplitThought.value = 'AI đã hoàn tất chia đội cân bằng.';
+  liveMobileAiWords.value = ['🤖', 'AI', 'đã', 'hoàn', 'tất', 'chia', 'đội', 'cân', 'bằng.'];
+  liveDesktopAiWords.value = [...liveMobileAiWords.value];
   liveTeamSplitDone.value = true;
 };
 
@@ -8177,6 +8313,7 @@ const generateRandomTeams = async (
 
   try {
     teamGenerationLoading.value = true;
+    livePreviewMode.value = false;
 
     const response = await apiClient.post(
       `/tournaments/${tournamentId}/generate-teams`,
@@ -10232,6 +10369,23 @@ const getDetailedMoneyChange = (
 .live-team-chip-leave-to {
   opacity: 0;
   transform: translateY(18px) scale(0.78);
+}
+.live-split-chip-enter-active,
+.live-split-chip-leave-active {
+  transition: all 1.8s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.live-split-chip-leave-to {
+  opacity: 0;
+  transform: scale(0.65);
+}
+.live-ai-word-reveal {
+  display: inline-block;
+  margin-right: 0.25rem;
+  animation: live-ai-word-reveal 0.22s ease-out both;
+}
+@keyframes live-ai-word-reveal {
+  from { opacity: 0; transform: translateY(3px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 /* Reserve the battle-icon slot so every external attendance row aligns. */
 @media (min-width: 1024px) {

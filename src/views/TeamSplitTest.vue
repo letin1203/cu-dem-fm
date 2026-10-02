@@ -136,7 +136,7 @@
                 v-else
                 class="flex h-8 w-8 items-center justify-center rounded-full bg-gray-200"
                 >{{ player.name[0] }}</span
-              ><span class="min-w-0 flex-1 truncate font-medium">{{
+              ><span class="min-w-0 flex-1 truncate font-normal">{{
                 player.name
               }}</span
               ><button
@@ -158,24 +158,8 @@
         </div>
       </section>
     </div>
-    <Teleport to="body">
-      <div
-        v-if="showTeamSplitProgressModal"
-        class="fixed inset-0 z-[85] flex items-center justify-center overflow-y-auto bg-black/50 p-4"
-      >
-        <div
-          class="flex max-h-[90vh] w-full max-w-6xl flex-col overflow-hidden rounded-xl bg-white shadow-xl"
-          :style="teamSplitModalStyle"
-        >
-          <div class="border-b p-5">
-            <h2 class="text-lg font-semibold text-primary-700">
-              Đang thực hiện chia team
-            </h2>
-            <p class="mt-1 text-sm text-gray-500">
-              {{ teamSplitSteps[teamSplitStep]?.description }}
-            </p>
-          </div>
-          <div class="min-h-0 space-y-5 overflow-y-auto p-5">
+    <TeamSplitProgressModal ref="teamSplitProgressModalRef" v-if="showTeamSplitProgressModal" :model-value="true" :team-count="teamCount" :stage="teamSplitStep + 1" :title="teamSplitSteps[teamSplitStep]?.title || ''" :description="teamSplitSteps[teamSplitStep]?.description || ''" :is-assigning-goalkeeper="isAssigningGoalkeeper" :desktop-ai-words="desktopAiThoughtWords" :mobile-ai-words="mobileAiThoughtWords" :ai-sequence="aiThoughtSequence" max-width-class="max-w-6xl" :modal-style="teamSplitModalStyle">
+          <template #groups>
             <div class="grid gap-3 md:grid-cols-3">
               <div
                 v-for="group in splitProgressGroups"
@@ -216,14 +200,8 @@
                 >
               </div>
             </div>
-            <div class="rounded-lg border border-gray-200 bg-gray-50 p-4">
-              <div class="mb-3 flex items-center gap-3">
-                <span
-                  class="flex h-7 w-7 items-center justify-center rounded-full bg-primary-600 text-sm font-bold text-white"
-                  >{{ teamSplitStep + 1 }}</span
-                ><strong class="shrink-0">{{ isAssigningGoalkeeper ? 'Đang phân chia GK' : teamSplitSteps[teamSplitStep]?.title }}</strong><div class="ml-6 hidden min-w-0 flex-1 overflow-hidden text-left lg:block" :style="{ height: `${teamCount * 16}px` }"><TransitionGroup name="ai-thought" tag="div" class="space-y-0"><p v-for="thought in aiThoughts.slice(-1)" :key="thought.id" class="overflow-hidden whitespace-pre-line text-xs leading-4 text-primary-700" :style="{ height: `${teamCount * 16}px` }"><template v-if="desktopAiThoughtAnimating && thought.id === aiThoughtSequence"><template v-for="(word, wordIndex) in desktopAiThoughtWords" :key="`${thought.id}-${wordIndex}`"><br v-if="word === '\n'" /><span v-else class="ai-word-reveal">{{ word }}</span></template></template><template v-else>{{ thought.text }}</template></p></TransitionGroup></div>
-              </div>
-              <div ref="aiThoughtBlockRef" class="mb-4 overflow-hidden rounded-lg border border-primary-200 bg-primary-50 p-2 lg:hidden" :style="{ height: `${teamCount * 16 + 36}px` }"><p class="mb-1 text-[10px] font-semibold uppercase tracking-wide text-primary-700">AI đang suy nghĩ</p><p class="overflow-hidden whitespace-pre-line break-words text-xs leading-4 text-primary-700" :style="{ height: `${teamCount * 16}px` }"><template v-if="mobileAiThoughtAnimating || mobileAiThoughtWords.length"><template v-for="(word, wordIndex) in mobileAiThoughtWords" :key="`${aiThoughtSequence}-${wordIndex}`"><br v-if="word === '\n'" /><span v-else class="ai-word-reveal">{{ word }}</span></template></template><template v-else>{{ aiThoughts[aiThoughts.length - 1]?.text }}</template></p></div>
+          </template>
+          <template #teams>
               <div
                 class="grid gap-3"
                 :class="
@@ -260,7 +238,7 @@
                         v-else
                         class="mr-1.5 flex h-6 w-6 items-center justify-center rounded-full bg-gray-200 text-xs"
                         >{{ player.name[0] }}</span
-                      ><span class="truncate font-medium">{{ player.name }}</span><span v-if="battlePairNumberByPlayerId[player.id]" class="ml-1 shrink-0 text-xs text-red-600" :title="`Cặp Battle #${battlePairNumberByPlayerId[player.id]}`">⚔️ {{ battlePairNumberByPlayerId[player.id] }}</span><span v-if="hopeStarPlayerIds.has(player.id)" class="ml-1 shrink-0 text-sm" title="Ngôi sao hy vọng">⭐</span></div><span :class="player.tier <= 3 ? 'font-bold' : 'text-gray-600'">{{ player.position }} · T{{ player.tier }}</span>
+                      ><span class="truncate">{{ player.name }}</span><span v-if="battlePairNumberByPlayerId[player.id]" class="ml-1 shrink-0 text-xs text-red-600" :title="`Cặp Battle #${battlePairNumberByPlayerId[player.id]}`">⚔️ {{ battlePairNumberByPlayerId[player.id] }}</span><span v-if="hopeStarPlayerIds.has(player.id)" class="ml-1 shrink-0 text-sm" title="Ngôi sao hy vọng">⭐</span></div><span class="text-gray-600">{{ player.position }} · <span :class="player.tier <= 3 ? 'font-bold text-gray-900' : ''">T{{ player.tier }}</span></span>
                     </div></TransitionGroup
                   >
                   <p
@@ -272,12 +250,9 @@
                   <div v-if="team.length" class="mt-auto flex justify-between border-t pt-2 text-[10px] text-gray-600"><span class="rounded border border-primary-300 bg-primary-50 px-1.5 py-0.5 font-bold text-primary-700">Tổng tier: {{ team.reduce((sum, player) => sum + player.tier, 0) }}</span><span class="rounded border border-red-300 bg-red-50 px-1.5 py-0.5 font-bold text-red-700">TB: {{ (team.reduce((sum, player) => sum + player.tier, 0) / team.length).toFixed(2) }}</span></div>
                 </div>
               </div>
-            </div>
-          </div>
-          <div v-if="teamSplitComplete" class="flex justify-end gap-3 border-t p-4"><button type="button" class="btn-secondary" :disabled="teamSplitRunning" @click="splitTeams">Chia team lại</button><button type="button" class="btn-primary" @click="openTeamResultFromProgress">Kết quả chia team</button></div>
-        </div>
-      </div>
-    </Teleport>
+          </template>
+          <template v-if="teamSplitComplete" #footer><div class="flex justify-end gap-3"><button type="button" class="btn-secondary" :disabled="teamSplitRunning" @click="splitTeams">Chia team lại</button><button type="button" class="btn-primary" @click="openTeamResultFromProgress">Kết quả chia team</button></div></template>
+    </TeamSplitProgressModal>
     <Teleport to="body"
       ><div
         v-if="showRandomModal"
@@ -397,7 +372,7 @@
                         v-else
                         class="mr-2 flex h-6 w-6 items-center justify-center rounded-full bg-gray-200 text-xs"
                         >{{ player.name[0] }}</span
-                      ><span class="truncate font-medium">{{
+                      ><span class="truncate font-normal">{{
                         player.name
                       }}</span
                       ><span
@@ -618,7 +593,7 @@
                       v-else
                       class="mr-2 flex h-7 w-7 items-center justify-center rounded-full bg-gray-200 text-xs"
                       >{{ player.name[0] }}</span
-                    ><span class="truncate font-medium">{{ player.name }}</span>
+                    ><span class="truncate font-normal">{{ player.name }}</span>
                   </div>
                   <span class="text-xs text-gray-500"
                     >{{ player.position }} · T{{ player.tier }}</span
@@ -680,6 +655,7 @@
   </div>
 </template>
 <script setup lang="ts">
+import TeamSplitProgressModal from '../components/TeamSplitProgressModal.vue';
 import { computed, nextTick, onBeforeUnmount, onMounted, ref } from "vue";
 import { apiClient } from "../api/client";
 type Player = {
@@ -724,6 +700,8 @@ const players = ref<Player[]>([]),
   viewportHeight = ref(window.innerHeight),
   splitTierGroupRefs = ref<Record<string, HTMLElement | null>>({}),
   splitTeamRefs = ref<Record<number, HTMLElement | null>>({}),
+  teamSplitProgressModalRef = ref<{ scrollToAiThought: () => Promise<void>; scrollToElement: (element: HTMLElement | null, alignment?: 'start' | 'center') => Promise<void> } | null>(null),
+  teamSplitProgressContentRef = ref<HTMLElement | null>(null),
   aiThoughtBlockRef = ref<HTMLElement | null>(null),
   showTeamResultModal = ref(false),
   showBattlePairsModal = ref(false),
@@ -1072,13 +1050,54 @@ function setSplitTeamRef(index: number, element: HTMLElement | null) {
 }
 async function scrollMobileToSplitElement(element: HTMLElement | null, pause: (milliseconds: number) => Promise<unknown>) {
   if (viewportWidth.value >= 1024 || !element) return;
-  element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  await teamSplitProgressModalRef.value?.scrollToElement(element, 'center');
+  await pause(2000);
+}
+
+function smoothScrollProgressModalTo(element: HTMLElement, alignment: 'start' | 'center') {
+  const container = teamSplitProgressContentRef.value;
+  if (!container) {
+    element.scrollIntoView({ behavior: 'smooth', block: alignment });
+    return Promise.resolve();
+  }
+
+  const targetOffset = element.getBoundingClientRect().top - container.getBoundingClientRect().top;
+  const alignedOffset = alignment === 'center'
+    ? targetOffset - (container.clientHeight - element.clientHeight) / 2
+    : targetOffset - 8;
+  const from = container.scrollTop;
+  const to = Math.max(0, Math.min(container.scrollHeight - container.clientHeight, from + alignedOffset));
+  const distance = to - from;
+  if (Math.abs(distance) < 2) return Promise.resolve();
+
+  const duration = Math.min(1100, Math.max(550, Math.abs(distance) * 1.25));
+  const start = performance.now();
+  const easeInOutCubic = (progress: number) => progress < 0.5
+    ? 4 * progress * progress * progress
+    : 1 - Math.pow(-2 * progress + 2, 3) / 2;
+
+  return new Promise<void>((resolve) => {
+    const frame = (now: number) => {
+      const progress = Math.min(1, (now - start) / duration);
+      container.scrollTop = from + distance * easeInOutCubic(progress);
+      if (progress < 1) requestAnimationFrame(frame);
+      else resolve();
+    };
+    requestAnimationFrame(frame);
+  });
+}
+
+async function scrollMobileToAiThought(pause: (milliseconds: number) => Promise<unknown>) {
+  const target = aiThoughtBlockRef.value;
+  if (viewportWidth.value >= 1024 || !target) return;
+
+  await teamSplitProgressModalRef.value?.scrollToAiThought();
   await pause(2000);
 }
 
 async function scrollMobileToFirstTeam(pause: (milliseconds: number) => Promise<unknown>) {
   if (viewportWidth.value >= 1024 || !splitTeamRefs.value[0]) return;
-  splitTeamRefs.value[0].scrollIntoView({ behavior: 'smooth', block: 'start' });
+  await teamSplitProgressModalRef.value?.scrollToElement(splitTeamRefs.value[0], 'start');
   await pause(2000);
 }
 
@@ -1239,7 +1258,7 @@ async function splitTeams() {
           }).join('\n');
           const thought = assignmentsText;
           addAiThought(thought);
-          await scrollMobileToSplitElement(aiThoughtBlockRef.value, pause);
+          await scrollMobileToAiThought(pause);
           await animateMobileAiThought(thought, pause);
           await animateDesktopAiThought(thought, pause);
           await scrollMobileToSplitElement(splitTierGroupRefs.value[tierLabels[index]], pause);
@@ -1275,7 +1294,7 @@ async function splitTeams() {
         desktopAiThoughtWords.value = [];
       }
       addAiThought(thought);
-      await scrollMobileToSplitElement(aiThoughtBlockRef.value, pause);
+      await scrollMobileToAiThought(pause);
       await animateMobileAiThought(thought, pause);
       await animateDesktopAiThought(thought, pause);
       await pause(3000);

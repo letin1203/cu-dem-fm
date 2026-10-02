@@ -11,12 +11,9 @@
             v-model="query"
             class="form-input min-w-44 flex-1"
             placeholder="Tìm tên cầu thủ"
-          /><select v-model="position" class="form-input w-28">
-            <option value="">Vị trí</option>
-            <option v-for="item in positions" :key="item" :value="item">
-              {{ item }}
-            </option></select
-          ><button class="btn-secondary" @click="showRandomModal = true">
+          /><button class="btn-secondary" @click="selectAllAvailable">
+            Chọn hết
+          </button><button class="btn-secondary" @click="showRandomModal = true">
             Chọn random
           </button>
         </div>
@@ -697,7 +694,6 @@ const players = ref<Player[]>([]),
   selected = ref<Player[]>([]),
   loading = ref(true),
   query = ref(""),
-  position = ref(""),
   showRandomModal = ref(false),
   randomCount = ref<number | null>(null),
   randomizing = ref(false),
@@ -707,7 +703,7 @@ const players = ref<Player[]>([]),
   teamSplitStep = ref(0),
   isAssigningGoalkeeper = ref(false),
   processingTeams = ref<Player[][]>([]),
-  departingProcessingPlayerId = ref<string | null>(null),
+  departingProcessingPlayerIds = ref<Set<string>>(new Set()),
   swappingProcessingPlayerIds = ref<Set<string>>(new Set()),
   teamSplitComplete = ref(false),
   teamSplitRunning = ref(false),
@@ -728,8 +724,7 @@ const players = ref<Player[]>([]),
   simulatedScores = ref<number[]>([]),
   battlePairs = ref<Array<{ firstId: string; secondId: string }>>([]),
   hopeStarPlayerIds = ref<Set<string>>(new Set());
-const positions = ["GK", "DEF", "MID", "FWD"];
-const randomOptions = [20, 24, 28, 32];
+const randomOptions = [20, 24, 27, 32];
 const teamSplitSteps = [
   {
     title: "Phân loại theo Tier",
@@ -866,8 +861,7 @@ const availablePlayers = computed(() =>
   players.value.filter(
     (p) =>
       !selected.value.some((s) => s.id === p.id) &&
-      (!query.value || normalize(p.name).includes(normalize(query.value))) &&
-      (!position.value || p.position === position.value),
+      (!query.value || normalize(p.name).includes(normalize(query.value))),
   ),
 );
 const groups = [
@@ -907,7 +901,7 @@ const splitProgressGroups = computed(() => [
       (player) =>
         player.tier <= 2 &&
         !assignedProcessingPlayerIds.value.has(player.id) &&
-        player.id !== departingProcessingPlayerId.value,
+        !departingProcessingPlayerIds.value.has(player.id),
     ),
   },
   {
@@ -918,7 +912,7 @@ const splitProgressGroups = computed(() => [
         player.tier >= 3 &&
         player.tier <= 4 &&
         !assignedProcessingPlayerIds.value.has(player.id) &&
-        player.id !== departingProcessingPlayerId.value,
+        !departingProcessingPlayerIds.value.has(player.id),
     ),
   },
   {
@@ -928,7 +922,7 @@ const splitProgressGroups = computed(() => [
       (player) =>
         player.tier >= 5 &&
         !assignedProcessingPlayerIds.value.has(player.id) &&
-        player.id !== departingProcessingPlayerId.value,
+        !departingProcessingPlayerIds.value.has(player.id),
     ),
   },
 ]);
@@ -1105,6 +1099,14 @@ function togglePlayer(player: Player) {
   hopeStarPlayerIds.value.delete(player.id);
   teams.value = [];
 }
+function selectAllAvailable() {
+  selected.value = [...players.value].sort(
+    (first, second) => first.tier - second.tier || first.name.localeCompare(second.name, 'vi'),
+  );
+  battlePairs.value = [];
+  hopeStarPlayerIds.value = new Set();
+  teams.value = [];
+}
 function clearAll() {
   selected.value = [];
   teams.value = [];
@@ -1137,7 +1139,7 @@ async function splitTeams() {
   teamSplitComplete.value = false;
   teamSplitRunning.value = true;
   processingTeams.value = Array.from({ length: teamCount.value }, () => []);
-  departingProcessingPlayerId.value = null;
+  departingProcessingPlayerIds.value = new Set();
   swappingProcessingPlayerIds.value = new Set();
   aiThoughts.value = [];
   mobileAiThoughtWords.value = [];
@@ -1203,10 +1205,12 @@ async function splitTeams() {
       const stagePlayers = preBalanceTeams.map((team) => team.filter(stages[index]));
       const rounds = Math.max(...stagePlayers.map((team) => team.length));
       for (let round = 0; round < rounds; round++) {
-        for (let teamIndex = 0; teamIndex < stagePlayers.length; teamIndex++) {
-          const player = stagePlayers[teamIndex][round];
-          if (!player) continue;
-          isAssigningGoalkeeper.value = isGoalkeeper(player);
+        const assignments = stagePlayers
+          .map((team, teamIndex) => ({ player: team[round], teamIndex }))
+          .filter((assignment): assignment is { player: Player; teamIndex: number } => Boolean(assignment.player));
+        if (!assignments.length) continue;
+        isAssigningGoalkeeper.value = assignments.some(({ player }) => isGoalkeeper(player));
+        {
           if (viewportWidth.value < 1024) {
             mobileAiThoughtAnimating.value = true;
             mobileAiThoughtWords.value = [];
@@ -1214,22 +1218,25 @@ async function splitTeams() {
             desktopAiThoughtAnimating.value = true;
             desktopAiThoughtWords.value = [];
           }
-          const healthReason = playerAiReasons[playerAiReasonIndex % playerAiReasons.length];
-          playerAiReasonIndex += 1;
-          const thought = `${player.name}: ${healthReason} → Chia vào Đội ${teamIndex + 1}`;
+          const assignmentsText = assignments.map(({ player, teamIndex }) => {
+            const healthReason = playerAiReasons[playerAiReasonIndex % playerAiReasons.length];
+            playerAiReasonIndex += 1;
+            return `${player.name}: ${healthReason} → Đội ${teamIndex + 1}`;
+          }).join(' · ');
+          const thought = `AI phân tích đồng thời ${assignments.length} cầu thủ: ${assignmentsText}`;
           addAiThought(thought);
           await scrollMobileToSplitElement(aiThoughtBlockRef.value, pause);
           await animateMobileAiThought(thought, pause);
           await animateDesktopAiThought(thought, pause);
           await scrollMobileToSplitElement(splitTierGroupRefs.value[tierLabels[index]], pause);
-          departingProcessingPlayerId.value = player.id;
+          departingProcessingPlayerIds.value = new Set(assignments.map(({ player }) => player.id));
           await nextTick();
           await pause(2000);
-          await scrollMobileToSplitElement(splitTeamRefs.value[teamIndex], pause);
+          await scrollMobileToSplitElement(splitTeamRefs.value[assignments[0].teamIndex], pause);
           const nextTeams = processingTeams.value.map((team) => [...team]);
-          nextTeams[teamIndex].push(player);
+          assignments.forEach(({ player, teamIndex }) => nextTeams[teamIndex].push(player));
           processingTeams.value = nextTeams;
-          departingProcessingPlayerId.value = null;
+          departingProcessingPlayerIds.value = new Set();
           await nextTick();
           await pause(2000);
         }

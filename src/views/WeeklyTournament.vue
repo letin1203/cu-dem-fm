@@ -8220,9 +8220,17 @@ const previewGenerateRandomTeams = async (): Promise<void> => {
   }
 };
 
-const playLiveTeamSplit = async (finalTeams: Array<{ players?: any[] }>, swaps: Array<{ firstId: string; secondId: string }> = []): Promise<void> => {
+const playLiveTeamSplit = async (finalTeams: Array<{ players?: any[] }>, swaps: Array<{ firstId: string; secondId: string }> = [], repeatTeammateSwaps: Array<{ firstId: string; secondId: string }> = []): Promise<void> => {
   const pause = (milliseconds: number) => new Promise((resolve) => setTimeout(resolve, milliseconds));
   const teams = finalTeams.map((team) => [...(team.players || [])]);
+  [...repeatTeammateSwaps].reverse().forEach((swap) => {
+    const firstTeam = teams.findIndex((team) => team.some((player) => player.id === swap.firstId));
+    const secondTeam = teams.findIndex((team) => team.some((player) => player.id === swap.secondId));
+    if (firstTeam < 0 || secondTeam < 0 || firstTeam === secondTeam) return;
+    const firstIndex = teams[firstTeam].findIndex((player) => player.id === swap.firstId);
+    const secondIndex = teams[secondTeam].findIndex((player) => player.id === swap.secondId);
+    [teams[firstTeam][firstIndex], teams[secondTeam][secondIndex]] = [teams[secondTeam][secondIndex], teams[firstTeam][firstIndex]];
+  });
   await loadLivePlayerStatsInsights();
   liveTeamSplitTeams.value = teams.map(() => []);
   liveSplitAllPlayers.value = teams.flat();
@@ -8309,7 +8317,30 @@ const playLiveTeamSplit = async (finalTeams: Array<{ players?: any[] }>, swaps: 
       }
     }
   }
-  liveTeamSplitStage.value = 5;
+  for (const swap of repeatTeammateSwaps) {
+    const firstTeam = liveTeamSplitTeams.value.findIndex((team) => team.some((player) => player.id === swap.firstId));
+    const secondTeam = liveTeamSplitTeams.value.findIndex((team) => team.some((player) => player.id === swap.secondId));
+    if (firstTeam < 0 || secondTeam < 0 || firstTeam === secondTeam) continue;
+    const first = liveTeamSplitTeams.value[firstTeam].find((player) => player.id === swap.firstId);
+    const second = liveTeamSplitTeams.value[secondTeam].find((player) => player.id === swap.secondId);
+    if (!first || !second) continue;
+    liveTeamSplitStage.value = 5;
+    liveTeamSplitTitle.value = 'Tránh đồng đội trùng tuần trước';
+    const thought = `🤖 ${first.name} và ${second.name}: đổi đội để mỗi người không chung quá 1 đồng đội từ tuần trước`;
+    liveTeamSplitThought.value = thought;
+    liveAiSequence.value += 1;
+    await liveTeamSplitModalRef.value?.scrollToAiThought();
+    await pause(2000);
+    await animateLiveAiThought(thought, pause);
+    await pause(3000);
+    const next = liveTeamSplitTeams.value.map((team) => [...team]);
+    next[firstTeam] = next[firstTeam].map((player) => player.id === first.id ? second : player);
+    next[secondTeam] = next[secondTeam].map((player) => player.id === second.id ? first : player);
+    liveTeamSplitTeams.value = next;
+    await nextTick();
+    await pause(2000);
+  }
+  liveTeamSplitStage.value = 6;
   liveTeamSplitTitle.value = 'Chốt kết quả';
   liveTeamSplitDescription.value = 'Đội hình đã được lưu cho giải đấu.';
   liveTeamSplitThought.value = 'AI đã hoàn tất chia đội cân bằng.';
@@ -8342,7 +8373,7 @@ const generateRandomTeams = async (
       // Show success message with team details
       const data = response.data as any;
       closeTeamCountModal();
-      await playLiveTeamSplit(data.teams || []);
+      await playLiveTeamSplit(data.teams || [], [], data.repeatTeammateSwaps || []);
       toast.success(
         `Đã chia ${data.playerCount} cầu thủ Sân ${field === "FIELD_5" ? "5" : "7"} thành ${data.teamCount} đội!`,
       );

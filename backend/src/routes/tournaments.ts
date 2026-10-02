@@ -2631,6 +2631,63 @@ router.post('/:id/generate-teams', authenticate, authorize(['ADMIN', 'MOD']), as
       lockedPlayers: generated.lockedPlayers,
     })));
 
+    // Avoid keeping a player with two or more of the same teammates for a
+    // second consecutive weekly tournament. Swaps are same-tier and preserve
+    // GK distribution, so this cannot change the tier balance established by
+    // the generator.
+    const previousTournament = await prisma.tournament.findFirst({
+      where: { type: 'WEEKLY', startDate: { lt: tournament.startDate }, teams: { some: {} } },
+      orderBy: { startDate: 'desc' },
+      include: { tournamentTeamPlayers: { select: { teamId: true, playerId: true } } },
+    });
+    const repeatTeammateSwaps: Array<{ firstId: string; secondId: string }> = [];
+    if (previousTournament) {
+      const previousTeamByPlayer = new Map(previousTournament.tournamentTeamPlayers.map((item) => [item.playerId, item.teamId]));
+      const battlePairs = await prisma.tournamentChallenge.findMany({
+        where: { tournamentId, status: 'ACCEPTED' },
+        select: { requesterPlayerId: true, targetPlayerId: true },
+      });
+      const battlePartnerByPlayer = new Map<string, string>();
+      battlePairs.forEach((pair) => { battlePartnerByPlayer.set(pair.requesterPlayerId, pair.targetPlayerId); battlePartnerByPlayer.set(pair.targetPlayerId, pair.requesterPlayerId); });
+      const repeatedTeammates = (player: typeof sortedPlayers[number], team: typeof teams[number]) => {
+        const previousTeam = previousTeamByPlayer.get(player.id);
+        if (!previousTeam) return 0;
+        return team.players.filter((mate) => mate.id !== player.id && previousTeamByPlayer.get(mate.id) === previousTeam).length;
+      };
+      const wouldBreakBattle = (player: typeof sortedPlayers[number], destination: typeof teams[number]) => {
+        const partnerId = battlePartnerByPlayer.get(player.id);
+        return Boolean(partnerId && destination.players.some((mate) => mate.id === partnerId));
+      };
+      for (let pass = 0; pass < teams.length * sortedPlayers.length; pass += 1) {
+        let swapped = false;
+        for (let sourceIndex = 0; sourceIndex < teams.length && !swapped; sourceIndex += 1) {
+          const source = teams[sourceIndex];
+          for (let playerIndex = 0; playerIndex < source.players.length && !swapped; playerIndex += 1) {
+            const player = source.players[playerIndex];
+            if (repeatedTeammates(player, source) < 2) continue;
+            for (let destinationIndex = 0; destinationIndex < teams.length && !swapped; destinationIndex += 1) {
+              if (destinationIndex === sourceIndex) continue;
+              const destination = teams[destinationIndex];
+              for (let replacementIndex = 0; replacementIndex < destination.players.length; replacementIndex += 1) {
+                const replacement = destination.players[replacementIndex];
+                const sameType = (player.position === 'GK' || player.position === 'Goalkeeper') === (replacement.position === 'GK' || replacement.position === 'Goalkeeper');
+                if (!sameType || player.tier !== replacement.tier || wouldBreakBattle(player, destination) || wouldBreakBattle(replacement, source)) continue;
+                const sourceAfter = { ...source, players: source.players.map((item, index) => index === playerIndex ? replacement : item) };
+                const destinationAfter = { ...destination, players: destination.players.map((item, index) => index === replacementIndex ? player : item) };
+                if (repeatedTeammates(player, destinationAfter) > 1 || repeatedTeammates(replacement, sourceAfter) > 1) continue;
+                source.players[playerIndex] = replacement;
+                destination.players[replacementIndex] = player;
+                repeatTeammateSwaps.push({ firstId: player.id, secondId: replacement.id });
+                swapped = true;
+                break;
+              }
+            }
+          }
+        }
+        if (!swapped) break;
+      }
+    }
+
     // Accepted challenges must always be on opposing teams. Resolve any pair
     // that landed together after the balancing pass by swapping the target
     // with a same-tier, position-compatible player from another team. Keeping
@@ -2716,6 +2773,7 @@ router.post('/:id/generate-teams', authenticate, authorize(['ADMIN', 'MOD']), as
         teams: createdTeams,
         playerCount,
         teamCount,
+        repeatTeammateSwaps,
       },
     });
   } catch (error) {

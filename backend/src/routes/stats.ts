@@ -90,6 +90,15 @@ router.get('/leaderboard', authenticate, async (_req: AuthenticatedRequest, res:
         losses: createRanking('losses'),
         contributions: createRanking('contribution'),
         attendance: createRanking('attendance'),
+        // The Stats page only renders top 10 lists, while the team-split
+        // simulator needs the same four metrics for every selected player.
+        metrics: [...totals.values()].map((entry) => ({
+          playerId: entry.player.id,
+          wins: entry.wins,
+          losses: entry.losses,
+          contribution: entry.contribution,
+          attendance: entry.attendance,
+        })),
       },
     });
   } catch (_error) {

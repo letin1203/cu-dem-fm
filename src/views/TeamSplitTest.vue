@@ -73,14 +73,14 @@
               </button>
             </div>
             <button
-              class="btn-primary"
+              class="btn-primary order-2 w-full basis-full sm:order-none sm:w-auto sm:basis-auto"
               :disabled="selectedPlayers.length < 10"
               @click="splitTeams"
             >
               Chia team ngẫu nhiên</button
             ><button
               type="button"
-              class="flex h-9 w-9 items-center justify-center rounded-lg border border-red-200 bg-red-50 text-lg text-red-600 transition hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-50"
+              class="order-1 flex h-9 w-9 items-center justify-center rounded-lg border border-red-200 bg-red-50 text-lg text-red-600 transition hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-50 sm:order-none"
               :disabled="selectedPlayers.length < 2"
               title="Random các cặp Battle"
               @click="randomizeBattles"
@@ -88,14 +88,14 @@
               ⚔️</button
             ><button
               type="button"
-              class="flex h-9 w-9 items-center justify-center rounded-lg border border-yellow-300 bg-yellow-50 text-lg text-yellow-600 transition hover:bg-yellow-100 disabled:cursor-not-allowed disabled:opacity-50"
+              class="order-1 flex h-9 w-9 items-center justify-center rounded-lg border border-yellow-300 bg-yellow-50 text-lg text-yellow-600 transition hover:bg-yellow-100 disabled:cursor-not-allowed disabled:opacity-50 sm:order-none"
               :disabled="!selectedPlayers.length"
               title="Random Ngôi sao hy vọng"
               @click="randomizeHopeStars"
             >
               ⭐</button
             ><button
-              class="btn-secondary text-red-600"
+              class="btn-secondary order-1 text-red-600 sm:order-none"
               :disabled="!selectedPlayers.length"
               @click="clearAll"
             >
@@ -221,9 +221,9 @@
                 <span
                   class="flex h-7 w-7 items-center justify-center rounded-full bg-primary-600 text-sm font-bold text-white"
                   >{{ teamSplitStep + 1 }}</span
-                ><strong class="shrink-0">{{ isAssigningGoalkeeper ? 'Đang phân chia GK' : teamSplitSteps[teamSplitStep]?.title }}</strong><div class="ml-6 hidden h-16 min-w-0 flex-1 overflow-hidden text-left lg:block"><TransitionGroup name="ai-thought" tag="div" class="space-y-0"><p v-for="thought in aiThoughts.slice(-2)" :key="thought.id" class="line-clamp-2 h-8 text-xs leading-4 text-primary-700">🤖 <template v-if="desktopAiThoughtAnimating && thought.id === aiThoughtSequence"><span v-for="(word, wordIndex) in desktopAiThoughtWords" :key="`${thought.id}-${wordIndex}`" class="ai-word-reveal">{{ word }}</span></template><template v-else>{{ thought.text }}</template></p></TransitionGroup></div>
+                ><strong class="shrink-0">{{ isAssigningGoalkeeper ? 'Đang phân chia GK' : teamSplitSteps[teamSplitStep]?.title }}</strong><div class="ml-6 hidden h-12 min-w-0 flex-1 overflow-hidden text-left lg:block"><TransitionGroup name="ai-thought" tag="div" class="space-y-0"><p v-for="thought in aiThoughts.slice(-1)" :key="thought.id" class="line-clamp-3 h-12 whitespace-pre-line text-xs leading-4 text-primary-700">🤖 <template v-if="desktopAiThoughtAnimating && thought.id === aiThoughtSequence"><template v-for="(word, wordIndex) in desktopAiThoughtWords" :key="`${thought.id}-${wordIndex}`"><br v-if="word === '\n'" /><span v-else class="ai-word-reveal">{{ word }}</span></template></template><template v-else>{{ thought.text }}</template></p></TransitionGroup></div>
               </div>
-              <div ref="aiThoughtBlockRef" class="mb-4 h-24 overflow-hidden rounded-lg border border-primary-200 bg-primary-50 p-2 lg:hidden"><p class="mb-1 text-[10px] font-semibold uppercase tracking-wide text-primary-700">AI đang suy nghĩ</p><p class="max-h-16 overflow-hidden whitespace-normal break-words text-xs leading-4 text-primary-700">🤖 <template v-if="mobileAiThoughtAnimating || mobileAiThoughtWords.length"><span v-for="(word, wordIndex) in mobileAiThoughtWords" :key="`${aiThoughtSequence}-${wordIndex}`" class="ai-word-reveal">{{ word }}</span></template><template v-else>{{ aiThoughts[aiThoughts.length - 1]?.text }}</template></p></div>
+              <div ref="aiThoughtBlockRef" class="mb-4 h-48 overflow-hidden rounded-lg border border-primary-200 bg-primary-50 p-2 lg:hidden"><p class="mb-1 text-[10px] font-semibold uppercase tracking-wide text-primary-700">AI đang suy nghĩ</p><p class="max-h-36 overflow-hidden whitespace-pre-line break-words text-xs leading-4 text-primary-700">🤖 <template v-if="mobileAiThoughtAnimating || mobileAiThoughtWords.length"><template v-for="(word, wordIndex) in mobileAiThoughtWords" :key="`${aiThoughtSequence}-${wordIndex}`"><br v-if="word === '\n'" /><span v-else class="ai-word-reveal">{{ word }}</span></template></template><template v-else>{{ aiThoughts[aiThoughts.length - 1]?.text }}</template></p></div>
               <div
                 class="grid gap-3"
                 :class="
@@ -690,9 +690,16 @@ type Player = {
   positionSecond?: string | null;
   tier: number;
 };
+type PlayerStatsInsight = {
+  wins: number;
+  losses: number;
+  contribution: number;
+  attendance: number;
+};
 const players = ref<Player[]>([]),
   selected = ref<Player[]>([]),
   loading = ref(true),
+  playerStatsInsights = ref<Record<string, PlayerStatsInsight>>({}),
   query = ref(""),
   showRandomModal = ref(false),
   randomCount = ref<number | null>(null),
@@ -852,6 +859,14 @@ const aiHealthReasons = [
   'tuần này có thói quen kéo giãn lưng sau giờ làm',
   'hôm qua phụ gia đình chuyển đồ nên vai hơi nặng',
 ];
+const formatShortCurrency = (amount: number) => `${Math.round(amount / 1000).toLocaleString('vi-VN')}K`;
+const getPlayerStatsInsight = (player: Player): string => {
+  const stats = playerStatsInsights.value[player.id];
+  if (!stats || (!stats.wins && !stats.losses && !stats.contribution && !stats.attendance)) {
+    return 'chưa có dữ liệu Stats từ các giải đã hoàn thành';
+  }
+  return `Stats: thắng ${stats.wins} · thua ${stats.losses} · góp quỹ ${formatShortCurrency(stats.contribution)} · tham gia ${stats.attendance} giải`;
+};
 const normalize = (text: string) =>
   text
     .normalize("NFD")
@@ -1061,10 +1076,16 @@ async function scrollMobileToSplitElement(element: HTMLElement | null, pause: (m
   await pause(2000);
 }
 
+async function scrollMobileToFirstTeam(pause: (milliseconds: number) => Promise<unknown>) {
+  if (viewportWidth.value >= 1024 || !splitTeamRefs.value[0]) return;
+  splitTeamRefs.value[0].scrollIntoView({ behavior: 'smooth', block: 'start' });
+  await pause(2000);
+}
+
 async function animateMobileAiThought(text: string, pause: (milliseconds: number) => Promise<unknown>) {
   if (viewportWidth.value >= 1024) return;
 
-  const words = text.split(/\s+/).filter(Boolean);
+  const words = text.match(/[^\s]+|\n/g) || [];
   const interval = Math.max(40, Math.floor(2000 / Math.max(words.length, 1)));
   mobileAiThoughtWords.value = [];
 
@@ -1080,7 +1101,7 @@ async function animateMobileAiThought(text: string, pause: (milliseconds: number
 async function animateDesktopAiThought(text: string, pause: (milliseconds: number) => Promise<unknown>) {
   if (viewportWidth.value < 1024) return;
 
-  const words = text.split(/\s+/).filter(Boolean);
+  const words = text.match(/[^\s]+|\n/g) || [];
   const interval = Math.max(40, Math.floor(2000 / Math.max(words.length, 1)));
   desktopAiThoughtWords.value = [];
 
@@ -1170,9 +1191,6 @@ async function splitTeams() {
     );
     const pause = (milliseconds: number) =>
       new Promise((resolve) => setTimeout(resolve, milliseconds));
-    // Each player is shown for a full three seconds so the allocation is easy
-    // to follow, regardless of the total number of selected players.
-    await pause(5000);
     const swapTeamsByPlayerIds = (sourceTeams: Player[][], firstId: string, secondId: string): Player[][] => {
       const nextTeams = sourceTeams.map((team) => [...team]);
       const locations = new Map<string, { team: number; player: number }>();
@@ -1198,8 +1216,6 @@ async function splitTeams() {
       (player: Player) => player.tier >= 5,
     ];
     const tierLabels = ['Tier 1-2', 'Tier 3-4', 'Tier 5-6'];
-    const playerAiReasons = [...aiHealthReasons].sort(() => Math.random() - 0.5);
-    let playerAiReasonIndex = 0;
     for (let index = 0; index < stages.length; index++) {
       teamSplitStep.value = index + 1;
       const stagePlayers = preBalanceTeams.map((team) => team.filter(stages[index]));
@@ -1219,11 +1235,9 @@ async function splitTeams() {
             desktopAiThoughtWords.value = [];
           }
           const assignmentsText = assignments.map(({ player, teamIndex }) => {
-            const healthReason = playerAiReasons[playerAiReasonIndex % playerAiReasons.length];
-            playerAiReasonIndex += 1;
-            return `${player.name}: ${healthReason} → Đội ${teamIndex + 1}`;
-          }).join(' · ');
-          const thought = `AI phân tích đồng thời ${assignments.length} cầu thủ: ${assignmentsText}`;
+            return `${player.name}: ${getPlayerStatsInsight(player)} → Đội ${teamIndex + 1}`;
+          }).join('\n');
+          const thought = assignmentsText;
           addAiThought(thought);
           await scrollMobileToSplitElement(aiThoughtBlockRef.value, pause);
           await animateMobileAiThought(thought, pause);
@@ -1232,7 +1246,7 @@ async function splitTeams() {
           departingProcessingPlayerIds.value = new Set(assignments.map(({ player }) => player.id));
           await nextTick();
           await pause(2000);
-          await scrollMobileToSplitElement(splitTeamRefs.value[assignments[0].teamIndex], pause);
+          await scrollMobileToFirstTeam(pause);
           const nextTeams = processingTeams.value.map((team) => [...team]);
           assignments.forEach(({ player, teamIndex }) => nextTeams[teamIndex].push(player));
           processingTeams.value = nextTeams;
@@ -1268,9 +1282,10 @@ async function splitTeams() {
       await nextTick();
       await pause(2000);
     }
-    await pause(5000);
     teams.value = finalTeams;
     teamSplitComplete.value = true;
+    await nextTick();
+    await scrollMobileToFirstTeam(pause);
   } finally {
     teamSplitRunning.value = false;
   }
@@ -1302,11 +1317,29 @@ const updateViewport = () => {
 onMounted(async () => {
   window.addEventListener('resize', updateViewport);
   try {
-    const response = await apiClient.getPlayers({ page: 1, limit: 200 });
+    const [response, leaderboardResponse] = await Promise.all([
+      apiClient.getPlayers({ page: 1, limit: 200 }),
+      apiClient.getPlayerLeaderboard(),
+    ]);
     const data = response.data as any;
     players.value = (data?.players || []).filter(
       (p: any) => p.isActive !== false && !p.friendOwnerId,
     );
+    const metrics = (leaderboardResponse.data as any)?.metrics;
+    if (Array.isArray(metrics)) {
+      playerStatsInsights.value = metrics.reduce<Record<string, PlayerStatsInsight>>(
+        (result, metric: any) => {
+          result[metric.playerId] = {
+            wins: Number(metric.wins) || 0,
+            losses: Number(metric.losses) || 0,
+            contribution: Number(metric.contribution) || 0,
+            attendance: Number(metric.attendance) || 0,
+          };
+          return result;
+        },
+        {},
+      );
+    }
   } finally {
     loading.value = false;
   }

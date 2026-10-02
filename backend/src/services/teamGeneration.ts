@@ -104,18 +104,51 @@ export function generateBalancedTeams(
     const averages = totals.map((total, index) => total / teams[index].players.length);
     return Math.max(...averages) - Math.min(...averages);
   };
+  const averageVariance = (totals: number[]) => {
+    const averages = totals.map((total, index) => total / teams[index].players.length);
+    const mean = averages.reduce((sum, value) => sum + value, 0) / averages.length;
+    return averages.reduce((sum, value) => sum + (value - mean) ** 2, 0);
+  };
+  const improvesBalance = (
+    nextSpread: number,
+    nextVariance: number,
+    currentSpread: number,
+    currentVariance: number,
+  ) =>
+    nextSpread < currentSpread - 0.000001 ||
+    (Math.abs(nextSpread - currentSpread) < 0.000001 &&
+      nextVariance < currentVariance - 0.000001);
+  const balanceValues = (totals: number[]) => {
+    const equalTeamSizes = teams.every((team) => team.players.length === teams[0].players.length);
+    return equalTeamSizes
+      ? totals
+      : totals.map((total, index) => total / teams[index].players.length);
+  };
   for (let iteration = 0; iteration < 100; iteration++) {
     const totals = teams.map((team) => team.totalTier);
     const spread = averageSpread(totals);
-    let best: { a: number; b: number; ai: number; bi: number; spread: number } | null = null;
+    const variance = averageVariance(totals);
+    const values = balanceValues(totals);
+    const lowestValue = Math.min(...values);
+    const highestValue = Math.max(...values);
+    let best: { a: number; b: number; ai: number; bi: number; spread: number; variance: number } | null = null;
     for (let a = 0; a < teams.length; a++) for (let b = a + 1; b < teams.length; b++) {
+      const comparesExtremes =
+        (Math.abs(values[a] - lowestValue) < 0.000001 && Math.abs(values[b] - highestValue) < 0.000001) ||
+        (Math.abs(values[b] - lowestValue) < 0.000001 && Math.abs(values[a] - highestValue) < 0.000001);
+      if (!comparesExtremes) continue;
       for (let ai = 0; ai < teams[a].players.length; ai++) for (let bi = 0; bi < teams[b].players.length; bi++) {
         const first = teams[a].players[ai]; const second = teams[b].players[bi];
         if (teams[a].lockedPlayers.has(first.id) || teams[b].lockedPlayers.has(second.id) || isGoalkeeper(first) !== isGoalkeeper(second)) continue;
         const next = [...totals];
         next[a] += second.tier - first.tier; next[b] += first.tier - second.tier;
         const nextSpread = averageSpread(next);
-        if (nextSpread < spread && (!best || nextSpread < best.spread)) best = { a, b, ai, bi, spread: nextSpread };
+        const nextVariance = averageVariance(next);
+        if (improvesBalance(nextSpread, nextVariance, spread, variance) &&
+          (!best || nextSpread < best.spread - 0.000001 ||
+            (Math.abs(nextSpread - best.spread) < 0.000001 && nextVariance < best.variance))) {
+          best = { a, b, ai, bi, spread: nextSpread, variance: nextVariance };
+        }
       }
     }
     if (!best) break;
@@ -189,8 +222,16 @@ export function generateBalancedTeams(
   for (let iteration = 0; iteration < 100; iteration++) {
     const totals = teams.map((team) => team.totalTier);
     const spread = averageSpread(totals);
-    let best: { a: number; b: number; ai: number; bi: number; spread: number } | null = null;
+    const variance = averageVariance(totals);
+    const values = balanceValues(totals);
+    const lowestValue = Math.min(...values);
+    const highestValue = Math.max(...values);
+    let best: { a: number; b: number; ai: number; bi: number; spread: number; variance: number } | null = null;
     for (let a = 0; a < teams.length; a++) for (let b = a + 1; b < teams.length; b++) {
+      const comparesExtremes =
+        (Math.abs(values[a] - lowestValue) < 0.000001 && Math.abs(values[b] - highestValue) < 0.000001) ||
+        (Math.abs(values[b] - lowestValue) < 0.000001 && Math.abs(values[a] - highestValue) < 0.000001);
+      if (!comparesExtremes) continue;
       for (let ai = 0; ai < teams[a].players.length; ai++) for (let bi = 0; bi < teams[b].players.length; bi++) {
         const first = teams[a].players[ai]; const second = teams[b].players[bi];
         if (teams[a].lockedPlayers.has(first.id) || teams[b].lockedPlayers.has(second.id) || isGoalkeeper(first) !== isGoalkeeper(second)) continue;
@@ -201,7 +242,12 @@ export function generateBalancedTeams(
         const next = [...totals];
         next[a] += second.tier - first.tier; next[b] += first.tier - second.tier;
         const nextSpread = averageSpread(next);
-        if (nextSpread < spread && (!best || nextSpread < best.spread)) best = { a, b, ai, bi, spread: nextSpread };
+        const nextVariance = averageVariance(next);
+        if (improvesBalance(nextSpread, nextVariance, spread, variance) &&
+          (!best || nextSpread < best.spread - 0.000001 ||
+            (Math.abs(nextSpread - best.spread) < 0.000001 && nextVariance < best.variance))) {
+          best = { a, b, ai, bi, spread: nextSpread, variance: nextVariance };
+        }
       }
     }
     if (!best) break;

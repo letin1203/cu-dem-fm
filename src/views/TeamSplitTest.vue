@@ -221,9 +221,9 @@
                 <span
                   class="flex h-7 w-7 items-center justify-center rounded-full bg-primary-600 text-sm font-bold text-white"
                   >{{ teamSplitStep + 1 }}</span
-                ><strong class="shrink-0">{{ isAssigningGoalkeeper ? 'Đang phân chia GK' : teamSplitSteps[teamSplitStep]?.title }}</strong><div class="ml-6 hidden h-12 min-w-0 flex-1 overflow-hidden text-left lg:block"><TransitionGroup name="ai-thought" tag="div" class="space-y-0"><p v-for="thought in aiThoughts.slice(-1)" :key="thought.id" class="line-clamp-3 h-12 whitespace-pre-line text-xs leading-4 text-primary-700">🤖 <template v-if="desktopAiThoughtAnimating && thought.id === aiThoughtSequence"><template v-for="(word, wordIndex) in desktopAiThoughtWords" :key="`${thought.id}-${wordIndex}`"><br v-if="word === '\n'" /><span v-else class="ai-word-reveal">{{ word }}</span></template></template><template v-else>{{ thought.text }}</template></p></TransitionGroup></div>
+                ><strong class="shrink-0">{{ isAssigningGoalkeeper ? 'Đang phân chia GK' : teamSplitSteps[teamSplitStep]?.title }}</strong><div class="ml-6 hidden min-w-0 flex-1 overflow-hidden text-left lg:block" :style="{ height: `${teamCount * 16}px` }"><TransitionGroup name="ai-thought" tag="div" class="space-y-0"><p v-for="thought in aiThoughts.slice(-1)" :key="thought.id" class="overflow-hidden whitespace-pre-line text-xs leading-4 text-primary-700" :style="{ height: `${teamCount * 16}px` }"><template v-if="desktopAiThoughtAnimating && thought.id === aiThoughtSequence"><template v-for="(word, wordIndex) in desktopAiThoughtWords" :key="`${thought.id}-${wordIndex}`"><br v-if="word === '\n'" /><span v-else class="ai-word-reveal">{{ word }}</span></template></template><template v-else>{{ thought.text }}</template></p></TransitionGroup></div>
               </div>
-              <div ref="aiThoughtBlockRef" class="mb-4 h-48 overflow-hidden rounded-lg border border-primary-200 bg-primary-50 p-2 lg:hidden"><p class="mb-1 text-[10px] font-semibold uppercase tracking-wide text-primary-700">AI đang suy nghĩ</p><p class="max-h-36 overflow-hidden whitespace-pre-line break-words text-xs leading-4 text-primary-700">🤖 <template v-if="mobileAiThoughtAnimating || mobileAiThoughtWords.length"><template v-for="(word, wordIndex) in mobileAiThoughtWords" :key="`${aiThoughtSequence}-${wordIndex}`"><br v-if="word === '\n'" /><span v-else class="ai-word-reveal">{{ word }}</span></template></template><template v-else>{{ aiThoughts[aiThoughts.length - 1]?.text }}</template></p></div>
+              <div ref="aiThoughtBlockRef" class="mb-4 overflow-hidden rounded-lg border border-primary-200 bg-primary-50 p-2 lg:hidden" :style="{ height: `${teamCount * 16 + 36}px` }"><p class="mb-1 text-[10px] font-semibold uppercase tracking-wide text-primary-700">AI đang suy nghĩ</p><p class="overflow-hidden whitespace-pre-line break-words text-xs leading-4 text-primary-700" :style="{ height: `${teamCount * 16}px` }"><template v-if="mobileAiThoughtAnimating || mobileAiThoughtWords.length"><template v-for="(word, wordIndex) in mobileAiThoughtWords" :key="`${aiThoughtSequence}-${wordIndex}`"><br v-if="word === '\n'" /><span v-else class="ai-word-reveal">{{ word }}</span></template></template><template v-else>{{ aiThoughts[aiThoughts.length - 1]?.text }}</template></p></div>
               <div
                 class="grid gap-3"
                 :class="
@@ -865,7 +865,7 @@ const getPlayerStatsInsight = (player: Player): string => {
   if (!stats || (!stats.wins && !stats.losses && !stats.contribution && !stats.attendance)) {
     return 'chưa có dữ liệu Stats từ các giải đã hoàn thành';
   }
-  return `Stats: thắng ${stats.wins} · thua ${stats.losses} · góp quỹ ${formatShortCurrency(stats.contribution)} · tham gia ${stats.attendance} giải`;
+  return `Thắng ${stats.wins} · thua ${stats.losses} · góp quỹ ${formatShortCurrency(stats.contribution)} · tham gia ${stats.attendance} giải`;
 };
 const normalize = (text: string) =>
   text
@@ -1167,7 +1167,7 @@ async function splitTeams() {
   mobileAiThoughtAnimating.value = false;
   desktopAiThoughtWords.value = [];
   desktopAiThoughtAnimating.value = false;
-  addAiThought('AI đang rà soát thể trạng và lịch sinh hoạt của cầu thủ trong tuần qua...');
+  addAiThought('🤖 AI đang rà soát dữ liệu cầu thủ từ các giải đã hoàn thành...');
   try {
     const response = await apiClient.post("/tournaments/preview-teams", {
       playerIds: selectedPlayers.value.map((player) => player.id),
@@ -1235,7 +1235,7 @@ async function splitTeams() {
             desktopAiThoughtWords.value = [];
           }
           const assignmentsText = assignments.map(({ player, teamIndex }) => {
-            return `${player.name}: ${getPlayerStatsInsight(player)} → Đội ${teamIndex + 1}`;
+            return `🤖 ${player.name}: ${getPlayerStatsInsight(player)} → Team ${teamIndex + 1}`;
           }).join('\n');
           const thought = assignmentsText;
           addAiThought(thought);
@@ -1259,9 +1259,14 @@ async function splitTeams() {
     teamSplitStep.value = 4;
     isAssigningGoalkeeper.value = false;
     for (const swap of swaps) {
-      const firstName = selected.value.find((player) => player.id === swap.firstId)?.name || 'Cầu thủ';
-      const secondName = selected.value.find((player) => player.id === swap.secondId)?.name || 'cầu thủ khác';
-      const thought = `Cân bằng Tier: hoán đổi ${firstName} ↔ ${secondName}`;
+      const firstPlayer = selected.value.find((player) => player.id === swap.firstId);
+      const secondPlayer = selected.value.find((player) => player.id === swap.secondId);
+      const firstTeamIndex = processingTeams.value.findIndex((team) => team.some((player) => player.id === swap.firstId));
+      const secondTeamIndex = processingTeams.value.findIndex((team) => team.some((player) => player.id === swap.secondId));
+      const totalsBefore = processingTeams.value.map((team) => team.reduce((total, player) => total + player.tier, 0));
+      const firstName = firstPlayer?.name || 'Cầu thủ';
+      const secondName = secondPlayer?.name || 'cầu thủ khác';
+      const thought = `🤖 Cân bằng Tier: ${firstName} (T${firstPlayer?.tier || '?'}, Team ${firstTeamIndex + 1}) ↔ ${secondName} (T${secondPlayer?.tier || '?'}, Team ${secondTeamIndex + 1}) · Tổng Tier trước: ${totalsBefore.map((total, index) => `T${index + 1} ${total}`).join(' | ')}`;
       if (viewportWidth.value < 1024) {
         mobileAiThoughtAnimating.value = true;
         mobileAiThoughtWords.value = [];

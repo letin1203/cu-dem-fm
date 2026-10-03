@@ -66,6 +66,8 @@ model Player {
   swapRequestsReceived    TournamentSwapRequest[] @relation("TournamentSwapTarget")
   challengesSent          TournamentChallenge[] @relation("TournamentChallengeRequester")
   challengesReceived      TournamentChallenge[] @relation("TournamentChallengeTarget")
+  friendInvitesSent       TournamentFriendInvite[] @relation("TournamentFriendInviteRequester")
+  friendInvitesReceived   TournamentFriendInvite[] @relation("TournamentFriendInviteTarget")
   deadmatchEntries        TournamentDeadmatchEntry[]
 
   @@map("players")
@@ -159,6 +161,7 @@ model Tournament {
   moneyHistory       PlayerMoneyHistory[]
   swapRequests       TournamentSwapRequest[]
   challenges         TournamentChallenge[]
+  friendInvites      TournamentFriendInvite[]
   deadmatchEntries   TournamentDeadmatchEntry[]
 
   @@map("tournaments")
@@ -359,6 +362,23 @@ model TournamentChallenge {
   @@unique([tournamentId, requesterPlayerId, targetPlayerId])
   @@index([tournamentId, status])
   @@map("tournament_challenges")
+}
+
+model TournamentFriendInvite {
+  id                String     @id @default(cuid())
+  tournament        Tournament @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+  tournamentId      String
+  requester         Player     @relation("TournamentFriendInviteRequester", fields: [requesterPlayerId], references: [id], onDelete: Cascade)
+  requesterPlayerId String
+  target            Player     @relation("TournamentFriendInviteTarget", fields: [targetPlayerId], references: [id], onDelete: Cascade)
+  targetPlayerId    String
+  status            String     @default("PENDING")
+  createdAt         DateTime   @default(now())
+  respondedAt       DateTime?
+
+  @@unique([tournamentId, requesterPlayerId, targetPlayerId])
+  @@index([tournamentId, status])
+  @@map("tournament_friend_invites")
 }
 
 model TournamentDeadmatchEntry {

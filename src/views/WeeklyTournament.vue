@@ -1299,7 +1299,7 @@
                             )
                           "
                           type="button"
-                          class="mr-1 text-sm"
+                          class="mr-1 inline-flex h-6 w-6 shrink-0 items-center justify-center text-sm leading-none"
                           :class="
                             isPendingOutgoingChallengeTarget(
                               ongoingTournament.id,
@@ -1379,8 +1379,9 @@
                           }}</span>
                         </div>
                         <div class="min-w-0">
-                          <div class="truncate font-normal text-gray-900">
-                            {{ player.name }}
+                          <div class="flex min-w-0 items-center whitespace-nowrap font-normal text-gray-900">
+                            <span class="truncate">{{ player.name }}</span>
+                            <button v-if="canShowFriendInviteIcon(ongoingTournament.id, field.value as 'FIELD_5' | 'FIELD_7', player)" type="button" class="ml-1 inline-flex h-5 w-5 shrink-0 items-center justify-center text-sm leading-none" title="Rủ bạn" @click="openFriendInviteModal(ongoingTournament.id, player)">🤝</button>
                             <button
                               v-if="player.challenge?.status === 'ACCEPTED'"
                               type="button"
@@ -1715,10 +1716,11 @@
                         player.name.charAt(0).toUpperCase()
                       }}</span>
                     </div>
-                    <div class="min-w-0">
-                      <div class="truncate font-normal text-gray-900">
-                        {{ player.name }}
-                        <button
+                      <div class="min-w-0">
+                        <div class="flex min-w-0 items-center whitespace-nowrap font-normal text-gray-900">
+                          <span class="truncate">{{ player.name }}</span>
+                          <button v-if="canShowFriendInviteIcon(ongoingTournament.id, (ongoingTournament.pitchType || mobileTeamPreviewField) as 'FIELD_5' | 'FIELD_7', player)" type="button" class="ml-1 inline-flex h-5 w-5 shrink-0 items-center justify-center text-sm leading-none" title="Rủ bạn" @click="openFriendInviteModal(ongoingTournament.id, player)">🤝</button>
+                          <button
                           v-if="player.challenge?.status === 'ACCEPTED'"
                           type="button"
                           class="ml-1 inline-flex animate-pulse align-middle text-sm"
@@ -5275,6 +5277,7 @@
       </div>
     </div>
   </div>
+  <div v-if="showFriendInviteModal" class="fixed inset-0 z-[80] flex items-center justify-center bg-black/50 p-4"><div class="w-full max-w-md rounded-xl bg-white shadow-xl"><div class="border-b p-5"><h3 class="text-lg font-semibold text-primary-700">🤝 Rủ bạn</h3><p class="mt-1 text-sm text-gray-600">{{ friendInviteTarget?.name }}</p></div><div class="space-y-2 p-5 text-sm leading-6 text-gray-700"><p class="font-semibold">Luật rủ bạn</p><p>Cầu thủ cùng đăng ký ít nhất một sân có thể rủ nhau. Tier 1–2 không được rủ nhau; Tier 3–6 vẫn có thể rủ Tier 1–2.</p><p>Hai cầu thủ đã chấp nhận sẽ được xếp cùng đội khi chia đội.</p><p>Kết thúc giải, cả hai cầu thủ bị trừ 10.000 ₫.</p></div><div class="flex justify-end gap-3 border-t p-4"><button class="btn-secondary" @click="showFriendInviteModal = false">Đóng</button><button class="btn-primary" :disabled="friendInviteSaving" @click="submitFriendInvite">{{ friendInviteSaving ? 'Đang xử lý...' : friendInviteReceived ? 'Chấp nhận' : 'Gởi lời mời' }}</button></div></div></div>
 
   <div
     v-if="showChallengePairsModal"
@@ -5637,6 +5640,11 @@ const challengeReceived = ref(false);
 const challengePendingOutgoing = ref(false);
 const challengeAccepted = ref(false);
 const challengeSaving = ref(false);
+const showFriendInviteModal = ref(false);
+const friendInviteTarget = ref<any | null>(null);
+const friendInviteTournamentId = ref<string | null>(null);
+const friendInviteReceived = ref(false);
+const friendInviteSaving = ref(false);
 const autoOpenedIncomingChallengeIds = new Set<string>();
 const showDeadmatchModal = ref(false);
 const showDeadmatchHistoryModal = ref(false);
@@ -7598,7 +7606,7 @@ const isPendingOutgoingChallengeTarget = (
   const currentPlayerId = getCurrentPlayerId();
   if (!currentPlayerId || player.id === currentPlayerId) return false;
   const details = attendanceDetailsMap.value.get(tournamentId) || [];
-  const self = details.find((item: any) => item.playerId === currentPlayerId);
+  const self: any = details.find((item: any) => item.playerId === currentPlayerId);
   return Boolean(
     self?.challenge?.direction === "SENT" &&
       self.challenge?.status === "PENDING" &&
@@ -7613,7 +7621,7 @@ const isCurrentUsersAcceptedChallenge = (
   const currentPlayerId = getCurrentPlayerId();
   if (!currentPlayerId) return false;
   const details = attendanceDetailsMap.value.get(tournamentId) || [];
-  const self = details.find((item: any) => item.playerId === currentPlayerId);
+  const self: any = details.find((item: any) => item.playerId === currentPlayerId);
   if (self?.challenge?.status !== "ACCEPTED") return false;
   return (
     player.id === currentPlayerId ||
@@ -7676,6 +7684,30 @@ const canShowChallengeIcon = (
     !player.challenge &&
     isSameChallengeTierRange(self.player.tier, player.tier)
   );
+};
+const canShowFriendInviteIcon = (tournamentId: string, field: 'FIELD_5' | 'FIELD_7', player: any): boolean => {
+  const currentPlayerId = getCurrentPlayerId();
+  const details = attendanceDetailsMap.value.get(tournamentId) || [];
+  const self: any = details.find((item: any) => item.playerId === currentPlayerId);
+  return Boolean(currentPlayerId && player.id !== currentPlayerId && self?.status === 'ATTEND' && (field === 'FIELD_5' ? self.field5 : self.field7) && !self.challenge && !player.challenge && !self.friendInvite && !player.friendInvite && !(self.player.tier <= 2 && player.tier <= 2));
+};
+const openFriendInviteModal = (tournamentId: string, player: any): void => {
+  friendInviteTournamentId.value = tournamentId; friendInviteTarget.value = player;
+  const self: any = (attendanceDetailsMap.value.get(tournamentId) || []).find((item: any) => item.playerId === getCurrentPlayerId());
+  friendInviteReceived.value = self?.friendInvite?.status === 'PENDING' && self.friendInvite?.direction === 'RECEIVED';
+  showFriendInviteModal.value = true;
+};
+const submitFriendInvite = async (): Promise<void> => {
+  if (!friendInviteTournamentId.value || !friendInviteTarget.value) return;
+  try {
+    friendInviteSaving.value = true;
+    const self: any = (attendanceDetailsMap.value.get(friendInviteTournamentId.value) || []).find((item: any) => item.playerId === getCurrentPlayerId());
+    if (friendInviteReceived.value && self?.friendInvite?.id) await apiClient.put(`/tournaments/${friendInviteTournamentId.value}/friend-invites/${self.friendInvite.id}/accept`);
+    else await apiClient.post(`/tournaments/${friendInviteTournamentId.value}/friend-invites`, { targetPlayerId: friendInviteTarget.value.id });
+    showFriendInviteModal.value = false;
+    await fetchAttendanceDetails(friendInviteTournamentId.value, false);
+  } catch (error: any) { toast.error(error.response?.data?.error || 'Không thể xử lý lời mời rủ bạn'); }
+  finally { friendInviteSaving.value = false; }
 };
 
 const openChallengeModal = (tournamentId: string, player: any): void => {

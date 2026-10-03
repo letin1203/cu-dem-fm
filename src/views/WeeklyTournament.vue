@@ -892,7 +892,7 @@
                 >
                   Swap dùm bạn
                 </button>
-                <template v-if="!cannotRegisterDueToDebt">
+                <template v-if="!cannotRegisterDueToDebt && getUserAttendanceStatus(ongoingTournament.id) !== 'ATTEND'">
                   <button
                     v-for="request in getIncomingSwapRequests(
                       ongoingTournament.id,

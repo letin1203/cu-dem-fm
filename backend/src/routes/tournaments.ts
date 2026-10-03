@@ -1374,7 +1374,7 @@ router.post('/:id/friend-invites', authenticate, async (req: AuthenticatedReques
     if (!tournament || tournament.status !== 'UPCOMING' || tournament.teams.length) { res.status(400).json({ success: false, error: 'Chỉ có thể rủ bạn trước khi chia đội' }); return; }
     const [requester, target, requesterAttendance, targetAttendance, activeChallenge, activeInvite] = await Promise.all([
       prisma.player.findUnique({ where: { id: user.playerId }, select: { id: true, tier: true } }),
-      prisma.player.findUnique({ where: { id: targetPlayerId }, select: { id: true, tier: true } }),
+      prisma.player.findUnique({ where: { id: targetPlayerId }, select: { id: true, tier: true, friendOwnerId: true } }),
       prisma.tournamentPlayerAttendance.findUnique({ where: { tournamentId_playerId: { tournamentId: tournament.id, playerId: user.playerId } } }),
       prisma.tournamentPlayerAttendance.findUnique({ where: { tournamentId_playerId: { tournamentId: tournament.id, playerId: targetPlayerId } } }),
       prisma.tournamentChallenge.findFirst({ where: { tournamentId: tournament.id, status: { in: ['PENDING', 'ACCEPTED'] }, OR: [{ requesterPlayerId: user.playerId }, { targetPlayerId: user.playerId }, { requesterPlayerId: targetPlayerId }, { targetPlayerId: targetPlayerId }] } }),
@@ -1383,7 +1383,8 @@ router.post('/:id/friend-invites', authenticate, async (req: AuthenticatedReques
     const sharedField = requesterAttendance?.status === 'ATTEND' && targetAttendance?.status === 'ATTEND' && ((requesterAttendance.field5 && targetAttendance.field5) || (requesterAttendance.field7 && targetAttendance.field7));
     if (!requester || !target || !sharedField || requester.tier < 1 || requester.tier > 6 || target.tier < 1 || target.tier > 6 || (requester.tier <= 2 && target.tier <= 2)) { res.status(400).json({ success: false, error: 'Chỉ rủ được cầu thủ đăng ký chung sân; Tier 1–2 không rủ nhau' }); return; }
     if (activeChallenge || activeInvite) { res.status(400).json({ success: false, error: 'Một trong hai cầu thủ đang có Thách đấu hoặc Rủ bạn' }); return; }
-    const invite = await prisma.tournamentFriendInvite.create({ data: { tournamentId: tournament.id, requesterPlayerId: user.playerId, targetPlayerId } });
+    const isOwnFriend = target.friendOwnerId === req.user!.id;
+    const invite = await prisma.tournamentFriendInvite.create({ data: { tournamentId: tournament.id, requesterPlayerId: user.playerId, targetPlayerId, status: isOwnFriend ? 'ACCEPTED' : 'PENDING', respondedAt: isOwnFriend ? new Date() : null } });
     res.json({ success: true, data: invite });
   } catch (error) { console.error('Create friend invite error:', error); res.status(500).json({ success: false, error: 'Không thể gửi lời mời rủ bạn' }); }
 });
@@ -2938,7 +2939,7 @@ router.put('/:id/end', authenticate, authorize(['ADMIN', 'MOD']), async (req: Au
     const [systemSettings, acceptedChallenges, acceptedFriendInvites, matchedDeadmatches] = await Promise.all([
       prisma.systemSettings.findFirst(),
       prisma.tournamentChallenge.findMany({ where: { tournamentId: id, status: 'ACCEPTED' } }),
-      prisma.tournamentFriendInvite.findMany({ where: { tournamentId: id, status: 'ACCEPTED' } }),
+      prisma.tournamentFriendInvite.findMany({ where: { tournamentId: id, status: 'ACCEPTED' }, include: { requester: { include: { user: { select: { id: true } } } }, target: { select: { friendOwnerId: true } } } }),
       prisma.tournamentDeadmatchEntry.findMany({ where: { tournamentId: id, status: 'MATCHED' } }),
     ]);
     const challengeOpponentByPlayerId = new Map<string, string>();
@@ -2946,8 +2947,12 @@ router.put('/:id/end', authenticate, authorize(['ADMIN', 'MOD']), async (req: Au
       challengeOpponentByPlayerId.set(challenge.requesterPlayerId, challenge.targetPlayerId);
       challengeOpponentByPlayerId.set(challenge.targetPlayerId, challenge.requesterPlayerId);
     }
-    const invitedFriendPlayerIds = new Set<string>();
-    acceptedFriendInvites.forEach((invite) => { invitedFriendPlayerIds.add(invite.requesterPlayerId); invitedFriendPlayerIds.add(invite.targetPlayerId); });
+    const invitedFriendPenaltyByPlayerId = new Map<string, number>();
+    acceptedFriendInvites.forEach((invite) => {
+      const requesterOwnsTarget = invite.target.friendOwnerId && invite.target.friendOwnerId === invite.requester.user?.id;
+      invitedFriendPenaltyByPlayerId.set(invite.requesterPlayerId, (invitedFriendPenaltyByPlayerId.get(invite.requesterPlayerId) || 0) + (requesterOwnsTarget ? 20000 : 10000));
+      if (!requesterOwnsTarget) invitedFriendPenaltyByPlayerId.set(invite.targetPlayerId, (invitedFriendPenaltyByPlayerId.get(invite.targetPlayerId) || 0) + 10000);
+    });
     const deadmatchesByPlayerId = new Map<string, typeof matchedDeadmatches>();
     for (const entry of matchedDeadmatches) {
       const entries = deadmatchesByPlayerId.get(entry.playerId) || [];
@@ -3005,8 +3010,9 @@ router.put('/:id/end', authenticate, authorize(['ADMIN', 'MOD']), async (req: Au
         moneyChangeDetails.push({ description: 'Phạt không lên sân', amount: -noShowPenalty });
       }
 
-      if (invitedFriendPlayerIds.has(player.id)) {
-        moneyChangeDetails.push({ description: 'Rủ bạn cùng đội', amount: -10000 });
+      const friendInvitePenalty = invitedFriendPenaltyByPlayerId.get(player.id) || 0;
+      if (friendInvitePenalty > 0) {
+        moneyChangeDetails.push({ description: friendInvitePenalty === 20000 ? 'Rủ bạn cùng đội (bao gồm phần bạn)' : 'Rủ bạn cùng đội', amount: -friendInvitePenalty });
       }
 
       const opponentId = challengeOpponentByPlayerId.get(player.id);

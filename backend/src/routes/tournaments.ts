@@ -2344,6 +2344,7 @@ router.post('/:id/generate-teams', authenticate, authorize(['ADMIN', 'MOD']), as
             position: true,
             positionSecond: true,
             tier: true,
+            avatar: true,
           },
         },
       },

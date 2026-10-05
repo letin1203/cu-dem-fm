@@ -4,6 +4,7 @@ export interface TeamGenerationPlayer {
   position: string;
   positionSecond: string | null;
   tier: number;
+  avatar: string | null;
 }
 
 export interface GeneratedTeam {
@@ -78,8 +79,16 @@ export function generateBalancedTeams(
       const pool = eligible.length ? eligible : teams.map((team, index) => ({ team, index }));
       let candidates = pool;
       if (tier <= 2) {
-        const minCount = Math.min(...pool.map(({ team }) => countTier(team, tier)));
-        candidates = pool.filter(({ team }) => countTier(team, tier) === minCount);
+        // Tier 1-2 are protected from later balancing. Allocate their
+        // combined slots first, then use the exact Tier count as a tie-break.
+        // This keeps a final Tier 2 from worsening an already uneven 1-2
+        // distribution.
+        const lowTierCount = ({ team }: { team: GeneratedTeam }) =>
+          team.players.filter((player) => player.tier <= 2).length;
+        const minLowTierCount = Math.min(...pool.map(lowTierCount));
+        candidates = pool.filter((candidate) => lowTierCount(candidate) === minLowTierCount);
+        const minCount = Math.min(...candidates.map(({ team }) => countTier(team, tier)));
+        candidates = candidates.filter(({ team }) => countTier(team, tier) === minCount);
       }
       candidates.sort((a, b) => {
         if (tier === 2) {

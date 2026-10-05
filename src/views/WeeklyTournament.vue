@@ -1858,9 +1858,8 @@
               </button>
               <button
                 v-if="
-                  authStore.hasPermission('canDeleteTournaments') &&
-                  !ongoingTournament.isProtected &&
-                  getTournamentTeams(ongoingTournament).length === 0
+                  authStore.hasRole('admin') &&
+                  !ongoingTournament.isProtected
                 "
                 @click="deleteTournament(ongoingTournament.id)"
                 class="px-4 py-2 rounded-lg font-medium bg-red-600 text-white hover:bg-red-700 transition-colors"

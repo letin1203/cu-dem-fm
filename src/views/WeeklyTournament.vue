@@ -1977,7 +1977,7 @@
                         {{ tournament.name }}
                       </h3>
                       <p v-if="tournament.status === 'DELETED'" class="basis-full text-xs font-medium text-red-600">
-                        Đã xóa: {{ tournament.deletedReason }}
+                        Lý do: {{ tournament.deletedReason }}
                       </p>
                       <span
                         class="inline-flex shrink-0 whitespace-nowrap rounded-full bg-primary-100 px-2 py-0.5 text-xs font-medium text-primary-700"
@@ -2372,7 +2372,7 @@
               </div>
               <div class="flex justify-end gap-3 pt-2 border-t border-gray-200">
                 <button
-                  v-if="!tournament.selfFunded"
+                  v-if="!tournament.selfFunded && tournament.status !== 'DELETED'"
                   @click="openTournamentMoneyHistory(tournament)"
                   class="btn-secondary"
                 >

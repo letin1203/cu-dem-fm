@@ -949,6 +949,7 @@ const uploadAvatar = async (event: Event): Promise<void> => {
     selectedAvatar.value = (response.data as any).avatar;
     playerProfile.value = { ...playerProfile.value, avatar: selectedAvatar.value };
     if (authStore.currentUser?.player) authStore.currentUser.player.avatar = selectedAvatar.value;
+    showAvatarModal.value = false;
     toast.success('Đã upload avatar lên Cloudinary');
   } catch (error) { toast.error(error instanceof Error ? error.message : 'Không thể upload avatar'); }
   finally { savingAvatar.value = false; }

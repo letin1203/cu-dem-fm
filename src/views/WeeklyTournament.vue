@@ -1886,30 +1886,30 @@
             </div>
             <div>
               <h3 class="text-lg font-semibold text-gray-900">
-                Logic chia đội
+                Logic chia team
               </h3>
               <p class="mt-1 text-sm text-gray-600">
                 Hệ thống ưu tiên số lượng cầu thủ, vị trí thủ môn và sức mạnh
-                đội hình để tạo các đội cân bằng nhất có thể.
+                team để tạo các team cân bằng nhất có thể.
               </p>
             </div>
           </div>
           <div class="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div class="rounded-lg border border-gray-200 bg-gray-50 p-4">
               <h4 class="font-semibold text-gray-900">
-                1. Điều kiện và số đội
+                1. Điều kiện và số team
               </h4>
               <p class="mt-1 text-sm text-gray-600">
                 Cần ít nhất 12 cầu thủ đăng ký Sân 5 hoặc 16 cầu thủ đăng ký Sân
-                7. Admin/mod chọn 2, 3 hoặc 4 đội; số cầu thủ giữa các đội được
+                7. Admin/mod chọn 2, 3 hoặc 4 team; số cầu thủ giữa các team được
                 phân bổ chênh lệch tối đa 1 người.
               </p>
             </div>
             <div class="rounded-lg border border-gray-200 bg-gray-50 p-4">
               <h4 class="font-semibold text-gray-900">2. Phân bổ thủ môn</h4>
               <p class="mt-1 text-sm text-gray-600">
-                Thủ môn được xếp trước, ưu tiên mỗi đội một GK. GK còn lại được
-                đưa vào đội có ít GK nhất để giữ cân bằng vị trí.
+                Thủ môn được xếp trước, ưu tiên mỗi team một GK. GK còn lại được
+                đưa vào team có ít GK nhất để giữ cân bằng vị trí.
               </p>
             </div>
             <div class="rounded-lg border border-gray-200 bg-gray-50 p-4">
@@ -1917,23 +1917,25 @@
                 3. Ưu tiên Tier 1 và Tier 2
               </h4>
               <p class="mt-1 text-sm text-gray-600">
-                Tier 1 và Tier 2 là cầu thủ mạnh, được chia trước theo thứ tự
-                Tier 1 rồi Tier 2. Khi chia Tier 2, đội có ít Tier 1 hơn sẽ được
-                ưu tiên trước.
+                Tier 1 và Tier 2 được chia trước. Khi chia Tier 2, team có ít
+                Tier 1 hơn được ưu tiên trước; sau đó mới cân bằng tổng slot
+                Tier 1–2 và số lượng từng Tier. Nhóm này được khóa để không bị
+                thay đổi ở các bước cân bằng sau.
               </p>
             </div>
             <div class="rounded-lg border border-gray-200 bg-gray-50 p-4">
               <h4 class="font-semibold text-gray-900">4. Cân bằng cuối cùng</h4>
               <p class="mt-1 text-sm text-gray-600">
                 Các Tier 3–6 được xếp theo sức chứa và tổng Tier. Sau đó hệ
-                thống đổi tối đa 100 cặp cầu thủ phù hợp để giảm chênh lệch Tier
-                trung bình; Tier 1/2 và GK chính được giữ ổn định.
+                thống đổi các cặp cầu thủ phù hợp giữa team mạnh nhất/yếu nhất
+                để giảm chênh lệch Tier trung bình; GK chính và Tier 1/2 được giữ ổn định.
               </p>
             </div>
           </div>
           <p class="mt-4 text-xs text-gray-500">
             Trong cùng một Tier, thứ tự cầu thủ được xáo trộn để kết quả mỗi lần
-            chia đội không hoàn toàn giống nhau.
+            chia team không hoàn toàn giống nhau. Cặp Battle luôn được ưu tiên
+            ở hai team khác nhau; cặp rủ bạn đã chấp nhận được xếp cùng team.
           </p>
         </div>
       </div>

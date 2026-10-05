@@ -3,8 +3,10 @@ import { prisma } from '../lib/prisma';
 import { createPlayerSchema, updatePlayerSchema, playerQuerySchema } from '../schemas/validation';
 import { authenticate, authorize, AuthenticatedRequest } from '../middleware/auth';
 import { AVATAR_PATHS, getRandomAvatar } from '../lib/avatars';
+import { v2 as cloudinary } from 'cloudinary';
 
 const router = Router();
+cloudinary.config({ secure: true });
 
 // Friends are players created and financially sponsored by a user (maximum two).
 router.get('/friends/mine', authenticate, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
@@ -379,6 +381,23 @@ router.post('/', authenticate, authorize(['ADMIN', 'MOD']), async (req: Authenti
 });
 
 // Let a user update only the avatar of their own linked player.
+router.post('/:id/avatar/upload', authenticate, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  try {
+    const { id } = req.params;
+    const image = req.body?.image;
+    if (typeof image !== 'string' || !image.startsWith('data:image/') || image.length > 7_000_000) {
+      res.status(400).json({ success: false, error: 'Ảnh avatar không hợp lệ hoặc vượt quá 5MB' }); return;
+    }
+    const player = await prisma.player.findUnique({ where: { id }, select: { user: { select: { id: true } } } });
+    if (!player) { res.status(404).json({ success: false, error: 'Không tìm thấy cầu thủ' }); return; }
+    if (player.user?.id !== req.user!.id && !['ADMIN', 'MOD'].includes(req.user!.role)) { res.status(403).json({ success: false, error: 'Bạn không có quyền đổi avatar cầu thủ này' }); return; }
+    if (!process.env.CLOUDINARY_URL) { res.status(503).json({ success: false, error: 'Cloudinary chưa được cấu hình' }); return; }
+    const uploaded = await cloudinary.uploader.upload(image, { folder: 'cu-dem-fm/avatars', public_id: `player-${id}`, overwrite: true, resource_type: 'image', transformation: [{ width: 256, height: 256, crop: 'fill', gravity: 'face' }] });
+    const updatedPlayer = await prisma.player.update({ where: { id }, data: { avatar: uploaded.secure_url } });
+    res.json({ success: true, data: updatedPlayer });
+  } catch (error) { console.error('Upload player avatar error:', error); res.status(500).json({ success: false, error: 'Không thể upload avatar' }); }
+});
+
 router.put('/:id/avatar', authenticate, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   try {
     const { id } = req.params;

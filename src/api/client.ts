@@ -327,6 +327,10 @@ class ApiClient {
     return this.put(`/players/${id}/avatar`, { avatar });
   }
 
+  async uploadMyPlayerAvatar(id: string, image: string) {
+    return this.post(`/players/${id}/avatar/upload`, { image });
+  }
+
   async updateMyPlayerYearOfBirth(id: string, yearOfBirth: number) {
     return this.put(`/players/${id}/year-of-birth`, { yearOfBirth });
   }

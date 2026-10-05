@@ -1182,6 +1182,7 @@
                     <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 6h18M6 12h12m-9 6h6M7 4l-2 2 2 2m10 8 2 2-2 2" /></svg>
                   </button>
                   <button type="button" class="inline-flex h-4 w-4 items-center justify-center rounded text-xs leading-none text-red-600 hover:bg-red-100" title="Xem các cặp thách đấu" aria-label="Xem các cặp thách đấu" @click="openChallengePairsModal(ongoingTournament.id)">⚔️</button>
+                  <button type="button" class="inline-flex h-4 w-4 items-center justify-center rounded text-xs leading-none text-primary-600 hover:bg-primary-100" title="Xem các cặp rủ bạn" aria-label="Xem các cặp rủ bạn" @click="openFriendInvitePairsModal(ongoingTournament.id)">🤝</button>
                   <button
                     v-if="authStore.hasAnyRole(['admin', 'mod'])"
                     type="button"
@@ -1492,6 +1493,7 @@
                     <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 6h18M6 12h12m-9 6h6M7 4l-2 2 2 2m10 8 2 2-2 2" /></svg>
                   </button>
                   <button type="button" class="inline-flex h-4 w-4 items-center justify-center rounded text-xs leading-none text-red-600 hover:bg-red-100" title="Xem các cặp thách đấu" aria-label="Xem các cặp thách đấu" @click="openChallengePairsModal(ongoingTournament.id)">⚔️</button>
+                  <button type="button" class="inline-flex h-4 w-4 items-center justify-center rounded text-xs leading-none text-primary-600 hover:bg-primary-100" title="Xem các cặp rủ bạn" aria-label="Xem các cặp rủ bạn" @click="openFriendInvitePairsModal(ongoingTournament.id)">🤝</button>
                   <button
                     v-if="authStore.hasAnyRole(['admin', 'mod'])"
                     type="button"
@@ -2186,6 +2188,7 @@
                   >
                     ⚔️ Battle
                   </button>
+                  <button type="button" class="ml-2 rounded bg-primary-600 px-2 py-1 text-xs font-semibold text-white hover:bg-primary-700" @click="openFriendInvitePairsModal(tournament.id)">🤝 Rủ bạn</button>
                 </h4>
 
                 <div
@@ -5307,6 +5310,7 @@
       <div class="flex justify-end border-t p-4"><button type="button" class="btn-primary" @click="showChallengePairsModal = false">Đóng</button></div>
     </div>
   </div>
+  <div v-if="showFriendInvitePairsModal" class="fixed inset-0 z-[80] flex items-center justify-center overflow-y-auto bg-black/50 p-4"><div class="my-auto max-h-[90vh] w-full max-w-md overflow-y-auto rounded-xl bg-white shadow-xl"><div class="flex items-start justify-between border-b p-5"><div><h3 class="text-lg font-semibold text-primary-700">🤝 Các cặp rủ bạn</h3><p class="mt-1 text-sm text-gray-600">Các cầu thủ đã chấp nhận rủ bạn trước khi chia đội.</p></div><button type="button" class="text-xl text-gray-400" @click="showFriendInvitePairsModal = false">×</button></div><div class="space-y-3 p-5"><section class="rounded-lg border border-primary-100 bg-primary-50 p-3 text-sm leading-6 text-gray-700"><h4 class="font-semibold text-primary-800">Luật rủ bạn</h4><ul class="mt-1 list-disc space-y-1 pl-5"><li>Cùng đăng ký ít nhất một sân; Tier 1–2 không rủ nhau.</li><li>Hai bên được xếp cùng đội khi chia team.</li><li>Kết thúc giải, cả hai bị trừ 10.000 ₫.</li></ul></section><p v-if="!activeFriendInvitePairs.length" class="rounded-lg bg-gray-50 p-4 text-center text-sm text-gray-500">Chưa có cặp rủ bạn nào.</p><div v-for="pair in activeFriendInvitePairs" :key="pair.id" class="flex items-center justify-between gap-3 rounded-lg border border-primary-100 bg-primary-50 p-3"><span class="min-w-0 flex-1 truncate">{{ pair.requester.name }}</span><span>🤝</span><span class="min-w-0 flex-1 truncate text-right">{{ pair.target.name }}</span></div></div><div class="flex justify-end border-t p-4"><button class="btn-primary" @click="showFriendInvitePairsModal = false">Đóng</button></div></div></div>
 
   <div
     v-if="showDeadmatchModal"
@@ -5633,6 +5637,8 @@ const showCreateFriendModal = ref(false);
 const showChallengeModal = ref(false);
 const showChallengePairsModal = ref(false);
 const challengePairsTournamentId = ref<string | null>(null);
+const friendInvitePairsTournamentId = ref<string | null>(null);
+const showFriendInvitePairsModal = ref(false);
 const challengeTarget = ref<any | null>(null);
 const challengeTournamentId = ref<string | null>(null);
 const challengeId = ref<string | null>(null);
@@ -7519,6 +7525,7 @@ const getTeamPreviewPlayers = (
       swapWaitlistPosition: attendance.swapWaitlistPosition || null,
       swappedWithName: attendance.swappedWithName || null,
       challenge: attendance.challenge || null,
+      friendInvite: attendance.friendInvite || null,
       registeredAt: attendance.registeredAt || null,
     }));
   const hasPrimaryGoalkeeper = players.some((player: any) =>
@@ -7580,6 +7587,16 @@ const activeChallengePairs = computed<
     target: any;
   }>;
 });
+const activeFriendInvitePairs = computed<Array<{ id: string; requester: any; target: any }>>(() => {
+  const tournamentId = friendInvitePairsTournamentId.value;
+  const details = tournamentId ? attendanceDetailsMap.value.get(tournamentId) || [] : [];
+  return details.filter((item: any) => item.friendInvite?.status === 'ACCEPTED' && item.friendInvite?.direction === 'SENT').map((item: any) => ({ id: item.friendInvite.id, requester: item.player, target: details.find((candidate: any) => candidate.playerId === item.friendInvite.opponentPlayerId)?.player })).filter((pair: any) => pair.target);
+});
+const openFriendInvitePairsModal = async (tournamentId: string): Promise<void> => {
+  friendInvitePairsTournamentId.value = tournamentId;
+  showFriendInvitePairsModal.value = true;
+  await fetchAttendanceDetails(tournamentId, false);
+};
 
 const openChallengePairsModal = async (tournamentId: string): Promise<void> => {
   challengePairsTournamentId.value = tournamentId;

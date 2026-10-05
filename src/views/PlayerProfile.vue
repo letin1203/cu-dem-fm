@@ -455,6 +455,7 @@
           <div><h2 class="text-lg font-semibold text-gray-900">Chọn avatar</h2><p class="text-sm text-gray-500">Chọn một hình đại diện cho hồ sơ của bạn.</p></div>
           <button type="button" class="text-2xl leading-none text-gray-400 hover:text-gray-700" @click="showAvatarModal = false">×</button>
         </div>
+        <div class="border-b p-5"><label class="btn-secondary inline-flex cursor-pointer"><input type="file" accept="image/png,image/jpeg,image/webp" class="hidden" @change="uploadAvatar">Tải ảnh lên</label><p class="mt-2 text-xs text-gray-500">PNG, JPG hoặc WebP, tối đa 5MB.</p></div>
         <div class="grid grid-cols-4 gap-3 overflow-y-auto p-5 sm:grid-cols-6">
           <button v-for="avatar in avatarOptions" :key="avatar" type="button" class="rounded-full border-2 p-0.5 transition-colors" :class="selectedAvatar === avatar ? 'border-primary-600' : 'border-transparent hover:border-primary-300'" @click="selectedAvatar = avatar">
             <img :src="avatar" alt="Avatar" class="aspect-square w-full rounded-full object-cover">
@@ -934,6 +935,23 @@ const saveAvatar = async () => {
   } finally {
     savingAvatar.value = false;
   }
+};
+
+const uploadAvatar = async (event: Event): Promise<void> => {
+  const file = (event.target as HTMLInputElement).files?.[0];
+  if (!file || !playerProfile.value) return;
+  if (file.size > 5 * 1024 * 1024) { toast.error('Ảnh tối đa 5MB'); return; }
+  savingAvatar.value = true;
+  try {
+    const image = await new Promise<string>((resolve, reject) => { const reader = new FileReader(); reader.onload = () => resolve(String(reader.result)); reader.onerror = reject; reader.readAsDataURL(file); });
+    const response = await apiClient.uploadMyPlayerAvatar(playerProfile.value.id, image);
+    if (!response.success) throw new Error(response.error || 'Không thể upload avatar');
+    selectedAvatar.value = (response.data as any).avatar;
+    playerProfile.value = { ...playerProfile.value, avatar: selectedAvatar.value };
+    if (authStore.currentUser?.player) authStore.currentUser.player.avatar = selectedAvatar.value;
+    toast.success('Đã upload avatar lên Cloudinary');
+  } catch (error) { toast.error(error instanceof Error ? error.message : 'Không thể upload avatar'); }
+  finally { savingAvatar.value = false; }
 };
 const submitTopUp = async () => {
   if (!Number.isInteger(selectedTopUpAmount.value) || selectedTopUpAmount.value <= 0) {

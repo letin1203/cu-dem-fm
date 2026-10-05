@@ -191,7 +191,7 @@ router.get('/completed-dates', async (req: AuthenticatedRequest, res: Response):
     const tournaments = await prisma.tournament.findMany({
       where: {
         type: 'WEEKLY',
-        status: 'COMPLETED',
+        status: { in: ['COMPLETED', 'DELETED'] },
         startDate: { gte: monthStart, lt: nextMonthStart },
       },
       select: { startDate: true },
@@ -529,10 +529,16 @@ router.put('/:id/protection', authenticate, authorize(['ADMIN']), async (req: Au
   }
 });
 
-// Delete tournament
+// Soft-delete a tournament. Keeping its record means the old-tournament view
+// remains auditable and no completion/financial settlement can run afterwards.
 router.delete('/:id', authenticate, authorize(['ADMIN']), async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   try {
     const { id } = req.params;
+    const reason = typeof req.body?.reason === 'string' ? req.body.reason.trim() : '';
+    if (!reason) {
+      res.status(400).json({ success: false, error: 'Vui lòng nhập lý do xóa giải đấu' });
+      return;
+    }
 
     const existingTournament = await prisma.tournament.findUnique({
       where: { id },
@@ -557,66 +563,28 @@ router.delete('/:id', authenticate, authorize(['ADMIN']), async (req: Authentica
       return;
     }
 
-    // Check if tournament has matches
-    if (existingTournament.matches.length > 0) {
-      res.status(400).json({
-        success: false,
-        error: 'Cannot delete tournament with existing matches',
-      });
+    if (existingTournament.status === 'DELETED') {
+      res.status(400).json({ success: false, error: 'Giải đấu này đã được xóa' });
       return;
     }
 
-    // For weekly tournaments, we need to clean up the teams that were created specifically for this tournament
-    let teamsDeleted = 0;
-    if (existingTournament.type === 'WEEKLY' && existingTournament.teams.length > 0) {
-      // Get the team IDs from tournament teams
-      const teamIds = existingTournament.teams.map(tt => tt.teamId);
-      
-      // Reset players' teamId to null before deleting teams
-      await prisma.player.updateMany({
-        where: {
-          teamId: {
-            in: teamIds,
-          },
-        },
-        data: {
-          teamId: null,
-        },
-      });
-      
-      // Delete team stats first (if any)
-      await prisma.teamStats.deleteMany({
-        where: {
-          teamId: {
-            in: teamIds,
-          },
-        },
-      });
-      
-      // Delete the actual teams
-      const deletedTeams = await prisma.team.deleteMany({
-        where: {
-          id: {
-            in: teamIds,
-          },
-        },
-      });
-      
-      teamsDeleted = deletedTeams.count;
+    // A completed tournament may already have settled money history. Do not
+    // allow it to be marked deleted unless that settlement is explicitly
+    // reversed in a dedicated flow.
+    if (existingTournament.status === 'COMPLETED') {
+      res.status(400).json({ success: false, error: 'Không thể xóa giải đấu đã hoàn thành và đã tính tiền' });
+      return;
     }
 
-    // Delete the tournament (cascade deletes will handle TournamentTeam, attendance, and additional costs)
-    await prisma.tournament.delete({
+    const deletedTournament = await prisma.tournament.update({
       where: { id },
+      data: { status: 'DELETED', deletedReason: reason },
     });
-
-    const message = existingTournament.type === 'WEEKLY' 
-      ? `Weekly tournament deleted successfully. Removed ${teamsDeleted} teams, ${existingTournament.teams.length} team assignments, ${existingTournament.playerAttendances.length} attendance records, and ${existingTournament.additionalCosts.length} additional costs.`
-      : `Tournament deleted successfully. Removed ${existingTournament.teams.length} team assignments, ${existingTournament.playerAttendances.length} attendance records, and ${existingTournament.additionalCosts.length} additional costs.`;
 
     res.json({
       success: true,
-      message,
+      data: deletedTournament,
+      message: 'Đã chuyển giải đấu sang trạng thái đã xóa. Giải đấu sẽ không được tính tiền.',
     });
   } catch (error) {
     console.error('Delete tournament error:', error);

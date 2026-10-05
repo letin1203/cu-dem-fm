@@ -3,7 +3,7 @@ import { z } from 'zod';
 // Define enums to match Prisma schema
 const UserRole = z.enum(['ADMIN', 'MOD', 'USER']);
 const TournamentType = z.enum(['LEAGUE', 'KNOCKOUT', 'GROUP', 'WEEKLY']);
-const TournamentStatus = z.enum(['UPCOMING', 'ONGOING', 'COMPLETED']);
+const TournamentStatus = z.enum(['UPCOMING', 'ONGOING', 'COMPLETED', 'DELETED']);
 const MatchStatus = z.enum(['SCHEDULED', 'LIVE', 'COMPLETED', 'POSTPONED']);
 const EventType = z.enum(['GOAL', 'OWN_GOAL', 'YELLOW_CARD', 'RED_CARD', 'SUBSTITUTION']);
 const TeamSide = z.enum(['HOME', 'AWAY']);

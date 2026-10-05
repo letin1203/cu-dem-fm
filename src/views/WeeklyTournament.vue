@@ -1976,6 +1976,9 @@
                       <h3 class="text-lg font-semibold text-gray-900">
                         {{ tournament.name }}
                       </h3>
+                      <p v-if="tournament.status === 'DELETED'" class="basis-full text-xs font-medium text-red-600">
+                        Đã xóa: {{ tournament.deletedReason }}
+                      </p>
                       <span
                         class="inline-flex shrink-0 whitespace-nowrap rounded-full bg-primary-100 px-2 py-0.5 text-xs font-medium text-primary-700"
                         >{{
@@ -1989,6 +1992,7 @@
                         v-if="
                           authStore.hasPermission('canDeleteTournaments') &&
                           tournament.status !== 'COMPLETED' &&
+                          tournament.status !== 'DELETED' &&
                           !tournament.isProtected
                         "
                         @click="deleteTournament(tournament.id)"
@@ -2038,7 +2042,7 @@
                   </div>
                   <!-- Financial Information or Postponed Status -->
                   <div
-                    v-if="getTournamentTeams(tournament).length > 0"
+                    v-if="getTournamentTeams(tournament).length > 0 && tournament.status !== 'DELETED'"
                     class="mt-2"
                   >
                     <div
@@ -2088,6 +2092,7 @@
                       </span>
                     </div>
                   </div>
+                  <div v-else-if="tournament.status === 'DELETED'" class="mt-2 text-sm font-medium text-red-600">Giải đấu đã bị xóa và không được tính tiền.</div>
                   <div v-else class="mt-2">
                     <div class="text-red-600 font-bold text-2xl">POSTPONED</div>
                   </div>
@@ -4729,41 +4734,24 @@
     <div class="bg-white rounded-lg p-6 max-w-lg w-full" @click.stop>
       <h3 class="text-lg font-semibold text-gray-900 mb-4">Xóa giải đấu</h3>
       <div class="text-gray-600 mb-6">
-        <p class="mb-2">
-          Bạn có chắc muốn xóa
-          <strong>"{{ deleteTournamentData?.name }}"</strong>?
-        </p>
-        <div v-if="deleteTournamentInfo" class="bg-red-50 p-3 rounded-lg">
-          <p class="font-medium text-red-800 mb-2">
-            Thao tác này sẽ xóa vĩnh viễn:
-          </p>
-          <ul class="text-red-700 text-sm space-y-1">
-            <li v-if="deleteTournamentInfo.teamCount > 0">
-              • {{ deleteTournamentInfo.teamCount }} phân công đội
-            </li>
-            <li v-if="deleteTournamentInfo.attendanceCount > 0">
-              • {{ deleteTournamentInfo.attendanceCount }} bản ghi điểm danh
-            </li>
-            <li v-if="deleteTournamentInfo.additionalCostCount > 0">
-              • {{ deleteTournamentInfo.additionalCostCount }} khoản chi phí
-              phát sinh
-            </li>
-          </ul>
-          <p class="text-red-800 font-medium mt-2">
-            Thao tác này không thể hoàn tác.
-          </p>
+        <p class="mb-3">Xác nhận xóa <strong>"{{ deleteTournamentData?.name }}"</strong>?</p>
+        <div class="rounded-lg bg-red-50 p-3 text-sm text-red-800">
+          Giải đấu sẽ được chuyển sang trạng thái <strong>DELETED</strong>, vẫn hiển thị ở Giải đấu cũ và không được tính tiền.
         </div>
+        <label class="mt-4 block text-sm font-medium text-gray-700" for="delete-tournament-reason">Lý do <span class="text-red-600">*</span></label>
+        <textarea id="delete-tournament-reason" v-model="deleteTournamentReason" rows="3" class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-primary-500 focus:outline-none" placeholder="Nhập lý do xóa giải đấu" />
       </div>
       <div class="flex justify-end space-x-3">
         <button
-          @click="showDeleteTournamentModal = false"
+          @click="closeDeleteTournamentModal"
           class="px-4 py-2 text-gray-600 hover:text-gray-800 transition-colors"
         >
           Hủy
         </button>
         <button
           @click="confirmDeleteTournament"
-          class="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 transition-colors"
+          :disabled="!deleteTournamentReason.trim()"
+          class="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 transition-colors disabled:cursor-not-allowed disabled:opacity-50"
         >
           Xóa giải đấu
         </button>
@@ -5919,11 +5907,7 @@ const teamScores = ref<Map<string, number>>(new Map());
 
 const showDeleteTournamentModal = ref(false);
 const deleteTournamentData = ref<Tournament | null>(null);
-const deleteTournamentInfo = ref<{
-  teamCount: number;
-  attendanceCount: number;
-  additionalCostCount: number;
-} | null>(null);
+const deleteTournamentReason = ref('');
 
 const showClearTeamsModal = ref(false);
 const clearTeamsModalTournamentId = ref<string | null>(null);
@@ -6151,7 +6135,7 @@ const canCreateNew = computed(() => {
   const tournamentForNextMonday = weeklyTournaments.value.find((tournament) => {
     const tournamentDateStr = toLocalDateKey(new Date(tournament.startDate));
     return (
-      tournamentDateStr === targetDateStr && tournament.status !== "COMPLETED"
+      tournamentDateStr === targetDateStr && !['COMPLETED', 'DELETED'].includes(tournament.status)
     );
   });
 
@@ -6188,7 +6172,7 @@ const oldTournamentWeekdays = ["CN", "T2", "T3", "T4", "T5", "T6", "T7"];
 const filteredOldTournaments = computed(() => {
   const filterDate = oldTournamentDateFilter.value;
   return weeklyTournaments.value
-    .filter((tournament) => tournament.status === "COMPLETED")
+    .filter((tournament) => ['COMPLETED', 'DELETED'].includes(tournament.status))
     .filter(
       (tournament) =>
         !filterDate ||
@@ -6447,6 +6431,8 @@ const getStatusBadge = (status: string) => {
       return "bg-green-100 text-green-800";
     case "COMPLETED":
       return "bg-gray-100 text-gray-800";
+    case "DELETED":
+      return "bg-red-100 text-red-800";
     default:
       return "bg-gray-100 text-gray-800";
   }
@@ -8513,7 +8499,7 @@ const createWeeklyTournament = async (tournamentDay: Date) => {
 const loadOldTournaments = async () => {
   try {
     oldTournaments.value = weeklyTournaments.value
-      .filter((t) => t.status === "COMPLETED")
+      .filter((t) => ['COMPLETED', 'DELETED'].includes(t.status))
       .sort(
         (a, b) =>
           new Date(b.startDate).getTime() - new Date(a.startDate).getTime(),
@@ -8793,41 +8779,30 @@ const deleteTournament = async (id: string) => {
     return;
   }
 
-  const teamCount = getTournamentTeams(tournament).length;
-  const attendanceCount = attendanceStats.value.get(id)?.totalPlayers || 0;
-  const additionalCostCount = getTournamentAdditionalCosts(id).length;
-
-  // Set up modal data
   deleteTournamentData.value = tournament;
-  deleteTournamentInfo.value = {
-    teamCount,
-    attendanceCount,
-    additionalCostCount,
-  };
+  deleteTournamentReason.value = '';
   showDeleteTournamentModal.value = true;
 };
 
+const closeDeleteTournamentModal = (): void => {
+  showDeleteTournamentModal.value = false;
+  deleteTournamentData.value = null;
+  deleteTournamentReason.value = '';
+};
+
 const confirmDeleteTournament = async () => {
-  if (!deleteTournamentData.value) return;
+  if (!deleteTournamentData.value || !deleteTournamentReason.value.trim()) return;
 
   try {
-    await tournamentsStore.deleteTournament(deleteTournamentData.value.id);
-
-    // Clear local data
-    attendanceMap.value.delete(deleteTournamentData.value.id);
-    attendanceStats.value.delete(deleteTournamentData.value.id);
+    await tournamentsStore.deleteTournament(deleteTournamentData.value.id, deleteTournamentReason.value.trim());
 
     await fetchData();
-    toast.success(
-      "Đã xóa giải đấu cùng các đội, điểm danh và chi phí liên quan.",
-    );
+    toast.success('Đã chuyển giải đấu sang trạng thái DELETED và không tính tiền.');
   } catch (err: any) {
     console.error("Delete tournament error:", err);
     toast.error(err.response?.data?.error || "Không thể xóa giải đấu");
   } finally {
-    showDeleteTournamentModal.value = false;
-    deleteTournamentData.value = null;
-    deleteTournamentInfo.value = null;
+    closeDeleteTournamentModal();
   }
 };
 

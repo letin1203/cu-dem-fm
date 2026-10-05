@@ -87,15 +87,13 @@ export const useTournamentsStore = defineStore('tournaments', () => {
     }
   }
 
-  async function deleteTournament(id: string) {
+  async function deleteTournament(id: string, reason = 'Xóa từ trang Quản lý giải đấu') {
     try {
       loading.value = true
       error.value = null
-      await apiClient.delete(`/tournaments/${id}`)
+      const response = await apiClient.delete<Tournament>(`/tournaments/${id}`, { data: { reason } })
       const index = tournaments.value.findIndex((t: Tournament) => t.id === id)
-      if (index !== -1) {
-        tournaments.value.splice(index, 1)
-      }
+      if (index !== -1 && response.data) tournaments.value[index] = response.data
     } catch (err) {
       error.value = 'Failed to delete tournament'
       console.error('Delete tournament error:', err)

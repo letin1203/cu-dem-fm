@@ -132,7 +132,8 @@ model Tournament {
   id        String   @id @default(cuid())
   name      String   @unique
   type      String   // "LEAGUE", "KNOCKOUT", "GROUP", "WEEKLY"
-  status    String   @default("UPCOMING") // "UPCOMING", "ONGOING", "COMPLETED"
+  status    String   @default("UPCOMING") // "UPCOMING", "ONGOING", "COMPLETED", "DELETED"
+  deletedReason String?
   startDate DateTime
   endDate   DateTime?
   completedAt DateTime?

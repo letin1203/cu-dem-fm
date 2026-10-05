@@ -94,7 +94,8 @@ export interface Tournament {
   id: string
   name: string
   type: 'LEAGUE' | 'KNOCKOUT' | 'GROUP' | 'WEEKLY'
-  status: 'UPCOMING' | 'ONGOING' | 'COMPLETED'
+  status: 'UPCOMING' | 'ONGOING' | 'COMPLETED' | 'DELETED'
+  deletedReason?: string | null
   startDate: string | Date
   endDate?: string | Date | null
   sponsorMoney?: number | null
@@ -118,7 +119,7 @@ export interface Tournament {
 export interface CreateTournamentRequest {
   name: string
   type: 'LEAGUE' | 'KNOCKOUT' | 'GROUP' | 'WEEKLY'
-  status: 'UPCOMING' | 'ONGOING' | 'COMPLETED'
+  status: 'UPCOMING' | 'ONGOING' | 'COMPLETED' | 'DELETED'
   startDate: string
   endDate?: string
   cancellationDeadline?: string

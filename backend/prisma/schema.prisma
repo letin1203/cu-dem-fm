@@ -133,6 +133,7 @@ model Tournament {
   name      String   @unique
   type      String   // "LEAGUE", "KNOCKOUT", "GROUP", "WEEKLY"
   status    String   @default("UPCOMING") // "UPCOMING", "ONGOING", "COMPLETED", "DELETED"
+  format    String   @default("SCORE") // "SCORE", "LEAGUE"
   deletedReason String?
   startDate DateTime
   endDate   DateTime?
@@ -143,6 +144,7 @@ model Tournament {
   fundContribution Int @default(0)
   pitchType String?
   selfFunded Boolean @default(false)
+  isTest     Boolean @default(false)
   isProtected Boolean @default(false)
   maxAttendance Int?
   cancellationDeadline DateTime?

@@ -289,6 +289,19 @@
                     ></span>
                     {{ ongoingTournament.selfFunded ? "Tự túc" : "Dùng quỹ" }}
                   </button>
+                  <button
+                    v-if="authStore.hasRole('admin')"
+                    type="button"
+                    :aria-pressed="Boolean(ongoingTournament.isTest)"
+                    :disabled="testTournamentSaving || ongoingTournament.isProtected"
+                    :title="ongoingTournament.isProtected ? 'Giải đấu đã Protect, không thể thay đổi Test giải' : undefined"
+                    @click="toggleTournamentTest(ongoingTournament)"
+                    class="inline-flex items-center gap-2 rounded-full px-3 py-0.5 text-[10px] font-semibold uppercase transition-colors disabled:cursor-not-allowed disabled:opacity-50 sm:py-1 sm:text-xs"
+                    :class="ongoingTournament.isTest ? 'bg-amber-500 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'"
+                  >
+                    <span class="h-3 w-3 rounded-full" :class="ongoingTournament.isTest ? 'bg-white' : 'bg-gray-400'"></span>
+                    Test giải
+                  </button>
                   <span
                     v-else-if="ongoingTournament.selfFunded"
                     class="inline-flex items-center rounded-full bg-violet-100 px-3 py-0.5 text-[10px] font-semibold uppercase text-violet-700 sm:py-1 sm:text-xs"
@@ -1855,6 +1868,13 @@
                 class="btn-secondary"
               >
                 Số lượng cầu thủ
+              </button>
+              <button
+                v-if="authStore.hasRole('admin') && ongoingTournament.status === 'UPCOMING' && getTournamentTeams(ongoingTournament).length === 0"
+                @click="openTournamentFormatModal(ongoingTournament)"
+                class="btn-secondary"
+              >
+                Thể thức
               </button>
               <button
                 v-if="
@@ -4933,6 +4953,18 @@
     </div>
   </div>
 
+  <div v-if="showTournamentFormatModal" class="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4">
+    <div class="w-full max-w-md rounded-lg bg-white p-6 shadow-xl">
+      <div class="flex items-start justify-between border-b pb-4"><div><h3 class="text-lg font-semibold text-gray-900">Thể thức giải đấu</h3><p class="mt-1 text-sm text-gray-500">{{ tournamentFormatTournament?.name }}</p></div><button type="button" class="text-2xl text-gray-400" @click="closeTournamentFormatModal">×</button></div>
+      <div class="mt-5 grid grid-cols-2 gap-3">
+        <button type="button" class="rounded-lg border-2 p-4 text-left" :class="selectedTournamentFormat === 'SCORE' ? 'border-primary-600 bg-primary-50 text-primary-800' : 'border-gray-200'" @click="selectedTournamentFormat = 'SCORE'"><strong class="block">Score</strong><span class="mt-1 block text-xs">Chấm điểm các team như thể thức hiện tại.</span></button>
+        <button type="button" class="rounded-lg border-2 p-4 text-left" :class="selectedTournamentFormat === 'LEAGUE' ? 'border-primary-600 bg-primary-50 text-primary-800' : 'border-gray-200'" @click="selectedTournamentFormat = 'LEAGUE'"><strong class="block">League</strong><span class="mt-1 block text-xs">Sau khi chia team, tạo lịch lượt đi và lượt về giữa các team.</span></button>
+      </div>
+      <p v-if="selectedTournamentFormat === 'LEAGUE'" class="mt-4 rounded-lg bg-blue-50 p-3 text-sm text-blue-800">Mỗi trận có thể ghi nhận cầu thủ ghi bàn. Thắng 3 điểm, hòa 1 điểm, thua 0 điểm.</p>
+      <div class="mt-6 flex justify-end gap-3 border-t pt-4"><button class="btn-secondary" @click="closeTournamentFormatModal">Hủy</button><button class="btn-primary" :disabled="tournamentFormatSaving" @click="saveTournamentFormat">{{ tournamentFormatSaving ? 'Đang lưu...' : 'Lưu' }}</button></div>
+    </div>
+  </div>
+
   <div
     v-if="showFriendSwapModal"
     class="fixed inset-0 z-[80] flex items-center justify-center overflow-y-auto overscroll-contain bg-black/50 p-4"
@@ -5846,6 +5878,7 @@ const selectedSponsorMoney = ref(400000);
 const sponsorMoneySaving = ref(false);
 const sponsorMoneyOptions = [0, 400000];
 const selfFundedSaving = ref(false);
+const testTournamentSaving = ref(false);
 const tournamentProtectionSaving = ref(false);
 
 const showTournamentTimeModal = ref(false);
@@ -5891,6 +5924,10 @@ const maxAttendanceTournament = ref<Tournament | null>(null);
 const selectedMaxAttendance = ref<number | null>(null);
 const maxAttendanceSaving = ref(false);
 const maxAttendanceOptions = [18, 21, 24, 27, 28, 32];
+const showTournamentFormatModal = ref(false);
+const tournamentFormatTournament = ref<Tournament | null>(null);
+const selectedTournamentFormat = ref<'SCORE' | 'LEAGUE'>('SCORE');
+const tournamentFormatSaving = ref(false);
 
 // Confirmation Modal variables
 const showEndTournamentModal = ref(false);
@@ -9228,6 +9265,33 @@ const saveMaxAttendance = async () => {
   }
 };
 
+const openTournamentFormatModal = (tournament: Tournament): void => {
+  tournamentFormatTournament.value = tournament;
+  selectedTournamentFormat.value = tournament.format || 'SCORE';
+  showTournamentFormatModal.value = true;
+};
+
+const closeTournamentFormatModal = (): void => {
+  showTournamentFormatModal.value = false;
+  tournamentFormatTournament.value = null;
+};
+
+const saveTournamentFormat = async (): Promise<void> => {
+  if (!tournamentFormatTournament.value || tournamentFormatSaving.value) return;
+  tournamentFormatSaving.value = true;
+  try {
+    const response = await apiClient.updateTournament(tournamentFormatTournament.value.id, { format: selectedTournamentFormat.value });
+    if (!response.success) throw new Error(response.error || 'Không thể cập nhật thể thức');
+    await fetchData();
+    closeTournamentFormatModal();
+    toast.success(`Đã chọn thể thức ${selectedTournamentFormat.value}`);
+  } catch (error: any) {
+    toast.error(error.response?.data?.error || error.message || 'Không thể cập nhật thể thức');
+  } finally {
+    tournamentFormatSaving.value = false;
+  }
+};
+
 const closeFundContributionModal = () => {
   showFundContributionModal.value = false;
   fundContributionTournament.value = null;
@@ -9329,6 +9393,24 @@ const toggleSelfFunded = async (tournament: Tournament) => {
     );
   } finally {
     selfFundedSaving.value = false;
+  }
+};
+
+const toggleTournamentTest = async (tournament: Tournament): Promise<void> => {
+  if (testTournamentSaving.value || tournament.isProtected) {
+    if (tournament.isProtected) toast.error('Giải đấu đã Protect, không thể thay đổi Test giải');
+    return;
+  }
+  try {
+    testTournamentSaving.value = true;
+    const response = await apiClient.updateTournament(tournament.id, { isTest: !tournament.isTest });
+    if (!response.success || !response.data) throw new Error(response.error || 'Không thể cập nhật Test giải');
+    Object.assign(tournament, response.data as Tournament);
+    toast.success(tournament.isTest ? 'Đã bật Test giải: chỉ admin thấy giải này' : 'Đã tắt Test giải');
+  } catch (error: any) {
+    toast.error(error.response?.data?.error || error.message || 'Không thể cập nhật Test giải');
+  } finally {
+    testTournamentSaving.value = false;
   }
 };
 

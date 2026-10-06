@@ -63,6 +63,31 @@ export const authenticate = async (
   }
 };
 
+// Public list endpoints may still tailor their response for a signed-in user.
+// Invalid/missing credentials remain anonymous instead of failing the request.
+export const optionalAuthenticate = async (
+  req: AuthenticatedRequest,
+  _res: Response,
+  next: NextFunction,
+): Promise<void> => {
+  try {
+    const token = req.header('Authorization')?.replace('Bearer ', '');
+    if (!token) { next(); return; }
+    const decoded = jwt.verify(token, process.env.JWT_SECRET!) as { userId?: string };
+    if (!decoded.userId) { next(); return; }
+    const user = await prisma.user.findUnique({
+      where: { id: decoded.userId },
+      select: { id: true, username: true, email: true, role: true, isActive: true },
+    });
+    if (user?.isActive) {
+      req.user = { id: user.id, username: user.username, email: user.email, role: user.role as 'ADMIN' | 'MOD' | 'USER' | 'GUEST' };
+    }
+  } catch {
+    // Treat an invalid optional token as an anonymous request.
+  }
+  next();
+};
+
 export const authorize = (roles: ('ADMIN' | 'MOD' | 'USER' | 'GUEST')[]) => {
   return (req: AuthenticatedRequest, res: Response, next: NextFunction): void => {
     if (!req.user) {

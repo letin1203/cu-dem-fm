@@ -443,13 +443,7 @@ router.post('/:id/events', authenticate, authorize(['ADMIN', 'MOD']), async (req
     const { id } = req.params;
     const eventData = createMatchEventSchema.parse({ ...req.body, matchId: id });
 
-    const match = await prisma.match.findUnique({
-      where: { id },
-      include: {
-        homeTeam: { select: { players: { select: { id: true } } } },
-        awayTeam: { select: { players: { select: { id: true } } } },
-      },
-    });
+    const match = await prisma.match.findUnique({ where: { id } });
 
     if (!match) {
       res.status(404).json({
@@ -460,10 +454,11 @@ router.post('/:id/events', authenticate, authorize(['ADMIN', 'MOD']), async (req
     }
 
     // Verify player is in one of the teams
-    const allPlayerIds = [
-      ...match.homeTeam.players.map((p: any) => p.id),
-      ...match.awayTeam.players.map((p: any) => p.id),
-    ];
+    const assignments = await prisma.tournamentTeamPlayer.findMany({
+      where: { tournamentId: match.tournamentId, teamId: { in: [match.homeTeamId, match.awayTeamId] } },
+      select: { playerId: true },
+    });
+    const allPlayerIds = assignments.map((assignment) => assignment.playerId);
 
     if (!allPlayerIds.includes(eventData.playerId)) {
       res.status(400).json({

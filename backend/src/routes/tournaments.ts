@@ -2,7 +2,7 @@ import { Router, Response } from 'express';
 import { z } from 'zod';
 import { prisma } from '../lib/prisma';
 import { createTournamentSchema, updateTournamentSchema, paginationSchema, updateAttendanceSchema, updateTeamScoreSchema, updateTournamentScoresSchema } from '../schemas/validation';
-import { authenticate, authorize, AuthenticatedRequest } from '../middleware/auth';
+import { authenticate, optionalAuthenticate, authorize, AuthenticatedRequest } from '../middleware/auth';
 import { generateBalancedTeams } from '../services/teamGeneration';
 
 const router = Router();
@@ -44,7 +44,7 @@ const hasAttendanceCapacity = async (tournamentId: string, maxAttendance: number
 };
 
 // Get all tournaments with pagination and filters
-router.get('/', async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+router.get('/', optionalAuthenticate, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   try {
     const { page, limit } = paginationSchema.parse(req.query);
     const { status, type } = req.query;
@@ -53,6 +53,7 @@ router.get('/', async (req: AuthenticatedRequest, res: Response): Promise<void> 
     const where: any = {};
     if (status) where.status = status;
     if (type) where.type = type;
+    if (req.user?.role !== 'ADMIN') where.isTest = false;
 
     const [tournaments, total] = await Promise.all([
       prisma.tournament.findMany({
@@ -423,11 +424,36 @@ router.put('/:id', authenticate, authorize(['ADMIN', 'MOD']), async (req: Authen
       return;
     }
 
+    if (updateData.isTest !== undefined && req.user!.role !== 'ADMIN') {
+      res.status(403).json({ success: false, error: 'Chỉ admin mới có thể thay đổi trạng thái Test giải' });
+      return;
+    }
+
+    if (updateData.format !== undefined && req.user!.role !== 'ADMIN') {
+      res.status(403).json({ success: false, error: 'Chỉ admin mới có thể thay đổi thể thức giải đấu' });
+      return;
+    }
+
+    if (updateData.format !== undefined && existingTournament.status !== 'UPCOMING') {
+      res.status(400).json({ success: false, error: 'Chỉ có thể đổi thể thức trước khi giải đấu bắt đầu' });
+      return;
+    }
+
+    if (updateData.format !== undefined && await prisma.tournamentTeam.count({ where: { tournamentId: id } }) > 0) {
+      res.status(400).json({ success: false, error: 'Chỉ có thể đổi thể thức trước khi chia team' });
+      return;
+    }
+
     if (updateData.selfFunded !== undefined && existingTournament.isProtected) {
       res.status(403).json({
         success: false,
         error: 'Giải đấu đã Protect, không thể thay đổi chế độ quỹ',
       });
+      return;
+    }
+
+    if (updateData.isTest !== undefined && existingTournament.isProtected) {
+      res.status(403).json({ success: false, error: 'Giải đấu đã Protect, không thể thay đổi trạng thái Test giải' });
       return;
     }
 
@@ -2766,6 +2792,7 @@ router.post('/:id/generate-teams', authenticate, authorize(['ADMIN', 'MOD']), as
         data: {
           name: teamData.name,
           founded: new Date(),
+          stats: { create: {} },
         },
       });
 
@@ -2796,6 +2823,22 @@ router.post('/:id/generate-teams', authenticate, authorize(['ADMIN', 'MOD']), as
       });
     }
 
+    // League format plays a double round-robin: every pair meets once as
+    // home and once as away. Scores/events are then managed through Match.
+    if (tournament.format === 'LEAGUE') {
+      const kickoff = new Date(tournament.startDate);
+      const fixtures = [];
+      for (let homeIndex = 0; homeIndex < createdTeams.length; homeIndex += 1) {
+        for (let awayIndex = homeIndex + 1; awayIndex < createdTeams.length; awayIndex += 1) {
+          const firstLegTime: Date = new Date(kickoff.getTime() + fixtures.length * 60 * 60_000);
+          fixtures.push(
+            { tournamentId, homeTeamId: createdTeams[homeIndex].id, awayTeamId: createdTeams[awayIndex].id, scheduledDate: firstLegTime },
+            { tournamentId, homeTeamId: createdTeams[awayIndex].id, awayTeamId: createdTeams[homeIndex].id, scheduledDate: new Date(firstLegTime.getTime() + 30 * 60_000) },
+          );
+        }
+      }
+      if (fixtures.length) await prisma.match.createMany({ data: fixtures });
+    }
 
     await prisma.tournament.update({
       where: { id: tournamentId },

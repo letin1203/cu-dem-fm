@@ -95,6 +95,7 @@ export interface Tournament {
   name: string
   type: 'LEAGUE' | 'KNOCKOUT' | 'GROUP' | 'WEEKLY'
   status: 'UPCOMING' | 'ONGOING' | 'COMPLETED' | 'DELETED'
+  format?: 'SCORE' | 'LEAGUE'
   deletedReason?: string | null
   startDate: string | Date
   endDate?: string | Date | null
@@ -103,6 +104,7 @@ export interface Tournament {
   fundContribution?: number
   pitchType?: 'FIELD_5' | 'FIELD_7' | null
   selfFunded?: boolean
+  isTest?: boolean
   isProtected?: boolean
   maxAttendance?: number | null
   cancellationDeadline?: string | Date | null

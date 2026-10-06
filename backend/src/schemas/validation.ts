@@ -123,6 +123,7 @@ export const updateMatchSchema = z.object({
   awayScore: z.number().int().min(0).optional(),
   status: MatchStatus.optional(),
   scheduledDate: z.string().transform((str) => new Date(str)).optional(),
+  durationMinutes: z.number().int().refine((value) => [10, 60].includes(value), 'Duration must be 10 or 60 minutes').optional(),
   venue: z.string().optional(),
 });
 

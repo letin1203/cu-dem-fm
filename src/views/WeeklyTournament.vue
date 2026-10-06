@@ -293,13 +293,28 @@
                     v-if="authStore.hasRole('admin')"
                     type="button"
                     :aria-pressed="Boolean(ongoingTournament.isTest)"
-                    :disabled="testTournamentSaving || ongoingTournament.isProtected"
-                    :title="ongoingTournament.isProtected ? 'Giải đấu đã Protect, không thể thay đổi Test giải' : undefined"
+                    :disabled="
+                      testTournamentSaving || ongoingTournament.isProtected
+                    "
+                    :title="
+                      ongoingTournament.isProtected
+                        ? 'Giải đấu đã Protect, không thể thay đổi Test giải'
+                        : undefined
+                    "
                     @click="toggleTournamentTest(ongoingTournament)"
                     class="inline-flex items-center gap-2 rounded-full px-3 py-0.5 text-[10px] font-semibold uppercase transition-colors disabled:cursor-not-allowed disabled:opacity-50 sm:py-1 sm:text-xs"
-                    :class="ongoingTournament.isTest ? 'bg-amber-500 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'"
+                    :class="
+                      ongoingTournament.isTest
+                        ? 'bg-amber-500 text-white'
+                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    "
                   >
-                    <span class="h-3 w-3 rounded-full" :class="ongoingTournament.isTest ? 'bg-white' : 'bg-gray-400'"></span>
+                    <span
+                      class="h-3 w-3 rounded-full"
+                      :class="
+                        ongoingTournament.isTest ? 'bg-white' : 'bg-gray-400'
+                      "
+                    ></span>
                     Test giải
                   </button>
                   <span
@@ -386,9 +401,7 @@
                   >
                     👥 Est:
                     <template v-if="shouldShowMaxCostRange(ongoingTournament)">
-                      {{
-                        getCostEstimateInfo(ongoingTournament.id).divisor
-                      }}
+                      {{ getCostEstimateInfo(ongoingTournament.id).divisor }}
                       cháu:
                       {{
                         formatMoney(
@@ -428,7 +441,13 @@
 
             <!-- Attendance Progress Bar -->
             <div
-              v-if="attendanceStats.has(ongoingTournament.id)"
+              v-if="
+                attendanceStats.has(ongoingTournament.id) &&
+                !(
+                  ongoingTournament.format === 'LEAGUE' &&
+                  ongoingTournament.status === 'ONGOING'
+                )
+              "
               class="mt-4 p-4 bg-gradient-to-r from-blue-50 to-green-50 rounded-lg border border-gray-200"
             >
               <div class="flex justify-between items-center mb-3">
@@ -522,7 +541,10 @@
                   <div class="text-green-600">Tham gia</div>
                 </button>
                 <button
-                  v-if="!ongoingTournament.selfFunded"
+                  v-if="
+                    !ongoingTournament.selfFunded &&
+                    !hidesSideGames(ongoingTournament)
+                  "
                   @click="openAttendanceModal(ongoingTournament.id, 'water')"
                   class="text-center p-2 bg-blue-100 rounded-lg hover:bg-blue-200 transition-colors cursor-pointer"
                 >
@@ -532,7 +554,10 @@
                   <div class="text-blue-600">Uống nước</div>
                 </button>
                 <button
-                  v-if="!ongoingTournament.selfFunded"
+                  v-if="
+                    !ongoingTournament.selfFunded &&
+                    !hidesSideGames(ongoingTournament)
+                  "
                   @click="openAttendanceModal(ongoingTournament.id, 'betting')"
                   class="text-center p-2 bg-yellow-100 rounded-lg hover:bg-yellow-200 transition-colors cursor-pointer"
                 >
@@ -597,7 +622,7 @@
                           <span
                             class="text-sm font-medium"
                             :class="getTeamTextClass(team.name)"
-                          >- {{ getTeamJerseyLabel(team.name) }}</span
+                            >- {{ getTeamJerseyLabel(team.name) }}</span
                           >
                         </h5>
                         <button
@@ -625,7 +650,10 @@
                       :key="player.id"
                       class="flex items-center justify-between p-2 bg-gray-50 rounded text-sm"
                       :class="{
-                        'bg-green-100 ring-1 ring-green-300': isTeamGoalkeeper(team.players, player),
+                        'bg-green-100 ring-1 ring-green-300': isTeamGoalkeeper(
+                          team.players,
+                          player,
+                        ),
                         'border-2 border-red-500': isCurrentUserPlayer(
                           player.id,
                         ),
@@ -645,11 +673,18 @@
                             player.name.charAt(0).toUpperCase()
                           }}</span>
                         </div>
-                          <div class="min-w-0">
-                            <span class="truncate font-normal text-gray-900">{{
-                              player.name
-                            }}</span>
-                            <span v-if="isPlayerBetting(ongoingTournament.id, player.id)" class="ml-1" title="Ngôi sao hy vọng">⭐</span>
+                        <div class="min-w-0">
+                          <span class="truncate font-normal text-gray-900">{{
+                            player.name
+                          }}</span>
+                          <span
+                            v-if="
+                              isPlayerBetting(ongoingTournament.id, player.id)
+                            "
+                            class="ml-1"
+                            title="Ngôi sao hy vọng"
+                            >⭐</span
+                          >
                           <div
                             v-if="player.addedByUsername"
                             class="truncate text-[10px] leading-4 text-gray-500"
@@ -672,7 +707,13 @@
                           "
                           class="ml-1 inline-flex animate-pulse align-middle text-sm"
                           :title="`Đang Battle với ${getAcceptedBattleOpponentName(ongoingTournament.id, player.id)}`"
-                          >⚔️ {{ getAcceptedBattlePairNumber(ongoingTournament.id, player.id) }}</span
+                          >⚔️
+                          {{
+                            getAcceptedBattlePairNumber(
+                              ongoingTournament.id,
+                              player.id,
+                            )
+                          }}</span
                         >
                         <span
                           v-if="
@@ -698,7 +739,11 @@
                             }}</template
                           ></span
                         >
-                        <span class="text-xs" :class="player.tier <= 3 ? 'font-bold' : ''">T{{ player.tier }}</span>
+                        <span
+                          class="text-xs"
+                          :class="player.tier <= 3 ? 'font-bold' : ''"
+                          >T{{ player.tier }}</span
+                        >
                       </div>
                     </div>
                   </div>
@@ -710,7 +755,8 @@
                       class="pt-3 border-t border-gray-200"
                     >
                       <div class="flex justify-between text-xs text-gray-600">
-                        <span class="rounded-md border-2 border-primary-400 bg-primary-50 px-2 py-1 font-bold text-primary-700"
+                        <span
+                          class="rounded-md border-2 border-primary-400 bg-primary-50 px-2 py-1 font-bold text-primary-700"
                           >Tổng tier:
                           {{
                             team.players.reduce(
@@ -719,7 +765,8 @@
                             )
                           }}</span
                         >
-                        <span class="rounded-md border-2 border-red-400 bg-red-50 px-2 py-1 font-bold text-red-700"
+                        <span
+                          class="rounded-md border-2 border-red-400 bg-red-50 px-2 py-1 font-bold text-red-700"
                           >Trung bình:
                           {{
                             (
@@ -733,7 +780,7 @@
                       </div>
                     </div>
                     <div
-                      v-if="ongoingTournament.status === 'ONGOING'"
+                      v-if="ongoingTournament.status === 'ONGOING' && ongoingTournament.format !== 'LEAGUE'"
                       class="mt-3 pt-3 border-t border-gray-200 text-right"
                     >
                       <span class="text-lg font-bold text-blue-600"
@@ -744,6 +791,358 @@
                 </div>
               </div>
             </div>
+
+            <section
+              v-if="
+                ongoingTournament.format === 'LEAGUE' &&
+                ongoingTournament.status === 'ONGOING'
+              "
+              class="mt-4 rounded-lg border border-primary-200 bg-primary-50/40 p-4"
+            >
+              <h4 class="mb-3 text-lg font-semibold text-primary-800">
+                📅 Lịch thi đấu
+              </h4>
+              <p
+                v-if="!ongoingTournament.matches?.length"
+                class="text-sm text-gray-500"
+              >
+                Chưa có trận đấu nào.
+              </p>
+              <div v-else class="space-y-2">
+                <article
+                  v-for="match in ongoingTournament.matches"
+                  :key="match.id"
+                  :id="`league-match-${match.id}`"
+                  class="overflow-hidden rounded-xl border border-primary-200 bg-white"
+                >
+                  <div
+                    role="button"
+                    tabindex="0"
+                    class="flex w-full cursor-pointer items-center justify-between gap-3 p-3 text-left"
+                    @click="toggleLeagueMatch(match.id)"
+                    @keydown.enter="toggleLeagueMatch(match.id)"
+                    @keydown.space.prevent="toggleLeagueMatch(match.id)"
+                  >
+                    <span class="min-w-0 flex-1 truncate text-sm font-semibold"
+                      >{{ displayTeamName(match.homeTeam.name) }}
+                      <span class="mx-1 text-gray-400">-</span
+                      ><span
+                        class="inline-flex rounded-md border border-primary-400 bg-primary-100 px-2 py-0.5 font-bold text-primary-800"
+                        >{{ leagueMatchTeamGoalCount(match.id, "HOME") }}
+                        <span class="mx-1 text-primary-400">vs</span>
+                        {{ leagueMatchTeamGoalCount(match.id, "AWAY") }}</span
+                      ><span class="mx-1 text-gray-400">-</span>
+                      {{ displayTeamName(match.awayTeam.name) }}</span
+                    >
+                    <button
+                      v-if="authStore.hasRole('admin')"
+                      type="button"
+                      class="shrink-0 rounded-full px-2 py-1 text-[10px] font-semibold"
+                      :class="getLeagueMatchStatusBadge(match.status)"
+                      @click.stop="openLeagueMatchStatusModal(match)"
+                    >
+                      {{ match.status }}
+                    </button>
+                    <span
+                      v-else
+                      class="shrink-0 rounded-full px-2 py-1 text-[10px] font-semibold"
+                      :class="getLeagueMatchStatusBadge(match.status)"
+                      >{{ match.status }}</span
+                    >
+                    <span
+                      class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border-2 border-primary-400 text-primary-700"
+                      ><svg
+                        class="h-4 w-4"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                        aria-hidden="true"
+                      >
+                        <path
+                          v-if="expandedLeagueMatchIds.has(match.id)"
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          stroke-width="2.5"
+                          d="m18 15-6-6-6 6"
+                        />
+                        <path
+                          v-else
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          stroke-width="2.5"
+                          d="m6 9 6 6 6-6"
+                        /></svg
+                    ></span>
+                  </div>
+                  <div
+                    v-if="expandedLeagueMatchIds.has(match.id)"
+                    class="border-t border-primary-100 p-3 text-sm text-gray-600"
+                  >
+                    <div
+                      v-if="leagueMatchLoadingIds.has(match.id)"
+                      class="py-3 text-center text-xs text-gray-500"
+                    >
+                      Đang tải chi tiết trận đấu...
+                    </div>
+                    <template v-else>
+                      <div>
+                        Thời gian:
+                        <button
+                          v-if="authStore.hasRole('admin')"
+                          type="button"
+                          class="rounded-full bg-primary-100 px-2 py-1 text-xs font-semibold text-primary-800 hover:bg-primary-200"
+                          @click="openLeagueMatchTimeModal(match)"
+                        >
+                          🕒 {{ formatLeagueMatchTime(match) }}</button
+                        ><span
+                          v-else
+                          class="rounded-full bg-primary-100 px-2 py-1 text-xs font-semibold text-primary-800"
+                          >🕒 {{ formatLeagueMatchTime(match) }}</span
+                        >
+                      </div>
+                      <div
+                        v-if="leagueMatchForms[match.id]"
+                        class="mt-4 rounded-lg bg-gray-50 p-3"
+                      >
+                        <div class="league-match-team-grid grid grid-cols-2 gap-3">
+                          <div
+                            v-for="side in ['HOME', 'AWAY']"
+                            :key="side"
+                            class="relative rounded-lg border bg-white p-3 pb-10"
+                          >
+                            <div class="flex items-center justify-between">
+                              <span
+                                v-if="side === 'HOME'"
+                                class="flex items-center gap-1 font-semibold text-gray-800"
+                                >{{ displayTeamName(match.homeTeam.name) }}</span
+                              ><span
+                                v-else
+                                class="text-xl font-bold text-green-700"
+                                >{{
+                                  leagueMatchTeamGoalCount(match.id, "AWAY")
+                                }}</span
+                              ><span
+                                v-if="side === 'HOME'"
+                                class="text-xl font-bold text-green-700"
+                                >{{
+                                  leagueMatchTeamGoalCount(match.id, "HOME")
+                                }}</span
+                              ><span
+                                v-else
+                                class="flex items-center gap-1 text-right font-semibold text-gray-800"
+                                >{{
+                                  displayTeamName(match.awayTeam.name)
+                                }}</span
+                              >
+                            </div>
+                            <div
+                              v-if="
+                                leagueMatchEventsByTeam(match.id, side, [
+                                  'GOAL',
+                                  'OWN_GOAL',
+                                ]).length
+                              "
+                              class="mt-3"
+                              :class="side === 'HOME' ? 'md:text-right' : ''"
+                            >
+                              <p
+                                class="mb-1 text-xs font-semibold text-green-700"
+                              >
+                                ⚽
+                              </p>
+                              <div
+                                v-for="event in leagueMatchEventsByTeam(
+                                  match.id,
+                                  side,
+                                  ['GOAL', 'OWN_GOAL'],
+                                )"
+                                :key="event.id"
+                                class="flex items-center gap-2 border-b py-1 text-xs"
+                                :class="side === 'HOME' ? 'md:justify-end' : ''"
+                              >
+                                <button
+                                  v-if="authStore.hasRole('admin')"
+                                  class="text-red-600"
+                                  title="Xóa"
+                                  @click="
+                                    deleteLeagueMatchEvent(match.id, event.id)
+                                  "
+                                >
+                                  ×</button
+                                ><span v-else class="text-green-600">⚽</span
+                                ><span>{{ event.player?.name }}</span>
+                              </div>
+                            </div>
+                            <div
+                              v-if="
+                                leagueMatchEventsByTeam(match.id, side, [
+                                  'YELLOW_CARD',
+                                ]).length
+                              "
+                              class="mt-3"
+                              :class="side === 'HOME' ? 'md:text-right' : ''"
+                            >
+                              <p
+                                class="mb-1 text-xs font-semibold text-amber-700"
+                              >
+                                🟨
+                              </p>
+                              <div
+                                v-for="event in leagueMatchEventsByTeam(
+                                  match.id,
+                                  side,
+                                  ['YELLOW_CARD'],
+                                )"
+                                :key="event.id"
+                                class="flex items-center gap-2 border-b py-1 text-xs"
+                                :class="side === 'HOME' ? 'md:justify-end' : ''"
+                              >
+                                <button
+                                  v-if="authStore.hasRole('admin')"
+                                  class="text-red-600"
+                                  title="Xóa"
+                                  @click="
+                                    deleteLeagueMatchEvent(match.id, event.id)
+                                  "
+                                >
+                                  ×</button
+                                ><span v-else>🟨</span
+                                ><span>{{ event.player?.name }}</span>
+                              </div>
+                            </div>
+                            <div
+                              v-if="
+                                leagueMatchEventsByTeam(match.id, side, [
+                                  'RED_CARD',
+                                ]).length
+                              "
+                              class="mt-3"
+                              :class="side === 'HOME' ? 'md:text-right' : ''"
+                            >
+                              <p
+                                class="mb-1 text-xs font-semibold text-red-700"
+                              >
+                                🟥
+                              </p>
+                              <div
+                                v-for="event in leagueMatchEventsByTeam(
+                                  match.id,
+                                  side,
+                                  ['RED_CARD'],
+                                )"
+                                :key="event.id"
+                                class="flex items-center gap-2 border-b py-1 text-xs"
+                                :class="side === 'HOME' ? 'md:justify-end' : ''"
+                              >
+                                <button
+                                  v-if="authStore.hasRole('admin')"
+                                  class="text-red-600"
+                                  title="Xóa"
+                                  @click="
+                                    deleteLeagueMatchEvent(match.id, event.id)
+                                  "
+                                >
+                                  ×</button
+                                ><span v-else>🟥</span
+                                ><span>{{ event.player?.name }}</span>
+                              </div>
+                            </div>
+                            <button
+                              v-if="authStore.hasRole('admin')"
+                              type="button"
+                              class="absolute bottom-3 left-1/2 inline-flex h-6 w-6 -translate-x-1/2 items-center justify-center rounded-full border border-primary-400 text-sm text-primary-700 hover:bg-primary-50"
+                              title="Cầu thủ team"
+                              @click="openLeagueTeamPlayersModal(match, side)"
+                            >
+                              +
+                            </button>
+                          </div>
+                        </div>
+                        <p
+                          class="mt-3 flex items-center gap-1 text-xs font-semibold text-gray-500"
+                        >
+                          <span
+                            class="inline-flex h-4 w-4 items-center justify-center rounded-full border border-gray-400 text-[10px]"
+                            >!</span
+                          >Tỉ số được tính tự động từ bàn thắng cầu thủ
+                        </p>
+                      </div>
+                    </template>
+                  </div>
+                </article>
+              </div>
+            </section>
+
+            <section
+              v-if="
+                ongoingTournament.format === 'LEAGUE' &&
+                ongoingTournament.status === 'ONGOING'
+              "
+              class="mt-4 rounded-lg border border-primary-200 bg-white p-4"
+            >
+              <h4 class="mb-3 text-lg font-semibold text-primary-800">
+                🏆 Bảng xếp hạng
+              </h4>
+              <div class="overflow-x-auto">
+                <table class="w-full min-w-[520px] text-sm">
+                  <thead class="border-b text-left text-xs text-gray-500">
+                    <tr>
+                      <th class="px-2 py-2">#</th>
+                      <th class="px-2 py-2">Team</th>
+                      <th class="px-2 py-2 text-center font-bold">Điểm</th>
+                      <th class="px-2 py-2 text-center">W</th>
+                      <th class="px-2 py-2 text-center">D</th>
+                      <th class="px-2 py-2 text-center">L</th>
+                      <th class="px-2 py-2 text-center">M</th>
+                      <th class="px-2 py-2 text-center">+/-</th>
+                      <th class="px-2 py-2 text-center">Diff</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr
+                      v-for="(team, index) in leagueStandings(
+                        ongoingTournament,
+                      )"
+                      :key="team.id"
+                      class="border-b last:border-0"
+                    >
+                      <td class="px-2 py-2 font-semibold">{{ index + 1 }}</td>
+                      <td class="px-2 py-2 font-medium">
+                        {{ displayTeamName(team.name) }}
+                      </td>
+                      <td
+                        class="px-2 py-2 text-center font-bold text-primary-700"
+                      >
+                        {{ team.stats.points || 0 }}
+                      </td>
+                      <td class="px-2 py-2 text-center">
+                        {{ team.stats.wins || 0 }}
+                      </td>
+                      <td class="px-2 py-2 text-center">
+                        {{ team.stats.draws || 0 }}
+                      </td>
+                      <td class="px-2 py-2 text-center">
+                        {{ team.stats.losses || 0 }}
+                      </td>
+                      <td class="px-2 py-2 text-center">
+                        {{ team.stats.gamesPlayed || 0 }}
+                      </td>
+                      <td class="px-2 py-2 text-center">
+                        {{ team.stats.goalsFor || 0 }}/{{
+                          team.stats.goalsAgainst || 0
+                        }}
+                      </td>
+                      <td class="px-2 py-2 text-center">
+                        {{
+                          (team.stats.goalsFor || 0) -
+                          (team.stats.goalsAgainst || 0)
+                        }}
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </section>
 
             <!-- Attendance Toggle Button -->
             <div
@@ -905,7 +1304,12 @@
                 >
                   Swap dùm bạn
                 </button>
-                <template v-if="!cannotRegisterDueToDebt && getUserAttendanceStatus(ongoingTournament.id) !== 'ATTEND'">
+                <template
+                  v-if="
+                    !cannotRegisterDueToDebt &&
+                    getUserAttendanceStatus(ongoingTournament.id) !== 'ATTEND'
+                  "
+                >
                   <button
                     v-for="request in getIncomingSwapRequests(
                       ongoingTournament.id,
@@ -964,6 +1368,7 @@
                 <button
                   v-if="
                     !ongoingTournament.selfFunded &&
+                    !hidesSideGames(ongoingTournament) &&
                     authStore.currentUser?.role !== 'guest'
                   "
                   @click="toggleWater(ongoingTournament.id)"
@@ -997,6 +1402,7 @@
                 <button
                   v-if="
                     !ongoingTournament.selfFunded &&
+                    !hidesSideGames(ongoingTournament) &&
                     authStore.currentUser?.role !== 'guest' &&
                     canUserToggleBet(ongoingTournament)
                   "
@@ -1116,7 +1522,8 @@
                   v-if="
                     authStore.hasPermission('canEditTournaments') &&
                     ongoingTournament.status === 'ONGOING' &&
-                    getTournamentTeams(ongoingTournament).length > 0
+                    getTournamentTeams(ongoingTournament).length > 0 &&
+                    ongoingTournament.format !== 'LEAGUE'
                   "
                   @click="openScoresModal(ongoingTournament.id)"
                   class="px-6 py-2 rounded-lg font-medium bg-primary-600 text-white hover:bg-primary-700 hover:shadow-md transition-colors duration-200"
@@ -1181,310 +1588,386 @@
             >
               <div class="mb-4">
                 <div>
-                <div class="flex items-center gap-2">
-                  <h4 class="text-lg font-semibold text-gray-800">
-                    Cầu thủ tham gia
-                  </h4>
-                  <button
-                    type="button"
-                    class="rounded p-1 text-primary-600 hover:bg-primary-100"
-                    :title="teamPreviewSortByTier ? 'Sắp xếp theo thời gian đăng ký' : 'Sắp xếp theo Tier'"
-                    :aria-label="teamPreviewSortByTier ? 'Sắp xếp theo thời gian đăng ký' : 'Sắp xếp theo Tier'"
-                    @click="teamPreviewSortByTier = !teamPreviewSortByTier"
-                  >
-                    <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 6h18M6 12h12m-9 6h6M7 4l-2 2 2 2m10 8 2 2-2 2" /></svg>
-                  </button>
-                  <button type="button" class="inline-flex h-4 w-4 items-center justify-center rounded text-xs leading-none text-red-600 hover:bg-red-100" title="Xem các cặp thách đấu" aria-label="Xem các cặp thách đấu" @click="openChallengePairsModal(ongoingTournament.id)">⚔️</button>
-                  <button type="button" class="inline-flex h-4 w-4 items-center justify-center rounded text-xs leading-none text-primary-600 hover:bg-primary-100" title="Xem các cặp rủ bạn" aria-label="Xem các cặp rủ bạn" @click="openFriendInvitePairsModal(ongoingTournament.id)">🤝</button>
-                  <button
-                    v-if="authStore.hasAnyRole(['admin', 'mod'])"
-                    type="button"
-                    class="rounded p-1 text-primary-600 hover:bg-primary-100 disabled:opacity-50"
-                    title="Làm mới danh sách cầu thủ"
-                    :disabled="
-                      refreshingAttendanceLists.has(ongoingTournament.id)
-                    "
-                    @click="refreshAttendanceList(ongoingTournament.id)"
-                  >
-                    <svg
-                      class="h-4 w-4"
-                      :class="{
-                        'animate-spin': refreshingAttendanceLists.has(
-                          ongoingTournament.id,
-                        ),
-                      }"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        stroke-width="2"
-                        d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0A8.003 8.003 0 014.582 15m15.356 0H15"
-                      />
-                    </svg>
-                  </button>
-                </div>
-                <span class="-mt-1 block text-xs font-medium text-orange-600">Chưa chia đội</span>
-              </div>
-              <div
-                class="grid gap-4 mt-2"
-                :class="
-                  ongoingTournament.pitchType ? 'grid-cols-1' : 'grid-cols-2'
-                "
-              >
-                <div
-                  v-for="field in [
-                    { value: 'FIELD_5', label: 'Sân 5' },
-                    { value: 'FIELD_7', label: 'Sân 7' },
-                  ]"
-                  v-show="
-                    !ongoingTournament.pitchType ||
-                    ongoingTournament.pitchType === field.value
-                  "
-                  :key="field.value"
-                  class="rounded-lg border border-primary-200 bg-white/80 p-3"
-                >
-                  <h5
-                    class="mb-3 flex items-center justify-between border-b pb-2 font-semibold text-gray-900"
-                  >
-                    <span
-                      >{{ field.label }} ({{
-                        getFieldAttendanceCount(
-                          ongoingTournament.id,
-                          field.value as "FIELD_5" | "FIELD_7",
-                        )
-                      }})</span
-                    ><button
+                  <div class="flex items-center gap-2">
+                    <h4 class="text-lg font-semibold text-gray-800">
+                      Cầu thủ tham gia
+                    </h4>
+                    <button
                       type="button"
-                      class="inline-flex h-5 w-5 items-center justify-center rounded-full bg-primary-100 text-xs text-primary-700 hover:bg-primary-200"
-                      :title="`Xem cầu thủ chỉ đăng ký ${field.label}`"
-                      @click="
-                        openAttendanceModal(
+                      class="rounded p-1 text-primary-600 hover:bg-primary-100"
+                      :title="
+                        teamPreviewSortByTier
+                          ? 'Sắp xếp theo thời gian đăng ký'
+                          : 'Sắp xếp theo Tier'
+                      "
+                      :aria-label="
+                        teamPreviewSortByTier
+                          ? 'Sắp xếp theo thời gian đăng ký'
+                          : 'Sắp xếp theo Tier'
+                      "
+                      @click="teamPreviewSortByTier = !teamPreviewSortByTier"
+                    >
+                      <svg
+                        class="h-4 w-4"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                        aria-hidden="true"
+                      >
+                        <path
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          stroke-width="2"
+                          d="M3 6h18M6 12h12m-9 6h6M7 4l-2 2 2 2m10 8 2 2-2 2"
+                        />
+                      </svg>
+                    </button>
+                    <button
+                      v-if="!hidesSideGames(ongoingTournament)"
+                      type="button"
+                      class="inline-flex h-4 w-4 items-center justify-center rounded text-xs leading-none text-red-600 hover:bg-red-100"
+                      title="Xem các cặp thách đấu"
+                      aria-label="Xem các cặp thách đấu"
+                      @click="openChallengePairsModal(ongoingTournament.id)"
+                    >
+                      ⚔️
+                    </button>
+                    <button
+                      v-if="!hidesSideGames(ongoingTournament)"
+                      type="button"
+                      class="inline-flex h-4 w-4 items-center justify-center rounded text-xs leading-none text-primary-600 hover:bg-primary-100"
+                      title="Xem các cặp rủ bạn"
+                      aria-label="Xem các cặp rủ bạn"
+                      @click="openFriendInvitePairsModal(ongoingTournament.id)"
+                    >
+                      🤝
+                    </button>
+                    <button
+                      v-if="authStore.hasAnyRole(['admin', 'mod'])"
+                      type="button"
+                      class="rounded p-1 text-primary-600 hover:bg-primary-100 disabled:opacity-50"
+                      title="Làm mới danh sách cầu thủ"
+                      :disabled="
+                        refreshingAttendanceLists.has(ongoingTournament.id)
+                      "
+                      @click="refreshAttendanceList(ongoingTournament.id)"
+                    >
+                      <svg
+                        class="h-4 w-4"
+                        :class="{
+                          'animate-spin': refreshingAttendanceLists.has(
+                            ongoingTournament.id,
+                          ),
+                        }"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          stroke-width="2"
+                          d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0A8.003 8.003 0 014.582 15m15.356 0H15"
+                        />
+                      </svg>
+                    </button>
+                  </div>
+                  <span class="-mt-1 block text-xs font-medium text-orange-600"
+                    >Chưa chia đội</span
+                  >
+                </div>
+                <div
+                  class="grid gap-4 mt-2"
+                  :class="
+                    ongoingTournament.pitchType ? 'grid-cols-1' : 'grid-cols-2'
+                  "
+                >
+                  <div
+                    v-for="field in [
+                      { value: 'FIELD_5', label: 'Sân 5' },
+                      { value: 'FIELD_7', label: 'Sân 7' },
+                    ]"
+                    v-show="
+                      !ongoingTournament.pitchType ||
+                      ongoingTournament.pitchType === field.value
+                    "
+                    :key="field.value"
+                    class="rounded-lg border border-primary-200 bg-white/80 p-3"
+                  >
+                    <h5
+                      class="mb-3 flex items-center justify-between border-b pb-2 font-semibold text-gray-900"
+                    >
+                      <span
+                        >{{ field.label }} ({{
+                          getFieldAttendanceCount(
+                            ongoingTournament.id,
+                            field.value as "FIELD_5" | "FIELD_7",
+                          )
+                        }})</span
+                      ><button
+                        type="button"
+                        class="inline-flex h-5 w-5 items-center justify-center rounded-full bg-primary-100 text-xs text-primary-700 hover:bg-primary-200"
+                        :title="`Xem cầu thủ chỉ đăng ký ${field.label}`"
+                        @click="
+                          openAttendanceModal(
+                            ongoingTournament.id,
+                            'attending',
+                            field.value as 'FIELD_5' | 'FIELD_7',
+                            true,
+                          )
+                        "
+                      >
+                        !
+                      </button>
+                    </h5>
+                    <div
+                      v-if="
+                        getTeamPreviewPlayers(
                           ongoingTournament.id,
-                          'attending',
                           field.value as 'FIELD_5' | 'FIELD_7',
-                          true,
-                        )
+                        ).length
+                      "
+                      class="gap-2"
+                      :class="
+                        ongoingTournament.pitchType
+                          ? 'grid grid-cols-2'
+                          : 'space-y-2'
                       "
                     >
-                      !
-                    </button>
-                  </h5>
-                  <div
-                    v-if="
-                      getTeamPreviewPlayers(
-                        ongoingTournament.id,
-                        field.value as 'FIELD_5' | 'FIELD_7',
-                      ).length
-                    "
-                    class="gap-2"
-                    :class="
-                      ongoingTournament.pitchType
-                        ? 'grid grid-cols-2'
-                        : 'space-y-2'
-                    "
-                  >
-                    <div
-                      v-for="player in getTeamPreviewPlayers(
-                        ongoingTournament.id,
-                        field.value as 'FIELD_5' | 'FIELD_7',
-                      )"
-                      :key="player.id"
-                      class="flex items-center justify-between rounded bg-gray-50 p-2 text-sm"
-                      :class="{
-                        'bg-yellow-100': isPlayerBetting(
-                          ongoingTournament.id,
-                          player.id,
-                        ),
-                        'border-2 border-red-500': isCurrentUserPlayer(
-                          player.id,
-                        ),
-                      }"
-                    >
-                      <div class="flex min-w-0 items-center">
-                        <button
-                          v-if="
-                            canShowChallengeIcon(
-                              ongoingTournament.id,
-                              field.value as 'FIELD_5' | 'FIELD_7',
-                              player,
-                            )
-                          "
-                          type="button"
-                          class="mr-1 inline-flex h-6 w-6 shrink-0 items-center justify-center text-sm leading-none"
-                          :class="
-                            isPendingOutgoingChallengeTarget(
-                              ongoingTournament.id,
-                              player,
-                            )
-                              ? 'inline-flex h-5 w-5 shrink-0 animate-pulse items-center justify-center rounded-full bg-red-500 text-xs font-bold text-white'
-                              : player.challenge?.status === 'PENDING'
-                                ? 'animate-pulse'
-                                : ''
-                          "
-                          :title="
-                            isPendingOutgoingChallengeTarget(
-                              ongoingTournament.id,
-                              player,
-                            )
-                              ? 'Lời mời thách đấu đang chờ'
-                              : 'Thách đấu'
-                          "
-                          @click="
-                            openChallengeModal(ongoingTournament.id, player)
-                          "
-                        >
-                          {{
-                            isPendingOutgoingChallengeTarget(
-                              ongoingTournament.id,
-                              player,
-                            )
-                              ? '!'
-                              : '⚔️'
-                          }}
-                        </button>
-                        <button
-                          v-if="isCurrentUsersFriend(player)"
-                          type="button"
-                          class="mr-1 inline-flex h-6 w-6 shrink-0 items-center justify-center rounded text-sm font-bold text-red-700 hover:bg-red-100"
-                          title="Hủy tham gia cho bạn"
-                          @click="cancelFriendAttendanceByPlayer(ongoingTournament.id, player)"
-                        >
-                          ✕
-                        </button>
-                        <button
-                          v-if="
-                            isCurrentUserPlayer(player.id) &&
-                            !canShowChallengeIcon(
-                              ongoingTournament.id,
-                              field.value as 'FIELD_5' | 'FIELD_7',
-                              player,
-                            ) &&
-                            canCancelOwnField(
-                              ongoingTournament,
-                              field.value as 'FIELD_5' | 'FIELD_7',
-                            )
-                          "
-                          type="button"
-                          class="mr-1 inline-flex h-6 w-6 shrink-0 items-center justify-center rounded text-sm font-bold text-red-700 hover:bg-red-100"
-                          :disabled="attendanceLoading.has(ongoingTournament.id)"
-                          :title="`Hủy ${field.label}`"
-                          @click="
-                            cancelOwnField(
-                              ongoingTournament,
-                              field.value as 'FIELD_5' | 'FIELD_7',
-                            )
-                          "
-                        >
-                          ✕
-                        </button>
-                        <div
-                          class="mr-2 flex h-6 w-6 shrink-0 items-center justify-center overflow-hidden rounded-full bg-gray-300 text-xs font-medium"
-                        >
-                          <img
-                            v-if="player.avatar"
-                            :src="player.avatar"
-                            :alt="player.name"
-                            class="h-full w-full object-cover"
-                          /><span v-else>{{
-                            player.name.charAt(0).toUpperCase()
-                          }}</span>
-                        </div>
-                        <div class="min-w-0">
-                          <div class="flex min-w-0 items-center whitespace-nowrap font-normal text-gray-900">
-                            <span class="truncate">{{ player.name }}</span>
-                            <button v-if="canShowFriendInviteIcon(ongoingTournament.id, field.value as 'FIELD_5' | 'FIELD_7', player)" type="button" class="ml-1 inline-flex h-5 w-5 shrink-0 items-center justify-center text-sm leading-none" title="Rủ bạn" @click="openFriendInviteModal(ongoingTournament.id, player)">🤝</button>
-                            <button
-                              v-if="player.challenge?.status === 'ACCEPTED'"
-                              type="button"
-                              class="ml-1 inline-flex animate-pulse align-middle text-sm"
-                              :class="
-                                isCurrentUsersAcceptedChallenge(
-                                  ongoingTournament.id,
-                                  player,
-                                )
-                                  ? 'cursor-pointer'
-                                  : 'cursor-default'
-                              "
-                              title="Đang thách đấu"
-                              @click="
-                                isCurrentUsersAcceptedChallenge(
-                                  ongoingTournament.id,
-                                  player,
-                                ) && openChallengeModal(ongoingTournament.id, player)
-                              "
-                            >
-                              ⚔️
-                            </button>
-                          </div>
-                          <div
-                            v-if="player.swapPending"
-                            class="truncate text-[10px] font-medium leading-4 text-amber-700"
-                          >
-                            Đang chờ swap
-                          </div>
-                          <div
-                            v-if="player.swapWaitlistPosition"
-                            class="truncate text-[10px] font-medium leading-4 text-violet-700"
-                          >
-                            Đang trong hàng chờ
-                            {{ player.swapWaitlistPosition }}
-                          </div>
-                          <div
-                            v-if="player.swappedWithName"
-                            class="truncate text-[10px] font-medium leading-4 text-emerald-700"
-                          >
-                            Đã swap với {{ player.swappedWithName }}
-                          </div>
-                          <div
-                            v-if="player.addedByUsername"
-                            class="truncate text-[10px] leading-4 text-gray-500"
-                          >
-                            Được thêm bởi {{ player.addedByUsername }}
-                          </div>
-                          <div
-                            v-if="player.friendOwnerName"
-                            class="truncate text-[10px] leading-4 text-blue-600"
-                          >
-                            Bạn của {{ player.friendOwnerName }}
-                          </div>
-                        </div>
-                        <span
-                          v-if="
-                            isPlayerWithWater(ongoingTournament.id, player.id)
-                          "
-                          class="ml-1"
-                          >💧</span
-                        >
-                      </div>
                       <div
-                        class="ml-2 flex shrink-0 items-center text-gray-600"
+                        v-for="player in getTeamPreviewPlayers(
+                          ongoingTournament.id,
+                          field.value as 'FIELD_5' | 'FIELD_7',
+                        )"
+                        :key="player.id"
+                        class="flex items-center justify-between rounded bg-gray-50 p-2 text-sm"
+                        :class="{
+                          'bg-yellow-100': isPlayerBetting(
+                            ongoingTournament.id,
+                            player.id,
+                          ),
+                          'border-2 border-red-500': isCurrentUserPlayer(
+                            player.id,
+                          ),
+                        }"
                       >
-                        <span
-                          class="mr-1 rounded px-1.5 py-0.5 text-xs"
-                          :class="
-                            isGoalkeeper(player.position)
-                              ? 'bg-green-100 font-semibold text-green-700'
-                              : ''
-                          "
-                          >{{ getPositionLabel(player.position)
-                          }}<template v-if="player.positionSecond"
-                            >-{{
-                              getPositionLabel(player.positionSecond)
-                            }}</template
-                          ></span
-                        ><span class="text-xs">T{{ player.tier }}</span>
+                        <div class="flex min-w-0 items-center">
+                          <button
+                            v-if="
+                              canShowChallengeIcon(
+                                ongoingTournament.id,
+                                field.value as 'FIELD_5' | 'FIELD_7',
+                                player,
+                              )
+                            "
+                            type="button"
+                            class="mr-1 inline-flex h-6 w-6 shrink-0 items-center justify-center text-sm leading-none"
+                            :class="
+                              isPendingOutgoingChallengeTarget(
+                                ongoingTournament.id,
+                                player,
+                              )
+                                ? 'inline-flex h-5 w-5 shrink-0 animate-pulse items-center justify-center rounded-full bg-red-500 text-xs font-bold text-white'
+                                : player.challenge?.status === 'PENDING'
+                                  ? 'animate-pulse'
+                                  : ''
+                            "
+                            :title="
+                              isPendingOutgoingChallengeTarget(
+                                ongoingTournament.id,
+                                player,
+                              )
+                                ? 'Lời mời thách đấu đang chờ'
+                                : 'Thách đấu'
+                            "
+                            @click="
+                              openChallengeModal(ongoingTournament.id, player)
+                            "
+                          >
+                            {{
+                              isPendingOutgoingChallengeTarget(
+                                ongoingTournament.id,
+                                player,
+                              )
+                                ? "!"
+                                : "⚔️"
+                            }}
+                          </button>
+                          <button
+                            v-if="isCurrentUsersFriend(player)"
+                            type="button"
+                            class="mr-1 inline-flex h-6 w-6 shrink-0 items-center justify-center rounded text-sm font-bold text-red-700 hover:bg-red-100"
+                            title="Hủy tham gia cho bạn"
+                            @click="
+                              cancelFriendAttendanceByPlayer(
+                                ongoingTournament.id,
+                                player,
+                              )
+                            "
+                          >
+                            ✕
+                          </button>
+                          <button
+                            v-if="
+                              isCurrentUserPlayer(player.id) &&
+                              !canShowChallengeIcon(
+                                ongoingTournament.id,
+                                field.value as 'FIELD_5' | 'FIELD_7',
+                                player,
+                              ) &&
+                              canCancelOwnField(
+                                ongoingTournament,
+                                field.value as 'FIELD_5' | 'FIELD_7',
+                              )
+                            "
+                            type="button"
+                            class="mr-1 inline-flex h-6 w-6 shrink-0 items-center justify-center rounded text-sm font-bold text-red-700 hover:bg-red-100"
+                            :disabled="
+                              attendanceLoading.has(ongoingTournament.id)
+                            "
+                            :title="`Hủy ${field.label}`"
+                            @click="
+                              cancelOwnField(
+                                ongoingTournament,
+                                field.value as 'FIELD_5' | 'FIELD_7',
+                              )
+                            "
+                          >
+                            ✕
+                          </button>
+                          <div
+                            class="mr-2 flex h-6 w-6 shrink-0 items-center justify-center overflow-hidden rounded-full bg-gray-300 text-xs font-medium"
+                          >
+                            <img
+                              v-if="player.avatar"
+                              :src="player.avatar"
+                              :alt="player.name"
+                              class="h-full w-full object-cover"
+                            /><span v-else>{{
+                              player.name.charAt(0).toUpperCase()
+                            }}</span>
+                          </div>
+                          <div class="min-w-0">
+                            <div
+                              class="flex min-w-0 items-center whitespace-nowrap font-normal text-gray-900"
+                            >
+                              <span class="truncate">{{ player.name }}</span>
+                              <button
+                                v-if="
+                                  canShowFriendInviteIcon(
+                                    ongoingTournament.id,
+                                    field.value as 'FIELD_5' | 'FIELD_7',
+                                    player,
+                                  )
+                                "
+                                type="button"
+                                class="ml-1 inline-flex h-5 w-5 shrink-0 items-center justify-center text-sm leading-none"
+                                title="Rủ bạn"
+                                @click="
+                                  openFriendInviteModal(
+                                    ongoingTournament.id,
+                                    player,
+                                  )
+                                "
+                              >
+                                🤝
+                              </button>
+                              <button
+                                v-if="
+                                  !hidesSideGames(ongoingTournament) &&
+                                  player.challenge?.status === 'ACCEPTED'
+                                "
+                                type="button"
+                                class="ml-1 inline-flex animate-pulse align-middle text-sm"
+                                :class="
+                                  isCurrentUsersAcceptedChallenge(
+                                    ongoingTournament.id,
+                                    player,
+                                  )
+                                    ? 'cursor-pointer'
+                                    : 'cursor-default'
+                                "
+                                title="Đang thách đấu"
+                                @click="
+                                  isCurrentUsersAcceptedChallenge(
+                                    ongoingTournament.id,
+                                    player,
+                                  ) &&
+                                  openChallengeModal(
+                                    ongoingTournament.id,
+                                    player,
+                                  )
+                                "
+                              >
+                                ⚔️
+                              </button>
+                            </div>
+                            <div
+                              v-if="player.swapPending"
+                              class="truncate text-[10px] font-medium leading-4 text-amber-700"
+                            >
+                              Đang chờ swap
+                            </div>
+                            <div
+                              v-if="player.swapWaitlistPosition"
+                              class="truncate text-[10px] font-medium leading-4 text-violet-700"
+                            >
+                              Đang trong hàng chờ
+                              {{ player.swapWaitlistPosition }}
+                            </div>
+                            <div
+                              v-if="player.swappedWithName"
+                              class="truncate text-[10px] font-medium leading-4 text-emerald-700"
+                            >
+                              Đã swap với {{ player.swappedWithName }}
+                            </div>
+                            <div
+                              v-if="player.addedByUsername"
+                              class="truncate text-[10px] leading-4 text-gray-500"
+                            >
+                              Được thêm bởi {{ player.addedByUsername }}
+                            </div>
+                            <div
+                              v-if="player.friendOwnerName"
+                              class="truncate text-[10px] leading-4 text-blue-600"
+                            >
+                              Bạn của {{ player.friendOwnerName }}
+                            </div>
+                          </div>
+                          <span
+                            v-if="
+                              isPlayerWithWater(ongoingTournament.id, player.id)
+                            "
+                            class="ml-1"
+                            >💧</span
+                          >
+                        </div>
+                        <div
+                          class="ml-2 flex shrink-0 items-center text-gray-600"
+                        >
+                          <span
+                            class="mr-1 rounded px-1.5 py-0.5 text-xs"
+                            :class="
+                              isGoalkeeper(player.position)
+                                ? 'bg-green-100 font-semibold text-green-700'
+                                : ''
+                            "
+                            >{{ getPositionLabel(player.position)
+                            }}<template v-if="player.positionSecond"
+                              >-{{
+                                getPositionLabel(player.positionSecond)
+                              }}</template
+                            ></span
+                          ><span class="text-xs">T{{ player.tier }}</span>
+                        </div>
                       </div>
                     </div>
+                    <p v-else class="py-5 text-center text-sm text-gray-500">
+                      Chưa có cầu thủ.
+                    </p>
                   </div>
-                  <p v-else class="py-5 text-center text-sm text-gray-500">
-                    Chưa có cầu thủ.
-                  </p>
                 </div>
               </div>
-            </div>
             </div>
             <div
               v-if="
@@ -1499,14 +1982,53 @@
                   <button
                     type="button"
                     class="rounded p-1 text-primary-600 hover:bg-primary-100"
-                    :title="teamPreviewSortByTier ? 'Sắp xếp theo thời gian đăng ký' : 'Sắp xếp theo Tier'"
-                    :aria-label="teamPreviewSortByTier ? 'Sắp xếp theo thời gian đăng ký' : 'Sắp xếp theo Tier'"
+                    :title="
+                      teamPreviewSortByTier
+                        ? 'Sắp xếp theo thời gian đăng ký'
+                        : 'Sắp xếp theo Tier'
+                    "
+                    :aria-label="
+                      teamPreviewSortByTier
+                        ? 'Sắp xếp theo thời gian đăng ký'
+                        : 'Sắp xếp theo Tier'
+                    "
                     @click="teamPreviewSortByTier = !teamPreviewSortByTier"
                   >
-                    <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 6h18M6 12h12m-9 6h6M7 4l-2 2 2 2m10 8 2 2-2 2" /></svg>
+                    <svg
+                      class="h-4 w-4"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                      aria-hidden="true"
+                    >
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M3 6h18M6 12h12m-9 6h6M7 4l-2 2 2 2m10 8 2 2-2 2"
+                      />
+                    </svg>
                   </button>
-                  <button type="button" class="inline-flex h-4 w-4 items-center justify-center rounded text-xs leading-none text-red-600 hover:bg-red-100" title="Xem các cặp thách đấu" aria-label="Xem các cặp thách đấu" @click="openChallengePairsModal(ongoingTournament.id)">⚔️</button>
-                  <button type="button" class="inline-flex h-4 w-4 items-center justify-center rounded text-xs leading-none text-primary-600 hover:bg-primary-100" title="Xem các cặp rủ bạn" aria-label="Xem các cặp rủ bạn" @click="openFriendInvitePairsModal(ongoingTournament.id)">🤝</button>
+                  <button
+                    v-if="!hidesSideGames(ongoingTournament)"
+                    type="button"
+                    class="inline-flex h-4 w-4 items-center justify-center rounded text-xs leading-none text-red-600 hover:bg-red-100"
+                    title="Xem các cặp thách đấu"
+                    aria-label="Xem các cặp thách đấu"
+                    @click="openChallengePairsModal(ongoingTournament.id)"
+                  >
+                    ⚔️
+                  </button>
+                  <button
+                    v-if="!hidesSideGames(ongoingTournament)"
+                    type="button"
+                    class="inline-flex h-4 w-4 items-center justify-center rounded text-xs leading-none text-primary-600 hover:bg-primary-100"
+                    title="Xem các cặp rủ bạn"
+                    aria-label="Xem các cặp rủ bạn"
+                    @click="openFriendInvitePairsModal(ongoingTournament.id)"
+                  >
+                    🤝
+                  </button>
                   <button
                     v-if="authStore.hasAnyRole(['admin', 'mod'])"
                     type="button"
@@ -1537,7 +2059,9 @@
                     </svg>
                   </button>
                 </div>
-                <span class="mt-1 block text-[10px] text-gray-500">Chưa chia đội</span>
+                <span class="mt-1 block text-[10px] text-gray-500"
+                  >Chưa chia đội</span
+                >
               </div>
               <div
                 v-if="ongoingTournament.pitchType"
@@ -1652,12 +2176,15 @@
                     'border-2 border-red-500': isCurrentUserPlayer(player.id),
                   }"
                 >
-                  <div class="flex min-w-0 items-center mobile-team-preview-player-content">
+                  <div
+                    class="flex min-w-0 items-center mobile-team-preview-player-content"
+                  >
                     <button
                       v-if="
                         canShowChallengeIcon(
                           ongoingTournament.id,
-                          (ongoingTournament.pitchType || mobileTeamPreviewField) as 'FIELD_5' | 'FIELD_7',
+                          (ongoingTournament.pitchType ||
+                            mobileTeamPreviewField) as 'FIELD_5' | 'FIELD_7',
                           player,
                         )
                       "
@@ -1680,8 +2207,8 @@
                           ongoingTournament.id,
                           player,
                         )
-                          ? '!'
-                          : '⚔️'
+                          ? "!"
+                          : "⚔️"
                       }}
                     </button>
                     <button
@@ -1689,7 +2216,12 @@
                       type="button"
                       class="mr-1 inline-flex h-6 w-6 shrink-0 items-center justify-center rounded text-sm font-bold text-red-700 hover:bg-red-100"
                       title="Hủy tham gia cho bạn"
-                      @click="cancelFriendAttendanceByPlayer(ongoingTournament.id, player)"
+                      @click="
+                        cancelFriendAttendanceByPlayer(
+                          ongoingTournament.id,
+                          player,
+                        )
+                      "
                     >
                       ✕
                     </button>
@@ -1698,12 +2230,14 @@
                         isCurrentUserPlayer(player.id) &&
                         !canShowChallengeIcon(
                           ongoingTournament.id,
-                          (ongoingTournament.pitchType || mobileTeamPreviewField) as 'FIELD_5' | 'FIELD_7',
+                          (ongoingTournament.pitchType ||
+                            mobileTeamPreviewField) as 'FIELD_5' | 'FIELD_7',
                           player,
                         ) &&
                         canCancelOwnField(
                           ongoingTournament,
-                          (ongoingTournament.pitchType || mobileTeamPreviewField) as 'FIELD_5' | 'FIELD_7',
+                          (ongoingTournament.pitchType ||
+                            mobileTeamPreviewField) as 'FIELD_5' | 'FIELD_7',
                         )
                       "
                       type="button"
@@ -1713,7 +2247,8 @@
                       @click="
                         cancelOwnField(
                           ongoingTournament,
-                          (ongoingTournament.pitchType || mobileTeamPreviewField) as 'FIELD_5' | 'FIELD_7',
+                          (ongoingTournament.pitchType ||
+                            mobileTeamPreviewField) as 'FIELD_5' | 'FIELD_7',
                         )
                       "
                     >
@@ -1731,12 +2266,35 @@
                         player.name.charAt(0).toUpperCase()
                       }}</span>
                     </div>
-                      <div class="min-w-0">
-                        <div class="flex min-w-0 items-center whitespace-nowrap font-normal text-gray-900">
-                          <span class="truncate">{{ player.name }}</span>
-                          <button v-if="canShowFriendInviteIcon(ongoingTournament.id, (ongoingTournament.pitchType || mobileTeamPreviewField) as 'FIELD_5' | 'FIELD_7', player)" type="button" class="ml-1 inline-flex h-5 w-5 shrink-0 items-center justify-center text-sm leading-none" title="Rủ bạn" @click="openFriendInviteModal(ongoingTournament.id, player)">🤝</button>
-                          <button
-                          v-if="player.challenge?.status === 'ACCEPTED'"
+                    <div class="min-w-0">
+                      <div
+                        class="flex min-w-0 items-center whitespace-nowrap font-normal text-gray-900"
+                      >
+                        <span class="truncate">{{ player.name }}</span>
+                        <button
+                          v-if="
+                            canShowFriendInviteIcon(
+                              ongoingTournament.id,
+                              (ongoingTournament.pitchType ||
+                                mobileTeamPreviewField) as
+                                'FIELD_5' | 'FIELD_7',
+                              player,
+                            )
+                          "
+                          type="button"
+                          class="ml-1 inline-flex h-5 w-5 shrink-0 items-center justify-center text-sm leading-none"
+                          title="Rủ bạn"
+                          @click="
+                            openFriendInviteModal(ongoingTournament.id, player)
+                          "
+                        >
+                          🤝
+                        </button>
+                        <button
+                          v-if="
+                            !hidesSideGames(ongoingTournament) &&
+                            player.challenge?.status === 'ACCEPTED'
+                          "
                           type="button"
                           class="ml-1 inline-flex animate-pulse align-middle text-sm"
                           :class="
@@ -1752,7 +2310,8 @@
                             isCurrentUsersAcceptedChallenge(
                               ongoingTournament.id,
                               player,
-                            ) && openChallengeModal(ongoingTournament.id, player)
+                            ) &&
+                            openChallengeModal(ongoingTournament.id, player)
                           "
                         >
                           ⚔️
@@ -1870,7 +2429,11 @@
                 Số lượng cầu thủ
               </button>
               <button
-                v-if="authStore.hasRole('admin') && ongoingTournament.status === 'UPCOMING' && getTournamentTeams(ongoingTournament).length === 0"
+                v-if="
+                  authStore.hasRole('admin') &&
+                  ongoingTournament.status === 'UPCOMING' &&
+                  getTournamentTeams(ongoingTournament).length === 0
+                "
                 @click="openTournamentFormatModal(ongoingTournament)"
                 class="btn-secondary"
               >
@@ -1878,8 +2441,7 @@
               </button>
               <button
                 v-if="
-                  authStore.hasRole('admin') &&
-                  !ongoingTournament.isProtected
+                  authStore.hasRole('admin') && !ongoingTournament.isProtected
                 "
                 @click="deleteTournament(ongoingTournament.id)"
                 class="px-4 py-2 rounded-lg font-medium bg-red-600 text-white hover:bg-red-700 transition-colors"
@@ -1920,8 +2482,8 @@
               </h4>
               <p class="mt-1 text-sm text-gray-600">
                 Cần ít nhất 12 cầu thủ đăng ký Sân 5 hoặc 16 cầu thủ đăng ký Sân
-                7. Admin/mod chọn 2, 3 hoặc 4 team; số cầu thủ giữa các team được
-                phân bổ chênh lệch tối đa 1 người.
+                7. Admin/mod chọn 2, 3 hoặc 4 team; số cầu thủ giữa các team
+                được phân bổ chênh lệch tối đa 1 người.
               </p>
             </div>
             <div class="rounded-lg border border-gray-200 bg-gray-50 p-4">
@@ -1947,14 +2509,15 @@
               <p class="mt-1 text-sm text-gray-600">
                 Các Tier 3–6 được xếp theo sức chứa và tổng Tier. Sau đó hệ
                 thống đổi các cặp cầu thủ phù hợp giữa team mạnh nhất/yếu nhất
-                để giảm chênh lệch Tier trung bình; GK chính và Tier 1/2 được giữ ổn định.
+                để giảm chênh lệch Tier trung bình; GK chính và Tier 1/2 được
+                giữ ổn định.
               </p>
             </div>
           </div>
           <p class="mt-4 text-xs text-gray-500">
             Trong cùng một Tier, thứ tự cầu thủ được xáo trộn để kết quả mỗi lần
-            chia team không hoàn toàn giống nhau. Cặp Battle luôn được ưu tiên
-            ở hai team khác nhau; cặp rủ bạn đã chấp nhận được xếp cùng team.
+            chia team không hoàn toàn giống nhau. Cặp Battle luôn được ưu tiên ở
+            hai team khác nhau; cặp rủ bạn đã chấp nhận được xếp cùng team.
           </p>
         </div>
       </div>
@@ -1996,7 +2559,10 @@
                       <h3 class="text-lg font-semibold text-gray-900">
                         {{ tournament.name }}
                       </h3>
-                      <p v-if="tournament.status === 'DELETED'" class="basis-full text-xs font-medium text-red-600">
+                      <p
+                        v-if="tournament.status === 'DELETED'"
+                        class="basis-full text-xs font-medium text-red-600"
+                      >
                         Lý do: {{ tournament.deletedReason }}
                       </p>
                       <span
@@ -2062,7 +2628,10 @@
                   </div>
                   <!-- Financial Information or Postponed Status -->
                   <div
-                    v-if="getTournamentTeams(tournament).length > 0 && tournament.status !== 'DELETED'"
+                    v-if="
+                      getTournamentTeams(tournament).length > 0 &&
+                      tournament.status !== 'DELETED'
+                    "
                     class="mt-2"
                   >
                     <div
@@ -2112,7 +2681,12 @@
                       </span>
                     </div>
                   </div>
-                  <div v-else-if="tournament.status === 'DELETED'" class="mt-2 text-sm font-medium text-red-600">Giải đấu đã bị xóa và không được tính tiền.</div>
+                  <div
+                    v-else-if="tournament.status === 'DELETED'"
+                    class="mt-2 text-sm font-medium text-red-600"
+                  >
+                    Giải đấu đã bị xóa và không được tính tiền.
+                  </div>
                   <div v-else class="mt-2">
                     <div class="text-red-600 font-bold text-2xl">POSTPONED</div>
                   </div>
@@ -2214,7 +2788,13 @@
                   >
                     ⚔️ Battle
                   </button>
-                  <button type="button" class="ml-2 rounded bg-primary-600 px-2 py-1 text-xs font-semibold text-white hover:bg-primary-700" @click="openFriendInvitePairsModal(tournament.id)">🤝 Rủ bạn</button>
+                  <button
+                    type="button"
+                    class="ml-2 rounded bg-primary-600 px-2 py-1 text-xs font-semibold text-white hover:bg-primary-700"
+                    @click="openFriendInvitePairsModal(tournament.id)"
+                  >
+                    🤝 Rủ bạn
+                  </button>
                 </h4>
 
                 <div
@@ -2232,13 +2812,15 @@
                       class="absolute right-3 top-3 text-xl"
                       title="Đội thắng"
                       aria-label="Đội thắng"
-                    >🏆</span>
+                      >🏆</span
+                    >
                     <span
                       v-else-if="isTournamentLoserTeam(tournament, team)"
                       class="absolute right-3 top-3 text-xl"
                       title="Đội thua"
                       aria-label="Đội thua"
-                    >💔</span>
+                      >💔</span
+                    >
                     <!-- Team Header -->
                     <div class="flex items-center mb-3">
                       <div
@@ -2276,13 +2858,16 @@
                         :key="player.id"
                         class="old-tournament-player-row grid min-h-14 w-full grid-cols-[minmax(0,1fr)_auto] items-center gap-2 rounded bg-gray-50 p-2 text-sm"
                         :class="{
-                          'bg-green-100 ring-1 ring-green-300': isTeamGoalkeeper(team.players, player),
+                          'bg-green-100 ring-1 ring-green-300':
+                            isTeamGoalkeeper(team.players, player),
                           'border-2 border-red-500': isCurrentUserPlayer(
                             player.id,
                           ),
                         }"
                       >
-                      <div class="flex min-w-0 justify-self-start items-center text-left">
+                        <div
+                          class="flex min-w-0 justify-self-start items-center text-left"
+                        >
                           <div
                             class="w-6 h-6 shrink-0 overflow-hidden bg-gray-300 rounded-full flex items-center justify-center mr-2 text-xs font-medium"
                           >
@@ -2302,19 +2887,47 @@
                                 type="button"
                                 class="max-w-full truncate text-left font-normal text-gray-900 transition-colors hover:text-primary-700 hover:underline"
                                 :title="`Xem biến động tiền của ${player.name}`"
-                                @click="openTournamentPlayerMoneyHistory(tournament, player)"
-                              >{{ player.name }}</button>
-                              <span v-if="isPlayerBetting(tournament.id, player.id)" class="ml-1 shrink-0" title="Ngôi sao hy vọng">⭐</span>
+                                @click="
+                                  openTournamentPlayerMoneyHistory(
+                                    tournament,
+                                    player,
+                                  )
+                                "
+                              >
+                                {{ player.name }}
+                              </button>
+                              <span
+                                v-if="isPlayerBetting(tournament.id, player.id)"
+                                class="ml-1 shrink-0"
+                                title="Ngôi sao hy vọng"
+                                >⭐</span
+                              >
                               <button
-                                v-if="getAcceptedBattleOpponentName(tournament.id, player.id)"
+                                v-if="
+                                  getAcceptedBattleOpponentName(
+                                    tournament.id,
+                                    player.id,
+                                  )
+                                "
                                 type="button"
                                 class="ml-1 inline-flex shrink-0 animate-pulse align-middle text-sm"
                                 :title="`Đã Battle với ${getAcceptedBattleOpponentName(tournament.id, player.id)}`"
-                                @click="openChallengeBattleDetailsModal(tournament)"
-                                >⚔️ {{ getAcceptedBattlePairNumber(tournament.id, player.id) }}</button
+                                @click="
+                                  openChallengeBattleDetailsModal(tournament)
+                                "
                               >
+                                ⚔️
+                                {{
+                                  getAcceptedBattlePairNumber(
+                                    tournament.id,
+                                    player.id,
+                                  )
+                                }}
+                              </button>
                               <span
-                                v-if="isPlayerWithWater(tournament.id, player.id)"
+                                v-if="
+                                  isPlayerWithWater(tournament.id, player.id)
+                                "
                                 class="ml-1 shrink-0"
                                 title="Đã đăng ký uống nước"
                                 >💧</span
@@ -2334,7 +2947,9 @@
                             </div>
                           </div>
                         </div>
-                        <div class="flex shrink-0 justify-self-end items-center text-gray-600">
+                        <div
+                          class="flex shrink-0 justify-self-end items-center text-gray-600"
+                        >
                           <span
                             class="text-xs mr-1 px-1.5 py-0.5 rounded"
                             :class="
@@ -2344,7 +2959,11 @@
                             "
                             >{{ getPositionLabel(player.position) }}</span
                           >
-                          <span class="text-xs" :class="player.tier <= 3 ? 'font-bold' : ''">T{{ player.tier }}</span>
+                          <span
+                            class="text-xs"
+                            :class="player.tier <= 3 ? 'font-bold' : ''"
+                            >T{{ player.tier }}</span
+                          >
                         </div>
                       </div>
                     </div>
@@ -2356,7 +2975,8 @@
                         class="pt-3 border-t border-gray-200"
                       >
                         <div class="flex justify-between text-xs text-gray-600">
-                          <span class="rounded-md border-2 border-primary-400 bg-primary-50 px-2 py-1 font-bold text-primary-700"
+                          <span
+                            class="rounded-md border-2 border-primary-400 bg-primary-50 px-2 py-1 font-bold text-primary-700"
                             >Tổng tier:
                             {{
                               team.players.reduce(
@@ -2365,7 +2985,8 @@
                               )
                             }}</span
                           >
-                          <span class="rounded-md border-2 border-red-400 bg-red-50 px-2 py-1 font-bold text-red-700"
+                          <span
+                            class="rounded-md border-2 border-red-400 bg-red-50 px-2 py-1 font-bold text-red-700"
                             >Trung bình:
                             {{
                               (
@@ -2379,7 +3000,7 @@
                         </div>
                       </div>
                       <div
-                        v-if="tournament.status === 'COMPLETED'"
+                        v-if="tournament.status === 'COMPLETED' && tournament.format !== 'LEAGUE'"
                         class="mt-3 pt-3 border-t border-gray-200 text-right"
                       >
                         <span class="text-lg font-bold text-blue-600"
@@ -2392,7 +3013,9 @@
               </div>
               <div class="flex justify-end gap-3 pt-2 border-t border-gray-200">
                 <button
-                  v-if="!tournament.selfFunded && tournament.status !== 'DELETED'"
+                  v-if="
+                    !tournament.selfFunded && tournament.status !== 'DELETED'
+                  "
                   @click="openTournamentMoneyHistory(tournament)"
                   class="btn-secondary"
                 >
@@ -2810,9 +3433,14 @@
             Biến động tiền cầu thủ
           </h3>
           <p class="text-sm text-gray-500">
-            {{ selectedMoneyHistoryPlayer?.name || selectedMoneyHistoryTournament?.name }}
+            {{
+              selectedMoneyHistoryPlayer?.name ||
+              selectedMoneyHistoryTournament?.name
+            }}
           </p>
-          <p v-if="selectedMoneyHistoryPlayer" class="text-xs text-gray-500">{{ selectedMoneyHistoryTournament?.name }}</p>
+          <p v-if="selectedMoneyHistoryPlayer" class="text-xs text-gray-500">
+            {{ selectedMoneyHistoryTournament?.name }}
+          </p>
         </div>
         <button
           @click="showTournamentMoneyHistoryModal = false"
@@ -3034,7 +3662,7 @@
                 ? "Admin/Mod đã chọn Sân 5 cho giải đấu này."
                 : fieldRegistrationPitchType === "FIELD_7"
                   ? "Admin/Mod đã chọn Sân 7 cho giải đấu này."
-              : "Bạn có thể đăng ký một hoặc cả hai sân."
+                  : "Bạn có thể đăng ký một hoặc cả hai sân."
         }}
       </p>
       <div
@@ -3833,9 +4461,15 @@
             :key="option.value"
             type="button"
             class="rounded-lg border px-3 py-3 font-medium transition-colors"
-            :class="selectedTournamentDuration === option.value ? 'border-primary-600 bg-primary-600 text-white' : 'border-gray-200 text-gray-700 hover:bg-gray-50'"
+            :class="
+              selectedTournamentDuration === option.value
+                ? 'border-primary-600 bg-primary-600 text-white'
+                : 'border-gray-200 text-gray-700 hover:bg-gray-50'
+            "
             @click="selectedTournamentDuration = option.value"
-          >{{ option.label }}</button>
+          >
+            {{ option.label }}
+          </button>
         </div>
       </div>
       <div class="flex justify-end gap-3 border-t pt-4">
@@ -3852,6 +4486,294 @@
           class="btn-primary disabled:opacity-50"
         >
           {{ tournamentTimeSaving ? "Đang lưu..." : "Lưu" }}
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div
+    v-if="showLeagueTeamPlayersModal && leagueTeamPlayersModal"
+    class="fixed inset-0 z-[70] flex items-center justify-center overflow-y-auto overscroll-contain bg-black/50 p-4"
+  >
+    <div class="w-full max-w-lg rounded-lg bg-white p-6 shadow-xl">
+      <div class="flex items-center justify-between border-b pb-4">
+        <div>
+          <h3 class="text-lg font-semibold text-gray-900">
+            Cầu thủ {{ leagueTeamPlayersModal?.teamName }}
+          </h3>
+          <p class="text-sm text-gray-500">
+            ⚽ Bàn thắng · 🟨 Thẻ vàng · 🟥 Thẻ đỏ
+          </p>
+        </div>
+        <button
+          type="button"
+          class="text-2xl text-gray-400 hover:text-gray-700"
+          @click="closeLeagueTeamPlayersModal"
+        >
+          ×
+        </button>
+      </div>
+      <div
+        v-if="
+          leagueMatchLoadingIds.has(leagueTeamPlayersModal?.match?.id || '')
+        "
+        class="py-8 text-center text-sm text-gray-500"
+      >
+        Đang tải cầu thủ...
+      </div>
+      <div v-else class="space-y-2 py-4">
+        <div
+          v-for="player in leagueModalTeamPlayers"
+          :key="player.id"
+          class="flex items-center justify-between rounded-lg border bg-gray-50 p-3"
+        >
+          <span class="min-w-0 truncate font-medium text-gray-900">{{
+            player.name
+          }}</span>
+          <div class="ml-3 flex shrink-0 items-center gap-2">
+            <span
+              v-if="
+                leaguePlayerGoalCount(
+                  leagueTeamPlayersModal.match.id,
+                  player.id,
+                )
+              "
+              class="text-sm font-bold text-green-700"
+              >{{
+                leaguePlayerGoalCount(
+                  leagueTeamPlayersModal.match.id,
+                  player.id,
+                )
+              }}</span
+            ><button
+              type="button"
+              class="flex h-9 w-9 items-center justify-center rounded-full bg-green-100 text-lg hover:bg-green-200"
+              title="Thêm bàn thắng"
+              @click="
+                addLeaguePlayerGoal(
+                  leagueTeamPlayersModal.match,
+                  player,
+                  leagueTeamPlayersModal.side,
+                )
+              "
+            >
+              ⚽</button
+            ><button
+              type="button"
+              class="flex h-9 w-9 items-center justify-center rounded-full text-lg"
+              :class="
+                isLeaguePlayerCardActive(
+                  leagueTeamPlayersModal.match.id,
+                  player.id,
+                  'YELLOW_CARD',
+                )
+                  ? 'bg-yellow-400 ring-2 ring-yellow-600'
+                  : 'bg-yellow-100 hover:bg-yellow-200'
+              "
+              title="Thẻ vàng"
+              @click="
+                toggleLeaguePlayerCard(
+                  leagueTeamPlayersModal.match,
+                  player,
+                  leagueTeamPlayersModal.side,
+                  'YELLOW_CARD',
+                )
+              "
+            >
+              🟨</button
+            ><button
+              type="button"
+              class="flex h-9 w-9 items-center justify-center rounded-full text-lg"
+              :class="
+                isLeaguePlayerCardActive(
+                  leagueTeamPlayersModal.match.id,
+                  player.id,
+                  'RED_CARD',
+                )
+                  ? 'bg-red-500 ring-2 ring-red-700'
+                  : 'bg-red-100 hover:bg-red-200'
+              "
+              title="Thẻ đỏ"
+              @click="
+                toggleLeaguePlayerCard(
+                  leagueTeamPlayersModal.match,
+                  player,
+                  leagueTeamPlayersModal.side,
+                  'RED_CARD',
+                )
+              "
+            >
+              🟥
+            </button>
+          </div>
+        </div>
+      </div>
+      <div class="flex justify-end gap-3 border-t pt-4">
+        <button
+          type="button"
+          class="btn-secondary"
+          @click="closeLeagueTeamPlayersModal"
+        >
+          Đóng</button
+        ><button
+          type="button"
+          class="btn-primary disabled:opacity-50"
+          :disabled="!hasLeaguePlayerActionChanges || leaguePlayerActionsSaving"
+          @click="saveLeaguePlayerActions"
+        >
+          {{ leaguePlayerActionsSaving ? "Đang lưu..." : "Lưu" }}
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div
+    v-if="showLeagueMatchStatusModal"
+    class="fixed inset-0 z-[70] flex items-center justify-center bg-black/50 p-4"
+  >
+    <div class="w-full max-w-sm rounded-lg bg-white p-6 shadow-xl">
+      <div class="flex items-center justify-between border-b pb-4">
+        <h3 class="text-lg font-semibold text-gray-900">Trạng thái trận đấu</h3>
+        <button
+          type="button"
+          class="text-2xl text-gray-400 hover:text-gray-700"
+          @click="closeLeagueMatchStatusModal"
+        >
+          ×
+        </button>
+      </div>
+      <div class="grid grid-cols-3 gap-3 py-5">
+        <button
+          v-for="status in leagueMatchStatusOptions"
+          :key="status"
+          type="button"
+          class="rounded-lg border px-2 py-3 text-xs font-semibold transition-colors"
+          :class="
+            selectedLeagueMatchStatus === status
+              ? 'border-primary-600 bg-primary-600 text-white'
+              : 'border-gray-200 text-gray-700 hover:bg-gray-50'
+          "
+          @click="selectedLeagueMatchStatus = status"
+        >
+          {{ status }}
+        </button>
+      </div>
+      <div class="flex justify-end gap-3 border-t pt-4">
+        <button
+          type="button"
+          class="btn-secondary"
+          @click="closeLeagueMatchStatusModal"
+        >
+          Hủy</button
+        ><button
+          type="button"
+          class="btn-primary disabled:opacity-50"
+          :disabled="leagueMatchStatusSaving"
+          @click="saveLeagueMatchStatus"
+        >
+          {{ leagueMatchStatusSaving ? "Đang lưu..." : "Lưu" }}
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div
+    v-if="showLeagueMatchTimeModal"
+    class="fixed inset-0 z-[70] flex items-center justify-center overflow-y-auto overscroll-contain bg-black/50 p-4"
+  >
+    <div class="w-full max-w-md rounded-lg bg-white p-6 shadow-xl">
+      <div class="flex items-center justify-between border-b pb-4">
+        <div>
+          <h3 class="text-lg font-semibold text-gray-900">
+            Chỉnh sửa giờ thi đấu
+          </h3>
+          <p class="text-sm text-gray-500">
+            {{
+              leagueMatchTimeMatch
+                ? `${displayTeamName(leagueMatchTimeMatch.homeTeam.name)} vs ${displayTeamName(leagueMatchTimeMatch.awayTeam.name)}`
+                : ""
+            }}
+          </p>
+        </div>
+        <button
+          type="button"
+          class="text-2xl text-gray-400 hover:text-gray-700"
+          @click="closeLeagueMatchTimeModal"
+        >
+          ×
+        </button>
+      </div>
+      <div class="py-5">
+        <p class="form-label mb-3">Chọn giờ bắt đầu</p>
+        <div class="grid grid-cols-3 gap-3">
+          <button
+            v-for="time in tournamentTimeOptions"
+            :key="time"
+            type="button"
+            class="rounded-lg border px-3 py-3 font-medium transition-colors"
+            :class="
+              selectedLeagueMatchTime === time
+                ? 'border-primary-600 bg-primary-600 text-white'
+                : 'border-gray-200 text-gray-700 hover:bg-gray-50'
+            "
+            @click="selectedLeagueMatchTime = time"
+          >
+            {{ time }}
+          </button>
+        </div>
+        <label class="form-label mt-5 block">Hoặc chọn giờ khác</label>
+        <div class="mt-1 flex items-center gap-2">
+          <button
+            type="button"
+            class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-gray-100 text-xl font-semibold text-gray-700 hover:bg-gray-200"
+            @click="adjustLeagueMatchTime(-10)"
+          >
+            −</button
+          ><input
+            v-model="selectedLeagueMatchTime"
+            type="time"
+            step="600"
+            class="form-input flex-1 text-center"
+          /><button
+            type="button"
+            class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary-100 text-xl font-semibold text-primary-700 hover:bg-primary-200"
+            @click="adjustLeagueMatchTime(10)"
+          >
+            +
+          </button>
+        </div>
+        <p class="form-label mb-3 mt-5">Thời gian thi đấu</p>
+        <div class="grid grid-cols-2 gap-3">
+          <button
+            v-for="option in leagueMatchDurationOptions"
+            :key="option.value"
+            type="button"
+            class="rounded-lg border px-3 py-3 font-medium transition-colors"
+            :class="
+              selectedLeagueMatchDuration === option.value
+                ? 'border-primary-600 bg-primary-600 text-white'
+                : 'border-gray-200 text-gray-700 hover:bg-gray-50'
+            "
+            @click="selectedLeagueMatchDuration = option.value"
+          >
+            {{ option.label }}
+          </button>
+        </div>
+      </div>
+      <div class="flex justify-end gap-3 border-t pt-4">
+        <button
+          type="button"
+          class="btn-secondary"
+          @click="closeLeagueMatchTimeModal"
+        >
+          Hủy</button
+        ><button
+          type="button"
+          class="btn-primary disabled:opacity-50"
+          :disabled="leagueMatchTimeSaving"
+          @click="saveLeagueMatchTime"
+        >
+          {{ leagueMatchTimeSaving ? "Đang lưu..." : "Lưu" }}
         </button>
       </div>
     </div>
@@ -4500,7 +5422,7 @@
               </div>
               <div class="text-right">
                 <span class="text-lg font-bold text-green-700"
-                  >⚽: {{ selectedWinningTeam.score || 0 }}</span
+                  >{{ getTournamentById(endTournamentId)?.format === 'LEAGUE' ? 'Điểm:' : '⚽:' }} {{ getTournamentById(endTournamentId)?.format === 'LEAGUE' ? (selectedWinningTeam.stats?.points || 0) : (selectedWinningTeam.score || 0) }}</span
                 >
               </div>
             </div>
@@ -4519,11 +5441,16 @@
               </div>
               <div class="text-right">
                 <span class="text-lg font-bold text-red-700"
-                  >⚽: {{ selectedLosingTeam.score || 0 }}</span
+                  >{{ getTournamentById(endTournamentId)?.format === 'LEAGUE' ? 'Điểm:' : '⚽:' }} {{ getTournamentById(endTournamentId)?.format === 'LEAGUE' ? (selectedLosingTeam.stats?.points || 0) : (selectedLosingTeam.score || 0) }}</span
                 >
               </div>
             </div>
           </div>
+        </div>
+
+        <div v-if="getTournamentById(endTournamentId)?.format === 'LEAGUE'" class="mb-6 rounded-lg border border-primary-200 bg-white p-4">
+          <h5 class="mb-3 font-semibold text-primary-800">🏆 Bảng xếp hạng</h5>
+          <div class="overflow-x-auto"><table class="w-full min-w-[420px] text-xs"><thead class="border-b text-left text-gray-500"><tr><th class="p-2">#</th><th class="p-2">Team</th><th class="p-2 text-center">Điểm</th><th class="p-2 text-center">W</th><th class="p-2 text-center">D</th><th class="p-2 text-center">L</th><th class="p-2 text-center">M</th><th class="p-2 text-center">+/-</th><th class="p-2 text-center">Diff</th></tr></thead><tbody><tr v-for="(team, index) in leagueStandings(getTournamentById(endTournamentId)!)" :key="team.id" class="border-b last:border-0"><td class="p-2">{{ index + 1 }}</td><td class="p-2 font-medium">{{ displayTeamName(team.name) }}</td><td class="p-2 text-center font-bold text-primary-700">{{ team.stats.points }}</td><td class="p-2 text-center">{{ team.stats.wins }}</td><td class="p-2 text-center">{{ team.stats.draws }}</td><td class="p-2 text-center">{{ team.stats.losses }}</td><td class="p-2 text-center">{{ team.stats.gamesPlayed }}</td><td class="p-2 text-center">{{ team.stats.goalsFor }}/{{ team.stats.goalsAgainst }}</td><td class="p-2 text-center">{{ team.stats.goalsFor - team.stats.goalsAgainst }}</td></tr></tbody></table></div>
         </div>
 
         <!-- Money Calculation Info -->
@@ -4546,22 +5473,23 @@
             <li v-if="!getTournamentById(endTournamentId)?.selfFunded">
               • GK được giảm 50% chi phí giải đấu
             </li>
-            <li v-if="!getTournamentById(endTournamentId)?.selfFunded">
+            <li v-if="!getTournamentById(endTournamentId)?.selfFunded && getTournamentById(endTournamentId)?.format !== 'LEAGUE'">
               • Ngôi sao hy vọng thắng: +10.000 ₫
             </li>
-            <li v-if="!getTournamentById(endTournamentId)?.selfFunded">
+            <li v-if="!getTournamentById(endTournamentId)?.selfFunded && getTournamentById(endTournamentId)?.format !== 'LEAGUE'">
               • Ngôi sao hy vọng thua: -10.000 ₫
             </li>
             <li v-if="!getTournamentById(endTournamentId)?.selfFunded">
               • Cầu thủ đội thua: -10.000 ₫
             </li>
-            <li v-if="!getTournamentById(endTournamentId)?.selfFunded">
-              • Battle: cầu thủ của đội điểm cao hơn +10.000 ₫, cầu thủ của đội điểm thấp hơn -10.000 ₫
+            <li v-if="!getTournamentById(endTournamentId)?.selfFunded && getTournamentById(endTournamentId)?.format !== 'LEAGUE'">
+              • Battle: cầu thủ của đội điểm cao hơn +10.000 ₫, cầu thủ của đội
+              điểm thấp hơn -10.000 ₫
             </li>
-            <li v-if="!getTournamentById(endTournamentId)?.selfFunded">
+            <li v-if="!getTournamentById(endTournamentId)?.selfFunded && getTournamentById(endTournamentId)?.format !== 'LEAGUE'">
               • Chi phí nước: -10.000 ₫
             </li>
-            <li v-if="!getTournamentById(endTournamentId)?.selfFunded">
+            <li v-if="!getTournamentById(endTournamentId)?.selfFunded && getTournamentById(endTournamentId)?.format !== 'LEAGUE'">
               • Đội thắng được miễn phí nước
             </li>
             <li
@@ -4754,19 +5682,40 @@
     <div class="bg-white rounded-lg p-6 max-w-lg w-full" @click.stop>
       <h3 class="text-lg font-semibold text-gray-900 mb-4">Xóa giải đấu</h3>
       <div class="text-gray-600 mb-6">
-        <p class="mb-3">Xác nhận xóa <strong>"{{ deleteTournamentData?.name }}"</strong>?</p>
+        <p class="mb-3">
+          Xác nhận xóa <strong>"{{ deleteTournamentData?.name }}"</strong>?
+        </p>
         <div class="rounded-lg bg-red-50 p-3 text-sm text-red-800">
-          Giải đấu sẽ được chuyển sang trạng thái <strong>DELETED</strong>, vẫn hiển thị ở Giải đấu cũ và không được tính tiền.
+          Giải đấu sẽ được chuyển sang trạng thái <strong>DELETED</strong>, vẫn
+          hiển thị ở Giải đấu cũ và không được tính tiền.
         </div>
-        <label class="mt-4 block text-sm font-medium text-gray-700" for="delete-tournament-reason">Lý do <span class="text-red-600">*</span></label>
-        <textarea id="delete-tournament-reason" v-model="deleteTournamentReason" rows="3" class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-primary-500 focus:outline-none" placeholder="Nhập lý do xóa giải đấu" />
+        <label
+          class="mt-4 block text-sm font-medium text-gray-700"
+          for="delete-tournament-reason"
+          >Lý do <span class="text-red-600">*</span></label
+        >
+        <textarea
+          id="delete-tournament-reason"
+          v-model="deleteTournamentReason"
+          rows="3"
+          class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-primary-500 focus:outline-none"
+          placeholder="Nhập lý do xóa giải đấu"
+        />
       </div>
-      <div class="flex justify-end space-x-3">
+      <div class="flex flex-wrap justify-end gap-3">
         <button
           @click="closeDeleteTournamentModal"
           class="px-4 py-2 text-gray-600 hover:text-gray-800 transition-colors"
         >
           Hủy
+        </button>
+        <button
+          v-if="authStore.currentUser?.role === 'admin'"
+          @click="confirmPermanentDeleteTournament"
+          :disabled="permanentDeleteSaving"
+          class="px-4 py-2 rounded bg-red-800 text-white transition-colors hover:bg-red-900 disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          {{ permanentDeleteSaving ? "Đang xóa..." : "Xóa vĩnh viễn" }}
         </button>
         <button
           @click="confirmDeleteTournament"
@@ -4847,7 +5796,13 @@
           v-if="authStore.currentUser?.role === 'admin'"
           type="button"
           class="btn-secondary"
-          :disabled="teamGenerationLoading || !canGenerateTeams(teamCountModalTournamentId || '', selectedTeamField)"
+          :disabled="
+            teamGenerationLoading ||
+            !canGenerateTeams(
+              teamCountModalTournamentId || '',
+              selectedTeamField,
+            )
+          "
           @click="previewGenerateRandomTeams"
         >
           Test chia đội
@@ -4871,26 +5826,269 @@
   </div>
 
   <!-- Team Split Progress Modal -->
-  <TeamSplitProgressModal ref="liveTeamSplitModalRef" v-if="showLiveTeamSplitModal" :model-value="true" :team-count="liveTeamSplitTeams.length" :stage="liveTeamSplitStage" :title="liveTeamSplitTitle" :description="liveTeamSplitDescription" :is-assigning-goalkeeper="liveTeamSplitTitle === 'Đang phân chia GK'" :desktop-ai-words="liveDesktopAiWords" :mobile-ai-words="liveMobileAiWords" :ai-sequence="liveAiSequence" max-width-class="max-w-7xl">
-      <template #groups>
-        <div class="grid gap-3 md:grid-cols-3">
-          <div v-for="group in liveSplitProgressGroups" :key="group.label" :ref="(element) => setLiveTierGroupRef(group.label, element as HTMLElement | null)" class="rounded-lg border p-3" :class="liveTeamSplitStage >= group.step ? 'border-primary-300 bg-primary-50' : 'border-gray-200 bg-gray-50 opacity-60'"><p class="mb-3 text-center text-sm font-semibold text-gray-800">{{ group.label }}</p><TransitionGroup name="live-split-chip" tag="div" class="flex flex-wrap justify-center gap-2"><div v-for="player in group.players" :key="player.id" class="w-16 text-center"><img v-if="player.avatar" :src="player.avatar" class="mx-auto h-9 w-9 rounded-full object-cover" /><span v-else class="mx-auto flex h-9 w-9 items-center justify-center rounded-full bg-gray-200 text-xs">{{ player.name?.[0] }}</span><span class="mt-1 block truncate text-[10px] font-medium">{{ player.name }}</span></div></TransitionGroup></div>
+  <TeamSplitProgressModal
+    ref="liveTeamSplitModalRef"
+    v-if="showLiveTeamSplitModal"
+    :model-value="true"
+    :team-count="liveTeamSplitTeams.length"
+    :stage="liveTeamSplitStage"
+    :title="liveTeamSplitTitle"
+    :description="liveTeamSplitDescription"
+    :is-assigning-goalkeeper="liveTeamSplitTitle === 'Đang phân chia GK'"
+    :desktop-ai-words="liveDesktopAiWords"
+    :mobile-ai-words="liveMobileAiWords"
+    :ai-sequence="liveAiSequence"
+    max-width-class="max-w-7xl"
+  >
+    <template #groups>
+      <div class="grid gap-3 md:grid-cols-3">
+        <div
+          v-for="group in liveSplitProgressGroups"
+          :key="group.label"
+          :ref="
+            (element) =>
+              setLiveTierGroupRef(group.label, element as HTMLElement | null)
+          "
+          class="rounded-lg border p-3"
+          :class="
+            liveTeamSplitStage >= group.step
+              ? 'border-primary-300 bg-primary-50'
+              : 'border-gray-200 bg-gray-50 opacity-60'
+          "
+        >
+          <p class="mb-3 text-center text-sm font-semibold text-gray-800">
+            {{ group.label }}
+          </p>
+          <TransitionGroup
+            name="live-split-chip"
+            tag="div"
+            class="flex flex-wrap justify-center gap-2"
+            ><div
+              v-for="player in group.players"
+              :key="player.id"
+              class="w-16 text-center"
+            >
+              <img
+                v-if="player.avatar"
+                :src="player.avatar"
+                class="mx-auto h-9 w-9 rounded-full object-cover"
+              /><span
+                v-else
+                class="mx-auto flex h-9 w-9 items-center justify-center rounded-full bg-gray-200 text-xs"
+                >{{ player.name?.[0] }}</span
+              ><span class="mt-1 block truncate text-[10px] font-medium">{{
+                player.name
+              }}</span>
+            </div></TransitionGroup
+          >
         </div>
-      </template>
-      <template #teams>
-          <div class="grid gap-3" :class="teamGridClass(liveTeamSplitTeams.length)">
-            <div v-for="(team, index) in liveTeamSplitTeams" :key="index" :ref="(element) => setLiveTeamRef(index, element as HTMLElement | null)" class="flex min-h-32 flex-col rounded-lg border bg-white p-3" :class="getLiveTeamBorderClass(index)">
-              <div class="mb-3 flex items-center gap-2"><span class="flex h-7 w-7 items-center justify-center rounded-full text-sm font-bold text-white" :class="getLiveTeamNumberClass(index)">{{ index + 1 }}</span><div><p class="text-sm font-semibold">Team {{ index + 1 }} <span class="font-medium" :class="getLiveTeamTextClass(index)">- {{ getTeamShirtLabel(index) }}</span></p><p class="text-xs text-gray-500">{{ team.length }} cầu thủ</p></div></div>
-              <TransitionGroup name="live-team-chip" tag="div" class="space-y-1"><div v-for="player in team" :key="player.id" class="flex items-center justify-between rounded p-1.5 text-xs" :class="isGoalkeeper(player.position) ? 'border border-green-300 bg-green-100' : 'bg-gray-50'"><div class="flex min-w-0 items-center"><img v-if="player.avatar" :src="player.avatar" class="mr-1.5 h-6 w-6 rounded-full object-cover" /><span v-else class="mr-1.5 flex h-6 w-6 items-center justify-center rounded-full bg-gray-200">{{ player.name?.[0] }}</span><span class="truncate">{{ player.name }}</span><span v-if="player.challenge" class="ml-1 text-red-600">⚔️</span><span v-if="player.hasBet" class="ml-1">⭐</span></div><span class="text-gray-600">{{ getPositionLabel(player.position) }} · <span :class="player.tier <= 3 ? 'font-bold text-gray-900' : ''">T{{ player.tier }}</span></span></div></TransitionGroup>
-              <p v-if="!team.length" class="py-7 text-center text-xs text-gray-400">Đang chờ</p>
-              <div v-if="team.length" class="mt-auto flex justify-between border-t pt-2 text-[10px]"><span class="rounded border border-primary-300 bg-primary-50 px-1.5 py-0.5 font-bold text-primary-700">Tổng tier: {{ team.reduce((sum, player) => sum + player.tier, 0) }}</span><span class="rounded border border-red-300 bg-red-50 px-1.5 py-0.5 font-bold text-red-700">TB: {{ (team.reduce((sum, player) => sum + player.tier, 0) / team.length).toFixed(2) }}</span></div>
+      </div>
+    </template>
+    <template #teams>
+      <div class="grid gap-3" :class="teamGridClass(liveTeamSplitTeams.length)">
+        <div
+          v-for="(team, index) in liveTeamSplitTeams"
+          :key="index"
+          :ref="
+            (element) => setLiveTeamRef(index, element as HTMLElement | null)
+          "
+          class="flex min-h-32 flex-col rounded-lg border bg-white p-3"
+          :class="getLiveTeamBorderClass(index)"
+        >
+          <div class="mb-3 flex items-center gap-2">
+            <span
+              class="flex h-7 w-7 items-center justify-center rounded-full text-sm font-bold text-white"
+              :class="getLiveTeamNumberClass(index)"
+              >{{ index + 1 }}</span
+            >
+            <div>
+              <p class="text-sm font-semibold">
+                Team {{ index + 1 }}
+                <span class="font-medium" :class="getLiveTeamTextClass(index)"
+                  >- {{ getTeamShirtLabel(index) }}</span
+                >
+              </p>
+              <p class="text-xs text-gray-500">{{ team.length }} cầu thủ</p>
             </div>
           </div>
-      </template>
-      <template v-if="liveTeamSplitDone" #footer><div class="flex justify-end"><button type="button" class="btn-primary" @click="closeLiveTeamSplitModal">Xem kết quả</button></div></template>
+          <TransitionGroup name="live-team-chip" tag="div" class="space-y-1"
+            ><div
+              v-for="player in team"
+              :key="player.id"
+              class="flex items-center justify-between rounded p-1.5 text-xs"
+              :class="
+                isGoalkeeper(player.position)
+                  ? 'border border-green-300 bg-green-100'
+                  : 'bg-gray-50'
+              "
+            >
+              <div class="flex min-w-0 items-center">
+                <img
+                  v-if="player.avatar"
+                  :src="player.avatar"
+                  class="mr-1.5 h-6 w-6 rounded-full object-cover"
+                /><span
+                  v-else
+                  class="mr-1.5 flex h-6 w-6 items-center justify-center rounded-full bg-gray-200"
+                  >{{ player.name?.[0] }}</span
+                ><span class="truncate">{{ player.name }}</span
+                ><span v-if="player.challenge" class="ml-1 text-red-600"
+                  >⚔️</span
+                ><span v-if="player.hasBet" class="ml-1">⭐</span>
+              </div>
+              <span class="text-gray-600"
+                >{{ getPositionLabel(player.position) }} ·
+                <span :class="player.tier <= 3 ? 'font-bold text-gray-900' : ''"
+                  >T{{ player.tier }}</span
+                ></span
+              >
+            </div></TransitionGroup
+          >
+          <p v-if="!team.length" class="py-7 text-center text-xs text-gray-400">
+            Đang chờ
+          </p>
+          <div
+            v-if="team.length"
+            class="mt-auto flex justify-between border-t pt-2 text-[10px]"
+          >
+            <span
+              class="rounded border border-primary-300 bg-primary-50 px-1.5 py-0.5 font-bold text-primary-700"
+              >Tổng tier:
+              {{ team.reduce((sum, player) => sum + player.tier, 0) }}</span
+            ><span
+              class="rounded border border-red-300 bg-red-50 px-1.5 py-0.5 font-bold text-red-700"
+              >TB:
+              {{
+                (
+                  team.reduce((sum, player) => sum + player.tier, 0) /
+                  team.length
+                ).toFixed(2)
+              }}</span
+            >
+          </div>
+        </div>
+      </div>
+    </template>
+    <template v-if="liveTeamSplitDone" #footer
+      ><div class="flex justify-end">
+        <button
+          type="button"
+          class="btn-primary"
+          @click="closeLiveTeamSplitModal"
+        >
+          Xem kết quả
+        </button>
+      </div></template
+    >
   </TeamSplitProgressModal>
 
-  <div v-if="showLivePreviewResultModal" class="fixed inset-0 z-[86] flex items-center justify-center bg-black/50 p-4"><div class="flex max-h-[90vh] w-full max-w-7xl flex-col overflow-hidden rounded-xl bg-white shadow-xl"><div class="flex items-start justify-between border-b p-5"><div><h2 class="text-lg font-semibold text-primary-700">Kết quả chia team</h2><p class="mt-1 text-sm text-gray-500">Kết quả test — chưa lưu vào giải đấu.</p></div><button type="button" class="text-2xl text-gray-400" @click="showLivePreviewResultModal = false">×</button></div><div class="min-h-0 overflow-y-auto p-5"><div class="grid gap-3" :class="teamGridClass(liveTeamSplitTeams.length)"><div v-for="(team, index) in liveTeamSplitTeams" :key="index" class="flex min-h-32 flex-col rounded-lg border bg-white p-3" :class="getLiveTeamBorderClass(index)"><div class="mb-3 flex items-center gap-2"><span class="flex h-7 w-7 items-center justify-center rounded-full text-sm font-bold text-white" :class="getLiveTeamNumberClass(index)">{{ index + 1 }}</span><div><p class="text-sm font-semibold">Team {{ index + 1 }} <span class="font-medium" :class="getLiveTeamTextClass(index)">- {{ getTeamShirtLabel(index) }}</span></p><p class="text-xs text-gray-500">{{ team.length }} cầu thủ</p></div></div><div class="space-y-1"><div v-for="player in team" :key="player.id" class="flex items-center justify-between rounded bg-gray-50 p-1.5 text-xs" :class="isGoalkeeper(player.position) ? 'border border-green-300 bg-green-100' : 'bg-gray-50'"><span class="flex min-w-0 items-center"><img v-if="player.avatar" :src="player.avatar" class="mr-1.5 h-6 w-6 rounded-full object-cover"><span class="truncate">{{ player.name }}</span></span><span class="text-gray-600">{{ getPositionLabel(player.position) }} · <span :class="player.tier <= 3 ? 'font-bold text-gray-900' : ''">T{{ player.tier }}</span></span></div></div><div class="mt-auto flex justify-between border-t pt-2 text-[10px]"><span class="rounded border border-primary-300 bg-primary-50 px-1.5 py-0.5 font-bold text-primary-700">Tổng tier: {{ team.reduce((sum, player) => sum + player.tier, 0) }}</span><span class="rounded border border-red-300 bg-red-50 px-1.5 py-0.5 font-bold text-red-700">TB: {{ (team.reduce((sum, player) => sum + player.tier, 0) / team.length).toFixed(2) }}</span></div></div></div></div><div class="flex justify-end border-t p-4"><button type="button" class="btn-primary" @click="showLivePreviewResultModal = false">Đóng</button></div></div></div>
+  <div
+    v-if="showLivePreviewResultModal"
+    class="fixed inset-0 z-[86] flex items-center justify-center bg-black/50 p-4"
+  >
+    <div
+      class="flex max-h-[90vh] w-full max-w-7xl flex-col overflow-hidden rounded-xl bg-white shadow-xl"
+    >
+      <div class="flex items-start justify-between border-b p-5">
+        <div>
+          <h2 class="text-lg font-semibold text-primary-700">
+            Kết quả chia team
+          </h2>
+          <p class="mt-1 text-sm text-gray-500">
+            Kết quả test — chưa lưu vào giải đấu.
+          </p>
+        </div>
+        <button
+          type="button"
+          class="text-2xl text-gray-400"
+          @click="showLivePreviewResultModal = false"
+        >
+          ×
+        </button>
+      </div>
+      <div class="min-h-0 overflow-y-auto p-5">
+        <div
+          class="grid gap-3"
+          :class="teamGridClass(liveTeamSplitTeams.length)"
+        >
+          <div
+            v-for="(team, index) in liveTeamSplitTeams"
+            :key="index"
+            class="flex min-h-32 flex-col rounded-lg border bg-white p-3"
+            :class="getLiveTeamBorderClass(index)"
+          >
+            <div class="mb-3 flex items-center gap-2">
+              <span
+                class="flex h-7 w-7 items-center justify-center rounded-full text-sm font-bold text-white"
+                :class="getLiveTeamNumberClass(index)"
+                >{{ index + 1 }}</span
+              >
+              <div>
+                <p class="text-sm font-semibold">
+                  Team {{ index + 1 }}
+                  <span class="font-medium" :class="getLiveTeamTextClass(index)"
+                    >- {{ getTeamShirtLabel(index) }}</span
+                  >
+                </p>
+                <p class="text-xs text-gray-500">{{ team.length }} cầu thủ</p>
+              </div>
+            </div>
+            <div class="space-y-1">
+              <div
+                v-for="player in team"
+                :key="player.id"
+                class="flex items-center justify-between rounded bg-gray-50 p-1.5 text-xs"
+                :class="
+                  isGoalkeeper(player.position)
+                    ? 'border border-green-300 bg-green-100'
+                    : 'bg-gray-50'
+                "
+              >
+                <span class="flex min-w-0 items-center"
+                  ><img
+                    v-if="player.avatar"
+                    :src="player.avatar"
+                    class="mr-1.5 h-6 w-6 rounded-full object-cover"
+                  /><span class="truncate">{{ player.name }}</span></span
+                ><span class="text-gray-600"
+                  >{{ getPositionLabel(player.position) }} ·
+                  <span
+                    :class="player.tier <= 3 ? 'font-bold text-gray-900' : ''"
+                    >T{{ player.tier }}</span
+                  ></span
+                >
+              </div>
+            </div>
+            <div class="mt-auto flex justify-between border-t pt-2 text-[10px]">
+              <span
+                class="rounded border border-primary-300 bg-primary-50 px-1.5 py-0.5 font-bold text-primary-700"
+                >Tổng tier:
+                {{ team.reduce((sum, player) => sum + player.tier, 0) }}</span
+              ><span
+                class="rounded border border-red-300 bg-red-50 px-1.5 py-0.5 font-bold text-red-700"
+                >TB:
+                {{
+                  (
+                    team.reduce((sum, player) => sum + player.tier, 0) /
+                    team.length
+                  ).toFixed(2)
+                }}</span
+              >
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="flex justify-end border-t p-4">
+        <button
+          type="button"
+          class="btn-primary"
+          @click="showLivePreviewResultModal = false"
+        >
+          Đóng
+        </button>
+      </div>
+    </div>
+  </div>
 
   <!-- Clear Teams Confirmation Modal -->
   <div
@@ -4953,15 +6151,76 @@
     </div>
   </div>
 
-  <div v-if="showTournamentFormatModal" class="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4">
+  <div
+    v-if="showTournamentFormatModal"
+    class="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4"
+  >
     <div class="w-full max-w-md rounded-lg bg-white p-6 shadow-xl">
-      <div class="flex items-start justify-between border-b pb-4"><div><h3 class="text-lg font-semibold text-gray-900">Thể thức giải đấu</h3><p class="mt-1 text-sm text-gray-500">{{ tournamentFormatTournament?.name }}</p></div><button type="button" class="text-2xl text-gray-400" @click="closeTournamentFormatModal">×</button></div>
-      <div class="mt-5 grid grid-cols-2 gap-3">
-        <button type="button" class="rounded-lg border-2 p-4 text-left" :class="selectedTournamentFormat === 'SCORE' ? 'border-primary-600 bg-primary-50 text-primary-800' : 'border-gray-200'" @click="selectedTournamentFormat = 'SCORE'"><strong class="block">Score</strong><span class="mt-1 block text-xs">Chấm điểm các team như thể thức hiện tại.</span></button>
-        <button type="button" class="rounded-lg border-2 p-4 text-left" :class="selectedTournamentFormat === 'LEAGUE' ? 'border-primary-600 bg-primary-50 text-primary-800' : 'border-gray-200'" @click="selectedTournamentFormat = 'LEAGUE'"><strong class="block">League</strong><span class="mt-1 block text-xs">Sau khi chia team, tạo lịch lượt đi và lượt về giữa các team.</span></button>
+      <div class="flex items-start justify-between border-b pb-4">
+        <div>
+          <h3 class="text-lg font-semibold text-gray-900">Thể thức giải đấu</h3>
+          <p class="mt-1 text-sm text-gray-500">
+            {{ tournamentFormatTournament?.name }}
+          </p>
+        </div>
+        <button
+          type="button"
+          class="text-2xl text-gray-400"
+          @click="closeTournamentFormatModal"
+        >
+          ×
+        </button>
       </div>
-      <p v-if="selectedTournamentFormat === 'LEAGUE'" class="mt-4 rounded-lg bg-blue-50 p-3 text-sm text-blue-800">Mỗi trận có thể ghi nhận cầu thủ ghi bàn. Thắng 3 điểm, hòa 1 điểm, thua 0 điểm.</p>
-      <div class="mt-6 flex justify-end gap-3 border-t pt-4"><button class="btn-secondary" @click="closeTournamentFormatModal">Hủy</button><button class="btn-primary" :disabled="tournamentFormatSaving" @click="saveTournamentFormat">{{ tournamentFormatSaving ? 'Đang lưu...' : 'Lưu' }}</button></div>
+      <div class="mt-5 grid grid-cols-2 gap-3">
+        <button
+          type="button"
+          class="rounded-lg border-2 p-4 text-left"
+          :class="
+            selectedTournamentFormat === 'SCORE'
+              ? 'border-primary-600 bg-primary-50 text-primary-800'
+              : 'border-gray-200'
+          "
+          @click="selectedTournamentFormat = 'SCORE'"
+        >
+          <strong class="block">Score</strong
+          ><span class="mt-1 block text-xs"
+            >Chấm điểm các team như thể thức hiện tại.</span
+          >
+        </button>
+        <button
+          type="button"
+          class="rounded-lg border-2 p-4 text-left"
+          :class="
+            selectedTournamentFormat === 'LEAGUE'
+              ? 'border-primary-600 bg-primary-50 text-primary-800'
+              : 'border-gray-200'
+          "
+          @click="selectedTournamentFormat = 'LEAGUE'"
+        >
+          <strong class="block">League</strong
+          ><span class="mt-1 block text-xs"
+            >Sau khi chia team, tạo lịch lượt đi và lượt về giữa các team.</span
+          >
+        </button>
+      </div>
+      <p
+        v-if="selectedTournamentFormat === 'LEAGUE'"
+        class="mt-4 rounded-lg bg-blue-50 p-3 text-sm text-blue-800"
+      >
+        Mỗi trận có thể ghi nhận cầu thủ ghi bàn. Thắng 3 điểm, hòa 1 điểm, thua
+        0 điểm.
+      </p>
+      <div class="mt-6 flex justify-end gap-3 border-t pt-4">
+        <button class="btn-secondary" @click="closeTournamentFormatModal">
+          Hủy</button
+        ><button
+          class="btn-primary"
+          :disabled="tournamentFormatSaving"
+          @click="saveTournamentFormat"
+        >
+          {{ tournamentFormatSaving ? "Đang lưu..." : "Lưu" }}
+        </button>
+      </div>
     </div>
   </div>
 
@@ -5185,7 +6444,8 @@
             v-if="friendRegistrationPitchType"
             class="mt-2 text-center text-xs text-gray-500"
           >
-            Admin/Mod đã chọn {{ friendRegistrationPitchType === "FIELD_5" ? "Sân 5" : "Sân 7" }}.
+            Admin/Mod đã chọn
+            {{ friendRegistrationPitchType === "FIELD_5" ? "Sân 5" : "Sân 7" }}.
           </p>
           <p class="mt-3 text-center text-sm font-medium text-primary-700">
             Bạn đang chọn:
@@ -5252,14 +6512,14 @@
         >
           {{
             challengeAccepted
-              ? 'Đang thách đấu.'
-              : 'Đang thách đấu — chờ đối thủ chấp nhận lời mời.'
+              ? "Đang thách đấu."
+              : "Đang thách đấu — chờ đối thủ chấp nhận lời mời."
           }}
         </p>
         <p class="font-semibold">Luật thách đấu</p>
         <p>
-          Chỉ cầu thủ cùng nhóm Tier (Tier 1–2 hoặc Tier 3–6) và cùng đăng ký
-          ít nhất một sân mới được thách đấu nhau.
+          Chỉ cầu thủ cùng nhóm Tier (Tier 1–2 hoặc Tier 3–6) và cùng đăng ký ít
+          nhất một sân mới được thách đấu nhau.
         </p>
         <p>
           Hai cầu thủ thách đấu sẽ luôn được xếp ở hai đội khác nhau khi chia
@@ -5278,7 +6538,9 @@
         >
           Đóng</button
         ><button
-          v-if="challengeReceived || challengePendingOutgoing || challengeAccepted"
+          v-if="
+            challengeReceived || challengePendingOutgoing || challengeAccepted
+          "
           class="btn-secondary text-red-600"
           :disabled="challengeSaving"
           @click="cancelChallenge"
@@ -5301,37 +6563,204 @@
       </div>
     </div>
   </div>
-  <div v-if="showFriendInviteModal" class="fixed inset-0 z-[80] flex items-center justify-center bg-black/50 p-4"><div class="w-full max-w-md rounded-xl bg-white shadow-xl"><div class="border-b p-5"><h3 class="text-lg font-semibold text-primary-700">🤝 Rủ bạn</h3><p class="mt-1 text-sm text-gray-600">{{ friendInviteTarget?.name }}</p></div><div class="space-y-2 p-5 text-sm leading-6 text-gray-700"><p class="font-semibold">Luật rủ bạn</p><p>Cầu thủ cùng đăng ký ít nhất một sân có thể rủ nhau. Tier 1–2 không được rủ nhau; Tier 3–6 vẫn có thể rủ Tier 1–2.</p><p>Hai cầu thủ đã chấp nhận sẽ được xếp cùng đội khi chia đội.</p><p>Kết thúc giải, cả hai cầu thủ bị trừ 10.000 ₫.</p></div><div class="flex justify-end gap-3 border-t p-4"><button class="btn-secondary" @click="showFriendInviteModal = false">Đóng</button><button class="btn-primary" :disabled="friendInviteSaving" @click="submitFriendInvite">{{ friendInviteSaving ? 'Đang xử lý...' : friendInviteReceived ? 'Chấp nhận' : 'Gởi lời mời' }}</button></div></div></div>
+  <div
+    v-if="showFriendInviteModal"
+    class="fixed inset-0 z-[80] flex items-center justify-center bg-black/50 p-4"
+  >
+    <div class="w-full max-w-md rounded-xl bg-white shadow-xl">
+      <div class="border-b p-5">
+        <h3 class="text-lg font-semibold text-primary-700">🤝 Rủ bạn</h3>
+        <p class="mt-1 text-sm text-gray-600">{{ friendInviteTarget?.name }}</p>
+      </div>
+      <div class="space-y-2 p-5 text-sm leading-6 text-gray-700">
+        <p class="font-semibold">Luật rủ bạn</p>
+        <p>
+          Cầu thủ cùng đăng ký ít nhất một sân có thể rủ nhau. Tier 1–2 không
+          được rủ nhau; Tier 3–6 vẫn có thể rủ Tier 1–2.
+        </p>
+        <p>Hai cầu thủ đã chấp nhận sẽ được xếp cùng đội khi chia đội.</p>
+        <p>Kết thúc giải, cả hai cầu thủ bị trừ 10.000 ₫.</p>
+      </div>
+      <div class="flex justify-end gap-3 border-t p-4">
+        <button class="btn-secondary" @click="showFriendInviteModal = false">
+          Đóng</button
+        ><button
+          class="btn-primary"
+          :disabled="friendInviteSaving"
+          @click="submitFriendInvite"
+        >
+          {{
+            friendInviteSaving
+              ? "Đang xử lý..."
+              : friendInviteReceived
+                ? "Chấp nhận"
+                : "Gởi lời mời"
+          }}
+        </button>
+      </div>
+    </div>
+  </div>
 
   <div
     v-if="showChallengePairsModal"
     class="fixed inset-0 z-[80] flex items-center justify-center overflow-y-auto overscroll-contain bg-black/50 p-4"
   >
-    <div class="my-auto max-h-[90vh] w-full max-w-md overflow-y-auto rounded-xl bg-white shadow-xl">
+    <div
+      class="my-auto max-h-[90vh] w-full max-w-md overflow-y-auto rounded-xl bg-white shadow-xl"
+    >
       <div class="flex items-start justify-between border-b p-5">
-        <div><h3 class="text-lg font-semibold text-red-700">⚔️ Các cặp thách đấu</h3><p class="mt-1 text-sm text-gray-600">Các cầu thủ đã chấp nhận thách đấu trước khi chia đội.</p></div>
-        <button type="button" class="text-xl text-gray-400 hover:text-gray-700" aria-label="Đóng" @click="showChallengePairsModal = false">×</button>
+        <div>
+          <h3 class="text-lg font-semibold text-red-700">
+            ⚔️ Các cặp thách đấu
+          </h3>
+          <p class="mt-1 text-sm text-gray-600">
+            Các cầu thủ đã chấp nhận thách đấu trước khi chia đội.
+          </p>
+        </div>
+        <button
+          type="button"
+          class="text-xl text-gray-400 hover:text-gray-700"
+          aria-label="Đóng"
+          @click="showChallengePairsModal = false"
+        >
+          ×
+        </button>
       </div>
       <div class="space-y-3 p-5">
-        <section class="rounded-lg border border-primary-100 bg-primary-50 p-3 text-sm leading-6 text-gray-700">
+        <section
+          class="rounded-lg border border-primary-100 bg-primary-50 p-3 text-sm leading-6 text-gray-700"
+        >
           <h4 class="font-semibold text-primary-800">Luật thách đấu</h4>
           <ul class="mt-1 list-disc space-y-1 pl-5">
-            <li>Chỉ cầu thủ cùng nhóm Tier (Tier 1–2 hoặc Tier 3–6) và cùng đăng ký ít nhất một sân mới được thách đấu.</li>
-            <li>Sau khi hai bên chấp nhận, hệ thống luôn xếp hai cầu thủ vào hai đội khác nhau khi chia đội.</li>
-            <li>Kết thúc giải, cầu thủ thuộc đội có điểm cao hơn thắng và nhận +10.000 ₫; cầu thủ còn lại bị trừ 10.000 ₫.</li>
+            <li>
+              Chỉ cầu thủ cùng nhóm Tier (Tier 1–2 hoặc Tier 3–6) và cùng đăng
+              ký ít nhất một sân mới được thách đấu.
+            </li>
+            <li>
+              Sau khi hai bên chấp nhận, hệ thống luôn xếp hai cầu thủ vào hai
+              đội khác nhau khi chia đội.
+            </li>
+            <li>
+              Kết thúc giải, cầu thủ thuộc đội có điểm cao hơn thắng và nhận
+              +10.000 ₫; cầu thủ còn lại bị trừ 10.000 ₫.
+            </li>
           </ul>
         </section>
-        <p v-if="!activeChallengePairs.length" class="rounded-lg bg-gray-50 p-4 text-center text-sm text-gray-500">Chưa có cặp cầu thủ nào đang thách đấu.</p>
-        <div v-for="pair in activeChallengePairs" :key="pair.id" class="flex items-center justify-between gap-3 rounded-lg border border-red-100 bg-red-50 p-3">
-          <div class="flex min-w-0 flex-1 items-center gap-2"><div class="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full bg-gray-200 text-sm font-semibold"><img v-if="pair.requester.avatar" :src="pair.requester.avatar" :alt="pair.requester.name" class="h-full w-full object-cover"><span v-else>{{ pair.requester.name.charAt(0) }}</span></div><span class="truncate font-medium text-gray-900">{{ pair.requester.name }}</span></div>
+        <p
+          v-if="!activeChallengePairs.length"
+          class="rounded-lg bg-gray-50 p-4 text-center text-sm text-gray-500"
+        >
+          Chưa có cặp cầu thủ nào đang thách đấu.
+        </p>
+        <div
+          v-for="pair in activeChallengePairs"
+          :key="pair.id"
+          class="flex items-center justify-between gap-3 rounded-lg border border-red-100 bg-red-50 p-3"
+        >
+          <div class="flex min-w-0 flex-1 items-center gap-2">
+            <div
+              class="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full bg-gray-200 text-sm font-semibold"
+            >
+              <img
+                v-if="pair.requester.avatar"
+                :src="pair.requester.avatar"
+                :alt="pair.requester.name"
+                class="h-full w-full object-cover"
+              /><span v-else>{{ pair.requester.name.charAt(0) }}</span>
+            </div>
+            <span class="truncate font-medium text-gray-900">{{
+              pair.requester.name
+            }}</span>
+          </div>
           <span class="shrink-0 text-lg" aria-label="Thách đấu">⚔️</span>
-          <div class="flex min-w-0 flex-1 items-center justify-end gap-2"><span class="truncate text-right font-medium text-gray-900">{{ pair.target.name }}</span><div class="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full bg-gray-200 text-sm font-semibold"><img v-if="pair.target.avatar" :src="pair.target.avatar" :alt="pair.target.name" class="h-full w-full object-cover"><span v-else>{{ pair.target.name.charAt(0) }}</span></div></div>
+          <div class="flex min-w-0 flex-1 items-center justify-end gap-2">
+            <span class="truncate text-right font-medium text-gray-900">{{
+              pair.target.name
+            }}</span>
+            <div
+              class="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full bg-gray-200 text-sm font-semibold"
+            >
+              <img
+                v-if="pair.target.avatar"
+                :src="pair.target.avatar"
+                :alt="pair.target.name"
+                class="h-full w-full object-cover"
+              /><span v-else>{{ pair.target.name.charAt(0) }}</span>
+            </div>
+          </div>
         </div>
       </div>
-      <div class="flex justify-end border-t p-4"><button type="button" class="btn-primary" @click="showChallengePairsModal = false">Đóng</button></div>
+      <div class="flex justify-end border-t p-4">
+        <button
+          type="button"
+          class="btn-primary"
+          @click="showChallengePairsModal = false"
+        >
+          Đóng
+        </button>
+      </div>
     </div>
   </div>
-  <div v-if="showFriendInvitePairsModal" class="fixed inset-0 z-[80] flex items-center justify-center overflow-y-auto bg-black/50 p-4"><div class="my-auto max-h-[90vh] w-full max-w-md overflow-y-auto rounded-xl bg-white shadow-xl"><div class="flex items-start justify-between border-b p-5"><div><h3 class="text-lg font-semibold text-primary-700">🤝 Các cặp rủ bạn</h3><p class="mt-1 text-sm text-gray-600">Các cầu thủ đã chấp nhận rủ bạn trước khi chia đội.</p></div><button type="button" class="text-xl text-gray-400" @click="showFriendInvitePairsModal = false">×</button></div><div class="space-y-3 p-5"><section class="rounded-lg border border-primary-100 bg-primary-50 p-3 text-sm leading-6 text-gray-700"><h4 class="font-semibold text-primary-800">Luật rủ bạn</h4><ul class="mt-1 list-disc space-y-1 pl-5"><li>Cùng đăng ký ít nhất một sân; Tier 1–2 không rủ nhau.</li><li>Hai bên được xếp cùng đội khi chia team.</li><li>Kết thúc giải, cả hai bị trừ 10.000 ₫.</li></ul></section><p v-if="!activeFriendInvitePairs.length" class="rounded-lg bg-gray-50 p-4 text-center text-sm text-gray-500">Chưa có cặp rủ bạn nào.</p><div v-for="pair in activeFriendInvitePairs" :key="pair.id" class="flex items-center justify-between gap-3 rounded-lg border border-primary-100 bg-primary-50 p-3"><span class="min-w-0 flex-1 truncate">{{ pair.requester.name }}</span><span>🤝</span><span class="min-w-0 flex-1 truncate text-right">{{ pair.target.name }}</span></div></div><div class="flex justify-end border-t p-4"><button class="btn-primary" @click="showFriendInvitePairsModal = false">Đóng</button></div></div></div>
+  <div
+    v-if="showFriendInvitePairsModal"
+    class="fixed inset-0 z-[80] flex items-center justify-center overflow-y-auto bg-black/50 p-4"
+  >
+    <div
+      class="my-auto max-h-[90vh] w-full max-w-md overflow-y-auto rounded-xl bg-white shadow-xl"
+    >
+      <div class="flex items-start justify-between border-b p-5">
+        <div>
+          <h3 class="text-lg font-semibold text-primary-700">
+            🤝 Các cặp rủ bạn
+          </h3>
+          <p class="mt-1 text-sm text-gray-600">
+            Các cầu thủ đã chấp nhận rủ bạn trước khi chia đội.
+          </p>
+        </div>
+        <button
+          type="button"
+          class="text-xl text-gray-400"
+          @click="showFriendInvitePairsModal = false"
+        >
+          ×
+        </button>
+      </div>
+      <div class="space-y-3 p-5">
+        <section
+          class="rounded-lg border border-primary-100 bg-primary-50 p-3 text-sm leading-6 text-gray-700"
+        >
+          <h4 class="font-semibold text-primary-800">Luật rủ bạn</h4>
+          <ul class="mt-1 list-disc space-y-1 pl-5">
+            <li>Cùng đăng ký ít nhất một sân; Tier 1–2 không rủ nhau.</li>
+            <li>Hai bên được xếp cùng đội khi chia team.</li>
+            <li>Kết thúc giải, cả hai bị trừ 10.000 ₫.</li>
+          </ul>
+        </section>
+        <p
+          v-if="!activeFriendInvitePairs.length"
+          class="rounded-lg bg-gray-50 p-4 text-center text-sm text-gray-500"
+        >
+          Chưa có cặp rủ bạn nào.
+        </p>
+        <div
+          v-for="pair in activeFriendInvitePairs"
+          :key="pair.id"
+          class="flex items-center justify-between gap-3 rounded-lg border border-primary-100 bg-primary-50 p-3"
+        >
+          <span class="min-w-0 flex-1 truncate">{{ pair.requester.name }}</span
+          ><span>🤝</span
+          ><span class="min-w-0 flex-1 truncate text-right">{{
+            pair.target.name
+          }}</span>
+        </div>
+      </div>
+      <div class="flex justify-end border-t p-4">
+        <button class="btn-primary" @click="showFriendInvitePairsModal = false">
+          Đóng
+        </button>
+      </div>
+    </div>
+  </div>
 
   <div
     v-if="showDeadmatchModal"
@@ -5340,49 +6769,99 @@
     <div class="w-full max-w-4xl rounded-xl bg-white shadow-xl">
       <div class="flex items-start justify-between border-b p-5">
         <div>
-          <h3 class="text-lg font-semibold text-red-700">⚔️ Kích hoạt Deadmatch</h3>
-          <p class="mt-1 text-sm text-gray-600">Ghép cặp theo thứ tự hàng chờ giữa hai đội.</p>
+          <h3 class="text-lg font-semibold text-red-700">
+            ⚔️ Kích hoạt Deadmatch
+          </h3>
+          <p class="mt-1 text-sm text-gray-600">
+            Ghép cặp theo thứ tự hàng chờ giữa hai đội.
+          </p>
         </div>
-        <button class="text-xl text-gray-400 hover:text-gray-700" @click="showDeadmatchModal = false">×</button>
+        <button
+          class="text-xl text-gray-400 hover:text-gray-700"
+          @click="showDeadmatchModal = false"
+        >
+          ×
+        </button>
       </div>
       <div class="space-y-2 border-b p-5 text-sm leading-6 text-gray-700">
         <p class="font-semibold">Luật Deadmatch</p>
-        <p>Chỉ tham gia sau khi đã chia đội. Có thể hủy trước giờ diễn ra giải đấu.</p>
-        <p>Hai hàng chờ được ghép tự động theo thứ tự đăng ký. Khi kết thúc giải, tất cả thành viên của đội điểm cao hơn +10.000 ₫; tất cả thành viên của đội có điểm thấp hơn -10.000 ₫.</p>
+        <p>
+          Chỉ tham gia sau khi đã chia đội. Có thể hủy trước giờ diễn ra giải
+          đấu.
+        </p>
+        <p>
+          Hai hàng chờ được ghép tự động theo thứ tự đăng ký. Khi kết thúc giải,
+          tất cả thành viên của đội điểm cao hơn +10.000 ₫; tất cả thành viên
+          của đội có điểm thấp hơn -10.000 ₫.
+        </p>
       </div>
-      <div v-if="deadmatchLoading" class="p-8 text-center text-gray-500">Đang tải Deadmatch...</div>
+      <div v-if="deadmatchLoading" class="p-8 text-center text-gray-500">
+        Đang tải Deadmatch...
+      </div>
       <div v-else class="grid gap-4 p-5 md:grid-cols-2">
-        <div v-for="team in deadmatchTeams" :key="team.id" class="rounded-lg border p-4" :class="getTeamCardClass(team.name)">
-          <h4 class="mb-3 font-semibold text-gray-900">{{ displayTeamName(team.name) }}</h4>
+        <div
+          v-for="team in deadmatchTeams"
+          :key="team.id"
+          class="rounded-lg border p-4"
+          :class="getTeamCardClass(team.name)"
+        >
+          <h4 class="mb-3 font-semibold text-gray-900">
+            {{ displayTeamName(team.name) }}
+          </h4>
           <div v-if="getDeadmatchTeamEntries(team.id).length" class="space-y-2">
-            <div v-for="entry in getDeadmatchTeamEntries(team.id)" :key="entry.id" class="rounded bg-gray-50 px-3 py-2 text-sm">
+            <div
+              v-for="entry in getDeadmatchTeamEntries(team.id)"
+              :key="entry.id"
+              class="rounded bg-gray-50 px-3 py-2 text-sm"
+            >
               <div class="flex items-center justify-between gap-2">
                 <span class="font-medium">{{ entry.player.name }}</span>
-                <span v-if="entry.status === 'WAITING'" class="text-xs text-amber-700">Hàng chờ #{{ entry.queueNumber }}</span>
-                <span v-else class="text-xs font-semibold text-red-600">⚔️ Đã ghép cặp</span>
+                <span
+                  v-if="entry.status === 'WAITING'"
+                  class="text-xs text-amber-700"
+                  >Hàng chờ #{{ entry.queueNumber }}</span
+                >
+                <span v-else class="text-xs font-semibold text-red-600"
+                  >⚔️ Đã ghép cặp</span
+                >
               </div>
-              <div v-if="getDeadmatchOpponentName(entry)" class="mt-1 border-t border-dashed pt-1 text-xs text-red-600">
+              <div
+                v-if="getDeadmatchOpponentName(entry)"
+                class="mt-1 border-t border-dashed pt-1 text-xs text-red-600"
+              >
                 └── ⚔️ {{ getDeadmatchOpponentName(entry) }}
               </div>
             </div>
           </div>
-          <p v-else class="text-sm text-gray-500">Chưa có cầu thủ trong hàng chờ.</p>
+          <p v-else class="text-sm text-gray-500">
+            Chưa có cầu thủ trong hàng chờ.
+          </p>
         </div>
       </div>
       <div class="flex justify-end gap-3 border-t p-4">
-        <button class="btn-secondary" :disabled="deadmatchSaving" @click="showDeadmatchModal = false">Đóng</button>
+        <button
+          class="btn-secondary"
+          :disabled="deadmatchSaving"
+          @click="showDeadmatchModal = false"
+        >
+          Đóng
+        </button>
         <button
           v-if="currentDeadmatchEntry && canManageDeadmatch"
           class="btn-secondary text-red-600"
           :disabled="deadmatchSaving"
           @click="cancelDeadmatch"
-        >Hủy tham gia</button>
+        >
+          Hủy tham gia
+        </button>
         <button
           v-else-if="canManageDeadmatch"
           class="btn-primary bg-red-600 hover:bg-red-700"
           :disabled="deadmatchSaving"
           @click="joinDeadmatch"
-        >{{ deadmatchSaving ? 'Đang xử lý...' : 'Tham gia' }}</button>
+        >
+          {{ deadmatchSaving ? "Đang xử lý..." : "Tham gia" }}
+        </button>
       </div>
     </div>
   </div>
@@ -5391,35 +6870,81 @@
     v-if="showDeadmatchHistoryModal"
     class="fixed inset-0 z-[80] flex items-center justify-center overflow-y-auto overscroll-contain bg-black/50 p-4"
   >
-    <div class="flex max-h-[90vh] w-full max-w-2xl flex-col overflow-hidden rounded-xl bg-white shadow-xl">
+    <div
+      class="flex max-h-[90vh] w-full max-w-2xl flex-col overflow-hidden rounded-xl bg-white shadow-xl"
+    >
       <div class="flex items-start justify-between border-b p-5">
         <div>
-          <h3 class="text-lg font-semibold text-red-700">⚔️ Battle Deadmatch</h3>
-          <p class="mt-1 text-sm text-gray-600">Các cặp Deadmatch đã ghép của giải đấu và kết quả theo điểm đội.</p>
+          <h3 class="text-lg font-semibold text-red-700">
+            ⚔️ Battle Deadmatch
+          </h3>
+          <p class="mt-1 text-sm text-gray-600">
+            Các cặp Deadmatch đã ghép của giải đấu và kết quả theo điểm đội.
+          </p>
         </div>
-        <button class="text-xl text-gray-400 hover:text-gray-700" @click="showDeadmatchHistoryModal = false">×</button>
+        <button
+          class="text-xl text-gray-400 hover:text-gray-700"
+          @click="showDeadmatchHistoryModal = false"
+        >
+          ×
+        </button>
       </div>
       <div class="min-h-0 overflow-y-auto p-5">
-        <div v-if="deadmatchHistoryLoading" class="py-10 text-center text-gray-500">Đang tải Deadmatch...</div>
-        <div v-else-if="!deadmatchHistoryPairs.length" class="py-10 text-center text-gray-500">Giải đấu này chưa có cặp Battle Deadmatch nào.</div>
+        <div
+          v-if="deadmatchHistoryLoading"
+          class="py-10 text-center text-gray-500"
+        >
+          Đang tải Deadmatch...
+        </div>
+        <div
+          v-else-if="!deadmatchHistoryPairs.length"
+          class="py-10 text-center text-gray-500"
+        >
+          Giải đấu này chưa có cặp Battle Deadmatch nào.
+        </div>
         <div v-else class="space-y-3">
-          <div v-for="pair in deadmatchHistoryPairs" :key="pair.id" class="rounded-lg border border-red-100 bg-red-50/30 p-4">
+          <div
+            v-for="pair in deadmatchHistoryPairs"
+            :key="pair.id"
+            class="rounded-lg border border-red-100 bg-red-50/30 p-4"
+          >
             <div class="grid items-center gap-3 sm:grid-cols-[1fr_auto_1fr]">
               <div class="min-w-0 text-left">
-                <p class="truncate font-semibold text-gray-900">{{ pair.first.player.name }}</p>
-                <p class="text-xs text-gray-500">{{ displayTeamName(pair.first.teamName) }} · ⚽ {{ pair.first.score }}</p>
+                <p class="truncate font-semibold text-gray-900">
+                  {{ pair.first.player.name }}
+                </p>
+                <p class="text-xs text-gray-500">
+                  {{ displayTeamName(pair.first.teamName) }} · ⚽
+                  {{ pair.first.score }}
+                </p>
               </div>
               <span class="text-center text-lg font-bold text-red-600">⚔️</span>
               <div class="min-w-0 text-left sm:text-right">
-                <p class="truncate font-semibold text-gray-900">{{ pair.second.player.name }}</p>
-                <p class="text-xs text-gray-500">{{ displayTeamName(pair.second.teamName) }} · ⚽ {{ pair.second.score }}</p>
+                <p class="truncate font-semibold text-gray-900">
+                  {{ pair.second.player.name }}
+                </p>
+                <p class="text-xs text-gray-500">
+                  {{ displayTeamName(pair.second.teamName) }} · ⚽
+                  {{ pair.second.score }}
+                </p>
               </div>
             </div>
-            <p class="mt-3 border-t border-red-100 pt-3 text-center text-sm font-semibold" :class="pair.result === 'Hòa' ? 'text-gray-600' : 'text-green-700'">{{ pair.result }}</p>
+            <p
+              class="mt-3 border-t border-red-100 pt-3 text-center text-sm font-semibold"
+              :class="
+                pair.result === 'Hòa' ? 'text-gray-600' : 'text-green-700'
+              "
+            >
+              {{ pair.result }}
+            </p>
           </div>
         </div>
       </div>
-      <div class="flex justify-end border-t p-4"><button class="btn-primary" @click="showDeadmatchHistoryModal = false">Đóng</button></div>
+      <div class="flex justify-end border-t p-4">
+        <button class="btn-primary" @click="showDeadmatchHistoryModal = false">
+          Đóng
+        </button>
+      </div>
     </div>
   </div>
 
@@ -5427,37 +6952,108 @@
     v-if="showChallengeBattleDetailsModal"
     class="fixed inset-0 z-[80] flex items-center justify-center overflow-y-auto overscroll-contain bg-black/50 p-4"
   >
-    <div class="flex max-h-[90vh] w-full max-w-2xl flex-col overflow-hidden rounded-xl bg-white shadow-xl">
+    <div
+      class="flex max-h-[90vh] w-full max-w-2xl flex-col overflow-hidden rounded-xl bg-white shadow-xl"
+    >
       <div class="flex items-start justify-between border-b p-5">
         <div>
           <h3 class="text-lg font-semibold text-red-700">⚔️ Chi tiết Battle</h3>
-          <p class="mt-1 text-sm text-gray-600">Các cặp cầu thủ đã Battle và kết quả theo điểm đội.</p>
+          <p class="mt-1 text-sm text-gray-600">
+            Các cặp cầu thủ đã Battle và kết quả theo điểm đội.
+          </p>
         </div>
-        <button class="text-xl text-gray-400 hover:text-gray-700" @click="showChallengeBattleDetailsModal = false">×</button>
+        <button
+          class="text-xl text-gray-400 hover:text-gray-700"
+          @click="showChallengeBattleDetailsModal = false"
+        >
+          ×
+        </button>
       </div>
       <div class="min-h-0 overflow-y-auto p-5">
-        <div v-if="challengeBattleDetailsLoading" class="py-10 text-center text-gray-500">Đang tải Battle...</div>
-        <div v-else-if="!challengeBattlePairs.length" class="py-10 text-center text-gray-500">Giải đấu này chưa có cặp Battle nào.</div>
+        <div
+          v-if="challengeBattleDetailsLoading"
+          class="py-10 text-center text-gray-500"
+        >
+          Đang tải Battle...
+        </div>
+        <div
+          v-else-if="!challengeBattlePairs.length"
+          class="py-10 text-center text-gray-500"
+        >
+          Giải đấu này chưa có cặp Battle nào.
+        </div>
         <div v-else class="space-y-3">
-          <div v-for="pair in challengeBattlePairs" :key="pair.id" class="rounded-lg border border-red-100 bg-red-50/30 p-4">
+          <div
+            v-for="pair in challengeBattlePairs"
+            :key="pair.id"
+            class="rounded-lg border border-red-100 bg-red-50/30 p-4"
+          >
             <div class="grid items-center gap-3 sm:grid-cols-[1fr_auto_1fr]">
               <div class="min-w-0 text-left">
-                <p class="truncate font-semibold text-gray-900">{{ pair.first.player.name }}</p>
-                <p class="text-xs text-gray-500">{{ displayTeamName(pair.first.teamName) }} · ⚽ {{ pair.first.score }}</p>
-                <p class="mt-1 text-xs font-semibold" :class="pair.first.amount > 0 ? 'text-green-600' : pair.first.amount < 0 ? 'text-red-600' : 'text-gray-500'">{{ pair.first.amount > 0 ? '+' : '' }}{{ formatMoney(pair.first.amount) }}</p>
+                <p class="truncate font-semibold text-gray-900">
+                  {{ pair.first.player.name }}
+                </p>
+                <p class="text-xs text-gray-500">
+                  {{ displayTeamName(pair.first.teamName) }} · ⚽
+                  {{ pair.first.score }}
+                </p>
+                <p
+                  class="mt-1 text-xs font-semibold"
+                  :class="
+                    pair.first.amount > 0
+                      ? 'text-green-600'
+                      : pair.first.amount < 0
+                        ? 'text-red-600'
+                        : 'text-gray-500'
+                  "
+                >
+                  {{ pair.first.amount > 0 ? "+" : ""
+                  }}{{ formatMoney(pair.first.amount) }}
+                </p>
               </div>
               <span class="text-center text-lg font-bold text-red-600">⚔️</span>
               <div class="min-w-0 text-left sm:text-right">
-                <p class="truncate font-semibold text-gray-900">{{ pair.second.player.name }}</p>
-                <p class="text-xs text-gray-500">{{ displayTeamName(pair.second.teamName) }} · ⚽ {{ pair.second.score }}</p>
-                <p class="mt-1 text-xs font-semibold" :class="pair.second.amount > 0 ? 'text-green-600' : pair.second.amount < 0 ? 'text-red-600' : 'text-gray-500'">{{ pair.second.amount > 0 ? '+' : '' }}{{ formatMoney(pair.second.amount) }}</p>
+                <p class="truncate font-semibold text-gray-900">
+                  {{ pair.second.player.name }}
+                </p>
+                <p class="text-xs text-gray-500">
+                  {{ displayTeamName(pair.second.teamName) }} · ⚽
+                  {{ pair.second.score }}
+                </p>
+                <p
+                  class="mt-1 text-xs font-semibold"
+                  :class="
+                    pair.second.amount > 0
+                      ? 'text-green-600'
+                      : pair.second.amount < 0
+                        ? 'text-red-600'
+                        : 'text-gray-500'
+                  "
+                >
+                  {{ pair.second.amount > 0 ? "+" : ""
+                  }}{{ formatMoney(pair.second.amount) }}
+                </p>
               </div>
             </div>
-            <p class="mt-3 border-t border-red-100 pt-3 text-center text-sm font-semibold" :class="pair.result === 'Hòa' ? 'text-gray-600' : 'text-green-700'">{{ pair.result }}</p>
+            <p
+              class="mt-3 border-t border-red-100 pt-3 text-center text-sm font-semibold"
+              :class="
+                pair.result === 'Hòa' ? 'text-gray-600' : 'text-green-700'
+              "
+            >
+              {{ pair.result }}
+            </p>
           </div>
         </div>
       </div>
-      <div class="flex justify-end border-t p-4"><button class="btn-primary" @click="showChallengeBattleDetailsModal = false">Đóng</button></div>
+      <div class="flex justify-end border-t p-4">
+        <button
+          class="btn-primary"
+          @click="showChallengeBattleDetailsModal = false"
+        >
+          Đóng
+        </button>
+      </div>
     </div>
   </div>
 
@@ -5587,11 +7183,68 @@
       </div>
     </form>
   </div>
-  <div v-if="showPinnedPollModal && pinnedPoll" class="fixed inset-0 z-[95] flex items-center justify-center overflow-y-auto bg-black/50 p-4">
+  <div
+    v-if="showPinnedPollModal && pinnedPoll"
+    class="fixed inset-0 z-[95] flex items-center justify-center overflow-y-auto bg-black/50 p-4"
+  >
     <div class="w-full max-w-lg rounded-xl bg-white shadow-xl" @click.stop>
-      <div class="flex items-center justify-between border-b p-5"><div><h3 class="text-lg font-semibold text-primary-700">📊 Bình chọn</h3><p class="mt-1 text-gray-900">{{ pinnedPoll.question }}</p></div><button type="button" class="text-2xl text-gray-400" @click="showPinnedPollModal = false">×</button></div>
-      <div class="space-y-2 p-5"><label v-for="option in pinnedPoll.options" :key="option.id" class="flex cursor-pointer items-center justify-between rounded-lg border p-3" :class="pinnedPollSelectedOptionIds.includes(option.id) ? 'border-primary-500 bg-primary-50' : 'border-gray-200'"><span class="flex items-center gap-3"><input v-if="pinnedPoll.allowMultiple" v-model="pinnedPollSelectedOptionIds" type="checkbox" :value="option.id"><input v-else type="radio" name="pinned-poll" :checked="pinnedPollSelectedOptionIds[0] === option.id" @change="pinnedPollSelectedOptionIds = [option.id]">{{ option.label }}</span><span class="text-sm text-gray-500">{{ option.voteCount }} phiếu</span></label></div>
-      <div class="flex justify-end gap-3 border-t p-4"><button type="button" class="btn-secondary" @click="showPinnedPollModal = false">Đóng</button><button type="button" class="btn-primary" :disabled="pinnedPollSaving || !pinnedPollSelectedOptionIds.length" @click="submitPinnedPollVote">{{ pinnedPollSaving ? 'Đang gửi...' : 'Bình chọn' }}</button></div>
+      <div class="flex items-center justify-between border-b p-5">
+        <div>
+          <h3 class="text-lg font-semibold text-primary-700">📊 Bình chọn</h3>
+          <p class="mt-1 text-gray-900">{{ pinnedPoll.question }}</p>
+        </div>
+        <button
+          type="button"
+          class="text-2xl text-gray-400"
+          @click="showPinnedPollModal = false"
+        >
+          ×
+        </button>
+      </div>
+      <div class="space-y-2 p-5">
+        <label
+          v-for="option in pinnedPoll.options"
+          :key="option.id"
+          class="flex cursor-pointer items-center justify-between rounded-lg border p-3"
+          :class="
+            pinnedPollSelectedOptionIds.includes(option.id)
+              ? 'border-primary-500 bg-primary-50'
+              : 'border-gray-200'
+          "
+          ><span class="flex items-center gap-3"
+            ><input
+              v-if="pinnedPoll.allowMultiple"
+              v-model="pinnedPollSelectedOptionIds"
+              type="checkbox"
+              :value="option.id"
+            /><input
+              v-else
+              type="radio"
+              name="pinned-poll"
+              :checked="pinnedPollSelectedOptionIds[0] === option.id"
+              @change="pinnedPollSelectedOptionIds = [option.id]"
+            />{{ option.label }}</span
+          ><span class="text-sm text-gray-500"
+            >{{ option.voteCount }} phiếu</span
+          ></label
+        >
+      </div>
+      <div class="flex justify-end gap-3 border-t p-4">
+        <button
+          type="button"
+          class="btn-secondary"
+          @click="showPinnedPollModal = false"
+        >
+          Đóng</button
+        ><button
+          type="button"
+          class="btn-primary"
+          :disabled="pinnedPollSaving || !pinnedPollSelectedOptionIds.length"
+          @click="submitPinnedPollVote"
+        >
+          {{ pinnedPollSaving ? "Đang gửi..." : "Bình chọn" }}
+        </button>
+      </div>
     </div>
   </div>
 </template>
@@ -5725,7 +7378,9 @@ const friendRegistrationPitchType = computed<"FIELD_5" | "FIELD_7" | null>(
       (tournament) => tournament.id === friendTournamentId.value,
     )?.pitchType || null,
 );
-const setFriendRegistrationFieldsForTournament = (tournamentId: string): void => {
+const setFriendRegistrationFieldsForTournament = (
+  tournamentId: string,
+): void => {
   const pitchType = weeklyTournaments.value.find(
     (tournament) => tournament.id === tournamentId,
   )?.pitchType;
@@ -5839,7 +7494,9 @@ interface TournamentMoneyHistoryItem {
 }
 const showTournamentMoneyHistoryModal = ref(false);
 const selectedMoneyHistoryTournament = ref<Tournament | null>(null);
-const selectedMoneyHistoryPlayer = ref<{ id: string; name: string } | null>(null);
+const selectedMoneyHistoryPlayer = ref<{ id: string; name: string } | null>(
+  null,
+);
 const tournamentMoneyHistory = ref<TournamentMoneyHistoryItem[]>([]);
 const tournamentMoneyHistoryLoading = ref(false);
 const showTournamentDebtTopUpModal = ref(false);
@@ -5926,7 +7583,7 @@ const maxAttendanceSaving = ref(false);
 const maxAttendanceOptions = [18, 21, 24, 27, 28, 32];
 const showTournamentFormatModal = ref(false);
 const tournamentFormatTournament = ref<Tournament | null>(null);
-const selectedTournamentFormat = ref<'SCORE' | 'LEAGUE'>('SCORE');
+const selectedTournamentFormat = ref<"SCORE" | "LEAGUE">("SCORE");
 const tournamentFormatSaving = ref(false);
 
 // Confirmation Modal variables
@@ -5941,10 +7598,56 @@ const endTournamentSaving = ref(false);
 const showScoresModal = ref(false);
 const scoresTournamentId = ref<string | null>(null);
 const teamScores = ref<Map<string, number>>(new Map());
+const expandedLeagueMatchIds = ref<Set<string>>(new Set());
+const leagueMatchDetails = ref<Record<string, any>>({});
+const leagueMatchLoadingIds = ref<Set<string>>(new Set());
+const leagueMatchSavingIds = ref<Set<string>>(new Set());
+const leagueMatchForms = ref<
+  Record<
+    string,
+    {
+      homeScore: number;
+      awayScore: number;
+      status: string;
+      scheduledDate: string;
+    }
+  >
+>({});
+const leagueEventForms = ref<
+  Record<string, { playerId: string; type: string; minute: number }>
+>({});
+const showLeagueMatchTimeModal = ref(false);
+const leagueMatchTimeMatch = ref<any>(null);
+const selectedLeagueMatchTime = ref("19:00");
+const selectedLeagueMatchDuration = ref(60);
+const leagueMatchTimeSaving = ref(false);
+const leagueMatchDurationOptions = [
+  { value: 10, label: "10 phút" },
+  { value: 60, label: "1 giờ" },
+];
+const showLeagueMatchStatusModal = ref(false);
+const leagueMatchStatusMatch = ref<any>(null);
+const selectedLeagueMatchStatus = ref("SCHEDULED");
+const leagueMatchStatusSaving = ref(false);
+const leagueMatchStatusOptions = ["SCHEDULED", "LIVE", "COMPLETED"];
+const showLeagueTeamPlayersModal = ref(false);
+const leagueTeamPlayersModal = ref<{
+  match: any;
+  side: "HOME" | "AWAY";
+  teamName: string;
+} | null>(null);
+const leaguePlayerActionDraft = ref<
+  Record<
+    string,
+    { goalsAdd: number; yellow?: boolean; red?: boolean; side: "HOME" | "AWAY" }
+  >
+>({});
+const leaguePlayerActionsSaving = ref(false);
 
 const showDeleteTournamentModal = ref(false);
 const deleteTournamentData = ref<Tournament | null>(null);
-const deleteTournamentReason = ref('');
+const deleteTournamentReason = ref("");
+const permanentDeleteSaving = ref(false);
 
 const showClearTeamsModal = ref(false);
 const clearTeamsModalTournamentId = ref<string | null>(null);
@@ -5955,9 +7658,11 @@ const teamCountOptions: Array<2 | 3 | 4> = [2, 3, 4];
 const selectedTeamField = ref<"FIELD_5" | "FIELD_7">("FIELD_5");
 const showLiveTeamSplitModal = ref(false);
 const liveTeamSplitTeams = ref<any[][]>([]);
-const liveTeamSplitTitle = ref('Phân loại theo Tier');
-const liveTeamSplitDescription = ref('Tách cầu thủ thành các nhóm để chuẩn bị chia đội.');
-const liveTeamSplitThought = ref('AI đang phân tích danh sách cầu thủ...');
+const liveTeamSplitTitle = ref("Phân loại theo Tier");
+const liveTeamSplitDescription = ref(
+  "Tách cầu thủ thành các nhóm để chuẩn bị chia đội.",
+);
+const liveTeamSplitThought = ref("AI đang phân tích danh sách cầu thủ...");
 const liveTeamSplitStage = ref(1);
 const liveTeamSplitDone = ref(false);
 const liveSplitAllPlayers = ref<any[]>([]);
@@ -5966,14 +7671,25 @@ const liveSplitProcessedPlayerIds = ref<Set<string>>(new Set());
 const liveMobileAiWords = ref<string[]>([]);
 const liveDesktopAiWords = ref<string[]>([]);
 const liveAiSequence = ref(0);
-const liveTeamSplitModalRef = ref<{ scrollToAiThought: () => Promise<void>; scrollToElement: (element: HTMLElement | null, alignment?: 'start' | 'center') => Promise<void> } | null>(null);
+const liveTeamSplitModalRef = ref<{
+  scrollToAiThought: () => Promise<void>;
+  scrollToElement: (
+    element: HTMLElement | null,
+    alignment?: "start" | "center",
+  ) => Promise<void>;
+} | null>(null);
 const liveTierGroupRefs = ref<Record<string, HTMLElement | null>>({});
 const liveTeamRefs = ref<Record<number, HTMLElement | null>>({});
 const liveTeamSplitContentRef = ref<HTMLElement | null>(null);
 const liveAiThoughtRef = ref<HTMLElement | null>(null);
 const showLivePreviewResultModal = ref(false);
 const livePreviewMode = ref(false);
-const livePlayerStatsInsights = ref<Record<string, { wins: number; losses: number; contribution: number; attendance: number }>>({});
+const livePlayerStatsInsights = ref<
+  Record<
+    string,
+    { wins: number; losses: number; contribution: number; attendance: number }
+  >
+>({});
 const mobileTeamPreviewField = ref<"FIELD_5" | "FIELD_7">("FIELD_5");
 
 const showDeleteCostModal = ref(false);
@@ -6172,7 +7888,8 @@ const canCreateNew = computed(() => {
   const tournamentForNextMonday = weeklyTournaments.value.find((tournament) => {
     const tournamentDateStr = toLocalDateKey(new Date(tournament.startDate));
     return (
-      tournamentDateStr === targetDateStr && !['COMPLETED', 'DELETED'].includes(tournament.status)
+      tournamentDateStr === targetDateStr &&
+      !["COMPLETED", "DELETED"].includes(tournament.status)
     );
   });
 
@@ -6209,7 +7926,9 @@ const oldTournamentWeekdays = ["CN", "T2", "T3", "T4", "T5", "T6", "T7"];
 const filteredOldTournaments = computed(() => {
   const filterDate = oldTournamentDateFilter.value;
   return weeklyTournaments.value
-    .filter((tournament) => ['COMPLETED', 'DELETED'].includes(tournament.status))
+    .filter((tournament) =>
+      ["COMPLETED", "DELETED"].includes(tournament.status),
+    )
     .filter(
       (tournament) =>
         !filterDate ||
@@ -6371,10 +8090,13 @@ const formatTime = (date: string | Date): string => {
 const formatTournamentTimeRange = (tournament: Tournament): string => {
   const startDate = new Date(tournament.startDate);
   if (Number.isNaN(startDate.getTime())) return "Giờ không hợp lệ";
-  const storedEndDate = tournament.endDate ? new Date(tournament.endDate) : null;
-  const endDate = storedEndDate && storedEndDate.getTime() > startDate.getTime()
-    ? storedEndDate
-    : new Date(startDate.getTime() + 90 * 60_000);
+  const storedEndDate = tournament.endDate
+    ? new Date(tournament.endDate)
+    : null;
+  const endDate =
+    storedEndDate && storedEndDate.getTime() > startDate.getTime()
+      ? storedEndDate
+      : new Date(startDate.getTime() + 90 * 60_000);
   return `${formatTime(startDate)}-${formatTime(endDate)}`;
 };
 
@@ -6475,6 +8197,505 @@ const getStatusBadge = (status: string) => {
   }
 };
 
+const hidesSideGames = (tournament?: Tournament | null): boolean =>
+  Boolean(tournament?.isTest || tournament?.format === "LEAGUE");
+
+const leagueMatchEvents = (matchId: string, types: string[]): any[] => {
+  const detailEvents = leagueMatchDetails.value[matchId]?.events;
+  const summaryEvents =
+    (ongoingTournament.value?.matches || []).find(
+      (match: any) => match.id === matchId,
+    )?.events || [];
+  return (detailEvents || summaryEvents).filter((event: any) =>
+    types.includes(event.type),
+  );
+};
+
+const leagueMatchEventsByTeam = (
+  matchId: string,
+  side: string,
+  types: string[],
+): any[] =>
+  leagueMatchEvents(matchId, types).filter((event: any) => event.team === side);
+
+const formatLeagueMatchTime = (match: any): string =>
+  `${formatRegistrationTime(match.scheduledDate)} · ${match.durationMinutes === 10 ? "10 phút" : "1 giờ"}`;
+
+const smoothScrollToLeagueMatch = (matchId: string): Promise<void> => {
+  const element = document.getElementById(`league-match-${matchId}`);
+  if (!element) return Promise.resolve();
+  const start = window.scrollY;
+  const target = Math.max(0, start + element.getBoundingClientRect().top - 12);
+  const duration = 1500;
+  const startedAt = performance.now();
+  return new Promise((resolve) => {
+    const tick = (now: number) => {
+      const progress = Math.min(1, (now - startedAt) / duration);
+      const eased = progress < 0.5
+        ? 4 * progress * progress * progress
+        : 1 - Math.pow(-2 * progress + 2, 3) / 2;
+      window.scrollTo({ top: start + (target - start) * eased });
+      if (progress < 1) requestAnimationFrame(tick);
+      else resolve();
+    };
+    requestAnimationFrame(tick);
+  });
+};
+
+const getLeagueMatchStatusBadge = (status: string): string => {
+  if (status === "SCHEDULED") return "bg-blue-100 text-blue-800";
+  if (status === "LIVE") return "bg-green-100 text-green-800";
+  return "bg-gray-100 text-gray-800";
+};
+
+const openLeagueMatchStatusModal = (match: any): void => {
+  leagueMatchStatusMatch.value = match;
+  selectedLeagueMatchStatus.value = match.status;
+  showLeagueMatchStatusModal.value = true;
+};
+
+const closeLeagueMatchStatusModal = (): void => {
+  showLeagueMatchStatusModal.value = false;
+  leagueMatchStatusMatch.value = null;
+};
+
+const saveLeagueMatchStatus = async (): Promise<void> => {
+  const match = leagueMatchStatusMatch.value;
+  if (!match || leagueMatchStatusSaving.value) return;
+  leagueMatchStatusSaving.value = true;
+  try {
+    const response = await apiClient.updateMatch(match.id, {
+      status: selectedLeagueMatchStatus.value,
+      homeScore: leagueMatchTeamGoalCount(match.id, "HOME"),
+      awayScore: leagueMatchTeamGoalCount(match.id, "AWAY"),
+    });
+    const updated = response.data as any;
+    leagueMatchDetails.value = {
+      ...leagueMatchDetails.value,
+      [match.id]: updated,
+    };
+    if (ongoingTournament.value?.matches) {
+      const current = ongoingTournament.value.matches.find(
+        (item: any) => item.id === match.id,
+      );
+      if (current) Object.assign(current, updated);
+    }
+    const form = leagueMatchForms.value[match.id];
+    if (form) form.status = updated.status;
+    toast.success("Đã cập nhật trạng thái trận đấu");
+    closeLeagueMatchStatusModal();
+    if (updated.status === "LIVE") {
+      expandedLeagueMatchIds.value = new Set([
+        ...expandedLeagueMatchIds.value,
+        match.id,
+      ]);
+      await loadLeagueMatchDetail(match.id);
+      await nextTick();
+      await smoothScrollToLeagueMatch(match.id);
+    } else if (updated.status === "COMPLETED") {
+      const expanded = new Set(expandedLeagueMatchIds.value);
+      expanded.delete(match.id);
+      expandedLeagueMatchIds.value = expanded;
+    }
+  } catch (error: any) {
+    toast.error(error.message || "Không thể cập nhật trạng thái trận đấu");
+  } finally {
+    leagueMatchStatusSaving.value = false;
+  }
+};
+
+const increaseLeagueMatchScore = (
+  matchId: string,
+  side: "home" | "away",
+): void => {
+  const form = leagueMatchForms.value[matchId];
+  if (form) form[side === "home" ? "homeScore" : "awayScore"] += 1;
+};
+
+const decreaseLeagueMatchScore = (
+  matchId: string,
+  side: "home" | "away",
+): void => {
+  const form = leagueMatchForms.value[matchId];
+  const key = side === "home" ? "homeScore" : "awayScore";
+  if (form && form[key] > 0) form[key] -= 1;
+};
+
+const openLeagueMatchTimeModal = (match: any): void => {
+  const date = new Date(match.scheduledDate);
+  selectedLeagueMatchTime.value = `${String(date.getHours()).padStart(2, "0")}:${String(date.getMinutes()).padStart(2, "0")}`;
+  selectedLeagueMatchDuration.value = match.durationMinutes === 10 ? 10 : 60;
+  leagueMatchTimeMatch.value = match;
+  showLeagueMatchTimeModal.value = true;
+};
+
+const closeLeagueMatchTimeModal = (): void => {
+  showLeagueMatchTimeModal.value = false;
+  leagueMatchTimeMatch.value = null;
+};
+
+const adjustLeagueMatchTime = (minutesToAdjust: number): void => {
+  const [hours, minutes] = selectedLeagueMatchTime.value.split(":").map(Number);
+  const totalMinutes =
+    (((hours * 60 + minutes + minutesToAdjust) % 1440) + 1440) % 1440;
+  selectedLeagueMatchTime.value = `${String(Math.floor(totalMinutes / 60)).padStart(2, "0")}:${String(totalMinutes % 60).padStart(2, "0")}`;
+};
+
+const saveLeagueMatchTime = async (): Promise<void> => {
+  const match = leagueMatchTimeMatch.value;
+  if (!match || leagueMatchTimeSaving.value) return;
+  const date = new Date(match.scheduledDate);
+  const [hours, minutes] = selectedLeagueMatchTime.value.split(":").map(Number);
+  date.setHours(hours, minutes, 0, 0);
+  leagueMatchTimeSaving.value = true;
+  try {
+    const response = await apiClient.updateMatch(match.id, {
+      scheduledDate: date.toISOString(),
+      durationMinutes: selectedLeagueMatchDuration.value,
+    });
+    const updated = response.data as any;
+    leagueMatchDetails.value = {
+      ...leagueMatchDetails.value,
+      [match.id]: updated,
+    };
+    if (ongoingTournament.value?.matches) {
+      const current = ongoingTournament.value.matches.find(
+        (item: any) => item.id === match.id,
+      );
+      if (current) Object.assign(current, updated);
+    }
+    toast.success("Đã cập nhật giờ thi đấu");
+    closeLeagueMatchTimeModal();
+  } catch (error: any) {
+    toast.error(error.message || "Không thể cập nhật giờ thi đấu");
+  } finally {
+    leagueMatchTimeSaving.value = false;
+  }
+};
+
+const leagueMatchPlayers = (match: any, tournament: Tournament): any[] => {
+  const teamIds = new Set([
+    match.homeTeamId || match.homeTeam?.id,
+    match.awayTeamId || match.awayTeam?.id,
+  ]);
+  return getTournamentTeams(tournament)
+    .filter((team: any) => teamIds.has(team.id))
+    .flatMap((team: any) => team.players || []);
+};
+
+const leagueModalTeamPlayers = computed(() => {
+  const modal = leagueTeamPlayersModal.value;
+  if (!modal || !ongoingTournament.value) return [];
+  const teamId =
+    modal.side === "HOME"
+      ? modal.match.homeTeamId || modal.match.homeTeam?.id
+      : modal.match.awayTeamId || modal.match.awayTeam?.id;
+  return (
+    getTournamentTeams(ongoingTournament.value).find(
+      (team: any) => team.id === teamId,
+    )?.players || []
+  );
+});
+
+const openLeagueTeamPlayersModal = async (
+  match: any,
+  side: "HOME" | "AWAY" | string,
+): Promise<void> => {
+  const team = side === "HOME" ? match.homeTeam : match.awayTeam;
+  leagueTeamPlayersModal.value = {
+    match,
+    side: side as "HOME" | "AWAY",
+    teamName: displayTeamName(team.name),
+  };
+  leaguePlayerActionDraft.value = {};
+  showLeagueTeamPlayersModal.value = true;
+  await loadLeagueMatchDetail(match.id);
+};
+
+const closeLeagueTeamPlayersModal = (): void => {
+  showLeagueTeamPlayersModal.value = false;
+  leagueTeamPlayersModal.value = null;
+  leaguePlayerActionDraft.value = {};
+};
+
+const leaguePlayerHasEvent = (
+  matchId: string,
+  playerId: string,
+  type: string,
+): boolean =>
+  leagueMatchEvents(matchId, [type]).some(
+    (event: any) => event.playerId === playerId,
+  );
+
+const leaguePlayerDraftKey = (matchId: string, playerId: string): string =>
+  `${matchId}:${playerId}`;
+
+const getLeaguePlayerDraft = (
+  matchId: string,
+  playerId: string,
+  side: "HOME" | "AWAY",
+) => {
+  const key = leaguePlayerDraftKey(matchId, playerId);
+  if (!leaguePlayerActionDraft.value[key]) {
+    leaguePlayerActionDraft.value[key] = { goalsAdd: 0, side };
+  }
+  return leaguePlayerActionDraft.value[key];
+};
+
+const leaguePlayerGoalCount = (matchId: string, playerId: string): number =>
+  leagueMatchEvents(matchId, ["GOAL"]).filter(
+    (event: any) => event.playerId === playerId,
+  ).length +
+  (leaguePlayerActionDraft.value[leaguePlayerDraftKey(matchId, playerId)]
+    ?.goalsAdd || 0);
+
+const leagueMatchTeamGoalCount = (
+  matchId: string,
+  side: "HOME" | "AWAY",
+): number => {
+  const persistedGoals = leagueMatchEvents(matchId, [
+    "GOAL",
+    "OWN_GOAL",
+  ]).reduce((count: number, event: any) => {
+    if (event.type === "GOAL" && event.team === side) return count + 1;
+    if (event.type === "OWN_GOAL" && event.team !== side) return count + 1;
+    return count;
+  }, 0);
+  const draftGoals = Object.values(leaguePlayerActionDraft.value)
+    .filter((draft) => draft.side === side)
+    .reduce((count, draft) => count + draft.goalsAdd, 0);
+  return persistedGoals + draftGoals;
+};
+
+const addLeaguePlayerGoal = (
+  match: any,
+  player: any,
+  side: "HOME" | "AWAY",
+): void => {
+  getLeaguePlayerDraft(match.id, player.id, side).goalsAdd += 1;
+};
+
+const isLeaguePlayerCardActive = (
+  matchId: string,
+  playerId: string,
+  type: "YELLOW_CARD" | "RED_CARD",
+): boolean => {
+  const draft =
+    leaguePlayerActionDraft.value[leaguePlayerDraftKey(matchId, playerId)];
+  const key = type === "YELLOW_CARD" ? "yellow" : "red";
+  return draft?.[key] ?? leaguePlayerHasEvent(matchId, playerId, type);
+};
+
+const toggleLeaguePlayerCard = (
+  match: any,
+  player: any,
+  side: "HOME" | "AWAY",
+  type: "YELLOW_CARD" | "RED_CARD",
+): void => {
+  const draft = getLeaguePlayerDraft(match.id, player.id, side);
+  if (type === "YELLOW_CARD")
+    draft.yellow = !isLeaguePlayerCardActive(match.id, player.id, type);
+  else draft.red = !isLeaguePlayerCardActive(match.id, player.id, type);
+};
+
+const hasLeaguePlayerActionChanges = computed(() =>
+  Object.values(leaguePlayerActionDraft.value).some(
+    (draft) =>
+      draft.goalsAdd > 0 ||
+      draft.yellow !== undefined ||
+      draft.red !== undefined,
+  ),
+);
+
+const saveLeaguePlayerActions = async (): Promise<void> => {
+  const modal = leagueTeamPlayersModal.value;
+  if (!modal || leaguePlayerActionsSaving.value) return;
+  leaguePlayerActionsSaving.value = true;
+  try {
+    for (const [key, draft] of Object.entries(leaguePlayerActionDraft.value)) {
+      const [, playerId] = key.split(":");
+      for (let goal = 0; goal < draft.goalsAdd; goal += 1) {
+        await apiClient.addMatchEvent(modal.match.id, {
+          playerId,
+          type: "GOAL",
+          minute: 0,
+          team: draft.side,
+        });
+      }
+      for (const [type, desired] of [
+        ["YELLOW_CARD", draft.yellow],
+        ["RED_CARD", draft.red],
+      ] as const) {
+        if (desired === undefined) continue;
+        const current = leagueMatchEvents(modal.match.id, [type]).find(
+          (event: any) => event.playerId === playerId,
+        );
+        if (desired && !current)
+          await apiClient.addMatchEvent(modal.match.id, {
+            playerId,
+            type,
+            minute: 0,
+            team: draft.side,
+          });
+        if (!desired && current)
+          await apiClient.deleteMatchEvent(modal.match.id, current.id);
+      }
+    }
+    await loadLeagueMatchDetail(modal.match.id);
+    const homeScore = leagueMatchTeamGoalCount(modal.match.id, "HOME");
+    const awayScore = leagueMatchTeamGoalCount(modal.match.id, "AWAY");
+    const scoreResponse = await apiClient.updateMatch(modal.match.id, {
+      homeScore,
+      awayScore,
+    });
+    const updatedMatch = scoreResponse.data as any;
+    leagueMatchDetails.value = {
+      ...leagueMatchDetails.value,
+      [modal.match.id]: updatedMatch,
+    };
+    if (ongoingTournament.value?.matches) {
+      const current = ongoingTournament.value.matches.find(
+        (item: any) => item.id === modal.match.id,
+      );
+      if (current) Object.assign(current, updatedMatch);
+    }
+    leaguePlayerActionDraft.value = {};
+    toast.success("Đã lưu diễn biến cầu thủ");
+    closeLeagueTeamPlayersModal();
+  } catch (error: any) {
+    toast.error(error.message || "Không thể lưu diễn biến cầu thủ");
+  } finally {
+    leaguePlayerActionsSaving.value = false;
+  }
+};
+
+const loadLeagueMatchDetail = async (matchId: string): Promise<void> => {
+  const loading = new Set(leagueMatchLoadingIds.value);
+  loading.add(matchId);
+  leagueMatchLoadingIds.value = loading;
+  try {
+    const response = await apiClient.getMatch(matchId);
+    const match = response.data as any;
+    leagueMatchDetails.value = {
+      ...leagueMatchDetails.value,
+      [matchId]: match,
+    };
+    leagueMatchForms.value = {
+      ...leagueMatchForms.value,
+      [matchId]: {
+        homeScore: match.homeScore ?? 0,
+        awayScore: match.awayScore ?? 0,
+        status: match.status,
+        scheduledDate: toDateTimeLocalValue(new Date(match.scheduledDate)),
+      },
+    };
+    leagueEventForms.value = {
+      ...leagueEventForms.value,
+      [matchId]: leagueEventForms.value[matchId] || {
+        playerId: "",
+        type: "GOAL",
+        minute: 0,
+      },
+    };
+  } catch (error: any) {
+    toast.error(error.message || "Không thể tải chi tiết trận đấu");
+  } finally {
+    const nextLoading = new Set(leagueMatchLoadingIds.value);
+    nextLoading.delete(matchId);
+    leagueMatchLoadingIds.value = nextLoading;
+  }
+};
+
+const toggleLeagueMatch = async (matchId: string): Promise<void> => {
+  const expanded = new Set(expandedLeagueMatchIds.value);
+  if (expanded.has(matchId)) expanded.delete(matchId);
+  else {
+    expanded.add(matchId);
+    expandedLeagueMatchIds.value = expanded;
+    await loadLeagueMatchDetail(matchId);
+    return;
+  }
+  expandedLeagueMatchIds.value = expanded;
+};
+
+const saveLeagueMatch = async (matchId: string): Promise<void> => {
+  const form = leagueMatchForms.value[matchId];
+  if (!form) return;
+  const saving = new Set(leagueMatchSavingIds.value);
+  saving.add(matchId);
+  leagueMatchSavingIds.value = saving;
+  try {
+    const response = await apiClient.updateMatch(matchId, {
+      homeScore: Number(form.homeScore),
+      awayScore: Number(form.awayScore),
+      status: form.status,
+      scheduledDate: new Date(form.scheduledDate).toISOString(),
+    });
+    const updated = response.data as any;
+    leagueMatchDetails.value = {
+      ...leagueMatchDetails.value,
+      [matchId]: updated,
+    };
+    if (ongoingTournament.value?.matches) {
+      const found = ongoingTournament.value.matches.find(
+        (match: any) => match.id === matchId,
+      );
+      if (found) Object.assign(found, updated);
+    }
+    toast.success("Đã cập nhật trận đấu");
+  } catch (error: any) {
+    toast.error(error.message || "Không thể cập nhật trận đấu");
+  } finally {
+    const nextSaving = new Set(leagueMatchSavingIds.value);
+    nextSaving.delete(matchId);
+    leagueMatchSavingIds.value = nextSaving;
+  }
+};
+
+const addLeagueMatchEvent = async (
+  match: any,
+  tournament: Tournament,
+): Promise<void> => {
+  const form = leagueEventForms.value[match.id];
+  if (!form?.playerId) return;
+  const homeTeam = getTournamentTeams(tournament).find(
+    (team: any) => team.id === (match.homeTeamId || match.homeTeam?.id),
+  );
+  const team = (homeTeam?.players || []).some(
+    (player: any) => player.id === form.playerId,
+  )
+    ? "HOME"
+    : "AWAY";
+  try {
+    await apiClient.addMatchEvent(match.id, {
+      ...form,
+      minute: Number(form.minute),
+      team,
+    });
+    leagueEventForms.value = {
+      ...leagueEventForms.value,
+      [match.id]: { playerId: "", type: "GOAL", minute: 0 },
+    };
+    await loadLeagueMatchDetail(match.id);
+    toast.success("Đã thêm diễn biến trận đấu");
+  } catch (error: any) {
+    toast.error(error.message || "Không thể thêm diễn biến");
+  }
+};
+
+const deleteLeagueMatchEvent = async (
+  matchId: string,
+  eventId: string,
+): Promise<void> => {
+  try {
+    await apiClient.deleteMatchEvent(matchId, eventId);
+    await loadLeagueMatchDetail(matchId);
+    toast.success("Đã xóa diễn biến trận đấu");
+  } catch (error: any) {
+    toast.error(error.message || "Không thể xóa diễn biến");
+  }
+};
+
 // Attendance functions
 const fetchAttendance = async (tournamentId: string): Promise<void> => {
   try {
@@ -6534,7 +8755,9 @@ const openFriendRegistration = async (tournamentId: string): Promise<void> => {
 
 const openFriendSwap = async (tournamentId: string): Promise<void> => {
   if (cannotRegisterDueToDebt.value) {
-    toast.error("Số dư hiện tại cộng tiền nạp chờ duyệt vẫn âm, vui lòng thanh toán trước khi swap dùm bạn");
+    toast.error(
+      "Số dư hiện tại cộng tiền nạp chờ duyệt vẫn âm, vui lòng thanh toán trước khi swap dùm bạn",
+    );
     return;
   }
   friendTournamentId.value = tournamentId;
@@ -6677,7 +8900,9 @@ const registerFriends = async (): Promise<void> => {
 const requestFriendSwap = async (): Promise<void> => {
   if (!friendTournamentId.value || !friendSelectedIds.value.length) return;
   if (cannotRegisterDueToDebt.value) {
-    toast.error("Số dư hiện tại cộng tiền nạp chờ duyệt vẫn âm, vui lòng thanh toán trước khi swap dùm bạn");
+    toast.error(
+      "Số dư hiện tại cộng tiền nạp chờ duyệt vẫn âm, vui lòng thanh toán trước khi swap dùm bạn",
+    );
     return;
   }
   friendRegistrationSaving.value = true;
@@ -6711,7 +8936,9 @@ const acceptSwapForFriend = async (): Promise<void> => {
   )
     return;
   if (cannotRegisterDueToDebt.value) {
-    toast.error("Số dư hiện tại cộng tiền nạp chờ duyệt vẫn âm, vui lòng thanh toán trước khi swap dùm bạn");
+    toast.error(
+      "Số dư hiện tại cộng tiền nạp chờ duyệt vẫn âm, vui lòng thanh toán trước khi swap dùm bạn",
+    );
     return;
   }
   friendRegistrationSaving.value = true;
@@ -6920,7 +9147,9 @@ const closeSwapModal = (): void => {
 const requestSwap = async (tournament: Tournament): Promise<void> => {
   if (swapRequestSavingId.value || hasPendingSwapRequest(tournament.id)) return;
   if (cannotRegisterDueToDebt.value) {
-    toast.error("Số dư hiện tại cộng tiền nạp chờ duyệt vẫn âm, vui lòng thanh toán trước khi swap");
+    toast.error(
+      "Số dư hiện tại cộng tiền nạp chờ duyệt vẫn âm, vui lòng thanh toán trước khi swap",
+    );
     return;
   }
   try {
@@ -7033,7 +9262,9 @@ const cancelSwapWaitlist = async (tournament: Tournament): Promise<void> => {
 
 const openSwapAcceptance = (request: IncomingSwapRequest): void => {
   if (cannotRegisterDueToDebt.value) {
-    toast.error("Số dư hiện tại cộng tiền nạp chờ duyệt vẫn âm, vui lòng thanh toán trước khi swap");
+    toast.error(
+      "Số dư hiện tại cộng tiền nạp chờ duyệt vẫn âm, vui lòng thanh toán trước khi swap",
+    );
     return;
   }
   pendingSwapRequest.value = request;
@@ -7108,7 +9339,10 @@ const toggleAttendance = async (tournamentId: string): Promise<void> => {
     if (response.success && response.data) {
       attendanceMap.value.set(tournamentId, response.data);
       // Refresh attendance stats
-      await Promise.all([fetchAttendanceStats(tournamentId), fetchAttendanceDetails(tournamentId)]);
+      await Promise.all([
+        fetchAttendanceStats(tournamentId),
+        fetchAttendanceDetails(tournamentId),
+      ]);
     }
   } catch (err: any) {
     console.error("Toggle attendance error:", err);
@@ -7125,8 +9359,8 @@ const canCancelOwnField = (
   const attendance = attendanceMap.value.get(tournament.id);
   return Boolean(
     attendance?.status === "ATTEND" &&
-      (field === "FIELD_5" ? attendance.field5 : attendance.field7) &&
-      !isUserCancellationLocked(tournament),
+    (field === "FIELD_5" ? attendance.field5 : attendance.field7) &&
+    !isUserCancellationLocked(tournament),
   );
 };
 
@@ -7166,7 +9400,9 @@ const cancelOwnField = async (
     toast.success(`Đã hủy đăng ký ${field === "FIELD_5" ? "Sân 5" : "Sân 7"}`);
   } catch (error: any) {
     toast.error(
-      error.response?.data?.error || error.message || "Không thể hủy đăng ký sân",
+      error.response?.data?.error ||
+        error.message ||
+        "Không thể hủy đăng ký sân",
     );
   } finally {
     const loading = new Set(attendanceLoading.value);
@@ -7240,7 +9476,8 @@ const fetchAttendanceDetails = async (
   if (attendanceDetailsLoadingIds.value.has(tournamentId)) {
     await attendanceDetailsRequests.get(tournamentId);
     if (updateAttendanceModal) {
-      attendanceModalData.value = attendanceDetailsMap.value.get(tournamentId) || [];
+      attendanceModalData.value =
+        attendanceDetailsMap.value.get(tournamentId) || [];
     }
     return;
   }
@@ -7354,7 +9591,10 @@ const confirmFieldRegistration = async (): Promise<void> => {
       throw new Error(response.error || "Không thể đăng ký tham gia");
     const addedFieldAfterDeadline = fieldRegistrationAddOnly.value;
     attendanceMap.value.set(tournamentId, response.data);
-    await Promise.all([fetchAttendanceStats(tournamentId), fetchAttendanceDetails(tournamentId)]);
+    await Promise.all([
+      fetchAttendanceStats(tournamentId),
+      fetchAttendanceDetails(tournamentId),
+    ]);
     closeFieldRegistrationModal();
     toast.success(
       addedFieldAfterDeadline ? "Đã thêm sân đăng ký" : "Đã đăng ký tham gia",
@@ -7581,7 +9821,10 @@ const getTeamPreviewPlayers = (
     const secondRegisteredAt = second.registeredAt
       ? new Date(second.registeredAt).getTime()
       : Number.MAX_SAFE_INTEGER;
-    return firstRegisteredAt - secondRegisteredAt || first.name.localeCompare(second.name, "vi");
+    return (
+      firstRegisteredAt - secondRegisteredAt ||
+      first.name.localeCompare(second.name, "vi")
+    );
   });
 };
 
@@ -7611,12 +9854,32 @@ const activeChallengePairs = computed<
     target: any;
   }>;
 });
-const activeFriendInvitePairs = computed<Array<{ id: string; requester: any; target: any }>>(() => {
+const activeFriendInvitePairs = computed<
+  Array<{ id: string; requester: any; target: any }>
+>(() => {
   const tournamentId = friendInvitePairsTournamentId.value;
-  const details = tournamentId ? attendanceDetailsMap.value.get(tournamentId) || [] : [];
-  return details.filter((item: any) => item.friendInvite?.status === 'ACCEPTED' && item.friendInvite?.direction === 'SENT').map((item: any) => ({ id: item.friendInvite.id, requester: item.player, target: details.find((candidate: any) => candidate.playerId === item.friendInvite.opponentPlayerId)?.player })).filter((pair: any) => pair.target);
+  const details = tournamentId
+    ? attendanceDetailsMap.value.get(tournamentId) || []
+    : [];
+  return details
+    .filter(
+      (item: any) =>
+        item.friendInvite?.status === "ACCEPTED" &&
+        item.friendInvite?.direction === "SENT",
+    )
+    .map((item: any) => ({
+      id: item.friendInvite.id,
+      requester: item.player,
+      target: details.find(
+        (candidate: any) =>
+          candidate.playerId === item.friendInvite.opponentPlayerId,
+      )?.player,
+    }))
+    .filter((pair: any) => pair.target);
 });
-const openFriendInvitePairsModal = async (tournamentId: string): Promise<void> => {
+const openFriendInvitePairsModal = async (
+  tournamentId: string,
+): Promise<void> => {
   friendInvitePairsTournamentId.value = tournamentId;
   showFriendInvitePairsModal.value = true;
   await fetchAttendanceDetails(tournamentId, false);
@@ -7647,12 +9910,14 @@ const isPendingOutgoingChallengeTarget = (
   const currentPlayerId = getCurrentPlayerId();
   if (!currentPlayerId || player.id === currentPlayerId) return false;
   const details = attendanceDetailsMap.value.get(tournamentId) || [];
-  const self: any = details.find((item: any) => item.playerId === currentPlayerId);
+  const self: any = details.find(
+    (item: any) => item.playerId === currentPlayerId,
+  );
   return Boolean(
     self?.challenge?.direction === "SENT" &&
-      self.challenge?.status === "PENDING" &&
-      player.challenge?.direction === "RECEIVED" &&
-      player.challenge?.status === "PENDING",
+    self.challenge?.status === "PENDING" &&
+    player.challenge?.direction === "RECEIVED" &&
+    player.challenge?.status === "PENDING",
   );
 };
 const isCurrentUsersAcceptedChallenge = (
@@ -7662,7 +9927,9 @@ const isCurrentUsersAcceptedChallenge = (
   const currentPlayerId = getCurrentPlayerId();
   if (!currentPlayerId) return false;
   const details = attendanceDetailsMap.value.get(tournamentId) || [];
-  const self: any = details.find((item: any) => item.playerId === currentPlayerId);
+  const self: any = details.find(
+    (item: any) => item.playerId === currentPlayerId,
+  );
   if (self?.challenge?.status !== "ACCEPTED") return false;
   return (
     player.id === currentPlayerId ||
@@ -7673,15 +9940,15 @@ const getAcceptedBattleOpponentName = (
   tournamentId: string,
   playerId: string,
 ): string | null => {
+  if (hidesSideGames(getTournamentById(tournamentId))) return null;
   const details = attendanceDetailsMap.value.get(tournamentId) || [];
   const playerDetail = details.find((item: any) => item.playerId === playerId);
   const challenge = playerDetail?.challenge;
   if (challenge?.status !== "ACCEPTED") return null;
 
   return (
-    details.find(
-      (item: any) => item.playerId === challenge.opponentPlayerId,
-    )?.player?.name || "đối thủ"
+    details.find((item: any) => item.playerId === challenge.opponentPlayerId)
+      ?.player?.name || "đối thủ"
   );
 };
 const getAcceptedBattlePairNumber = (
@@ -7689,13 +9956,23 @@ const getAcceptedBattlePairNumber = (
   playerId: string,
 ): number | null => {
   const details = attendanceDetailsMap.value.get(tournamentId) || [];
-  const pairs = Array.from(new Set(
-    details.flatMap((detail: any) => detail.challenge?.status === "ACCEPTED" && detail.challenge?.opponentPlayerId
-      ? [[detail.playerId, detail.challenge.opponentPlayerId].sort().join(":")]
-      : [],
+  const pairs = Array.from(
+    new Set(
+      details.flatMap((detail: any) =>
+        detail.challenge?.status === "ACCEPTED" &&
+        detail.challenge?.opponentPlayerId
+          ? [
+              [detail.playerId, detail.challenge.opponentPlayerId]
+                .sort()
+                .join(":"),
+            ]
+          : [],
+      ),
     ),
-  )).sort();
-  const pairIndex = pairs.findIndex((pair) => pair.split(":").includes(playerId));
+  ).sort();
+  const pairIndex = pairs.findIndex((pair) =>
+    pair.split(":").includes(playerId),
+  );
   return pairIndex >= 0 ? pairIndex + 1 : null;
 };
 const canShowChallengeIcon = (
@@ -7703,6 +9980,7 @@ const canShowChallengeIcon = (
   field: "FIELD_5" | "FIELD_7",
   player: any,
 ): boolean => {
+  if (hidesSideGames(getTournamentById(tournamentId))) return false;
   const currentPlayerId = getCurrentPlayerId();
   if (!currentPlayerId) return false;
   const details = attendanceDetailsMap.value.get(tournamentId) || [];
@@ -7726,32 +10004,70 @@ const canShowChallengeIcon = (
     isSameChallengeTierRange(self.player.tier, player.tier)
   );
 };
-const canShowFriendInviteIcon = (tournamentId: string, field: 'FIELD_5' | 'FIELD_7', player: any): boolean => {
+const canShowFriendInviteIcon = (
+  tournamentId: string,
+  field: "FIELD_5" | "FIELD_7",
+  player: any,
+): boolean => {
+  if (hidesSideGames(getTournamentById(tournamentId))) return false;
   const currentPlayerId = getCurrentPlayerId();
   const details = attendanceDetailsMap.value.get(tournamentId) || [];
-  const self: any = details.find((item: any) => item.playerId === currentPlayerId);
-  return Boolean(currentPlayerId && player.id !== currentPlayerId && self?.status === 'ATTEND' && (field === 'FIELD_5' ? self.field5 : self.field7) && !self.challenge && !player.challenge && !self.friendInvite && !player.friendInvite && !(self.player.tier <= 2 && player.tier <= 2));
+  const self: any = details.find(
+    (item: any) => item.playerId === currentPlayerId,
+  );
+  return Boolean(
+    currentPlayerId &&
+    player.id !== currentPlayerId &&
+    self?.status === "ATTEND" &&
+    (field === "FIELD_5" ? self.field5 : self.field7) &&
+    !self.challenge &&
+    !player.challenge &&
+    !self.friendInvite &&
+    !player.friendInvite &&
+    !(self.player.tier <= 2 && player.tier <= 2),
+  );
 };
 const openFriendInviteModal = (tournamentId: string, player: any): void => {
-  friendInviteTournamentId.value = tournamentId; friendInviteTarget.value = player;
-  const self: any = (attendanceDetailsMap.value.get(tournamentId) || []).find((item: any) => item.playerId === getCurrentPlayerId());
-  friendInviteReceived.value = self?.friendInvite?.status === 'PENDING' && self.friendInvite?.direction === 'RECEIVED';
+  if (hidesSideGames(getTournamentById(tournamentId))) return;
+  friendInviteTournamentId.value = tournamentId;
+  friendInviteTarget.value = player;
+  const self: any = (attendanceDetailsMap.value.get(tournamentId) || []).find(
+    (item: any) => item.playerId === getCurrentPlayerId(),
+  );
+  friendInviteReceived.value =
+    self?.friendInvite?.status === "PENDING" &&
+    self.friendInvite?.direction === "RECEIVED";
   showFriendInviteModal.value = true;
 };
 const submitFriendInvite = async (): Promise<void> => {
   if (!friendInviteTournamentId.value || !friendInviteTarget.value) return;
   try {
     friendInviteSaving.value = true;
-    const self: any = (attendanceDetailsMap.value.get(friendInviteTournamentId.value) || []).find((item: any) => item.playerId === getCurrentPlayerId());
-    if (friendInviteReceived.value && self?.friendInvite?.id) await apiClient.put(`/tournaments/${friendInviteTournamentId.value}/friend-invites/${self.friendInvite.id}/accept`);
-    else await apiClient.post(`/tournaments/${friendInviteTournamentId.value}/friend-invites`, { targetPlayerId: friendInviteTarget.value.id });
+    const self: any = (
+      attendanceDetailsMap.value.get(friendInviteTournamentId.value) || []
+    ).find((item: any) => item.playerId === getCurrentPlayerId());
+    if (friendInviteReceived.value && self?.friendInvite?.id)
+      await apiClient.put(
+        `/tournaments/${friendInviteTournamentId.value}/friend-invites/${self.friendInvite.id}/accept`,
+      );
+    else
+      await apiClient.post(
+        `/tournaments/${friendInviteTournamentId.value}/friend-invites`,
+        { targetPlayerId: friendInviteTarget.value.id },
+      );
     showFriendInviteModal.value = false;
     await fetchAttendanceDetails(friendInviteTournamentId.value, false);
-  } catch (error: any) { toast.error(error.response?.data?.error || 'Không thể xử lý lời mời rủ bạn'); }
-  finally { friendInviteSaving.value = false; }
+  } catch (error: any) {
+    toast.error(
+      error.response?.data?.error || "Không thể xử lý lời mời rủ bạn",
+    );
+  } finally {
+    friendInviteSaving.value = false;
+  }
 };
 
 const openChallengeModal = (tournamentId: string, player: any): void => {
+  if (hidesSideGames(getTournamentById(tournamentId))) return;
   challengeTournamentId.value = tournamentId;
   const currentPlayerId = getCurrentPlayerId();
   const details = attendanceDetailsMap.value.get(tournamentId) || [];
@@ -7926,7 +10242,48 @@ const getTournamentTeams = (tournament: Tournament): any[] => {
         });
       })(),
       score: team.score || 0,
+      stats: team.stats || {
+        gamesPlayed: 0,
+        wins: 0,
+        draws: 0,
+        losses: 0,
+        goalsFor: 0,
+        goalsAgainst: 0,
+        points: 0,
+      },
     };
+  });
+};
+
+const leagueStandings = (tournament: Tournament): any[] => {
+  const standings = getTournamentTeams(tournament).map((team: any) => ({
+    ...team,
+    stats: { gamesPlayed: 0, wins: 0, draws: 0, losses: 0, goalsFor: 0, goalsAgainst: 0, points: 0 },
+  }));
+  const byTeamId = new Map(standings.map((team: any) => [team.id, team]));
+  (tournament.matches || []).filter((match: any) => match.status === 'COMPLETED' && match.homeScore !== null && match.awayScore !== null).forEach((match: any) => {
+    const home = byTeamId.get(match.homeTeam?.id);
+    const away = byTeamId.get(match.awayTeam?.id);
+    if (!home || !away) return;
+    const homeScore = Number(match.homeScore);
+    const awayScore = Number(match.awayScore);
+    home.stats.gamesPlayed += 1; away.stats.gamesPlayed += 1;
+    home.stats.goalsFor += homeScore; home.stats.goalsAgainst += awayScore;
+    away.stats.goalsFor += awayScore; away.stats.goalsAgainst += homeScore;
+    if (homeScore > awayScore) { home.stats.wins += 1; home.stats.points += 3; away.stats.losses += 1; }
+    else if (awayScore > homeScore) { away.stats.wins += 1; away.stats.points += 3; home.stats.losses += 1; }
+    else { home.stats.draws += 1; away.stats.draws += 1; home.stats.points += 1; away.stats.points += 1; }
+  });
+  return standings.sort((first, second) => {
+    const firstStats = first.stats;
+    const secondStats = second.stats;
+    const firstDiff = firstStats.goalsFor - firstStats.goalsAgainst;
+    const secondDiff = secondStats.goalsFor - secondStats.goalsAgainst;
+    return (
+      (secondStats.points || 0) - (firstStats.points || 0) ||
+      secondDiff - firstDiff ||
+      (secondStats.goalsFor || 0) - (firstStats.goalsFor || 0)
+    );
   });
 };
 
@@ -7934,10 +10291,13 @@ const isTournamentWinnerTeam = (tournament: Tournament, team: any): boolean => {
   if (tournament.winner?.id) return tournament.winner.id === team.id;
   const teams = getTournamentTeams(tournament);
   if (tournament.status !== "COMPLETED" || teams.length < 2) return false;
-  const highestScore = Math.max(...teams.map((item) => Number(item.score || 0)));
+  const highestScore = Math.max(
+    ...teams.map((item) => Number(item.score || 0)),
+  );
   return (
     Number(team.score || 0) === highestScore &&
-    teams.filter((item) => Number(item.score || 0) === highestScore).length === 1
+    teams.filter((item) => Number(item.score || 0) === highestScore).length ===
+      1
   );
 };
 
@@ -7955,18 +10315,21 @@ const isTournamentLoserTeam = (tournament: Tournament, team: any): boolean => {
 const getCurrentPlayerTeam = (tournament: Tournament): any | null => {
   const playerId = getCurrentPlayerId();
   if (!playerId) return null;
-  return getTournamentTeams(tournament).find((team) =>
-    team.players.some((player: any) => player.id === playerId),
-  ) || null;
+  return (
+    getTournamentTeams(tournament).find((team) =>
+      team.players.some((player: any) => player.id === playerId),
+    ) || null
+  );
 };
 
 const canOpenDeadmatch = (tournament: Tournament, team: any): boolean => {
   const currentTeam = getCurrentPlayerTeam(tournament);
   return Boolean(
+    !hidesSideGames(tournament) &&
     currentTeam &&
-      currentTeam.id !== team.id &&
-      getTournamentTeams(tournament).length > 1 &&
-      tournament.status !== "COMPLETED",
+    currentTeam.id !== team.id &&
+    getTournamentTeams(tournament).length > 1 &&
+    tournament.status !== "COMPLETED",
   );
 };
 
@@ -7983,8 +10346,11 @@ const currentDeadmatchEntry = computed(() => {
   );
 });
 
-const canManageDeadmatch = computed(
-  () => Boolean(deadmatchTournament.value && Date.now() < new Date(deadmatchTournament.value.startDate).getTime()),
+const canManageDeadmatch = computed(() =>
+  Boolean(
+    deadmatchTournament.value &&
+    Date.now() < new Date(deadmatchTournament.value.startDate).getTime(),
+  ),
 );
 
 const getDeadmatchTeamEntries = (teamId: string): any[] =>
@@ -7993,15 +10359,19 @@ const getDeadmatchTeamEntries = (teamId: string): any[] =>
     .sort((first, second) => {
       const firstWaiting = first.status === "WAITING" ? 0 : 1;
       const secondWaiting = second.status === "WAITING" ? 0 : 1;
-      return firstWaiting - secondWaiting || first.queueNumber - second.queueNumber;
+      return (
+        firstWaiting - secondWaiting || first.queueNumber - second.queueNumber
+      );
     });
 
 const getDeadmatchOpponentName = (entry: any): string | null => {
   if (!entry.matchKey) return null;
-  return deadmatchEntries.value.find(
-    (candidate) =>
-      candidate.id !== entry.id && candidate.matchKey === entry.matchKey,
-  )?.player?.name || null;
+  return (
+    deadmatchEntries.value.find(
+      (candidate) =>
+        candidate.id !== entry.id && candidate.matchKey === entry.matchKey,
+    )?.player?.name || null
+  );
 };
 
 const loadDeadmatches = async (): Promise<void> => {
@@ -8012,16 +10382,22 @@ const loadDeadmatches = async (): Promise<void> => {
       deadmatchTournament.value.id,
       deadmatchOpponentTeam.value.id,
     );
-    if (!response.success) throw new Error(response.error || "Không thể tải Deadmatch");
+    if (!response.success)
+      throw new Error(response.error || "Không thể tải Deadmatch");
     deadmatchEntries.value = (response.data as any)?.entries || [];
   } catch (error: any) {
-    toast.error(error.response?.data?.error || error.message || "Không thể tải Deadmatch");
+    toast.error(
+      error.response?.data?.error || error.message || "Không thể tải Deadmatch",
+    );
   } finally {
     deadmatchLoading.value = false;
   }
 };
 
-const openDeadmatchModal = async (tournament: Tournament, opponentTeam: any): Promise<void> => {
+const openDeadmatchModal = async (
+  tournament: Tournament,
+  opponentTeam: any,
+): Promise<void> => {
   deadmatchTournament.value = tournament;
   deadmatchOpponentTeam.value = opponentTeam;
   deadmatchEntries.value = [];
@@ -8029,19 +10405,25 @@ const openDeadmatchModal = async (tournament: Tournament, opponentTeam: any): Pr
   await loadDeadmatches();
 };
 
-const openDeadmatchHistoryModal = async (tournament: Tournament): Promise<void> => {
+const openDeadmatchHistoryModal = async (
+  tournament: Tournament,
+): Promise<void> => {
   showDeadmatchHistoryModal.value = true;
   deadmatchHistoryLoading.value = true;
   deadmatchHistoryPairs.value = [];
   try {
-    const response = await apiClient.getTournamentDeadmatchHistory(tournament.id);
+    const response = await apiClient.getTournamentDeadmatchHistory(
+      tournament.id,
+    );
     if (!response.success) {
       throw new Error(response.error || "Không thể tải lịch sử Deadmatch");
     }
     deadmatchHistoryPairs.value = (response.data as any)?.pairs || [];
   } catch (error: any) {
     toast.error(
-      error.response?.data?.error || error.message || "Không thể tải lịch sử Deadmatch",
+      error.response?.data?.error ||
+        error.message ||
+        "Không thể tải lịch sử Deadmatch",
     );
   } finally {
     deadmatchHistoryLoading.value = false;
@@ -8066,8 +10448,11 @@ const challengeBattlePairs = computed(() => {
   const handledPairs = new Set<string>();
   return details.flatMap((detail: any) => {
     const challenge = detail.challenge;
-    if (challenge?.status !== "ACCEPTED" || !challenge.opponentPlayerId) return [];
-    const pairId = [detail.playerId, challenge.opponentPlayerId].sort().join(":");
+    if (challenge?.status !== "ACCEPTED" || !challenge.opponentPlayerId)
+      return [];
+    const pairId = [detail.playerId, challenge.opponentPlayerId]
+      .sort()
+      .join(":");
     if (handledPairs.has(pairId)) return [];
     handledPairs.add(pairId);
 
@@ -8078,22 +10463,42 @@ const challengeBattlePairs = computed(() => {
 
     const firstScore = firstTeam.score || 0;
     const secondScore = secondTeam.score || 0;
-    const firstAmount = firstScore === secondScore ? 0 : firstScore > secondScore ? 10000 : -10000;
-    const secondAmount = -firstAmount;
-    return [{
-      id: pairId,
-      first: { player: detail.player, teamName: firstTeam.name, score: firstScore, amount: firstAmount },
-      second: { player: opponent.player, teamName: secondTeam.name, score: secondScore, amount: secondAmount },
-      result: firstScore === secondScore
-        ? "Hòa"
+    const firstAmount =
+      firstScore === secondScore
+        ? 0
         : firstScore > secondScore
-          ? `${detail.player.name} thắng`
-          : `${opponent.player.name} thắng`,
-    }];
+          ? 10000
+          : -10000;
+    const secondAmount = -firstAmount;
+    return [
+      {
+        id: pairId,
+        first: {
+          player: detail.player,
+          teamName: firstTeam.name,
+          score: firstScore,
+          amount: firstAmount,
+        },
+        second: {
+          player: opponent.player,
+          teamName: secondTeam.name,
+          score: secondScore,
+          amount: secondAmount,
+        },
+        result:
+          firstScore === secondScore
+            ? "Hòa"
+            : firstScore > secondScore
+              ? `${detail.player.name} thắng`
+              : `${opponent.player.name} thắng`,
+      },
+    ];
   });
 });
 
-const openChallengeBattleDetailsModal = async (tournament: Tournament): Promise<void> => {
+const openChallengeBattleDetailsModal = async (
+  tournament: Tournament,
+): Promise<void> => {
   challengeBattleTournament.value = tournament;
   showChallengeBattleDetailsModal.value = true;
   challengeBattleDetailsLoading.value = true;
@@ -8101,7 +10506,9 @@ const openChallengeBattleDetailsModal = async (tournament: Tournament): Promise<
     await fetchAttendanceDetails(tournament.id, false);
   } catch (error: any) {
     toast.error(
-      error.response?.data?.error || error.message || "Không thể tải chi tiết Battle",
+      error.response?.data?.error ||
+        error.message ||
+        "Không thể tải chi tiết Battle",
     );
   } finally {
     challengeBattleDetailsLoading.value = false;
@@ -8109,30 +10516,58 @@ const openChallengeBattleDetailsModal = async (tournament: Tournament): Promise<
 };
 
 const joinDeadmatch = async (): Promise<void> => {
-  if (!deadmatchTournament.value || !deadmatchOpponentTeam.value || deadmatchSaving.value) return;
+  if (
+    !deadmatchTournament.value ||
+    !deadmatchOpponentTeam.value ||
+    deadmatchSaving.value
+  )
+    return;
   deadmatchSaving.value = true;
   try {
-    const response = await apiClient.joinTournamentDeadmatch(deadmatchTournament.value.id, deadmatchOpponentTeam.value.id);
-    if (!response.success) throw new Error(response.error || "Không thể tham gia Deadmatch");
+    const response = await apiClient.joinTournamentDeadmatch(
+      deadmatchTournament.value.id,
+      deadmatchOpponentTeam.value.id,
+    );
+    if (!response.success)
+      throw new Error(response.error || "Không thể tham gia Deadmatch");
     await loadDeadmatches();
-    toast.success((response.data as any)?.matched ? "Đã ghép cặp Deadmatch" : "Đã vào hàng chờ Deadmatch");
+    toast.success(
+      (response.data as any)?.matched
+        ? "Đã ghép cặp Deadmatch"
+        : "Đã vào hàng chờ Deadmatch",
+    );
   } catch (error: any) {
-    toast.error(error.response?.data?.error || error.message || "Không thể tham gia Deadmatch");
+    toast.error(
+      error.response?.data?.error ||
+        error.message ||
+        "Không thể tham gia Deadmatch",
+    );
   } finally {
     deadmatchSaving.value = false;
   }
 };
 
 const cancelDeadmatch = async (): Promise<void> => {
-  if (!deadmatchTournament.value || !deadmatchOpponentTeam.value || deadmatchSaving.value) return;
+  if (
+    !deadmatchTournament.value ||
+    !deadmatchOpponentTeam.value ||
+    deadmatchSaving.value
+  )
+    return;
   deadmatchSaving.value = true;
   try {
-    const response = await apiClient.cancelTournamentDeadmatch(deadmatchTournament.value.id, deadmatchOpponentTeam.value.id);
-    if (!response.success) throw new Error(response.error || "Không thể hủy Deadmatch");
+    const response = await apiClient.cancelTournamentDeadmatch(
+      deadmatchTournament.value.id,
+      deadmatchOpponentTeam.value.id,
+    );
+    if (!response.success)
+      throw new Error(response.error || "Không thể hủy Deadmatch");
     await loadDeadmatches();
     toast.success("Đã hủy tham gia Deadmatch");
   } catch (error: any) {
-    toast.error(error.response?.data?.error || error.message || "Không thể hủy Deadmatch");
+    toast.error(
+      error.response?.data?.error || error.message || "Không thể hủy Deadmatch",
+    );
   } finally {
     deadmatchSaving.value = false;
   }
@@ -8166,54 +10601,131 @@ const isTeamGoalkeeper = (players: any[], player: any): boolean =>
     isGoalkeeper(player.positionSecond));
 
 const getLiveTeamBorderClass = (index: number): string =>
-  ['border-green-300', 'border-orange-300', 'border-blue-300', 'border-gray-300'][index] || 'border-gray-300';
+  [
+    "border-green-300",
+    "border-orange-300",
+    "border-blue-300",
+    "border-gray-300",
+  ][index] || "border-gray-300";
 const getLiveTeamNumberClass = (index: number): string =>
-  ['bg-green-600', 'bg-orange-500', 'bg-blue-600', 'bg-gray-500'][index] || 'bg-gray-500';
+  ["bg-green-600", "bg-orange-500", "bg-blue-600", "bg-gray-500"][index] ||
+  "bg-gray-500";
 const getLiveTeamTextClass = (index: number): string =>
-  ['text-green-700', 'text-orange-700', 'text-blue-700', 'text-gray-700'][index] || 'text-gray-700';
+  ["text-green-700", "text-orange-700", "text-blue-700", "text-gray-700"][
+    index
+  ] || "text-gray-700";
 const getTeamShirtLabel = (index: number): string =>
-  ['Áo xanh lá', 'Áo cam', 'Áo xanh dương', 'Áo trắng'][index] || 'Áo trắng';
+  ["Áo xanh lá", "Áo cam", "Áo xanh dương", "Áo trắng"][index] || "Áo trắng";
 const getLivePlayerStatsInsight = (player: any): string => {
   const stats = livePlayerStatsInsights.value[player.id];
-  if (!stats || (!stats.wins && !stats.losses && !stats.contribution && !stats.attendance)) return 'chưa có dữ liệu Stats từ các giải đã hoàn thành';
-  return `Thắng ${stats.wins} · thua ${stats.losses} · góp quỹ ${Math.round(stats.contribution / 1000).toLocaleString('vi-VN')}K · tham gia ${stats.attendance} giải`;
+  if (
+    !stats ||
+    (!stats.wins && !stats.losses && !stats.contribution && !stats.attendance)
+  )
+    return "chưa có dữ liệu Stats từ các giải đã hoàn thành";
+  return `Thắng ${stats.wins} · thua ${stats.losses} · góp quỹ ${Math.round(stats.contribution / 1000).toLocaleString("vi-VN")}K · tham gia ${stats.attendance} giải`;
 };
 const loadLivePlayerStatsInsights = async (): Promise<void> => {
   if (Object.keys(livePlayerStatsInsights.value).length) return;
   try {
     const response = await apiClient.getPlayerLeaderboard();
     const metrics = (response.data as any)?.metrics;
-    if (Array.isArray(metrics)) livePlayerStatsInsights.value = metrics.reduce((result: Record<string, { wins: number; losses: number; contribution: number; attendance: number }>, metric: any) => {
-      result[metric.playerId] = { wins: Number(metric.wins) || 0, losses: Number(metric.losses) || 0, contribution: Number(metric.contribution) || 0, attendance: Number(metric.attendance) || 0 };
-      return result;
-    }, {});
-  } catch { /* Animation remains available if Stats cannot be loaded. */ }
+    if (Array.isArray(metrics))
+      livePlayerStatsInsights.value = metrics.reduce(
+        (
+          result: Record<
+            string,
+            {
+              wins: number;
+              losses: number;
+              contribution: number;
+              attendance: number;
+            }
+          >,
+          metric: any,
+        ) => {
+          result[metric.playerId] = {
+            wins: Number(metric.wins) || 0,
+            losses: Number(metric.losses) || 0,
+            contribution: Number(metric.contribution) || 0,
+            attendance: Number(metric.attendance) || 0,
+          };
+          return result;
+        },
+        {},
+      );
+  } catch {
+    /* Animation remains available if Stats cannot be loaded. */
+  }
 };
 const liveSplitProgressGroups = computed(() => {
-  const visible = (filter: (player: any) => boolean) => liveSplitAllPlayers.value.filter(
-    (player) => filter(player) && !liveSplitDepartingPlayerIds.value.has(player.id) && !liveSplitProcessedPlayerIds.value.has(player.id),
-  );
+  const visible = (filter: (player: any) => boolean) =>
+    liveSplitAllPlayers.value.filter(
+      (player) =>
+        filter(player) &&
+        !liveSplitDepartingPlayerIds.value.has(player.id) &&
+        !liveSplitProcessedPlayerIds.value.has(player.id),
+    );
   return [
-    { label: 'GK', step: 1, players: visible((player) => isGoalkeeper(player.position)) },
-    { label: 'Tier 1–2', step: 2, players: visible((player) => !isGoalkeeper(player.position) && player.tier <= 2) },
-    { label: 'Tier 3–4', step: 3, players: visible((player) => !isGoalkeeper(player.position) && player.tier >= 3 && player.tier <= 4) },
-    { label: 'Tier 5–6', step: 4, players: visible((player) => !isGoalkeeper(player.position) && player.tier >= 5) },
+    {
+      label: "GK",
+      step: 1,
+      players: visible((player) => isGoalkeeper(player.position)),
+    },
+    {
+      label: "Tier 1–2",
+      step: 2,
+      players: visible(
+        (player) => !isGoalkeeper(player.position) && player.tier <= 2,
+      ),
+    },
+    {
+      label: "Tier 3–4",
+      step: 3,
+      players: visible(
+        (player) =>
+          !isGoalkeeper(player.position) &&
+          player.tier >= 3 &&
+          player.tier <= 4,
+      ),
+    },
+    {
+      label: "Tier 5–6",
+      step: 4,
+      players: visible(
+        (player) => !isGoalkeeper(player.position) && player.tier >= 5,
+      ),
+    },
   ];
 });
-const setLiveTierGroupRef = (label: string, element: HTMLElement | null): void => {
+const setLiveTierGroupRef = (
+  label: string,
+  element: HTMLElement | null,
+): void => {
   liveTierGroupRefs.value[label] = element;
 };
 const setLiveTeamRef = (index: number, element: HTMLElement | null): void => {
   liveTeamRefs.value[index] = element;
 };
 
-const smoothScrollLiveProgressTo = (element: HTMLElement | null, alignment: 'start' | 'center' = 'start'): Promise<void> => {
+const smoothScrollLiveProgressTo = (
+  element: HTMLElement | null,
+  alignment: "start" | "center" = "start",
+): Promise<void> => {
   const container = liveTeamSplitContentRef.value;
-  if (!element || !container || window.innerWidth >= 1024) return Promise.resolve();
-  const offset = element.getBoundingClientRect().top - container.getBoundingClientRect().top;
-  const target = alignment === 'center' ? offset - (container.clientHeight - element.clientHeight) / 2 : offset - 8;
+  if (!element || !container || window.innerWidth >= 1024)
+    return Promise.resolve();
+  const offset =
+    element.getBoundingClientRect().top - container.getBoundingClientRect().top;
+  const target =
+    alignment === "center"
+      ? offset - (container.clientHeight - element.clientHeight) / 2
+      : offset - 8;
   const from = container.scrollTop;
-  const to = Math.max(0, Math.min(container.scrollHeight - container.clientHeight, from + target));
+  const to = Math.max(
+    0,
+    Math.min(container.scrollHeight - container.clientHeight, from + target),
+  );
   const distance = to - from;
   if (Math.abs(distance) < 2) return Promise.resolve();
   const duration = Math.min(1100, Math.max(550, Math.abs(distance) * 1.25));
@@ -8221,7 +10733,10 @@ const smoothScrollLiveProgressTo = (element: HTMLElement | null, alignment: 'sta
   return new Promise((resolve) => {
     const tick = (now: number) => {
       const progress = Math.min(1, (now - start) / duration);
-      const eased = progress < 0.5 ? 4 * progress * progress * progress : 1 - Math.pow(-2 * progress + 2, 3) / 2;
+      const eased =
+        progress < 0.5
+          ? 4 * progress * progress * progress
+          : 1 - Math.pow(-2 * progress + 2, 3) / 2;
       container.scrollTop = from + distance * eased;
       if (progress < 1) requestAnimationFrame(tick);
       else resolve();
@@ -8230,9 +10745,13 @@ const smoothScrollLiveProgressTo = (element: HTMLElement | null, alignment: 'sta
   });
 };
 
-const animateLiveAiThought = async (thought: string, pause: (milliseconds: number) => Promise<unknown>): Promise<void> => {
+const animateLiveAiThought = async (
+  thought: string,
+  pause: (milliseconds: number) => Promise<unknown>,
+): Promise<void> => {
   const words = thought.match(/[^\s]+|\n/g) || [];
-  const target = window.innerWidth < 1024 ? liveMobileAiWords : liveDesktopAiWords;
+  const target =
+    window.innerWidth < 1024 ? liveMobileAiWords : liveDesktopAiWords;
   target.value = [];
   const interval = Math.max(40, Math.floor(2000 / Math.max(words.length, 1)));
   for (const word of words) {
@@ -8272,37 +10791,68 @@ const confirmGenerateRandomTeams = async (): Promise<void> => {
 
 const previewGenerateRandomTeams = async (): Promise<void> => {
   const tournamentId = teamCountModalTournamentId.value;
-  if (!tournamentId || teamGenerationLoading.value || !canGenerateTeams(tournamentId, selectedTeamField.value)) return;
+  if (
+    !tournamentId ||
+    teamGenerationLoading.value ||
+    !canGenerateTeams(tournamentId, selectedTeamField.value)
+  )
+    return;
   try {
     teamGenerationLoading.value = true;
-    if (!attendanceDetailsMap.value.has(tournamentId)) await fetchAttendanceDetails(tournamentId);
-    const playerIds = getTeamPreviewPlayers(tournamentId, selectedTeamField.value).map((player: any) => player.id);
-    const response = await apiClient.post('/tournaments/preview-teams', { playerIds, teamCount: selectedTeamCount.value });
+    if (!attendanceDetailsMap.value.has(tournamentId))
+      await fetchAttendanceDetails(tournamentId);
+    const playerIds = getTeamPreviewPlayers(
+      tournamentId,
+      selectedTeamField.value,
+    ).map((player: any) => player.id);
+    const response = await apiClient.post("/tournaments/preview-teams", {
+      playerIds,
+      teamCount: selectedTeamCount.value,
+    });
     if (!response.success || !response.data) {
-      toast.error('Không thể tạo kết quả test');
+      toast.error("Không thể tạo kết quả test");
       return;
     }
     livePreviewMode.value = true;
     closeTeamCountModal();
-    await playLiveTeamSplit((response.data as any).teams || [], (response.data as any).swaps || []);
-    toast.info('Đây là kết quả test, chưa được lưu vào giải đấu.');
+    await playLiveTeamSplit(
+      (response.data as any).teams || [],
+      (response.data as any).swaps || [],
+    );
+    toast.info("Đây là kết quả test, chưa được lưu vào giải đấu.");
   } catch (err: any) {
-    toast.error(err.response?.data?.error || 'Không thể test chia đội');
+    toast.error(err.response?.data?.error || "Không thể test chia đội");
   } finally {
     teamGenerationLoading.value = false;
   }
 };
 
-const playLiveTeamSplit = async (finalTeams: Array<{ players?: any[] }>, swaps: Array<{ firstId: string; secondId: string }> = [], repeatTeammateSwaps: Array<{ firstId: string; secondId: string }> = []): Promise<void> => {
-  const pause = (milliseconds: number) => new Promise((resolve) => setTimeout(resolve, milliseconds));
+const playLiveTeamSplit = async (
+  finalTeams: Array<{ players?: any[] }>,
+  swaps: Array<{ firstId: string; secondId: string }> = [],
+  repeatTeammateSwaps: Array<{ firstId: string; secondId: string }> = [],
+): Promise<void> => {
+  const pause = (milliseconds: number) =>
+    new Promise((resolve) => setTimeout(resolve, milliseconds));
   const teams = finalTeams.map((team) => [...(team.players || [])]);
   [...repeatTeammateSwaps].reverse().forEach((swap) => {
-    const firstTeam = teams.findIndex((team) => team.some((player) => player.id === swap.firstId));
-    const secondTeam = teams.findIndex((team) => team.some((player) => player.id === swap.secondId));
+    const firstTeam = teams.findIndex((team) =>
+      team.some((player) => player.id === swap.firstId),
+    );
+    const secondTeam = teams.findIndex((team) =>
+      team.some((player) => player.id === swap.secondId),
+    );
     if (firstTeam < 0 || secondTeam < 0 || firstTeam === secondTeam) return;
-    const firstIndex = teams[firstTeam].findIndex((player) => player.id === swap.firstId);
-    const secondIndex = teams[secondTeam].findIndex((player) => player.id === swap.secondId);
-    [teams[firstTeam][firstIndex], teams[secondTeam][secondIndex]] = [teams[secondTeam][secondIndex], teams[firstTeam][firstIndex]];
+    const firstIndex = teams[firstTeam].findIndex(
+      (player) => player.id === swap.firstId,
+    );
+    const secondIndex = teams[secondTeam].findIndex(
+      (player) => player.id === swap.secondId,
+    );
+    [teams[firstTeam][firstIndex], teams[secondTeam][secondIndex]] = [
+      teams[secondTeam][secondIndex],
+      teams[firstTeam][firstIndex],
+    ];
   });
   await loadLivePlayerStatsInsights();
   liveTeamSplitTeams.value = teams.map(() => []);
@@ -8313,17 +10863,37 @@ const playLiveTeamSplit = async (finalTeams: Array<{ players?: any[] }>, swaps: 
   liveDesktopAiWords.value = [];
   liveTeamSplitDone.value = false;
   liveTeamSplitStage.value = 1;
-  liveTeamSplitTitle.value = 'Phân loại theo Tier';
-  liveTeamSplitDescription.value = 'Tách cầu thủ thành các nhóm để chuẩn bị chia đội.';
-  liveTeamSplitThought.value = 'AI đang rà soát danh sách cầu thủ tham gia...';
+  liveTeamSplitTitle.value = "Phân loại theo Tier";
+  liveTeamSplitDescription.value =
+    "Tách cầu thủ thành các nhóm để chuẩn bị chia đội.";
+  liveTeamSplitThought.value = "AI đang rà soát danh sách cầu thủ tham gia...";
   showLiveTeamSplitModal.value = true;
   await nextTick();
 
   const groups = [
-    { title: 'Đang phân chia GK', description: 'Ưu tiên phân bổ thủ môn cho các đội.', filter: (player: any) => isGoalkeeper(player.position) },
-    { title: 'Rải đều Tier 1–2', description: 'Rải đều các cầu thủ Tier 1 và Tier 2.', filter: (player: any) => !isGoalkeeper(player.position) && player.tier <= 2 },
-    { title: 'Cân bằng Tier 3–4', description: 'Bổ sung nhóm Tier trung bình để cân bằng đội.', filter: (player: any) => !isGoalkeeper(player.position) && player.tier >= 3 && player.tier <= 4 },
-    { title: 'Cân bằng Tier 5–6', description: 'Hoàn thiện đội hình và tối ưu Tier trung bình.', filter: (player: any) => !isGoalkeeper(player.position) && player.tier >= 5 },
+    {
+      title: "Đang phân chia GK",
+      description: "Ưu tiên phân bổ thủ môn cho các đội.",
+      filter: (player: any) => isGoalkeeper(player.position),
+    },
+    {
+      title: "Rải đều Tier 1–2",
+      description: "Rải đều các cầu thủ Tier 1 và Tier 2.",
+      filter: (player: any) =>
+        !isGoalkeeper(player.position) && player.tier <= 2,
+    },
+    {
+      title: "Cân bằng Tier 3–4",
+      description: "Bổ sung nhóm Tier trung bình để cân bằng đội.",
+      filter: (player: any) =>
+        !isGoalkeeper(player.position) && player.tier >= 3 && player.tier <= 4,
+    },
+    {
+      title: "Cân bằng Tier 5–6",
+      description: "Hoàn thiện đội hình và tối ưu Tier trung bình.",
+      filter: (player: any) =>
+        !isGoalkeeper(player.position) && player.tier >= 5,
+    },
   ];
 
   for (let groupIndex = 0; groupIndex < groups.length; groupIndex += 1) {
@@ -8334,46 +10904,81 @@ const playLiveTeamSplit = async (finalTeams: Array<{ players?: any[] }>, swaps: 
     const perTeam = teams.map((team) => team.filter(group.filter));
     const rounds = Math.max(0, ...perTeam.map((team) => team.length));
     for (let round = 0; round < rounds; round += 1) {
-      const assignments = perTeam.map((team, teamIndex) => ({ player: team[round], teamIndex })).filter((item) => item.player);
+      const assignments = perTeam
+        .map((team, teamIndex) => ({ player: team[round], teamIndex }))
+        .filter((item) => item.player);
       if (!assignments.length) continue;
-      const thought = assignments.map(({ player, teamIndex }) => `🤖 ${player.name}: ${getLivePlayerStatsInsight(player)} → Team ${teamIndex + 1}`).join('\n');
+      const thought = assignments
+        .map(
+          ({ player, teamIndex }) =>
+            `🤖 ${player.name}: ${getLivePlayerStatsInsight(player)} → Team ${teamIndex + 1}`,
+        )
+        .join("\n");
       liveTeamSplitThought.value = thought;
       liveAiSequence.value += 1;
       await liveTeamSplitModalRef.value?.scrollToAiThought();
       await pause(2000);
       await animateLiveAiThought(thought, pause);
       await pause(3000);
-      const tierGroupLabel = ['GK', 'Tier 1–2', 'Tier 3–4', 'Tier 5–6'][groupIndex];
+      const tierGroupLabel = ["GK", "Tier 1–2", "Tier 3–4", "Tier 5–6"][
+        groupIndex
+      ];
       if (tierGroupLabel) {
-        await liveTeamSplitModalRef.value?.scrollToElement(liveTierGroupRefs.value[tierGroupLabel], 'center');
+        await liveTeamSplitModalRef.value?.scrollToElement(
+          liveTierGroupRefs.value[tierGroupLabel],
+          "center",
+        );
         await pause(2000);
       }
-      liveSplitDepartingPlayerIds.value = new Set(assignments.map(({ player }) => player.id));
+      liveSplitDepartingPlayerIds.value = new Set(
+        assignments.map(({ player }) => player.id),
+      );
       await nextTick();
       await pause(2000);
       if (window.innerWidth < 1024) {
-        await liveTeamSplitModalRef.value?.scrollToElement(liveTeamRefs.value[0], 'start');
+        await liveTeamSplitModalRef.value?.scrollToElement(
+          liveTeamRefs.value[0],
+          "start",
+        );
         await pause(2000);
       }
       const next = liveTeamSplitTeams.value.map((team) => [...team]);
-      assignments.forEach(({ player, teamIndex }) => next[teamIndex].push(player));
+      assignments.forEach(({ player, teamIndex }) =>
+        next[teamIndex].push(player),
+      );
       liveTeamSplitTeams.value = next;
-      liveSplitProcessedPlayerIds.value = new Set([...liveSplitProcessedPlayerIds.value, ...assignments.map(({ player }) => player.id)]);
+      liveSplitProcessedPlayerIds.value = new Set([
+        ...liveSplitProcessedPlayerIds.value,
+        ...assignments.map(({ player }) => player.id),
+      ]);
       liveSplitDepartingPlayerIds.value = new Set();
       await nextTick();
       await pause(700);
     }
     if (groupIndex === 2) {
-      const available = new Set(liveTeamSplitTeams.value.flat().map((player) => player.id));
-      for (const swap of swaps.filter((item) => available.has(item.firstId) && available.has(item.secondId))) {
-        const firstTeam = liveTeamSplitTeams.value.findIndex((team) => team.some((player) => player.id === swap.firstId));
-        const secondTeam = liveTeamSplitTeams.value.findIndex((team) => team.some((player) => player.id === swap.secondId));
-        if (firstTeam < 0 || secondTeam < 0 || firstTeam === secondTeam) continue;
-        const first = liveTeamSplitTeams.value[firstTeam].find((player) => player.id === swap.firstId);
-        const second = liveTeamSplitTeams.value[secondTeam].find((player) => player.id === swap.secondId);
+      const available = new Set(
+        liveTeamSplitTeams.value.flat().map((player) => player.id),
+      );
+      for (const swap of swaps.filter(
+        (item) => available.has(item.firstId) && available.has(item.secondId),
+      )) {
+        const firstTeam = liveTeamSplitTeams.value.findIndex((team) =>
+          team.some((player) => player.id === swap.firstId),
+        );
+        const secondTeam = liveTeamSplitTeams.value.findIndex((team) =>
+          team.some((player) => player.id === swap.secondId),
+        );
+        if (firstTeam < 0 || secondTeam < 0 || firstTeam === secondTeam)
+          continue;
+        const first = liveTeamSplitTeams.value[firstTeam].find(
+          (player) => player.id === swap.firstId,
+        );
+        const second = liveTeamSplitTeams.value[secondTeam].find(
+          (player) => player.id === swap.secondId,
+        );
         if (!first || !second) continue;
         liveTeamSplitStage.value = 4;
-        liveTeamSplitTitle.value = 'Cân bằng Tier tạm thời';
+        liveTeamSplitTitle.value = "Cân bằng Tier tạm thời";
         const thought = `🤖 Cân bằng Tier: ${first.name} (T${first.tier}, Team ${firstTeam + 1}) ↔ ${second.name} (T${second.tier}, Team ${secondTeam + 1})`;
         liveTeamSplitThought.value = thought;
         liveAiSequence.value += 1;
@@ -8382,8 +10987,12 @@ const playLiveTeamSplit = async (finalTeams: Array<{ players?: any[] }>, swaps: 
         await animateLiveAiThought(thought, pause);
         await pause(3000);
         const next = liveTeamSplitTeams.value.map((team) => [...team]);
-        next[firstTeam] = next[firstTeam].map((player) => player.id === first.id ? second : player);
-        next[secondTeam] = next[secondTeam].map((player) => player.id === second.id ? first : player);
+        next[firstTeam] = next[firstTeam].map((player) =>
+          player.id === first.id ? second : player,
+        );
+        next[secondTeam] = next[secondTeam].map((player) =>
+          player.id === second.id ? first : player,
+        );
         liveTeamSplitTeams.value = next;
         await nextTick();
         await pause(2000);
@@ -8391,14 +11000,22 @@ const playLiveTeamSplit = async (finalTeams: Array<{ players?: any[] }>, swaps: 
     }
   }
   for (const swap of repeatTeammateSwaps) {
-    const firstTeam = liveTeamSplitTeams.value.findIndex((team) => team.some((player) => player.id === swap.firstId));
-    const secondTeam = liveTeamSplitTeams.value.findIndex((team) => team.some((player) => player.id === swap.secondId));
+    const firstTeam = liveTeamSplitTeams.value.findIndex((team) =>
+      team.some((player) => player.id === swap.firstId),
+    );
+    const secondTeam = liveTeamSplitTeams.value.findIndex((team) =>
+      team.some((player) => player.id === swap.secondId),
+    );
     if (firstTeam < 0 || secondTeam < 0 || firstTeam === secondTeam) continue;
-    const first = liveTeamSplitTeams.value[firstTeam].find((player) => player.id === swap.firstId);
-    const second = liveTeamSplitTeams.value[secondTeam].find((player) => player.id === swap.secondId);
+    const first = liveTeamSplitTeams.value[firstTeam].find(
+      (player) => player.id === swap.firstId,
+    );
+    const second = liveTeamSplitTeams.value[secondTeam].find(
+      (player) => player.id === swap.secondId,
+    );
     if (!first || !second) continue;
     liveTeamSplitStage.value = 5;
-    liveTeamSplitTitle.value = 'Tránh đồng đội trùng tuần trước';
+    liveTeamSplitTitle.value = "Tránh đồng đội trùng tuần trước";
     const thought = `🤖 ${first.name} và ${second.name}: đổi đội để mỗi người không chung quá 1 đồng đội từ tuần trước`;
     liveTeamSplitThought.value = thought;
     liveAiSequence.value += 1;
@@ -8407,17 +11024,31 @@ const playLiveTeamSplit = async (finalTeams: Array<{ players?: any[] }>, swaps: 
     await animateLiveAiThought(thought, pause);
     await pause(3000);
     const next = liveTeamSplitTeams.value.map((team) => [...team]);
-    next[firstTeam] = next[firstTeam].map((player) => player.id === first.id ? second : player);
-    next[secondTeam] = next[secondTeam].map((player) => player.id === second.id ? first : player);
+    next[firstTeam] = next[firstTeam].map((player) =>
+      player.id === first.id ? second : player,
+    );
+    next[secondTeam] = next[secondTeam].map((player) =>
+      player.id === second.id ? first : player,
+    );
     liveTeamSplitTeams.value = next;
     await nextTick();
     await pause(2000);
   }
   liveTeamSplitStage.value = 6;
-  liveTeamSplitTitle.value = 'Chốt kết quả';
-  liveTeamSplitDescription.value = 'Đội hình đã được lưu cho giải đấu.';
-  liveTeamSplitThought.value = 'AI đã hoàn tất chia đội cân bằng.';
-  liveMobileAiWords.value = ['🤖', 'AI', 'đã', 'hoàn', 'tất', 'chia', 'đội', 'cân', 'bằng.'];
+  liveTeamSplitTitle.value = "Chốt kết quả";
+  liveTeamSplitDescription.value = "Đội hình đã được lưu cho giải đấu.";
+  liveTeamSplitThought.value = "AI đã hoàn tất chia đội cân bằng.";
+  liveMobileAiWords.value = [
+    "🤖",
+    "AI",
+    "đã",
+    "hoàn",
+    "tất",
+    "chia",
+    "đội",
+    "cân",
+    "bằng.",
+  ];
   liveDesktopAiWords.value = [...liveMobileAiWords.value];
   liveTeamSplitDone.value = true;
 };
@@ -8446,7 +11077,11 @@ const generateRandomTeams = async (
       // Show success message with team details
       const data = response.data as any;
       closeTeamCountModal();
-      await playLiveTeamSplit(data.teams || [], [], data.repeatTeammateSwaps || []);
+      await playLiveTeamSplit(
+        data.teams || [],
+        [],
+        data.repeatTeammateSwaps || [],
+      );
       toast.success(
         `Đã chia ${data.playerCount} cầu thủ Sân ${field === "FIELD_5" ? "5" : "7"} thành ${data.teamCount} đội!`,
       );
@@ -8536,7 +11171,7 @@ const createWeeklyTournament = async (tournamentDay: Date) => {
 const loadOldTournaments = async () => {
   try {
     oldTournaments.value = weeklyTournaments.value
-      .filter((t) => ['COMPLETED', 'DELETED'].includes(t.status))
+      .filter((t) => ["COMPLETED", "DELETED"].includes(t.status))
       .sort(
         (a, b) =>
           new Date(b.startDate).getTime() - new Date(a.startDate).getTime(),
@@ -8718,8 +11353,9 @@ const endTournament = async (tournamentId: string) => {
   if (tournament) {
     const teams = getTournamentTeams(tournament);
     if (teams.length > 0) {
-      const highestScoreTeam = getHighestScoreTeam(teams);
-      const lowestScoreTeam = getLowestScoreTeam(teams);
+      const rankedTeams = tournament.format === "LEAGUE" ? leagueStandings(tournament) : teams;
+      const highestScoreTeam = tournament.format === "LEAGUE" ? rankedTeams[0] : getHighestScoreTeam(teams);
+      const lowestScoreTeam = tournament.format === "LEAGUE" ? rankedTeams[rankedTeams.length - 1] : getLowestScoreTeam(teams);
 
       selectedWinningTeam.value = highestScoreTeam;
       selectedLosingTeam.value = lowestScoreTeam;
@@ -8817,29 +11453,56 @@ const deleteTournament = async (id: string) => {
   }
 
   deleteTournamentData.value = tournament;
-  deleteTournamentReason.value = '';
+  deleteTournamentReason.value = "";
   showDeleteTournamentModal.value = true;
 };
 
 const closeDeleteTournamentModal = (): void => {
   showDeleteTournamentModal.value = false;
   deleteTournamentData.value = null;
-  deleteTournamentReason.value = '';
+  deleteTournamentReason.value = "";
 };
 
 const confirmDeleteTournament = async () => {
-  if (!deleteTournamentData.value || !deleteTournamentReason.value.trim()) return;
+  if (!deleteTournamentData.value || !deleteTournamentReason.value.trim())
+    return;
 
   try {
-    await tournamentsStore.deleteTournament(deleteTournamentData.value.id, deleteTournamentReason.value.trim());
+    await tournamentsStore.deleteTournament(
+      deleteTournamentData.value.id,
+      deleteTournamentReason.value.trim(),
+    );
 
     await fetchData();
-    toast.success('Đã chuyển giải đấu sang trạng thái DELETED và không tính tiền.');
+    toast.success(
+      "Đã chuyển giải đấu sang trạng thái DELETED và không tính tiền.",
+    );
   } catch (err: any) {
     console.error("Delete tournament error:", err);
     toast.error(err.response?.data?.error || "Không thể xóa giải đấu");
   } finally {
     closeDeleteTournamentModal();
+  }
+};
+
+const confirmPermanentDeleteTournament = async () => {
+  if (!deleteTournamentData.value || permanentDeleteSaving.value) return;
+
+  permanentDeleteSaving.value = true;
+  try {
+    await apiClient.delete(
+      `/tournaments/${deleteTournamentData.value.id}/permanent`,
+    );
+    await fetchData();
+    toast.success("Đã xóa vĩnh viễn giải đấu và toàn bộ dữ liệu liên quan.");
+    closeDeleteTournamentModal();
+  } catch (err: any) {
+    console.error("Permanently delete tournament error:", err);
+    toast.error(
+      err.response?.data?.error || "Không thể xóa vĩnh viễn giải đấu",
+    );
+  } finally {
+    permanentDeleteSaving.value = false;
   }
 };
 
@@ -9047,9 +11710,10 @@ const openTournamentTimeModal = (tournament: Tournament) => {
   const date = new Date(tournament.startDate);
   selectedTournamentTime.value = `${String(date.getHours()).padStart(2, "0")}:${String(date.getMinutes()).padStart(2, "0")}`;
   const endDate = tournament.endDate ? new Date(tournament.endDate) : null;
-  const durationMinutes = endDate && endDate.getTime() > date.getTime()
-    ? Math.round((endDate.getTime() - date.getTime()) / 60_000)
-    : 90;
+  const durationMinutes =
+    endDate && endDate.getTime() > date.getTime()
+      ? Math.round((endDate.getTime() - date.getTime()) / 60_000)
+      : 90;
   selectedTournamentDuration.value = durationMinutes >= 105 ? 120 : 90;
   timeTournament.value = tournament;
   showTournamentTimeModal.value = true;
@@ -9093,8 +11757,10 @@ const saveTournamentTime = async () => {
     if (tournament) {
       // Update the badge immediately, then reconcile with the canonical
       // tournament payload so both start and end time stay in sync.
-      tournament.startDate = (response.data as Tournament).startDate || startDate.toISOString();
-      tournament.endDate = (response.data as Tournament).endDate || endDate.toISOString();
+      tournament.startDate =
+        (response.data as Tournament).startDate || startDate.toISOString();
+      tournament.endDate =
+        (response.data as Tournament).endDate || endDate.toISOString();
     }
     await tournamentsStore.fetchTournaments();
     toast.success("Đã cập nhật giờ thi đấu");
@@ -9267,7 +11933,7 @@ const saveMaxAttendance = async () => {
 
 const openTournamentFormatModal = (tournament: Tournament): void => {
   tournamentFormatTournament.value = tournament;
-  selectedTournamentFormat.value = tournament.format || 'SCORE';
+  selectedTournamentFormat.value = tournament.format || "SCORE";
   showTournamentFormatModal.value = true;
 };
 
@@ -9280,13 +11946,21 @@ const saveTournamentFormat = async (): Promise<void> => {
   if (!tournamentFormatTournament.value || tournamentFormatSaving.value) return;
   tournamentFormatSaving.value = true;
   try {
-    const response = await apiClient.updateTournament(tournamentFormatTournament.value.id, { format: selectedTournamentFormat.value });
-    if (!response.success) throw new Error(response.error || 'Không thể cập nhật thể thức');
+    const response = await apiClient.updateTournament(
+      tournamentFormatTournament.value.id,
+      { format: selectedTournamentFormat.value },
+    );
+    if (!response.success)
+      throw new Error(response.error || "Không thể cập nhật thể thức");
     await fetchData();
     closeTournamentFormatModal();
     toast.success(`Đã chọn thể thức ${selectedTournamentFormat.value}`);
   } catch (error: any) {
-    toast.error(error.response?.data?.error || error.message || 'Không thể cập nhật thể thức');
+    toast.error(
+      error.response?.data?.error ||
+        error.message ||
+        "Không thể cập nhật thể thức",
+    );
   } finally {
     tournamentFormatSaving.value = false;
   }
@@ -9398,17 +12072,29 @@ const toggleSelfFunded = async (tournament: Tournament) => {
 
 const toggleTournamentTest = async (tournament: Tournament): Promise<void> => {
   if (testTournamentSaving.value || tournament.isProtected) {
-    if (tournament.isProtected) toast.error('Giải đấu đã Protect, không thể thay đổi Test giải');
+    if (tournament.isProtected)
+      toast.error("Giải đấu đã Protect, không thể thay đổi Test giải");
     return;
   }
   try {
     testTournamentSaving.value = true;
-    const response = await apiClient.updateTournament(tournament.id, { isTest: !tournament.isTest });
-    if (!response.success || !response.data) throw new Error(response.error || 'Không thể cập nhật Test giải');
+    const response = await apiClient.updateTournament(tournament.id, {
+      isTest: !tournament.isTest,
+    });
+    if (!response.success || !response.data)
+      throw new Error(response.error || "Không thể cập nhật Test giải");
     Object.assign(tournament, response.data as Tournament);
-    toast.success(tournament.isTest ? 'Đã bật Test giải: chỉ admin thấy giải này' : 'Đã tắt Test giải');
+    toast.success(
+      tournament.isTest
+        ? "Đã bật Test giải: chỉ admin thấy giải này"
+        : "Đã tắt Test giải",
+    );
   } catch (error: any) {
-    toast.error(error.response?.data?.error || error.message || 'Không thể cập nhật Test giải');
+    toast.error(
+      error.response?.data?.error ||
+        error.message ||
+        "Không thể cập nhật Test giải",
+    );
   } finally {
     testTournamentSaving.value = false;
   }
@@ -9661,6 +12347,12 @@ const canEndTournament = (tournamentId: string): boolean => {
   const tournament = weeklyTournaments.value.find((t) => t.id === tournamentId);
   if (!tournament || tournament.status !== "ONGOING") return false;
 
+  if (tournament.format === "LEAGUE") {
+    return Boolean(tournament.matches?.length) && tournament.matches!.every(
+      (match: any) => match.status === "COMPLETED",
+    );
+  }
+
   const teams = getTournamentTeams(tournament);
   if (teams.length < 2) return false;
 
@@ -9692,6 +12384,13 @@ const canEndTournament = (tournamentId: string): boolean => {
 const getTournamentEndStatusMessage = (tournamentId: string): string => {
   const tournament = weeklyTournaments.value.find((t) => t.id === tournamentId);
   if (!tournament || tournament.status !== "ONGOING") return "";
+
+  if (tournament.format === "LEAGUE") {
+    const remaining = (tournament.matches || []).filter(
+      (match: any) => match.status !== "COMPLETED",
+    ).length;
+    return remaining ? `Còn ${remaining} trận chưa kết thúc` : "";
+  }
 
   const teams = getTournamentTeams(tournament);
   if (teams.length < 2) return "Cần ít nhất 2 đội";
@@ -9767,6 +12466,26 @@ const fetchData = async () => {
     ]);
     await loadOldTournaments();
 
+    const liveMatchIds = weeklyTournaments.value
+      .filter(
+        (tournament) =>
+          tournament.format === "LEAGUE" && tournament.status === "ONGOING",
+      )
+      .flatMap((tournament: any) => tournament.matches || [])
+      .filter((match: any) => match.status === "LIVE")
+      .map((match: any) => match.id);
+    if (liveMatchIds.length) {
+      expandedLeagueMatchIds.value = new Set([
+        ...expandedLeagueMatchIds.value,
+        ...liveMatchIds,
+      ]);
+      await Promise.all(liveMatchIds.map((matchId) => loadLeagueMatchDetail(matchId)));
+      if (window.innerWidth < 768) {
+        await nextTick();
+        await smoothScrollToLeagueMatch(liveMatchIds[0]);
+      }
+    }
+
     // Only load attendance for the currently displayed tournament on first render.
     // Historical tournaments are loaded on demand when the user opens that tab.
     await loadAttendanceData(
@@ -9792,7 +12511,10 @@ const pollIncomingChallenges = async (): Promise<void> => {
     return;
   }
   const openChallengeTournamentIds = weeklyTournaments.value
-    .filter((tournament) => tournament.status === "UPCOMING" && !tournament.teams.length)
+    .filter(
+      (tournament) =>
+        tournament.status === "UPCOMING" && !tournament.teams.length,
+    )
     .map((tournament) => tournament.id);
   if (!openChallengeTournamentIds.length) return;
 
@@ -9814,7 +12536,7 @@ const handleChallengeVisibilityChange = (): void => {
 
 const loadPinnedPoll = async (): Promise<void> => {
   try {
-    const response = await apiClient.get<any>('/polls/pinned');
+    const response = await apiClient.get<any>("/polls/pinned");
     if (!response.success || !response.data) return;
     pinnedPoll.value = response.data;
     pinnedPollSelectedOptionIds.value = response.data.options
@@ -9830,14 +12552,20 @@ const submitPinnedPollVote = async (): Promise<void> => {
   if (!pinnedPoll.value || pinnedPollSaving.value) return;
   pinnedPollSaving.value = true;
   try {
-    const response = await apiClient.post<any>(`/polls/${pinnedPoll.value.id}/vote`, { optionIds: pinnedPollSelectedOptionIds.value });
-    if (!response.success) throw new Error(response.error || 'Không thể gửi bình chọn');
+    const response = await apiClient.post<any>(
+      `/polls/${pinnedPoll.value.id}/vote`,
+      { optionIds: pinnedPollSelectedOptionIds.value },
+    );
+    if (!response.success)
+      throw new Error(response.error || "Không thể gửi bình chọn");
     pinnedPoll.value = response.data;
-    pinnedPollSelectedOptionIds.value = response.data.options.filter((option: any) => option.selected).map((option: any) => option.id);
+    pinnedPollSelectedOptionIds.value = response.data.options
+      .filter((option: any) => option.selected)
+      .map((option: any) => option.id);
     showPinnedPollModal.value = false;
-    toast.success('Đã ghi nhận bình chọn');
+    toast.success("Đã ghi nhận bình chọn");
   } catch (error: any) {
-    toast.error(error?.message || 'Không thể gửi bình chọn');
+    toast.error(error?.message || "Không thể gửi bình chọn");
   } finally {
     pinnedPollSaving.value = false;
   }
@@ -9847,12 +12575,18 @@ const submitPinnedPollVote = async (): Promise<void> => {
 onMounted(async () => {
   await fetchData();
   void loadPinnedPoll();
-  document.addEventListener("visibilitychange", handleChallengeVisibilityChange);
+  document.addEventListener(
+    "visibilitychange",
+    handleChallengeVisibilityChange,
+  );
   window.addEventListener(
     "pending-money-top-ups-changed",
     refreshPendingRegistrationTopUps,
   );
-  challengePollTimer = window.setInterval(() => void pollIncomingChallenges(), 5_000);
+  challengePollTimer = window.setInterval(
+    () => void pollIncomingChallenges(),
+    5_000,
+  );
 });
 
 const cancellationDeadlineTimer = window.setInterval(() => {
@@ -9862,7 +12596,10 @@ const cancellationDeadlineTimer = window.setInterval(() => {
 onBeforeUnmount(() => {
   window.clearInterval(cancellationDeadlineTimer);
   if (challengePollTimer) window.clearInterval(challengePollTimer);
-  document.removeEventListener("visibilitychange", handleChallengeVisibilityChange);
+  document.removeEventListener(
+    "visibilitychange",
+    handleChallengeVisibilityChange,
+  );
   window.removeEventListener(
     "pending-money-top-ups-changed",
     refreshPendingRegistrationTopUps,
@@ -10036,6 +12773,7 @@ const canUserToggleBet = (tournament: Tournament): boolean => {
 };
 
 const isPlayerBetting = (tournamentId: string, playerId: string): boolean => {
+  if (hidesSideGames(getTournamentById(tournamentId))) return false;
   const details = attendanceDetailsMap.value.get(tournamentId);
   return (
     Array.isArray(details) &&
@@ -10194,14 +12932,28 @@ const cancelFriendAttendance = async (
   }
 };
 
-const cancelFriendAttendanceByPlayer = async (tournamentId: string, player: any): Promise<void> => {
+const cancelFriendAttendanceByPlayer = async (
+  tournamentId: string,
+  player: any,
+): Promise<void> => {
   try {
-    const response = await apiClient.cancelFriendTournamentAttendance(tournamentId, player.id);
-    if (!response.success) throw new Error(response.error || 'Không thể hủy tham gia cho bạn');
-    await Promise.all([fetchAttendanceStats(tournamentId), fetchAttendanceDetails(tournamentId)]);
+    const response = await apiClient.cancelFriendTournamentAttendance(
+      tournamentId,
+      player.id,
+    );
+    if (!response.success)
+      throw new Error(response.error || "Không thể hủy tham gia cho bạn");
+    await Promise.all([
+      fetchAttendanceStats(tournamentId),
+      fetchAttendanceDetails(tournamentId),
+    ]);
     toast.success(`Đã hủy tham gia cho ${player.name}`);
   } catch (error: any) {
-    toast.error(error.response?.data?.error || error.message || 'Không thể hủy tham gia cho bạn');
+    toast.error(
+      error.response?.data?.error ||
+        error.message ||
+        "Không thể hủy tham gia cho bạn",
+    );
   }
 };
 
@@ -10471,17 +13223,23 @@ const getDetailedMoneyChange = (
 
   // Battle (thách đấu) is settled from the two players' actual team scores.
   // Attendance details include the accepted challenge and its opponent ID.
-  const acceptedBattle = playerAttendance?.challenge?.status === "ACCEPTED"
-    ? playerAttendance.challenge
-    : null;
+  const acceptedBattle =
+    playerAttendance?.challenge?.status === "ACCEPTED"
+      ? playerAttendance.challenge
+      : null;
   if (acceptedBattle?.opponentPlayerId) {
     const opponentTeam = getTournamentTeams(tournament).find((candidate: any) =>
-      candidate.players?.some((candidatePlayer: any) =>
-        candidatePlayer.id === acceptedBattle.opponentPlayerId,
+      candidate.players?.some(
+        (candidatePlayer: any) =>
+          candidatePlayer.id === acceptedBattle.opponentPlayerId,
       ),
     );
-    if (opponentTeam && Number(team.score || 0) !== Number(opponentTeam.score || 0)) {
-      const wonBattle = Number(team.score || 0) > Number(opponentTeam.score || 0);
+    if (
+      opponentTeam &&
+      Number(team.score || 0) !== Number(opponentTeam.score || 0)
+    ) {
+      const wonBattle =
+        Number(team.score || 0) > Number(opponentTeam.score || 0);
       changes.push({
         type: "battle",
         amount: wonBattle ? 10000 : -10000,
@@ -10540,28 +13298,47 @@ const getDetailedMoneyChange = (
   animation: live-ai-word-reveal 0.22s ease-out both;
 }
 @keyframes live-ai-word-reveal {
-  from { opacity: 0; transform: translateY(3px); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(3px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 /* Reserve the battle-icon slot so every external attendance row aligns. */
 @media (min-width: 1024px) {
-  .bg-gray-50.p-2.text-sm:not(.old-tournament-player-row) > .flex.min-w-0.items-center {
+  .bg-gray-50.p-2.text-sm:not(.old-tournament-player-row)
+    > .flex.min-w-0.items-center {
     position: relative;
   }
-  .bg-gray-50.p-2.text-sm:not(.old-tournament-player-row) > .flex.min-w-0.items-center::before {
+  .bg-gray-50.p-2.text-sm:not(.old-tournament-player-row)
+    > .flex.min-w-0.items-center::before {
     content: "";
     display: inline-block;
     width: 1.75rem;
     flex: 0 0 1.75rem;
   }
-  .bg-gray-50.p-2.text-sm:not(.old-tournament-player-row) > .flex.min-w-0.items-center > button:first-child {
+  .bg-gray-50.p-2.text-sm:not(.old-tournament-player-row)
+    > .flex.min-w-0.items-center
+    > button:first-child {
     position: absolute;
     left: 0;
   }
 }
 @media (max-width: 1023px) {
-  .mobile-team-preview-player-content:not(:has(> button)) .mobile-team-preview-avatar {
+  .mobile-team-preview-player-content:not(:has(> button))
+    .mobile-team-preview-avatar {
     margin-left: 1.75rem;
+  }
+}
+@media (max-width: 767px) {
+  /* Keep the two League match team cards side-by-side on mobile. */
+  .league-match-team-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    width: calc(100% + 1rem);
+    margin-left: -0.5rem;
   }
 }
 </style>

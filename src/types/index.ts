@@ -173,6 +173,7 @@ export interface Match {
   awayScore?: number
   status: 'SCHEDULED' | 'LIVE' | 'COMPLETED' | 'POSTPONED'
   scheduledDate: string | Date
+  durationMinutes?: number
   venue?: string
   currentMinute?: number
   events: MatchEvent[]

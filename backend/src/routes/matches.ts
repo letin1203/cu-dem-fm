@@ -299,48 +299,53 @@ router.put('/:id', authenticate, authorize(['ADMIN', 'MOD']), async (req: Authen
       return;
     }
 
-    // If match is being completed, update team stats
-    const isBeingCompleted = updateData.status === 'COMPLETED' && existingMatch.status !== 'COMPLETED';
-    
-    let teamStatsUpdates = {};
-    if (isBeingCompleted && updateData.homeScore !== undefined && updateData.awayScore !== undefined) {
-      const homeScore = updateData.homeScore;
-      const awayScore = updateData.awayScore;
+    const updateStatsForResult = async (homeScore: number, awayScore: number, multiplier: 1 | -1): Promise<void> => {
       const homeWin = homeScore > awayScore;
       const awayWin = awayScore > homeScore;
       const draw = homeScore === awayScore;
 
-      // Update home team stats
       if (existingMatch.homeTeam.stats) {
         await prisma.teamStats.update({
           where: { teamId: existingMatch.homeTeamId },
           data: {
-            gamesPlayed: { increment: 1 },
-            wins: homeWin ? { increment: 1 } : undefined,
-            draws: draw ? { increment: 1 } : undefined,
-            losses: awayWin ? { increment: 1 } : undefined,
-            goalsFor: { increment: homeScore },
-            goalsAgainst: { increment: awayScore },
-            points: { increment: homeWin ? 3 : draw ? 1 : 0 },
+            gamesPlayed: { increment: multiplier },
+            wins: homeWin ? { increment: multiplier } : undefined,
+            draws: draw ? { increment: multiplier } : undefined,
+            losses: awayWin ? { increment: multiplier } : undefined,
+            goalsFor: { increment: multiplier * homeScore },
+            goalsAgainst: { increment: multiplier * awayScore },
+            points: { increment: multiplier * (homeWin ? 3 : draw ? 1 : 0) },
           },
         });
       }
 
-      // Update away team stats
       if (existingMatch.awayTeam.stats) {
         await prisma.teamStats.update({
           where: { teamId: existingMatch.awayTeamId },
           data: {
-            gamesPlayed: { increment: 1 },
-            wins: awayWin ? { increment: 1 } : undefined,
-            draws: draw ? { increment: 1 } : undefined,
-            losses: homeWin ? { increment: 1 } : undefined,
-            goalsFor: { increment: awayScore },
-            goalsAgainst: { increment: homeScore },
-            points: { increment: awayWin ? 3 : draw ? 1 : 0 },
+            gamesPlayed: { increment: multiplier },
+            wins: awayWin ? { increment: multiplier } : undefined,
+            draws: draw ? { increment: multiplier } : undefined,
+            losses: homeWin ? { increment: multiplier } : undefined,
+            goalsFor: { increment: multiplier * awayScore },
+            goalsAgainst: { increment: multiplier * homeScore },
+            points: { increment: multiplier * (awayWin ? 3 : draw ? 1 : 0) },
           },
         });
       }
+    };
+
+    const finalStatus = updateData.status ?? existingMatch.status;
+    const finalHomeScore = updateData.homeScore ?? existingMatch.homeScore;
+    const finalAwayScore = updateData.awayScore ?? existingMatch.awayScore;
+
+    // Roll the old result back before applying the new one. This lets an admin
+    // correct a completed result without accumulating table points twice.
+    if (existingMatch.status === 'COMPLETED' && existingMatch.homeScore !== null && existingMatch.awayScore !== null) {
+      await updateStatsForResult(existingMatch.homeScore, existingMatch.awayScore, -1);
+    }
+    if (finalStatus === 'COMPLETED' && finalHomeScore !== null && finalAwayScore !== null) {
+      await updateStatsForResult(finalHomeScore, finalAwayScore, 1);
     }
 
     const match = await prisma.match.update({

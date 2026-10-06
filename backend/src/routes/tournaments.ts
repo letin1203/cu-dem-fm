@@ -69,6 +69,7 @@ router.get('/', optionalAuthenticate, async (req: AuthenticatedRequest, res: Res
                   name: true,
                   logo: true,
                   score: true,
+                  stats: true,
                 },
               },
             },
@@ -92,6 +93,7 @@ router.get('/', optionalAuthenticate, async (req: AuthenticatedRequest, res: Res
                   name: true,
                   logo: true,
                   score: true,
+                  stats: true,
                 },
               },
             },
@@ -108,8 +110,20 @@ router.get('/', optionalAuthenticate, async (req: AuthenticatedRequest, res: Res
               homeScore: true,
               awayScore: true,
               scheduledDate: true,
-              homeTeam: { select: { name: true } },
-              awayTeam: { select: { name: true } },
+              durationMinutes: true,
+              homeTeam: { select: { id: true, name: true } },
+              awayTeam: { select: { id: true, name: true } },
+              events: {
+                select: {
+                  id: true,
+                  type: true,
+                  team: true,
+                  minute: true,
+                  playerId: true,
+                  player: { select: { id: true, name: true } },
+                },
+                orderBy: { minute: 'asc' },
+              },
             },
             orderBy: {
               scheduledDate: 'asc',
@@ -557,6 +571,99 @@ router.put('/:id/protection', authenticate, authorize(['ADMIN']), async (req: Au
 
 // Soft-delete a tournament. Keeping its record means the old-tournament view
 // remains auditable and no completion/financial settlement can run afterwards.
+// Permanently delete a tournament and every record owned by it. This is kept
+// separate from the regular delete route below, which is a recoverable soft
+// delete. Completed tournaments have already changed player balances, so those
+// changes must be reversed before their settlement history is removed.
+router.delete('/:id/permanent', authenticate, authorize(['ADMIN']), async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  try {
+    const { id } = req.params;
+    const tournament = await prisma.tournament.findUnique({
+      where: { id },
+      select: {
+        id: true,
+        name: true,
+        teams: { select: { teamId: true } },
+        moneyHistory: { select: { id: true, playerId: true, amount: true } },
+      },
+    });
+
+    if (!tournament) {
+      res.status(404).json({ success: false, error: 'Tournament not found' });
+      return;
+    }
+
+    const balanceChanges = new Map<string, number>();
+    for (const history of tournament.moneyHistory) {
+      balanceChanges.set(
+        history.playerId,
+        (balanceChanges.get(history.playerId) || 0) - history.amount,
+      );
+    }
+    const teamIds = tournament.teams.map((entry) => entry.teamId);
+
+    await prisma.$transaction(async (tx) => {
+      // Revert completed-settlement balance effects before deleting the audit
+      // rows. Each history amount is applied in reverse to its payer.
+      for (const [playerId, amount] of balanceChanges) {
+        if (amount !== 0) {
+          await tx.player.update({
+            where: { id: playerId },
+            data: { money: { increment: amount } },
+          });
+        }
+      }
+
+      const matches = await tx.match.findMany({
+        where: { tournamentId: id },
+        select: { id: true },
+      });
+      const matchIds = matches.map((match) => match.id);
+
+      if (matchIds.length) {
+        await tx.matchEvent.deleteMany({ where: { matchId: { in: matchIds } } });
+        await tx.match.deleteMany({ where: { id: { in: matchIds } } });
+      }
+
+      await tx.playerMoneyHistory.deleteMany({ where: { tournamentId: id } });
+      await tx.tournamentDeadmatchEntry.deleteMany({ where: { tournamentId: id } });
+      await tx.tournamentFriendInvite.deleteMany({ where: { tournamentId: id } });
+      await tx.tournamentChallenge.deleteMany({ where: { tournamentId: id } });
+      await tx.tournamentSwapRequest.deleteMany({ where: { tournamentId: id } });
+      await tx.tournamentTeamPlayer.deleteMany({ where: { tournamentId: id } });
+      await tx.tournamentTeam.deleteMany({ where: { tournamentId: id } });
+      await tx.tournamentPlayerAttendance.deleteMany({ where: { tournamentId: id } });
+      await tx.additionalCost.deleteMany({ where: { tournamentId: id } });
+      await tx.tournament.delete({ where: { id } });
+
+      // Generated teams are tournament-only. Do not remove a Team that has
+      // subsequently been used by players or another tournament.
+      if (teamIds.length) {
+        await tx.team.deleteMany({
+          where: {
+            id: { in: teamIds },
+            players: { none: {} },
+            tournaments: { none: {} },
+            tournamentTeamPlayers: { none: {} },
+            homeMatches: { none: {} },
+            awayMatches: { none: {} },
+            wonTournaments: { none: {} },
+            lostTournaments: { none: {} },
+          },
+        });
+      }
+    });
+
+    res.json({
+      success: true,
+      message: `Đã xóa vĩnh viễn giải đấu ${tournament.name} và toàn bộ dữ liệu liên quan.`,
+    });
+  } catch (error) {
+    console.error('Permanently delete tournament error:', error);
+    res.status(500).json({ success: false, error: 'Không thể xóa vĩnh viễn giải đấu' });
+  }
+});
+
 router.delete('/:id', authenticate, authorize(['ADMIN']), async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   try {
     const { id } = req.params;
@@ -1599,6 +1706,11 @@ router.put('/:id/attendance', authenticate, async (req: AuthenticatedRequest, re
 
     if (tournament.selfFunded && (toggleWater || toggleBet || withWater !== undefined || bet !== undefined)) {
       res.status(400).json({ success: false, error: 'Giải tự túc không hỗ trợ Uống nước hoặc Ngôi sao hy vọng' });
+      return;
+    }
+
+    if ((tournament.isTest || tournament.format === 'LEAGUE') && (toggleWater || toggleBet || withWater !== undefined || bet !== undefined)) {
+      res.status(400).json({ success: false, error: tournament.isTest ? 'Giải TEST không hỗ trợ Uống nước hoặc Ngôi sao hy vọng' : 'Giải LEAGUE không hỗ trợ Uống nước hoặc Ngôi sao hy vọng' });
       return;
     }
 
@@ -2823,20 +2935,38 @@ router.post('/:id/generate-teams', authenticate, authorize(['ADMIN', 'MOD']), as
       });
     }
 
-    // League format plays a double round-robin: every pair meets once as
-    // home and once as away. Scores/events are then managed through Match.
+    // League format uses a rotating double round-robin. Within one round a
+    // team appears at most once, so crossing two rounds means no team plays
+    // more than two consecutive matches. The second leg reverses home/away.
     if (tournament.format === 'LEAGUE') {
       const kickoff = new Date(tournament.startDate);
-      const fixtures = [];
-      for (let homeIndex = 0; homeIndex < createdTeams.length; homeIndex += 1) {
-        for (let awayIndex = homeIndex + 1; awayIndex < createdTeams.length; awayIndex += 1) {
-          const firstLegTime: Date = new Date(kickoff.getTime() + fixtures.length * 60 * 60_000);
-          fixtures.push(
-            { tournamentId, homeTeamId: createdTeams[homeIndex].id, awayTeamId: createdTeams[awayIndex].id, scheduledDate: firstLegTime },
-            { tournamentId, homeTeamId: createdTeams[awayIndex].id, awayTeamId: createdTeams[homeIndex].id, scheduledDate: new Date(firstLegTime.getTime() + 30 * 60_000) },
-          );
+      const rotation: Array<string | null> = createdTeams.map((team) => team.id);
+      if (rotation.length % 2 === 1) rotation.push(null); // bye slot
+      const rounds: Array<Array<{ homeTeamId: string; awayTeamId: string }>> = [];
+      const teamSlots = rotation.length;
+
+      for (let roundIndex = 0; roundIndex < teamSlots - 1; roundIndex += 1) {
+        const round: Array<{ homeTeamId: string; awayTeamId: string }> = [];
+        for (let index = 0; index < teamSlots / 2; index += 1) {
+          const left = rotation[index];
+          const right = rotation[teamSlots - 1 - index];
+          if (!left || !right) continue;
+          const [homeTeamId, awayTeamId] = roundIndex % 2 === 0 ? [left, right] : [right, left];
+          round.push({ homeTeamId, awayTeamId });
         }
+        rounds.push(round);
+        rotation.splice(1, 0, rotation.pop()!);
       }
+
+      const fixtures = [...rounds.flat(), ...rounds.flat().map(({ homeTeamId, awayTeamId }) => ({
+        homeTeamId: awayTeamId,
+        awayTeamId: homeTeamId,
+      }))].map((fixture, index) => ({
+        tournamentId,
+        ...fixture,
+        durationMinutes: 10,
+        scheduledDate: new Date(kickoff.getTime() + index * 10 * 60_000),
+      }));
       if (fixtures.length) await prisma.match.createMany({ data: fixtures });
     }
 
@@ -2894,6 +3024,15 @@ router.put('/:id/end', authenticate, authorize(['ADMIN', 'MOD']), async (req: Au
           },
         },
         additionalCosts: true,
+        matches: {
+          select: {
+            status: true,
+            homeScore: true,
+            awayScore: true,
+            homeTeamId: true,
+            awayTeamId: true,
+          },
+        },
       },
     });
 
@@ -2923,12 +3062,33 @@ router.put('/:id/end', authenticate, authorize(['ADMIN', 'MOD']), async (req: Au
       return;
     }
 
-    const sortedTeams = teams.sort((a, b) => (b.score || 0) - (a.score || 0));
+    let sortedTeams = teams.sort((a, b) => (b.score || 0) - (a.score || 0));
+    if (tournament.format === 'LEAGUE') {
+      if (!tournament.matches.length || tournament.matches.some((match) => match.status !== 'COMPLETED')) {
+        res.status(400).json({ success: false, error: 'League can only end after every match is completed' });
+        return;
+      }
+      const standings = new Map(teams.map((team) => [team.id, { team, points: 0, goalsFor: 0, goalsAgainst: 0 }]));
+      for (const match of tournament.matches) {
+        if (match.homeScore === null || match.awayScore === null) continue;
+        const home = standings.get(match.homeTeamId);
+        const away = standings.get(match.awayTeamId);
+        if (!home || !away) continue;
+        home.goalsFor += match.homeScore; home.goalsAgainst += match.awayScore;
+        away.goalsFor += match.awayScore; away.goalsAgainst += match.homeScore;
+        if (match.homeScore > match.awayScore) home.points += 3;
+        else if (match.awayScore > match.homeScore) away.points += 3;
+        else { home.points += 1; away.points += 1; }
+      }
+      sortedTeams = [...standings.values()]
+        .sort((first, second) => second.points - first.points || (second.goalsFor - second.goalsAgainst) - (first.goalsFor - first.goalsAgainst) || second.goalsFor - first.goalsFor)
+        .map((entry) => entry.team);
+    }
     const winnerTeam = sortedTeams[0];
     const loserTeam = sortedTeams[sortedTeams.length - 1];
 
     // Check if there's a clear winner/loser (no ties)
-    if (winnerTeam.score === loserTeam.score) {
+    if (tournament.format !== 'LEAGUE' && winnerTeam.score === loserTeam.score) {
       res.status(400).json({
         success: false,
         error: 'Cannot end tournament with tied scores',

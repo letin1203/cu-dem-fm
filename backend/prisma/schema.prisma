@@ -226,6 +226,7 @@ model Match {
   awayScore     Int?
   status        String   @default("SCHEDULED") // "SCHEDULED", "LIVE", "COMPLETED", "POSTPONED"
   scheduledDate DateTime
+  durationMinutes Int    @default(60)
   venue         String?
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt

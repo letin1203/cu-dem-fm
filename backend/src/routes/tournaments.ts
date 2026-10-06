@@ -1709,8 +1709,8 @@ router.put('/:id/attendance', authenticate, async (req: AuthenticatedRequest, re
       return;
     }
 
-    if ((tournament.isTest || tournament.format === 'LEAGUE') && (toggleWater || toggleBet || withWater !== undefined || bet !== undefined)) {
-      res.status(400).json({ success: false, error: tournament.isTest ? 'Giải TEST không hỗ trợ Uống nước hoặc Ngôi sao hy vọng' : 'Giải LEAGUE không hỗ trợ Uống nước hoặc Ngôi sao hy vọng' });
+    if (tournament.isTest && (toggleWater || toggleBet || withWater !== undefined || bet !== undefined)) {
+      res.status(400).json({ success: false, error: 'Giải TEST không hỗ trợ Uống nước hoặc Ngôi sao hy vọng' });
       return;
     }
 

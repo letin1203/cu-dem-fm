@@ -543,7 +543,7 @@
                 <button
                   v-if="
                     !ongoingTournament.selfFunded &&
-                    !hidesSideGames(ongoingTournament)
+                    supportsWaterAndBet(ongoingTournament)
                   "
                   @click="openAttendanceModal(ongoingTournament.id, 'water')"
                   class="text-center p-2 bg-blue-100 rounded-lg hover:bg-blue-200 transition-colors cursor-pointer"
@@ -556,7 +556,7 @@
                 <button
                   v-if="
                     !ongoingTournament.selfFunded &&
-                    !hidesSideGames(ongoingTournament)
+                    supportsWaterAndBet(ongoingTournament)
                   "
                   @click="openAttendanceModal(ongoingTournament.id, 'betting')"
                   class="text-center p-2 bg-yellow-100 rounded-lg hover:bg-yellow-200 transition-colors cursor-pointer"
@@ -1368,7 +1368,7 @@
                 <button
                   v-if="
                     !ongoingTournament.selfFunded &&
-                    !hidesSideGames(ongoingTournament) &&
+                    supportsWaterAndBet(ongoingTournament) &&
                     authStore.currentUser?.role !== 'guest'
                   "
                   @click="toggleWater(ongoingTournament.id)"
@@ -1402,7 +1402,7 @@
                 <button
                   v-if="
                     !ongoingTournament.selfFunded &&
-                    !hidesSideGames(ongoingTournament) &&
+                    supportsWaterAndBet(ongoingTournament) &&
                     authStore.currentUser?.role !== 'guest' &&
                     canUserToggleBet(ongoingTournament)
                   "
@@ -8200,6 +8200,9 @@ const getStatusBadge = (status: string) => {
 const hidesSideGames = (tournament?: Tournament | null): boolean =>
   Boolean(tournament?.isTest || tournament?.format === "LEAGUE");
 
+const supportsWaterAndBet = (tournament?: Tournament | null): boolean =>
+  !tournament?.isTest;
+
 const leagueMatchEvents = (matchId: string, types: string[]): any[] => {
   const detailEvents = leagueMatchDetails.value[matchId]?.events;
   const summaryEvents =
@@ -12773,7 +12776,7 @@ const canUserToggleBet = (tournament: Tournament): boolean => {
 };
 
 const isPlayerBetting = (tournamentId: string, playerId: string): boolean => {
-  if (hidesSideGames(getTournamentById(tournamentId))) return false;
+  if (!supportsWaterAndBet(getTournamentById(tournamentId))) return false;
   const details = attendanceDetailsMap.value.get(tournamentId);
   return (
     Array.isArray(details) &&

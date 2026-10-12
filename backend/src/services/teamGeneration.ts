@@ -84,18 +84,20 @@ export function generateBalancedTeams(
         // the primary strength-distribution rule, not merely a tie-break.
         const lowTierCount = ({ team }: { team: GeneratedTeam }) =>
           team.players.filter((player) => player.tier <= 2).length;
-        if (tier === 2) {
-          const minTierOneCount = Math.min(...pool.map(({ team }) => countTier(team, 1)));
-          candidates = pool.filter(({ team }) => countTier(team, 1) === minTierOneCount);
-        }
-        const minLowTierCount = Math.min(...candidates.map(lowTierCount));
-        candidates = candidates.filter((candidate) => lowTierCount(candidate) === minLowTierCount);
+        
+        const minLowTierCount = Math.min(...pool.map(lowTierCount));
+        candidates = pool.filter((candidate) => lowTierCount(candidate) === minLowTierCount);
+        
         const minCount = Math.min(...candidates.map(({ team }) => countTier(team, tier)));
         candidates = candidates.filter(({ team }) => countTier(team, tier) === minCount);
       }
       candidates.sort((a, b) => {
         // Tier 3 is the first flexible balancing tier. Teams that already
         // received more Tier 1–2 players should receive fewer Tier 3 players.
+        if (tier === 2) {
+          const tierOneDifference = countTier(a.team, 1) - countTier(b.team, 1);
+          if (tierOneDifference) return tierOneDifference;
+        }
         if (tier === 3) {
           const lowTierDifference = a.team.players.filter((player) => player.tier <= 2).length
             - b.team.players.filter((player) => player.tier <= 2).length;

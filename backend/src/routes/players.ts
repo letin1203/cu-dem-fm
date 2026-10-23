@@ -66,7 +66,7 @@ router.get('/friends', authenticate, authorize(['ADMIN', 'MOD']), async (_req: A
 });
 
 // Get all players with pagination and filters
-router.get('/', async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+router.get('/', authenticate, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   try {
     const { page, limit, teamId, position, tier } = playerQuerySchema.parse(req.query);
     const skip = (page - 1) * limit;
@@ -152,7 +152,7 @@ router.put('/inactive/:id/activate', authenticate, authorize(['ADMIN', 'MOD']), 
 });
 
 // Get paginated money-change history for a player
-router.get('/:id/money-history', async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+router.get('/:id/money-history', authenticate, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   try {
     const { id } = req.params;
     const page = Math.max(1, Number.parseInt(String(req.query.page || '1'), 10) || 1);
@@ -236,7 +236,7 @@ router.post('/:id/deduct-money', authenticate, authorize(['ADMIN', 'MOD']), asyn
 });
 
 // Get the tournaments a player attended, newest first.
-router.get('/:id/tournament-history', async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+router.get('/:id/tournament-history', authenticate, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   try {
     const { id } = req.params;
 
@@ -274,7 +274,7 @@ router.get('/:id/tournament-history', async (req: AuthenticatedRequest, res: Res
 });
 
 // Get player by ID
-router.get('/:id', async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+router.get('/:id', authenticate, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   try {
     const { id } = req.params;
 

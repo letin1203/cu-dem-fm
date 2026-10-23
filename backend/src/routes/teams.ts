@@ -63,7 +63,7 @@ router.get('/', async (req: AuthenticatedRequest, res: Response): Promise<void> 
 });
 
 // Get team by ID
-router.get('/:id', async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+router.get('/:id', authenticate, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   try {
     const { id } = req.params;
 
@@ -71,7 +71,18 @@ router.get('/:id', async (req: AuthenticatedRequest, res: Response): Promise<voi
       where: { id },
       include: {
         players: {
-          include: {
+          select: {
+            id: true,
+            name: true,
+            position: true,
+            positionSecond: true,
+            yearOfBirth: true,
+            tier: true,
+            avatar: true,
+            isActive: true,
+            teamId: true,
+            createdAt: true,
+            updatedAt: true,
             stats: true,
             user: {
               select: {

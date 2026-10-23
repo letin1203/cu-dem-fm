@@ -2,7 +2,7 @@ import { Router, Response } from 'express';
 import { z } from 'zod';
 import { prisma } from '../lib/prisma';
 import { createTournamentSchema, updateTournamentSchema, paginationSchema, updateAttendanceSchema, updateTeamScoreSchema, updateTournamentScoresSchema } from '../schemas/validation';
-import { authenticate, optionalAuthenticate, authorize, AuthenticatedRequest } from '../middleware/auth';
+import { authenticate, authorize, AuthenticatedRequest } from '../middleware/auth';
 import { generateBalancedTeams } from '../services/teamGeneration';
 
 const router = Router();
@@ -44,7 +44,7 @@ const hasAttendanceCapacity = async (tournamentId: string, maxAttendance: number
 };
 
 // Get all tournaments with pagination and filters
-router.get('/', optionalAuthenticate, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+router.get('/', authenticate, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   try {
     const { page, limit } = paginationSchema.parse(req.query);
     const { status, type } = req.query;
@@ -178,7 +178,7 @@ router.get('/', optionalAuthenticate, async (req: AuthenticatedRequest, res: Res
 });
 
 // Get every player's saved money changes for a completed tournament.
-router.get('/:id/money-history', async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+router.get('/:id/money-history', authenticate, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   try {
     const history = await prisma.playerMoneyHistory.findMany({
       where: { tournamentId: req.params.id },
@@ -192,7 +192,7 @@ router.get('/:id/money-history', async (req: AuthenticatedRequest, res: Response
 });
 
 // Get dates that contain completed weekly tournaments for a calendar month.
-router.get('/completed-dates', async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+router.get('/completed-dates', authenticate, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   try {
     const year = Number(req.query.year);
     const month = Number(req.query.month);
@@ -224,7 +224,7 @@ router.get('/completed-dates', async (req: AuthenticatedRequest, res: Response):
 });
 
 // Get tournament by ID
-router.get('/:id', async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+router.get('/:id', authenticate, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   try {
     const { id } = req.params;
 
@@ -2080,7 +2080,7 @@ router.put('/:id/attendance/:playerId', authenticate, authorize(['ADMIN', 'MOD']
 });
 
 // Get attendance statistics for a tournament
-router.get('/:id/attendance-stats', async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+router.get('/:id/attendance-stats', authenticate, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   try {
     const { id: tournamentId } = req.params;
 
@@ -2138,7 +2138,7 @@ router.get('/:id/attendance-stats', async (req: AuthenticatedRequest, res: Respo
 });
 
 // Get detailed attendance list for a tournament
-router.get('/:id/attendance-details', async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+router.get('/:id/attendance-details', authenticate, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   try {
     const { id: tournamentId } = req.params;
 
@@ -3156,128 +3156,137 @@ router.put('/:id/end', authenticate, authorize(['ADMIN', 'MOD']), async (req: Au
 
     // Process each attending player
     // A self-funded tournament does not create player-money changes at all.
-    for (const player of (tournament.selfFunded ? [] : attendingPlayers)) {
-      const attendance = tournament.playerAttendances.find(att => att.playerId === player.id);
-      if (!attendance) continue;
+    // Every balance change, its audit row and the status flip are committed
+    // together so a mid-way failure can never leave balances half-applied.
+    await prisma.$transaction(async (tx) => {
+      const current = await tx.tournament.findUnique({ where: { id }, select: { status: true } });
+      if (!current || (current.status !== 'ONGOING' && current.status !== 'ACTIVE')) {
+        throw new Error('Tournament is no longer active');
+      }
 
-      const playerTeamAssignment = tournament.tournamentTeamPlayers.find(ttp => ttp.playerId === player.id);
-      const playerTeam = playerTeamAssignment?.team;
-      const moneyChangeDetails: Array<{ description: string; amount: number }> = [];
+      for (const player of (tournament.selfFunded ? [] : attendingPlayers)) {
+        const attendance = tournament.playerAttendances.find(att => att.playerId === player.id);
+        if (!attendance) continue;
 
-      // Goalkeepers receive a 50% tournament-cost discount unless staff
-      // cancelled it from the end-tournament confirmation modal.
-      if (tournamentCostPerPlayer > 0) {
-        const isGoalkeeper = player.position === 'GK' || player.position === 'Goalkeeper';
-        const hasGkDiscount = isGoalkeeper && !cancelledGkDiscountPlayerIds.has(player.id);
-        const tournamentCost = hasGkDiscount
-          ? Math.round(tournamentCostPerPlayer / 2)
-          : tournamentCostPerPlayer;
-        moneyChangeDetails.push({
-          description: hasGkDiscount ? 'Chi phí giải đấu mỗi cầu thủ (GK giảm 50%)' : 'Chi phí giải đấu mỗi cầu thủ',
-          amount: -tournamentCost,
+        const playerTeamAssignment = tournament.tournamentTeamPlayers.find(ttp => ttp.playerId === player.id);
+        const playerTeam = playerTeamAssignment?.team;
+        const moneyChangeDetails: Array<{ description: string; amount: number }> = [];
+
+        // Goalkeepers receive a 50% tournament-cost discount unless staff
+        // cancelled it from the end-tournament confirmation modal.
+        if (tournamentCostPerPlayer > 0) {
+          const isGoalkeeper = player.position === 'GK' || player.position === 'Goalkeeper';
+          const hasGkDiscount = isGoalkeeper && !cancelledGkDiscountPlayerIds.has(player.id);
+          const tournamentCost = hasGkDiscount
+            ? Math.round(tournamentCostPerPlayer / 2)
+            : tournamentCostPerPlayer;
+          moneyChangeDetails.push({
+            description: hasGkDiscount ? 'Chi phí giải đấu mỗi cầu thủ (GK giảm 50%)' : 'Chi phí giải đấu mỗi cầu thủ',
+            amount: -tournamentCost,
+          });
+        }
+
+        if (attendance.notOnField && noShowPenalty > 0) {
+          moneyChangeDetails.push({ description: 'Phạt không lên sân', amount: -noShowPenalty });
+        }
+
+        const friendInvitePenalty = invitedFriendPenaltyByPlayerId.get(player.id) || 0;
+        if (friendInvitePenalty > 0) {
+          moneyChangeDetails.push({ description: friendInvitePenalty === 20000 ? 'Rủ bạn cùng đội (bao gồm phần bạn)' : 'Rủ bạn cùng đội', amount: -friendInvitePenalty });
+        }
+
+        const opponentId = challengeOpponentByPlayerId.get(player.id);
+        if (opponentId) {
+          const opponentTeam = tournament.tournamentTeamPlayers.find(assignment => assignment.playerId === opponentId)?.team;
+          if (playerTeam && opponentTeam && playerTeam.score !== opponentTeam.score) {
+            moneyChangeDetails.push({
+              description: playerTeam.score > opponentTeam.score ? 'Battle thắng' : 'Battle thua',
+              amount: playerTeam.score > opponentTeam.score ? 10000 : -10000,
+            });
+          }
+        }
+
+        for (const deadmatch of deadmatchesByPlayerId.get(player.id) || []) {
+          const deadmatchOpponentTeam = tournament.teams.find(
+            assignment => assignment.teamId === deadmatch.opponentTeamId,
+          )?.team;
+          if (playerTeam && deadmatchOpponentTeam && playerTeam.score !== deadmatchOpponentTeam.score) {
+            moneyChangeDetails.push({
+              description: playerTeam.score > deadmatchOpponentTeam.score ? 'Thắng Deadmatch' : 'Thua Deadmatch',
+              amount: playerTeam.score > deadmatchOpponentTeam.score ? 10000 : -10000,
+            });
+          }
+        }
+
+        // Betting calculations
+        if (!tournament.selfFunded && attendance.bet) {
+          if (playerTeam && playerTeam.id === winnerTeam.id) {
+            // Betting winner gets bonus
+            moneyChangeDetails.push({ description: 'Ngôi sao hy vọng thắng', amount: bettingWinBonus });
+          } else {
+            // Betting loser pays penalty
+            moneyChangeDetails.push({ description: 'Ngôi sao hy vọng thua', amount: -bettingLossAmount });
+          }
+        }
+
+        // Team loser penalty (in addition to betting penalty if applicable)
+        if (playerTeam && playerTeam.id === loserTeam.id) {
+          moneyChangeDetails.push({ description: 'Cầu thủ đội thua', amount: -teamLoserPenalty });
+        }
+
+        // Water cost (winner team gets free water)
+        if (!tournament.selfFunded && attendance.withWater && playerTeam && playerTeam.id !== winnerTeam.id) {
+          moneyChangeDetails.push({ description: 'Chi phí nước', amount: -waterCostPerPlayer });
+        }
+
+        const moneyChange = moneyChangeDetails.reduce((total, item) => total + item.amount, 0);
+
+        // A friend's tournament costs belong to the linked user's own player balance.
+        const payerId = player.friendOwner?.player?.id || player.id;
+        const payer = await tx.player.findUniqueOrThrow({ where: { id: payerId }, select: { id: true, money: true } });
+        const newMoney = payer.money + moneyChange;
+        await tx.player.update({
+          where: { id: payer.id },
+          data: { money: newMoney },
         });
-      }
 
-      if (attendance.notOnField && noShowPenalty > 0) {
-        moneyChangeDetails.push({ description: 'Phạt không lên sân', amount: -noShowPenalty });
-      }
+        await tx.playerMoneyHistory.create({
+          data: {
+            playerId: payer.id,
+            tournamentId: tournament.id,
+            amount: moneyChange,
+            balanceBefore: payer.money,
+            balanceAfter: newMoney,
+            description: player.friendOwnerId ? `Tổng kết giải đấu: ${tournament.name} (chi phí cho ${player.name})` : `Tổng kết giải đấu: ${tournament.name}`,
+            details: moneyChangeDetails,
+          },
+        });
 
-      const friendInvitePenalty = invitedFriendPenaltyByPlayerId.get(player.id) || 0;
-      if (friendInvitePenalty > 0) {
-        moneyChangeDetails.push({ description: friendInvitePenalty === 20000 ? 'Rủ bạn cùng đội (bao gồm phần bạn)' : 'Rủ bạn cùng đội', amount: -friendInvitePenalty });
-      }
-
-      const opponentId = challengeOpponentByPlayerId.get(player.id);
-      if (opponentId) {
-        const opponentTeam = tournament.tournamentTeamPlayers.find(assignment => assignment.playerId === opponentId)?.team;
-        if (playerTeam && opponentTeam && playerTeam.score !== opponentTeam.score) {
-          moneyChangeDetails.push({
-            description: playerTeam.score > opponentTeam.score ? 'Battle thắng' : 'Battle thua',
-            amount: playerTeam.score > opponentTeam.score ? 10000 : -10000,
-          });
-        }
-      }
-
-      for (const deadmatch of deadmatchesByPlayerId.get(player.id) || []) {
-        const deadmatchOpponentTeam = tournament.teams.find(
-          assignment => assignment.teamId === deadmatch.opponentTeamId,
-        )?.team;
-        if (playerTeam && deadmatchOpponentTeam && playerTeam.score !== deadmatchOpponentTeam.score) {
-          moneyChangeDetails.push({
-            description: playerTeam.score > deadmatchOpponentTeam.score ? 'Thắng Deadmatch' : 'Thua Deadmatch',
-            amount: playerTeam.score > deadmatchOpponentTeam.score ? 10000 : -10000,
-          });
-        }
-      }
-
-      // Betting calculations
-      if (!tournament.selfFunded && attendance.bet) {
-        if (playerTeam && playerTeam.id === winnerTeam.id) {
-          // Betting winner gets bonus
-          moneyChangeDetails.push({ description: 'Ngôi sao hy vọng thắng', amount: bettingWinBonus });
-        } else {
-          // Betting loser pays penalty
-          moneyChangeDetails.push({ description: 'Ngôi sao hy vọng thua', amount: -bettingLossAmount });
-        }
-      }
-
-      // Team loser penalty (in addition to betting penalty if applicable)
-      if (playerTeam && playerTeam.id === loserTeam.id) {
-        moneyChangeDetails.push({ description: 'Cầu thủ đội thua', amount: -teamLoserPenalty });
-      }
-
-      // Water cost (winner team gets free water)
-      if (!tournament.selfFunded && attendance.withWater && playerTeam && playerTeam.id !== winnerTeam.id) {
-        moneyChangeDetails.push({ description: 'Chi phí nước', amount: -waterCostPerPlayer });
-      }
-
-      const moneyChange = moneyChangeDetails.reduce((total, item) => total + item.amount, 0);
-
-      // A friend's tournament costs belong to the linked user's own player balance.
-      const payerId = player.friendOwner?.player?.id || player.id;
-      const payer = await prisma.player.findUniqueOrThrow({ where: { id: payerId }, select: { id: true, money: true } });
-      const newMoney = payer.money + moneyChange;
-      await prisma.player.update({
-        where: { id: payer.id },
-        data: { money: newMoney },
-      });
-
-      await prisma.playerMoneyHistory.create({
-        data: {
+        moneyUpdates.push({
           playerId: payer.id,
-          tournamentId: tournament.id,
-          amount: moneyChange,
-          balanceBefore: payer.money,
-          balanceAfter: newMoney,
-          description: player.friendOwnerId ? `Tổng kết giải đấu: ${tournament.name} (chi phí cho ${player.name})` : `Tổng kết giải đấu: ${tournament.name}`,
-          details: moneyChangeDetails,
+          oldMoney: payer.money,
+          newMoney,
+          change: moneyChange,
+        });
+
+        if (moneyChange > 0) {
+          totalAdded += moneyChange;
+        } else if (moneyChange < 0) {
+          totalDeducted += Math.abs(moneyChange);
+        }
+      }
+
+      // Update tournament status to completed
+      await tx.tournament.update({
+        where: { id },
+        data: { 
+          status: 'COMPLETED',
+          completedAt: new Date(),
+          sponsorMoney,
+          stadiumCost,
+          costPerPlayer: tournamentCostPerPlayer,
         },
       });
-
-      moneyUpdates.push({
-        playerId: payer.id,
-        oldMoney: payer.money,
-        newMoney,
-        change: moneyChange,
-      });
-
-      if (moneyChange > 0) {
-        totalAdded += moneyChange;
-      } else if (moneyChange < 0) {
-        totalDeducted += Math.abs(moneyChange);
-      }
-    }
-
-    // Update tournament status to completed
-    await prisma.tournament.update({
-      where: { id },
-      data: { 
-        status: 'COMPLETED',
-        completedAt: new Date(),
-        sponsorMoney,
-        stadiumCost,
-        costPerPlayer: tournamentCostPerPlayer,
-      },
     });
 
     res.json({
@@ -3306,9 +3315,12 @@ router.put('/:id/end', authenticate, authorize(['ADMIN', 'MOD']), async (req: Au
     });
   } catch (error) {
     console.error('End tournament error:', error);
-    res.status(500).json({
+    const message = error instanceof Error ? error.message : 'Failed to end tournament';
+    res.status(message === 'Tournament is no longer active' ? 409 : 500).json({
       success: false,
-      error: 'Failed to end tournament',
+      error: message === 'Tournament is no longer active'
+        ? 'Giải đấu không còn ở trạng thái đang diễn ra'
+        : 'Failed to end tournament',
     });
   }
 });

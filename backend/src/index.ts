@@ -47,9 +47,25 @@ const limiter = rateLimit({
   standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
   legacyHeaders: false, // Disable the `X-RateLimit-*` headers
   skip: (req) => {
-    // Auth requests and all development traffic are excluded to prevent login loops.
+    // Auth requests are excluded from the general limiter because they have
+    // their own stricter limiter below.
     return !rateLimitEnabled || req.path.startsWith('/api/auth');
   }
+});
+
+// Credential endpoints get a much tighter budget so passwords cannot be
+// brute-forced. Successful logins are not counted against the limit.
+const authLimiter = rateLimit({
+  windowMs: Number(process.env.AUTH_RATE_LIMIT_WINDOW_MS) || 15 * 60 * 1000,
+  max: Number(process.env.AUTH_RATE_LIMIT_MAX_REQUESTS) || 10,
+  message: {
+    success: false,
+    error: 'Too many login attempts. Please try again later.',
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+  skipSuccessfulRequests: true,
+  skip: () => !rateLimitEnabled,
 });
 
 // Middleware
@@ -101,6 +117,10 @@ app.get('/health', (req, res) => {
 });
 
 // API Routes
+app.use('/api/auth/login', authLimiter);
+app.use('/api/auth/register', authLimiter);
+app.use('/api/auth/forgot-password', authLimiter);
+app.use('/api/auth/reset-password', authLimiter);
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/players', playerRoutes);
@@ -173,12 +193,16 @@ app.use(errorHandler);
 
 // Start server
 app.listen(PORT, () => {
-  void assignMissingPlayerAvatars()
-    .then(() => undefined)
-    .catch(error => console.error('Unable to assign missing player avatars:', error));
-  void syncKnownPlayerRoster()
-    .then(() => undefined)
-    .catch(error => console.error('Unable to update known player roster:', error));
+  // One-off data repairs must be explicit. Running them on every boot would
+  // silently rewrite production player names and tiers.
+  if (process.env.RUN_STARTUP_DATA_SYNC === 'true') {
+    void assignMissingPlayerAvatars()
+      .then(() => undefined)
+      .catch(error => console.error('Unable to assign missing player avatars:', error));
+    void syncKnownPlayerRoster()
+      .then(() => undefined)
+      .catch(error => console.error('Unable to update known player roster:', error));
+  }
 });
 
 export default app;

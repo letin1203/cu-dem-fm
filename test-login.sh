@@ -1,5 +1,11 @@
 #!/bin/bash
 
+# Credentials are read from the environment so no password is committed.
+# Example: ADMIN_PASSWORD=... MOD_PASSWORD=... USER_PASSWORD=... ./test-login.sh
+: "${ADMIN_PASSWORD:?Set ADMIN_PASSWORD}"
+: "${MOD_PASSWORD:?Set MOD_PASSWORD}"
+: "${USER_PASSWORD:?Set USER_PASSWORD}"
+
 echo "🧪 Testing Cu Dem FM Login API..."
 echo
 
@@ -7,7 +13,7 @@ echo
 echo "1. Testing admin login:"
 ADMIN_RESPONSE=$(curl -s -X POST http://localhost:3001/api/auth/login \
   -H "Content-Type: application/json" \
-  -d '{"username": "admin", "password": "admin123"}')
+  -d "{\"username\": \"admin\", \"password\": \"$ADMIN_PASSWORD\"}")
 
 echo "$ADMIN_RESPONSE" | jq .
 if echo "$ADMIN_RESPONSE" | jq -r .success | grep -q true; then
@@ -22,7 +28,7 @@ echo
 echo "2. Testing moderator login:"
 MOD_RESPONSE=$(curl -s -X POST http://localhost:3001/api/auth/login \
   -H "Content-Type: application/json" \
-  -d '{"username": "moderator", "password": "mod123"}')
+  -d "{\"username\": \"moderator\", \"password\": \"$MOD_PASSWORD\"}")
 
 echo "$MOD_RESPONSE" | jq .
 if echo "$MOD_RESPONSE" | jq -r .success | grep -q true; then
@@ -35,7 +41,7 @@ echo
 echo "3. Testing user login:"
 USER_RESPONSE=$(curl -s -X POST http://localhost:3001/api/auth/login \
   -H "Content-Type: application/json" \
-  -d '{"username": "player1", "password": "user123"}')
+  -d "{\"username\": \"player1\", \"password\": \"$USER_PASSWORD\"}")
 
 echo "$USER_RESPONSE" | jq .
 if echo "$USER_RESPONSE" | jq -r .success | grep -q true; then
@@ -74,7 +80,7 @@ echo
 echo "🎉 All login tests completed!"
 echo
 echo "📋 Available login credentials:"
-echo "   Admin: username=admin, password=admin123"
-echo "   Moderator: username=moderator, password=mod123"
-echo "   User 1: username=player1, password=user123"
-echo "   User 2: username=player2, password=user123"
+echo "   Admin: username=admin (password from ADMIN_PASSWORD)"
+echo "   Moderator: username=moderator (password from MOD_PASSWORD)"
+echo "   User 1: username=player1 (password from USER_PASSWORD)"
+echo "   User 2: username=player2 (password from USER_PASSWORD)"

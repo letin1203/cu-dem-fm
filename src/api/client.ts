@@ -176,8 +176,8 @@ class ApiClient {
     }
   }
 
-  async register(userData: { username: string; email: string; password: string; role?: string }) {
-    return this.post('/auth/register', this.prepareUserDataForBackend(userData));
+  async register(userData: { username: string; email: string; password: string }) {
+    return this.post('/auth/register', userData);
   }
 
   async guestLogin() {

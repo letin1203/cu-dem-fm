@@ -1,13 +1,25 @@
 import { PrismaClient } from '@prisma/client';
 import bcrypt from 'bcryptjs';
+import { randomBytes } from 'crypto';
 
 const prisma = new PrismaClient();
+
+// Seed passwords must never be hardcoded. Set SEED_ADMIN_PASSWORD,
+// SEED_MOD_PASSWORD and SEED_USER_PASSWORD, or a random password is generated
+// and printed once so the seeded accounts stay usable.
+const seedPassword = (envName: string): string => {
+  const configured = process.env[envName];
+  if (configured) return configured;
+  const generated = randomBytes(18).toString('base64url');
+  console.log(`⚠️  ${envName} not set. Generated password: ${generated}`);
+  return generated;
+};
 
 async function main() {
   console.log('🌱 Starting database seed...');
 
   // Create admin user
-  const adminPassword = await bcrypt.hash('admin123', 12);
+  const adminPassword = await bcrypt.hash(seedPassword('SEED_ADMIN_PASSWORD'), 12);
   const admin = await prisma.user.upsert({
     where: { username: 'admin' },
     update: {},
@@ -20,7 +32,7 @@ async function main() {
   });
 
   // Create mod user
-  const modPassword = await bcrypt.hash('mod123', 12);
+  const modPassword = await bcrypt.hash(seedPassword('SEED_MOD_PASSWORD'), 12);
   const mod = await prisma.user.upsert({
     where: { username: 'moderator' },
     update: {},
@@ -352,7 +364,7 @@ async function main() {
   console.log(`✅ Created ${events.length} match events`);
 
   // Create some user players
-  const userPassword = await bcrypt.hash('user123', 12);
+  const userPassword = await bcrypt.hash(seedPassword('SEED_USER_PASSWORD'), 12);
   const regularUsers = await Promise.all([
     prisma.user.upsert({
       where: { username: 'player1' },
@@ -414,10 +426,10 @@ async function main() {
 
   console.log('🎉 Database seeding completed!');
   console.log('\n📋 Sample accounts:');
-  console.log('Admin: username="admin", password="admin123"');
-  console.log('Moderator: username="moderator", password="mod123"');
-  console.log('User 1: username="player1", password="user123"');
-  console.log('User 2: username="player2", password="user123"');
+  console.log('Admin: username="admin" (password from SEED_ADMIN_PASSWORD)');
+  console.log('Moderator: username="moderator" (password from SEED_MOD_PASSWORD)');
+  console.log('User 1: username="player1" (password from SEED_USER_PASSWORD)');
+  console.log('User 2: username="player2" (password from SEED_USER_PASSWORD)');
 }
 
 main()

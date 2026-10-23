@@ -279,8 +279,8 @@ datasource db {
 ### **Environment Variables Needed**
 ```env
 # Backend (.env)
-DATABASE_URL="postgresql://..."
-JWT_SECRET="your-secret-key"
+DATABASE_URL="postgresql://postgres:[YOUR-PASSWORD]@db.[YOUR-PROJECT-REF].supabase.co:5432/postgres"
+JWT_SECRET="<generate-a-strong-random-secret>"
 NODE_ENV="production"
 CORS_ORIGIN="https://your-frontend-domain.com"
 
@@ -364,10 +364,10 @@ postgresql://postgres:[YOUR-PASSWORD]@db.project-ref.supabase.co:5432/postgres
 Create `.env` file in `/backend/` folder:
 ```env
 # Supabase Database
-DATABASE_URL="postgresql://postgres:[YOUR-PASSWORD]@db.project-ref.supabase.co:5432/postgres"
+DATABASE_URL="postgresql://postgres:[YOUR-PASSWORD]@db.[YOUR-PROJECT-REF].supabase.co:5432/postgres"
 
 # JWT Secret (generate a random string)
-JWT_SECRET="your-super-secret-jwt-key-here"
+JWT_SECRET="<generate-a-strong-random-secret>"
 
 # CORS Origin (will update after Vercel deployment)
 CORS_ORIGIN="http://localhost:5173"
@@ -622,8 +622,8 @@ Go to your Render dashboard → Your service → Environment:
 
 ```bash
 # Required Environment Variables for Render:
-DATABASE_URL=postgresql://postgres:nf1bIPwDST0v5OAw@db.rjsczmpelcgacjkwaqhf.supabase.co:5432/postgres
-JWT_SECRET=cu-dem-fm-super-secret-jwt-key-2025-football-management
+DATABASE_URL="postgresql://postgres:[YOUR-PASSWORD]@db.[YOUR-PROJECT-REF].supabase.co:5432/postgres"
+JWT_SECRET="<generate-a-strong-random-secret>"
 NODE_ENV=production
 CORS_ORIGIN=https://your-vercel-app.vercel.app  # Will update after frontend deployment
 PORT=10000
@@ -703,8 +703,8 @@ dist/assets/index.js 270.15 kB │ gzip: 87.01 kB
 
 **Environment Variables Summary**:
 ```bash
-DATABASE_URL=postgresql://postgres:nf1bIPwDST0v5OAw@db.rjsczmpelcgacjkwaqhf.supabase.co:5432/postgres
-JWT_SECRET=cu-dem-fm-super-secret-jwt-key-2025-football-management
+DATABASE_URL="postgresql://postgres:[YOUR-PASSWORD]@db.[YOUR-PROJECT-REF].supabase.co:5432/postgres"
+JWT_SECRET="<generate-a-strong-random-secret>"
 NODE_ENV=production
 CORS_ORIGIN=https://cu-dem-fm.vercel.app
 PORT=10000
@@ -727,8 +727,8 @@ PORT=10000
 Go to [Render Dashboard](https://dashboard.render.com) → Your Service → Environment:
 
 ```bash
-DATABASE_URL=postgresql://postgres:nf1bIPwDST0v5OAw@db.rjsczmpelcgacjkwaqhf.supabase.co:5432/postgres
-JWT_SECRET=cu-dem-fm-super-secret-jwt-key-2025-football-management
+DATABASE_URL="postgresql://postgres:[YOUR-PASSWORD]@db.[YOUR-PROJECT-REF].supabase.co:5432/postgres"
+JWT_SECRET="<generate-a-strong-random-secret>"
 NODE_ENV=production
 CORS_ORIGIN=https://cu-dem-fm.vercel.app
 PORT=10000

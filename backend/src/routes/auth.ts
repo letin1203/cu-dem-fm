@@ -107,7 +107,7 @@ router.post('/login', async (req: Request, res: Response): Promise<void> => {
 // Register
 router.post('/register', async (req: Request, res: Response): Promise<void> => {
   try {
-    const { username, email, password, role } = registerSchema.parse(req.body);
+    const { username, email, password } = registerSchema.parse(req.body);
 
     // Check if user already exists
     const existingUser = await prisma.user.findFirst({
@@ -134,7 +134,7 @@ router.post('/register', async (req: Request, res: Response): Promise<void> => {
         username,
         email,
         password: hashedPassword,
-        role: role || 'USER',
+        role: 'USER',
       },
     });
 

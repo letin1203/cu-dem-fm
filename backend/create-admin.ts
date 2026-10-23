@@ -1,5 +1,6 @@
 import { PrismaClient } from '@prisma/client';
 import bcrypt from 'bcryptjs';
+import { randomBytes } from 'crypto';
 
 const prisma = new PrismaClient();
 
@@ -15,12 +16,18 @@ async function createAdmin() {
       return existingAdmin;
     }
 
-    // Create admin user
-    const hashedPassword = await bcrypt.hash('admin123', 10);
+    // Never hardcode the admin password. Provide ADMIN_PASSWORD explicitly, or
+    // let a strong random one be generated and printed once for local setup.
+    const password = process.env.ADMIN_PASSWORD || randomBytes(18).toString('base64url');
+    if (!process.env.ADMIN_PASSWORD) {
+      console.log('ADMIN_PASSWORD was not set. Generated password:', password);
+    }
+
+    const hashedPassword = await bcrypt.hash(password, 12);
     const adminUser = await prisma.user.create({
       data: {
-        email: 'admin@example.com',
-        username: 'admin',
+        email: process.env.ADMIN_EMAIL || 'admin@example.com',
+        username: process.env.ADMIN_USERNAME || 'admin',
         password: hashedPassword,
         role: 'ADMIN',
       },

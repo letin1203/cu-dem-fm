@@ -15,11 +15,12 @@ export const loginSchema = z.object({
   password: z.string().min(1, 'Password is required'),
 });
 
+// Public self-registration never accepts a role. Privileged accounts are only
+// created by an authenticated admin through the users API.
 export const registerSchema = z.object({
   username: z.string().min(3, 'Username must be at least 3 characters'),
   email: z.string().email('Invalid email format'),
   password: z.string().min(6, 'Password must be at least 6 characters'),
-  role: UserRole.optional(),
 });
 
 // User schemas

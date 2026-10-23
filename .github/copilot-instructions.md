@@ -8,12 +8,11 @@ This is a Vue 3 TypeScript application for managing football organizations with 
 - Vue 3 with Composition API and TypeScript
 - Vite for build tooling
 - Tailwind CSS for styling
-- Vue Router for navigation
+- Vue Router for navigation (lazy-loaded routes)
 - Pinia for state management
-- VueUse for composables
-- Headless UI for accessible components
-- Chart.js with vue-chartjs for statistics
-- VeeValidate with Zod for form validation
+- vue-toastification for notifications
+- SheetJS (`xlsx`) for Excel export, imported on demand
+- Express + Prisma + PostgreSQL backend in `backend/`
 
 ## Project Structure
 - Use Composition API with `<script setup>` syntax
@@ -23,13 +22,14 @@ This is a Vue 3 TypeScript application for managing football organizations with 
 - Use Tailwind CSS utility classes for styling
 - Implement responsive design principles
 
-## Key Features to Implement
-1. **Tournament Management**: Create, edit, delete tournaments with bracket systems
-2. **Match Management**: Schedule matches, record scores, track match history
-3. **Player Management**: Player profiles, statistics, team assignments
-4. **Team Management**: Team creation, player rosters, team statistics
-5. **Statistics Dashboard**: Charts and graphs showing various statistics
-6. **User Authentication**: Login/logout functionality (future implementation)
+## Key Features
+1. **Weekly Tournament**: attendance, team splitting, settlement (main screen)
+2. **Tournament Management**: create, edit, soft/permanent delete
+3. **Match Management**: schedule matches, record scores, track history
+4. **Player Management**: profiles, statistics, balances, top-up approvals
+5. **Team Management**: team creation, rosters, statistics
+6. **Statistics**: leaderboards and performance metrics
+7. **Authentication**: JWT with per-user token versioning
 
 ## Code Guidelines
 - Use TypeScript interfaces for all data models

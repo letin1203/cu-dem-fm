@@ -37,6 +37,7 @@ export const authenticate = async (
         email: true,
         role: true,
         isActive: true,
+        tokenVersion: true,
       },
     });
 
@@ -44,6 +45,15 @@ export const authenticate = async (
       res.status(401).json({
         success: false,
         error: 'Invalid token or user not active.',
+      });
+      return;
+    }
+
+    // A token issued before the last logout/password change is no longer valid.
+    if ((decoded.tokenVersion ?? 0) !== user.tokenVersion) {
+      res.status(401).json({
+        success: false,
+        error: 'Session expired. Please log in again.',
       });
       return;
     }
@@ -73,13 +83,13 @@ export const optionalAuthenticate = async (
   try {
     const token = req.header('Authorization')?.replace('Bearer ', '');
     if (!token) { next(); return; }
-    const decoded = jwt.verify(token, process.env.JWT_SECRET!) as { userId?: string };
+    const decoded = jwt.verify(token, process.env.JWT_SECRET!) as { userId?: string; tokenVersion?: number };
     if (!decoded.userId) { next(); return; }
     const user = await prisma.user.findUnique({
       where: { id: decoded.userId },
-      select: { id: true, username: true, email: true, role: true, isActive: true },
+      select: { id: true, username: true, email: true, role: true, isActive: true, tokenVersion: true },
     });
-    if (user?.isActive) {
+    if (user?.isActive && (decoded.tokenVersion ?? 0) === user.tokenVersion) {
       req.user = { id: user.id, username: user.username, email: user.email, role: user.role as 'ADMIN' | 'MOD' | 'USER' | 'GUEST' };
     }
   } catch {

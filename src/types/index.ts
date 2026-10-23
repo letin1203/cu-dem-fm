@@ -108,6 +108,8 @@ export interface Tournament {
   isProtected?: boolean
   maxAttendance?: number | null
   cancellationDeadline?: string | Date | null
+  costPerPlayer?: number
+  completedAt?: string | Date | null
   teams: Team[]
   tournamentTeamPlayers?: TournamentTeamPlayer[]
   additionalCosts?: AdditionalCost[]
@@ -150,7 +152,6 @@ export interface SystemSettings {
   sponsorMoney: number
   noShowPenalty: number
   clubFund: number
-  waterCost?: number
   createdAt: string | Date
   updatedAt: string | Date
 }
@@ -267,30 +268,6 @@ export interface TournamentAttendanceStats {
   nullCount: number
   responseRate: string
   attendanceRate: string
-}
-
-export interface TournamentAttendanceDetails {
-  id: string
-  status: 'NULL' | 'NOT_ATTEND' | 'ATTEND'
-  withWater?: boolean
-  bet?: boolean
-  field5?: boolean
-  field7?: boolean
-  notOnField?: boolean
-  registeredAt?: string | Date | null
-  addedBy?: { username: string } | null
-  tournamentId: string
-  playerId: string
-  createdAt: string | Date
-  updatedAt: string | Date
-  player: {
-    id: string
-    name: string
-    position: string
-    positionSecond?: string | null
-    tier: number
-    avatar?: string
-  }
 }
 
 export interface TournamentEndResponse {

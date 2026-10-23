@@ -19,7 +19,7 @@ router.post('/guest-login', async (_req: Request, res: Response): Promise<void> 
       update: { isActive: true, role: 'GUEST' },
       create: { username: 'guest', email: 'guest@cu-dem.local', password: await bcrypt.hash(randomBytes(24).toString('hex'), 12), role: 'GUEST', isActive: true },
     });
-    const token = jwt.sign({ userId: user.id }, process.env.JWT_SECRET!, { expiresIn: '7d' });
+    const token = jwt.sign({ userId: user.id, tokenVersion: user.tokenVersion }, process.env.JWT_SECRET!, { expiresIn: '7d' });
     res.json({ success: true, data: { user: { id: user.id, username: user.username, email: user.email, role: user.role, player: null }, token } });
   } catch (error) {
     res.status(500).json({ success: false, error: error instanceof Error ? error.message : 'Không thể đăng nhập khách' });
@@ -78,7 +78,7 @@ router.post('/login', async (req: Request, res: Response): Promise<void> => {
     });
 
     const token = jwt.sign(
-      { userId: user.id },
+      { userId: user.id, tokenVersion: user.tokenVersion },
       process.env.JWT_SECRET!,
       { expiresIn: '7d' }
     );
@@ -139,7 +139,7 @@ router.post('/register', async (req: Request, res: Response): Promise<void> => {
     });
 
     const token = jwt.sign(
-      { userId: user.id },
+      { userId: user.id, tokenVersion: user.tokenVersion },
       process.env.JWT_SECRET!,
       { expiresIn: '7d' }
     );
@@ -231,6 +231,8 @@ router.post('/reset-password', async (req: Request, res: Response): Promise<void
         passwordResetTokenHash: null,
         passwordResetExpiresAt: null,
         passwordResetStatus: 'NONE',
+        // Invalidate sessions that were opened with the old password.
+        tokenVersion: { increment: 1 },
       },
     });
     res.json({ success: true, message: 'Đặt lại mật khẩu thành công.' });
@@ -304,13 +306,20 @@ router.get('/me', authenticate, async (req: AuthenticatedRequest, res: Response)
   }
 });
 
-// Logout (token blacklisting would be implemented with Redis)
+// Logout revokes every token issued for this user by bumping tokenVersion.
 router.post('/logout', authenticate, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
-  // In a real implementation, you would add the token to a blacklist in Redis
-  res.json({
-    success: true,
-    message: 'Logged out successfully',
-  });
+  try {
+    await prisma.user.update({
+      where: { id: req.user!.id },
+      data: { tokenVersion: { increment: 1 } },
+    });
+    res.json({
+      success: true,
+      message: 'Logged out successfully',
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, error: 'Không thể đăng xuất' });
+  }
 });
 
 export { router as authRoutes };

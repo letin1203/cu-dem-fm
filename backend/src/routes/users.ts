@@ -1,5 +1,6 @@
 import { Router, Response } from 'express';
 import bcrypt from 'bcryptjs';
+import { randomBytes } from 'crypto';
 import { prisma } from '../lib/prisma';
 import { updateUserSchema, paginationSchema } from '../schemas/validation';
 import { authenticate, authorize, AuthenticatedRequest } from '../middleware/auth';
@@ -544,8 +545,10 @@ router.post('/bulk-user-player', authenticate, authorize(['ADMIN']), async (req:
       },
     });
 
-    // Create user linked to the player
-    const hashedPassword = await bcrypt.hash('123456', 12);
+    // Create user linked to the player. A random password is generated and
+    // returned once instead of using a shared, guessable default.
+    const generatedPassword = randomBytes(9).toString('base64url');
+    const hashedPassword = await bcrypt.hash(generatedPassword, 12);
     const user = await prisma.user.create({
       data: {
         username,
@@ -587,6 +590,8 @@ router.post('/bulk-user-player', authenticate, authorize(['ADMIN']), async (req:
       success: true,
       data: {
         user,
+        // Shown once so the admin can hand the credentials to the player.
+        temporaryPassword: generatedPassword,
         player: {
           id: player.id,
           name: player.name,

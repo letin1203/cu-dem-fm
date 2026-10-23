@@ -41,7 +41,6 @@
     "jsonwebtoken": "^9.0.2",
     "morgan": "^1.10.0",
     "prisma": "^5.7.1",
-    "redis": "^4.6.12",
     "typescript": "^5.3.3",
     "zod": "^3.22.4"
   },

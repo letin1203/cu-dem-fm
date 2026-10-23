@@ -4,5 +4,6 @@ export function formatMoney(value: number | null | undefined): string {
 
   if (absoluteAmount < 1000) return `${amount.toLocaleString('vi-VN')} ₫`
 
-  return `${(amount / 1000).toLocaleString('vi-VN', { maximumFractionDigits: 0 })}K ₫`
+  // Keep one decimal so 1.500 ₫ renders as "1,5K ₫" instead of rounding to 2K.
+  return `${(amount / 1000).toLocaleString('vi-VN', { maximumFractionDigits: 1 })}K ₫`
 }

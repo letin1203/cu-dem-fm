@@ -534,7 +534,6 @@ import { usePlayersStore } from "../stores/players";
 import { useSystemStore } from "../stores/system";
 import { apiClient } from "../api/client";
 import { useToast } from "vue-toastification";
-import * as XLSX from "xlsx";
 import {
   TrophyIcon,
   CalendarIcon,
@@ -674,7 +673,7 @@ const formatMoney = (amount: number | null | undefined) => formatCompactMoney(am
 const formatCompactMoney = (amount: number | null | undefined) => {
   const value = typeof amount === "number" && Number.isFinite(amount) ? amount : 0;
   return Math.abs(value) >= 1000
-    ? `${(value / 1000).toLocaleString("vi-VN", { maximumFractionDigits: 0 })}K`
+    ? `${(value / 1000).toLocaleString("vi-VN", { maximumFractionDigits: 1 })}K`
     : value.toLocaleString("vi-VN");
 };
 
@@ -708,6 +707,8 @@ function formatPlayerMoneyDetails(details: unknown) {
 async function exportFundHistory() {
   exportingFundHistory.value = true;
   try {
+    // xlsx is only needed for this export, so keep it out of the initial bundle.
+    const XLSX = await import("xlsx");
     const [fundHistoryResponse, playerMoneyHistoryResponse] = await Promise.all([
       apiClient.getFundHistory(),
       apiClient.getAllPlayerMoneyHistory(),

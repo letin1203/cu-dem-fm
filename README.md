@@ -16,13 +16,13 @@ A comprehensive Vue 3 TypeScript web application for managing football organizat
 - **Frontend Framework**: Vue 3 with Composition API and TypeScript
 - **Build Tool**: Vite
 - **Styling**: Tailwind CSS
-- **Routing**: Vue Router 4
+- **Routing**: Vue Router 4 (lazy-loaded routes)
 - **State Management**: Pinia
-- **UI Components**: Headless UI Vue
 - **Icons**: Heroicons
-- **Charts**: Chart.js with vue-chartjs
-- **Form Validation**: VeeValidate with Zod
-- **Utilities**: VueUse
+- **Notifications**: vue-toastification
+- **Excel export**: SheetJS (`xlsx`, loaded on demand)
+- **Backend**: Express + Prisma + PostgreSQL
+- **Auth**: JWT with per-user token versioning (logout revokes tokens)
 
 ## 📁 Project Structure
 
@@ -31,13 +31,13 @@ src/
 ├── components/          # Reusable UI components
 │   ├── Navigation.vue   # Main navigation component
 │   └── StatsCard.vue    # Statistics display card
-├── views/              # Page components
-│   ├── Dashboard.vue    # Main dashboard view
+├── views/              # Page components (lazy-loaded)
+│   ├── WeeklyTournament.vue  # Main attendance/settlement screen
 │   ├── Teams.vue        # Team management
 │   ├── Players.vue      # Player management
 │   ├── Tournaments.vue  # Tournament management
 │   ├── Matches.vue      # Match management
-│   └── Statistics.vue   # Statistics and analytics
+│   └── Stats.vue        # Statistics and analytics
 ├── stores/             # Pinia stores for state management
 │   ├── players.ts       # Player data management
 │   ├── teams.ts         # Team data management
@@ -78,15 +78,17 @@ src/
 
 ## 📊 Features Overview
 
-### Dashboard
-- Overview statistics cards
-- Recent matches and top scorers
-- League table preview
+### Weekly Tournament (main screen)
+- Attendance registration with 5-a-side / 7-a-side pitch choices
+- Balanced team generation by tier, with GK protection
+- Swap requests, challenges, deadmatches and friend invites
+- End-of-tournament settlement: per-player cost, GK discount, water,
+  betting, no-show penalty, and a full money-history audit trail
 
 ### Tournament Management
-- Create tournaments with different formats
+- Create tournaments with different formats (score / league)
 - Track tournament status and progress
-- Manage participating teams
+- Manage participating teams, soft delete and permanent delete
 
 ### Match Management
 - Schedule matches between teams
@@ -101,10 +103,9 @@ src/
 ### Player Management
 - Maintain detailed player profiles
 - Track individual statistics (goals, assists, cards, etc.)
-- Assign players to teams
+- Assign players to teams, manage balances and top-up approvals
 
 ### Statistics & Analytics
-- Interactive charts and graphs
 - Performance metrics and trends
 - Top scorers and team rankings
 
@@ -112,7 +113,8 @@ src/
 
 The application uses Tailwind CSS with a custom color palette:
 
-- **Primary**: Blue tones for main actions and branding
+- **Primary**: Lavender tones for main actions and branding
+- **Secondary**: Soft pink accents
 - **Success**: Green for positive actions and success states
 - **Warning**: Yellow for cautionary information
 - **Danger**: Red for destructive actions and errors
@@ -134,8 +136,30 @@ The application uses Pinia for state management with separate stores for:
 - Teams
 - Tournaments
 - Matches
+- System settings
+- Auth
 
 Each store provides CRUD operations and computed properties for data manipulation.
+
+### Backend
+
+```bash
+cd backend
+npm install
+npx prisma generate
+npm run dev          # http://localhost:3001
+```
+
+Environment variables are documented in `backend/.env.example`. Notable ones:
+
+| Variable | Purpose |
+|---|---|
+| `JWT_SECRET` | Token signing key (required) |
+| `DATABASE_URL` | PostgreSQL connection string |
+| `AUTH_RATE_LIMIT_MAX_REQUESTS` | Login attempts per window (default 10) |
+| `DATABASE_ADMIN_ALLOW_WRITES` | Allow non-SELECT queries in the DB admin page |
+| `RUN_STARTUP_DATA_SYNC` | Run one-off roster/avatar repairs on boot |
+| `SEED_ADMIN_PASSWORD` / `SEED_MOD_PASSWORD` / `SEED_USER_PASSWORD` | Seed script passwords |
 
 ## 🚀 Deployment
 

@@ -1,20 +1,23 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
-import Tournaments from '../views/Tournaments.vue'
-import WeeklyTournament from '../views/WeeklyTournament.vue'
-// ...existing code...
-import Matches from '../views/Matches.vue'
-import Players from '../views/Players.vue'
-import Teams from '../views/Teams.vue'
-import Users from '../views/Users.vue'
-import PlayerProfile from '../views/PlayerProfile.vue'
-import SystemSettings from '../views/SystemSettings.vue'
-import DatabaseAdmin from '../views/DatabaseAdmin.vue'
-import MoneyTopUpApprovals from '../views/MoneyTopUpApprovals.vue'
-import Login from '../components/Login.vue'
-import ResetPassword from '../components/ResetPassword.vue'
-import Stats from '../views/Stats.vue'
-import TeamSplitTest from '../views/TeamSplitTest.vue'
+import type { Permission } from '../types'
+
+// Views are lazy-loaded so the initial bundle stays small; WeeklyTournament
+// alone is several hundred KB.
+const Tournaments = () => import('../views/Tournaments.vue')
+const WeeklyTournament = () => import('../views/WeeklyTournament.vue')
+const Matches = () => import('../views/Matches.vue')
+const Players = () => import('../views/Players.vue')
+const Teams = () => import('../views/Teams.vue')
+const Users = () => import('../views/Users.vue')
+const PlayerProfile = () => import('../views/PlayerProfile.vue')
+const SystemSettings = () => import('../views/SystemSettings.vue')
+const DatabaseAdmin = () => import('../views/DatabaseAdmin.vue')
+const MoneyTopUpApprovals = () => import('../views/MoneyTopUpApprovals.vue')
+const Login = () => import('../components/Login.vue')
+const ResetPassword = () => import('../components/ResetPassword.vue')
+const Stats = () => import('../views/Stats.vue')
+const TeamSplitTest = () => import('../views/TeamSplitTest.vue')
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -124,6 +127,10 @@ router.beforeEach((to, from, next) => {
   } else if (requiresGuest && authStore.isAuthenticated) {
     next('/')
   } else if (to.meta.roles && !(to.meta.roles as string[]).includes(authStore.currentUser?.role || '')) {
+    next('/')
+  } else if (to.meta.role && to.meta.role !== authStore.currentUser?.role) {
+    next('/')
+  } else if (to.meta.permission && !authStore.hasPermission(to.meta.permission as keyof Permission)) {
     next('/')
   } else {
     next()

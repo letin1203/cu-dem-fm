@@ -2097,8 +2097,9 @@ router.get('/:id/attendance-stats', authenticate, async (req: AuthenticatedReque
       return;
     }
 
-    // Get total number of players
-    const totalPlayers = await prisma.player.count();
+    // Count only active players so this matches the roster returned by
+    // /attendance-details; inactive players must not inflate nullCount.
+    const totalPlayers = await prisma.player.count({ where: { isActive: true } });
 
     // Get attendance statistics
     const attendanceStats = await prisma.tournamentPlayerAttendance.findMany({
@@ -3133,7 +3134,6 @@ router.put('/:id/end', authenticate, authorize(['ADMIN', 'MOD']), async (req: Au
     }
 
     // Get tournament settings
-    const loserPenalty = 50000; // Default loser penalty
     const waterCostPerPlayer = 10000; // Water cost
     const bettingWinAmount = 10000; // Fixed betting win amount
     const bettingLossAmount = 10000; // Betting loss penalty

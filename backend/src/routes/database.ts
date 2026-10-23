@@ -137,21 +137,53 @@ router.post('/query', async (req, res) => {
       })
     }
 
-    // Basic validation to prevent dangerous operations
-    const dangerousKeywords = ['DROP DATABASE', 'DROP SCHEMA', 'TRUNCATE', 'DELETE FROM users', 'UPDATE users SET password']
-    const upperQuery = query.toUpperCase()
-    
-    for (const keyword of dangerousKeywords) {
-      if (upperQuery.includes(keyword)) {
+    // Strip comments and trailing semicolons so the statement can be classified
+    // reliably, then reject stacked statements outright.
+    const normalized = query
+      .replace(/--[^\n]*/g, ' ')
+      .replace(/\/\*[\s\S]*?\*\//g, ' ')
+      .trim()
+      .replace(/;+\s*$/, '')
+
+    if (!normalized) {
+      return res.status(400).json({ success: false, error: 'Query is empty' })
+    }
+
+    if (normalized.includes(';')) {
+      return res.status(400).json({
+        success: false,
+        error: 'Only a single statement is allowed'
+      })
+    }
+
+    const statement = normalized.toUpperCase()
+    const isReadOnly = /^(SELECT|WITH|EXPLAIN|SHOW)\b/.test(statement)
+    const allowWrites = process.env.DATABASE_ADMIN_ALLOW_WRITES === 'true'
+
+    if (!isReadOnly && !allowWrites) {
+      return res.status(403).json({
+        success: false,
+        error: 'Only read-only queries are allowed. Set DATABASE_ADMIN_ALLOW_WRITES=true to enable writes.'
+      })
+    }
+
+    // Schema-destructive statements stay blocked even when writes are enabled.
+    const forbidden = [
+      'DROP DATABASE', 'DROP SCHEMA', 'TRUNCATE',
+      'ALTER ROLE', 'ALTER USER', 'CREATE ROLE', 'CREATE USER',
+      'GRANT ', 'REVOKE ', 'COPY ', 'PG_READ_FILE', 'PG_READ_BINARY_FILE',
+    ]
+    for (const keyword of forbidden) {
+      if (statement.includes(keyword)) {
         return res.status(400).json({
           success: false,
-          error: `Dangerous operation detected: ${keyword}. This query is not allowed.`
+          error: `Operation not allowed: ${keyword.trim()}`
         })
       }
     }
 
     // Execute raw SQL query
-    const result = await prisma.$queryRawUnsafe(query)
+    const result = await prisma.$queryRawUnsafe(normalized)
     
     // Handle different types of results
     let data: any[] = []

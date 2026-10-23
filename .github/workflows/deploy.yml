@@ -9,77 +9,75 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
-    
+
     steps:
     - uses: actions/checkout@v4
-    
+
     - name: Setup Node.js
       uses: actions/setup-node@v4
       with:
-        node-version: '22'
+        node-version-file: '.nvmrc'
         cache: 'npm'
-    
+
     - name: Install dependencies (Frontend)
       run: npm ci
-    
+
     - name: Install dependencies (Backend)
       run: |
         cd backend
         npm ci
-    
-    - name: Build Frontend
+
+    - name: Type check and build Frontend
       run: npm run build
-    
+
     - name: Build Backend
       run: |
         cd backend
         npm run build
-    
-    - name: Run Tests (if available)
+
+    - name: Audit dependencies
       run: |
-        # Add your test commands here
-        echo "Tests would run here"
+        npm audit --audit-level=critical
+        cd backend
+        npm audit --audit-level=critical
 
   deploy-frontend:
     needs: test
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main'
-    
+
     steps:
     - uses: actions/checkout@v4
-    
+
     - name: Setup Node.js
       uses: actions/setup-node@v4
       with:
-        node-version: '22'
+        node-version-file: '.nvmrc'
         cache: 'npm'
-    
+
     - name: Install dependencies
       run: npm ci
-    
+
     - name: Build
       run: npm run build
       env:
         VITE_API_BASE_URL: ${{ secrets.VITE_API_BASE_URL }}
-    
+
     - name: Deploy to Vercel
-      uses: vercel/action@v1
-      with:
-        vercel-token: ${{ secrets.VERCEL_TOKEN }}
-        vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
-        vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
-        vercel-args: '--prod'
+      run: npx vercel deploy --prod --yes --token "$VERCEL_TOKEN"
+      env:
+        VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+        VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+        VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
 
   deploy-backend:
     needs: test
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main'
-    
+
     steps:
-    - uses: actions/checkout@v4
-    
     - name: Deploy to Render
       run: |
-        curl -X POST "${{ secrets.RENDER_DEPLOY_HOOK }}" \
+        curl -fsS -X POST "${{ secrets.RENDER_DEPLOY_HOOK }}" \
           -H "Content-Type: application/json" \
           -d '{}'

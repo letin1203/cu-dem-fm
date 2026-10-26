@@ -71,38 +71,51 @@ export function generateBalancedTeams(
 
   const countTier = (team: GeneratedTeam, tier: number) =>
     team.players.filter((player) => player.tier === tier).length;
+  const countLowTier = (team: GeneratedTeam) =>
+    team.players.filter((player) => player.tier <= 2).length;
   for (let tier = 1; tier <= 6; tier++) {
     for (const player of shuffled(remaining.filter((candidate) => candidate.tier === tier))) {
+      if (tier <= 2) {
+        // Tier 1-2 are protected from later balancing, so their distribution
+        // is decided here and must not be overridden by team capacity.
+        // Pick the team that keeps the T1+T2 count as even as possible, then
+        // prefer the team with fewer Tier 1 players. This puts the extra slot
+        // of an uneven split on a team without a Tier 1 player, e.g.
+        // 2xT1 + 5xT2 over 3 teams becomes T1T2 / T1T2 / T2T2T2.
+        const lowCounts = teams.map(countLowTier);
+        const spreadAfterAdding = (index: number) => {
+          const next = [...lowCounts];
+          next[index] += 1;
+          return Math.max(...next) - Math.min(...next);
+        };
+        const candidates = teams.map((team, index) => ({ team, index }));
+        candidates.sort((a, b) => {
+          const spreadDifference = spreadAfterAdding(a.index) - spreadAfterAdding(b.index);
+          if (spreadDifference) return spreadDifference;
+          const tierOneDifference = countTier(a.team, 1) - countTier(b.team, 1);
+          if (tierOneDifference) return tierOneDifference;
+          const tierDifference = countTier(a.team, tier) - countTier(b.team, tier);
+          if (tierDifference) return tierDifference;
+          const sizeDifference = a.team.players.length - b.team.players.length;
+          if (sizeDifference) return sizeDifference;
+          return a.team.totalTier - b.team.totalTier || Math.random() - 0.5;
+        });
+        add(candidates[0].index, player);
+        continue;
+      }
+
       const eligible = teams
         .map((team, index) => ({ team, index }))
         .filter(({ team, index }) => team.players.length < targets[index]);
       const pool = eligible.length ? eligible : teams.map((team, index) => ({ team, index }));
       let candidates = pool;
-      if (tier <= 2) {
-        // Tier 1-2 are protected from later balancing. For Tier 2, a team
-        // with fewer Tier 1 players must always be considered first; this is
-        // the primary strength-distribution rule, not merely a tie-break.
-        const lowTierCount = ({ team }: { team: GeneratedTeam }) =>
-          team.players.filter((player) => player.tier <= 2).length;
-        
-        const minLowTierCount = Math.min(...pool.map(lowTierCount));
-        candidates = pool.filter((candidate) => lowTierCount(candidate) === minLowTierCount);
-        
-        const minCount = Math.min(...candidates.map(({ team }) => countTier(team, tier)));
-        candidates = candidates.filter(({ team }) => countTier(team, tier) === minCount);
+      if (tier === 3) {
+        // Tier 3 is the first flexible balancing tier. Teams that already
+        // received more Tier 1-2 players should receive fewer Tier 3 players.
+        const minLowTierCount = Math.min(...pool.map(({ team }) => countLowTier(team)));
+        candidates = pool.filter(({ team }) => countLowTier(team) === minLowTierCount);
       }
       candidates.sort((a, b) => {
-        // Tier 3 is the first flexible balancing tier. Teams that already
-        // received more Tier 1–2 players should receive fewer Tier 3 players.
-        if (tier === 2) {
-          const tierOneDifference = countTier(a.team, 1) - countTier(b.team, 1);
-          if (tierOneDifference) return tierOneDifference;
-        }
-        if (tier === 3) {
-          const lowTierDifference = a.team.players.filter((player) => player.tier <= 2).length
-            - b.team.players.filter((player) => player.tier <= 2).length;
-          if (lowTierDifference) return lowTierDifference;
-        }
         const capacityDifference = a.team.players.length / targets[a.index] - b.team.players.length / targets[b.index];
         if (capacityDifference) return capacityDifference;
         const tierDifference = a.team.totalTier - b.team.totalTier;

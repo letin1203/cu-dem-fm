@@ -164,7 +164,7 @@
     </div>
     <TeamSplitProgressModal ref="teamSplitProgressModalRef" v-if="showTeamSplitProgressModal" :model-value="true" :team-count="teamCount" :stage="teamSplitStep + 1" :title="teamSplitSteps[teamSplitStep]?.title || ''" :description="teamSplitSteps[teamSplitStep]?.description || ''" :is-assigning-goalkeeper="isAssigningGoalkeeper" :desktop-ai-words="desktopAiThoughtWords" :mobile-ai-words="mobileAiThoughtWords" :ai-sequence="aiThoughtSequence" max-width-class="max-w-6xl" :modal-style="teamSplitModalStyle">
           <template #groups>
-            <div class="grid gap-3 md:grid-cols-5">
+            <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-5">
               <div
                 v-for="group in splitProgressGroups"
                 :key="group.label"
@@ -174,7 +174,7 @@
                   teamSplitStep >= group.step
                     ? 'border-primary-300 bg-primary-50'
                     : 'border-gray-200 bg-gray-50 opacity-60',
-                  group.span === 2 ? 'md:col-span-2' : '',
+                  group.span === 2 ? 'sm:col-span-2' : '',
                 ]"
               >
                 <p class="mb-3 text-center text-sm font-semibold text-gray-800">
@@ -882,15 +882,33 @@ const selectedPlayers = computed(() =>
     (a, b) => a.tier - b.tier || a.name.localeCompare(b.name, "vi"),
   ),
 );
+// Canonical display order for a split team: goalkeeper first, then Tier
+// ascending, then name. Applied after the final swaps so the finished list
+// never shows a weaker player above a stronger one.
+const sortSplitTeamPlayers = (team: Player[]): Player[] =>
+  [...team].sort(
+    (a, b) =>
+      (isGoalkeeper(b) ? 1 : 0) - (isGoalkeeper(a) ? 1 : 0) ||
+      a.tier - b.tier ||
+      a.name.localeCompare(b.name, "vi"),
+  );
 const teamSplitModalStyle = computed(() => {
   if (viewportWidth.value < 1024) return {};
   const maxPlayersPerTeam = Math.ceil(selectedPlayers.value.length / teamCount.value);
   const groupCounts = [
-    selectedPlayers.value.filter((player) => player.tier <= 2).length,
-    selectedPlayers.value.filter((player) => player.tier >= 3 && player.tier <= 4).length,
-    selectedPlayers.value.filter((player) => player.tier >= 5).length,
+    selectedPlayers.value.filter((player) => isGoalkeeper(player)).length,
+    selectedPlayers.value.filter((player) => !isGoalkeeper(player) && player.tier <= 2).length,
+    selectedPlayers.value.filter((player) => !isGoalkeeper(player) && player.tier >= 3 && player.tier <= 4).length,
+    selectedPlayers.value.filter((player) => !isGoalkeeper(player) && player.tier >= 5).length,
   ];
-  const tierRows = Math.max(1, Math.ceil(Math.max(...groupCounts) / 5));
+  // Tier 3-4 spans two of the five columns, so it fits twice as many per row.
+  const tierRows = Math.max(
+    1,
+    Math.ceil(groupCounts[0] / 5),
+    Math.ceil(groupCounts[1] / 5),
+    Math.ceil(groupCounts[2] / 10),
+    Math.ceil(groupCounts[3] / 5),
+  );
   const estimatedHeight = 230 + tierRows * 62 + maxPlayersPerTeam * 35 + 120;
   return { height: `${Math.min(Math.max(540, estimatedHeight), Math.floor(viewportHeight.value * 0.9))}px` };
 });
@@ -1339,7 +1357,13 @@ async function splitTeams() {
       await nextTick();
       await pause(1000);
     }
-    teams.value = finalTeams;
+    // The final swaps move players between teams, so re-sort each team:
+    // GK first, then Tier ascending. Otherwise a Tier 4 can sit above a
+    // Tier 3 in the finished list.
+    processingTeams.value = processingTeams.value.map((team) =>
+      sortSplitTeamPlayers(team),
+    );
+    teams.value = finalTeams.map((team) => sortSplitTeamPlayers(team));
     teamSplitStep.value = 6;
     teamSplitComplete.value = true;
     await nextTick();

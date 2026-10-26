@@ -5842,7 +5842,7 @@
     max-width-class="max-w-7xl"
   >
     <template #groups>
-      <div class="grid gap-3 md:grid-cols-5">
+      <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-5">
         <div
           v-for="group in liveSplitProgressGroups"
           :key="group.label"
@@ -5855,7 +5855,7 @@
             liveTeamSplitStage >= group.step
               ? 'border-primary-300 bg-primary-50'
               : 'border-gray-200 bg-gray-50 opacity-60',
-            group.span === 2 ? 'md:col-span-2' : '',
+            group.span === 2 ? 'sm:col-span-2' : '',
           ]"
         >
           <p class="mb-3 text-center text-sm font-semibold text-gray-800">
@@ -10618,6 +10618,21 @@ const getLiveTeamTextClass = (index: number): string =>
   ] || "text-gray-700";
 const getTeamShirtLabel = (index: number): string =>
   ["Áo xanh lá", "Áo cam", "Áo xanh dương", "Áo trắng"][index] || "Áo trắng";
+
+// Canonical display order for a split team: goalkeeper first, then Tier
+// ascending, then name. Used both when the split starts and after the final
+// swaps so the finished list never shows a weaker player above a stronger one.
+const sortSplitTeamPlayers = (team: any[]): any[] =>
+  [...team].sort((first, second) => {
+    const firstIsGoalkeeper = isGoalkeeper(first.position);
+    const secondIsGoalkeeper = isGoalkeeper(second.position);
+    if (firstIsGoalkeeper !== secondIsGoalkeeper)
+      return firstIsGoalkeeper ? -1 : 1;
+    return (
+      first.tier - second.tier ||
+      String(first.name).localeCompare(String(second.name), "vi")
+    );
+  });
 const getLivePlayerStatsInsight = (player: any): string => {
   const stats = livePlayerStatsInsights.value[player.id];
   if (
@@ -11058,6 +11073,13 @@ const playLiveTeamSplit = async (
     "bằng.",
   ];
   liveDesktopAiWords.value = [...liveMobileAiWords.value];
+  // The final swaps move players between teams, so each team must be sorted
+  // again: GK first, then Tier ascending. Without this a Tier 4 can appear
+  // above a Tier 3 in the finished list.
+  liveTeamSplitTeams.value = liveTeamSplitTeams.value.map((team) =>
+    sortSplitTeamPlayers(team),
+  );
+  await nextTick();
   liveTeamSplitDone.value = true;
 };
 

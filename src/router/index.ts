@@ -68,7 +68,7 @@ const router = createRouter({
       component: Stats,
       meta: { requiresAuth: true, permission: 'canViewPlayers' }
     },
-    { path: '/test-chia-team', name: 'teamSplitTest', component: TeamSplitTest, meta: { requiresAuth: true } },
+    { path: '/test-chia-team', name: 'teamSplitTest', component: TeamSplitTest, meta: { requiresAuth: true, allowGuest: true } },
     {
       path: '/my-profile',
       name: 'playerProfile',
@@ -119,10 +119,13 @@ router.beforeEach((to, from, next) => {
   }
   const requiresAuth = to.matched.some(record => record.meta.requiresAuth)
   const requiresGuest = to.matched.some(record => record.meta.requiresGuest)
+  // Guests are normally confined to the weekly tournament screen; a route can
+  // opt in with meta.allowGuest when it is safe for them to open.
+  const allowGuest = to.matched.some(record => record.meta.allowGuest)
 
   if (requiresAuth && !authStore.isAuthenticated) {
     next('/login')
-  } else if (authStore.currentUser?.role === 'guest' && to.path !== '/weekly-tournament') {
+  } else if (authStore.currentUser?.role === 'guest' && !allowGuest && to.path !== '/weekly-tournament') {
     next('/weekly-tournament')
   } else if (requiresGuest && authStore.isAuthenticated) {
     next('/')

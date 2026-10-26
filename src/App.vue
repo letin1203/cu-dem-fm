@@ -54,13 +54,26 @@ let topUpApprovalSince = new Date().toISOString()
 let topUpApprovalPolling = false
 
 const formatApprovalAmount = (amount: number) => Number(amount || 0).toLocaleString('vi-VN')
-const closeApprovedTopUpModal = () => { approvedTopUpQueue.value.shift() }
+// The header balance comes from the auth store, so refresh it whenever an
+// approval arrives or the modal is dismissed. Otherwise the header keeps
+// showing the pre-approval balance until the next full page load.
+const refreshUserBalance = async () => {
+  try {
+    await authStore.getCurrentUser()
+  } catch {
+    // A failed refresh must not block the approval modal.
+  }
+}
+const closeApprovedTopUpModal = async () => {
+  approvedTopUpQueue.value.shift()
+  await refreshUserBalance()
+}
 const goToAttendance = async () => {
   // Attendance eligibility uses the player balance stored in the auth store.
   // Refresh it first so a newly approved top-up immediately removes a stale
   // negative-balance restriction, even when the user is already on this page.
   await authStore.getCurrentUser()
-  closeApprovedTopUpModal()
+  approvedTopUpQueue.value.shift()
   if (router.currentRoute.value.name !== 'weeklyTournament') await router.push('/weekly-tournament')
 }
 
@@ -79,6 +92,10 @@ const checkApprovedTopUps = async () => {
       if (notifications.some(item => item.status === 'APPROVED' || item.status === 'REJECTED')) {
         window.dispatchEvent(new Event('pending-money-top-ups-changed'))
       }
+      // The approved amount is already in the player balance, so refresh the
+      // auth store now: the header shows the new balance while the modal is
+      // still open, not only after it is dismissed.
+      if (approvals.length) await refreshUserBalance()
       for (const rejection of notifications.filter(item => item.status === 'REJECTED')) {
         const requestedAt = new Date(rejection.requestedAt).toLocaleString('vi-VN')
         toast.error(`Số tiền ${formatApprovalAmount(rejection.amount)} ₫ bạn nạp lúc ${requestedAt} đã bị từ chối, vui lòng kiểm tra lại trong quỹ MoMo.`)

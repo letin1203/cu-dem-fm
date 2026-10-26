@@ -10729,7 +10729,7 @@ const smoothScrollLiveProgressTo = (
   );
   const distance = to - from;
   if (Math.abs(distance) < 2) return Promise.resolve();
-  const duration = Math.min(1100, Math.max(550, Math.abs(distance) * 1.25));
+  const duration = Math.min(550, Math.max(275, Math.abs(distance) * 0.625));
   const start = performance.now();
   return new Promise((resolve) => {
     const tick = (now: number) => {
@@ -10754,7 +10754,7 @@ const animateLiveAiThought = async (
   const target =
     window.innerWidth < 1024 ? liveMobileAiWords : liveDesktopAiWords;
   target.value = [];
-  const interval = Math.max(40, Math.floor(2000 / Math.max(words.length, 1)));
+  const interval = Math.max(20, Math.floor(1000 / Math.max(words.length, 1)));
   for (const word of words) {
     target.value = [...target.value, word];
     await pause(interval);
@@ -10920,9 +10920,9 @@ const playLiveTeamSplit = async (
       liveTeamSplitThought.value = thought;
       liveAiSequence.value += 1;
       await liveTeamSplitModalRef.value?.scrollToAiThought();
-      await pause(2000);
+      await pause(1000);
       await animateLiveAiThought(thought, pause);
-      await pause(3000);
+      await pause(1500);
       const tierGroupLabel = ["GK", "Tier 1–2", "Tier 3–4", "Tier 5–6"][
         groupIndex
       ];
@@ -10931,19 +10931,19 @@ const playLiveTeamSplit = async (
           liveTierGroupRefs.value[tierGroupLabel],
           "center",
         );
-        await pause(2000);
+        await pause(1000);
       }
       liveSplitDepartingPlayerIds.value = new Set(
         assignments.map(({ player }) => player.id),
       );
       await nextTick();
-      await pause(2000);
+      await pause(1000);
       if (window.innerWidth < 1024) {
         await liveTeamSplitModalRef.value?.scrollToElement(
           liveTeamRefs.value[0],
           "start",
         );
-        await pause(2000);
+        await pause(1000);
       }
       const next = liveTeamSplitTeams.value.map((team) => [...team]);
       assignments.forEach(({ player, teamIndex }) =>
@@ -10956,7 +10956,7 @@ const playLiveTeamSplit = async (
       ]);
       liveSplitDepartingPlayerIds.value = new Set();
       await nextTick();
-      await pause(700);
+      await pause(350);
     }
     if (groupIndex === 2) {
       const available = new Set(
@@ -10986,9 +10986,9 @@ const playLiveTeamSplit = async (
         liveTeamSplitThought.value = thought;
         liveAiSequence.value += 1;
         await liveTeamSplitModalRef.value?.scrollToAiThought();
-        await pause(2000);
+        await pause(1000);
         await animateLiveAiThought(thought, pause);
-        await pause(3000);
+        await pause(1500);
         const next = liveTeamSplitTeams.value.map((team) => [...team]);
         next[firstTeam] = next[firstTeam].map((player) =>
           player.id === first.id ? second : player,
@@ -10998,7 +10998,7 @@ const playLiveTeamSplit = async (
         );
         liveTeamSplitTeams.value = next;
         await nextTick();
-        await pause(2000);
+        await pause(1000);
       }
     }
   }
@@ -11023,9 +11023,9 @@ const playLiveTeamSplit = async (
     liveTeamSplitThought.value = thought;
     liveAiSequence.value += 1;
     await liveTeamSplitModalRef.value?.scrollToAiThought();
-    await pause(2000);
+    await pause(1000);
     await animateLiveAiThought(thought, pause);
-    await pause(3000);
+    await pause(1500);
     const next = liveTeamSplitTeams.value.map((team) => [...team]);
     next[firstTeam] = next[firstTeam].map((player) =>
       player.id === first.id ? second : player,
@@ -11035,7 +11035,7 @@ const playLiveTeamSplit = async (
     );
     liveTeamSplitTeams.value = next;
     await nextTick();
-    await pause(2000);
+    await pause(1000);
   }
   liveTeamSplitStage.value = 6;
   liveTeamSplitTitle.value = "Chốt kết quả";
@@ -13277,7 +13277,7 @@ const getDetailedMoneyChange = (
 <style scoped>
 .live-team-chip-enter-active,
 .live-team-chip-leave-active {
-  transition: all 0.7s cubic-bezier(0.22, 1, 0.36, 1);
+  transition: all 0.35s cubic-bezier(0.22, 1, 0.36, 1);
 }
 .live-team-chip-enter-from {
   opacity: 0;
@@ -13289,7 +13289,7 @@ const getDetailedMoneyChange = (
 }
 .live-split-chip-enter-active,
 .live-split-chip-leave-active {
-  transition: all 1.8s cubic-bezier(0.22, 1, 0.36, 1);
+  transition: all 0.9s cubic-bezier(0.22, 1, 0.36, 1);
 }
 .live-split-chip-leave-to {
   opacity: 0;

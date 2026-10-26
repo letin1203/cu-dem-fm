@@ -27,7 +27,7 @@
               <button
                 v-for="player in availablePlayers.filter(group.filter)"
                 :key="player.id"
-                class="flex items-center gap-2 rounded-full border border-gray-200 bg-gray-50 px-2 py-1 text-sm transition-all duration-1000 hover:border-primary-400 hover:bg-primary-50"
+                class="flex items-center gap-2 rounded-full border border-gray-200 bg-gray-50 px-2 py-1 text-sm transition-all duration-500 hover:border-primary-400 hover:bg-primary-50"
                 @click="togglePlayer(player)"
               >
                 <img
@@ -713,15 +713,19 @@ const randomOptions = [20, 24, 27, 32];
 const teamSplitSteps = [
   {
     title: "Phân loại theo Tier",
-    description: "Tách cầu thủ thành ba nhóm Tier để chuẩn bị chia đội.",
+    description: "Tách cầu thủ thành các nhóm để chuẩn bị chia đội.",
+  },
+  {
+    title: "Đang phân chia GK",
+    description: "Ưu tiên phân bổ thủ môn cho các đội.",
   },
   {
     title: "Rải đều Tier 1–2",
-    description: "Ưu tiên rải đều cầu thủ mạnh và thủ môn cho các đội.",
+    description: "Rải đều các cầu thủ Tier 1 và Tier 2.",
   },
   {
     title: "Cân bằng Tier 3–4",
-    description: "Bổ sung nhóm Tier trung bình để cân bằng từng đội.",
+    description: "Bổ sung nhóm Tier trung bình để cân bằng đội.",
   },
   {
     title: "Cân bằng Tier 5–6",
@@ -1051,7 +1055,7 @@ function setSplitTeamRef(index: number, element: HTMLElement | null) {
 async function scrollMobileToSplitElement(element: HTMLElement | null, pause: (milliseconds: number) => Promise<unknown>) {
   if (viewportWidth.value >= 1024 || !element) return;
   await teamSplitProgressModalRef.value?.scrollToElement(element, 'center');
-  await pause(2000);
+  await pause(1000);
 }
 
 function smoothScrollProgressModalTo(element: HTMLElement, alignment: 'start' | 'center') {
@@ -1070,7 +1074,7 @@ function smoothScrollProgressModalTo(element: HTMLElement, alignment: 'start' | 
   const distance = to - from;
   if (Math.abs(distance) < 2) return Promise.resolve();
 
-  const duration = Math.min(1100, Math.max(550, Math.abs(distance) * 1.25));
+  const duration = Math.min(550, Math.max(275, Math.abs(distance) * 0.625));
   const start = performance.now();
   const easeInOutCubic = (progress: number) => progress < 0.5
     ? 4 * progress * progress * progress
@@ -1092,20 +1096,20 @@ async function scrollMobileToAiThought(pause: (milliseconds: number) => Promise<
   if (viewportWidth.value >= 1024 || !target) return;
 
   await teamSplitProgressModalRef.value?.scrollToAiThought();
-  await pause(2000);
+  await pause(1000);
 }
 
 async function scrollMobileToFirstTeam(pause: (milliseconds: number) => Promise<unknown>) {
   if (viewportWidth.value >= 1024 || !splitTeamRefs.value[0]) return;
   await teamSplitProgressModalRef.value?.scrollToElement(splitTeamRefs.value[0], 'start');
-  await pause(2000);
+  await pause(1000);
 }
 
 async function animateMobileAiThought(text: string, pause: (milliseconds: number) => Promise<unknown>) {
   if (viewportWidth.value >= 1024) return;
 
   const words = text.match(/[^\s]+|\n/g) || [];
-  const interval = Math.max(40, Math.floor(2000 / Math.max(words.length, 1)));
+  const interval = Math.max(20, Math.floor(1000 / Math.max(words.length, 1)));
   mobileAiThoughtWords.value = [];
 
   for (const word of words) {
@@ -1114,14 +1118,14 @@ async function animateMobileAiThought(text: string, pause: (milliseconds: number
   }
 
   // Give the user a moment to read the completed thought before moving on.
-  await pause(3000);
+  await pause(1500);
 }
 
 async function animateDesktopAiThought(text: string, pause: (milliseconds: number) => Promise<unknown>) {
   if (viewportWidth.value < 1024) return;
 
   const words = text.match(/[^\s]+|\n/g) || [];
-  const interval = Math.max(40, Math.floor(2000 / Math.max(words.length, 1)));
+  const interval = Math.max(20, Math.floor(1000 / Math.max(words.length, 1)));
   desktopAiThoughtWords.value = [];
 
   for (const word of words) {
@@ -1230,15 +1234,16 @@ async function splitTeams() {
       finalTeams.map((team) => [...team]),
     );
     const stages = [
-      (player: Player) => player.tier <= 2,
-      (player: Player) => player.tier >= 3 && player.tier <= 4,
-      (player: Player) => player.tier >= 5,
+      (player: Player) => isGoalkeeper(player),
+      (player: Player) => !isGoalkeeper(player) && player.tier <= 2,
+      (player: Player) => !isGoalkeeper(player) && player.tier >= 3 && player.tier <= 4,
+      (player: Player) => !isGoalkeeper(player) && player.tier >= 5,
     ];
-    const tierLabels = ['Tier 1-2', 'Tier 3-4', 'Tier 5-6'];
+    const tierLabels = ['Đang phân chia GK', 'Tier 1-2', 'Tier 3-4', 'Tier 5-6'];
     for (let index = 0; index < stages.length; index++) {
       teamSplitStep.value = index + 1;
       const stagePlayers = preBalanceTeams.map((team) => team.filter(stages[index]));
-      const rounds = Math.max(...stagePlayers.map((team) => team.length));
+      const rounds = Math.max(0, ...stagePlayers.map((team) => team.length));
       for (let round = 0; round < rounds; round++) {
         const assignments = stagePlayers
           .map((team, teamIndex) => ({ player: team[round], teamIndex }))
@@ -1264,18 +1269,18 @@ async function splitTeams() {
           await scrollMobileToSplitElement(splitTierGroupRefs.value[tierLabels[index]], pause);
           departingProcessingPlayerIds.value = new Set(assignments.map(({ player }) => player.id));
           await nextTick();
-          await pause(2000);
+          await pause(1000);
           await scrollMobileToFirstTeam(pause);
           const nextTeams = processingTeams.value.map((team) => [...team]);
           assignments.forEach(({ player, teamIndex }) => nextTeams[teamIndex].push(player));
           processingTeams.value = nextTeams;
           departingProcessingPlayerIds.value = new Set();
           await nextTick();
-          await pause(2000);
+          await pause(1000);
         }
       }
     }
-    teamSplitStep.value = 4;
+    teamSplitStep.value = 5;
     isAssigningGoalkeeper.value = false;
     for (const swap of swaps) {
       const firstPlayer = selected.value.find((player) => player.id === swap.firstId);
@@ -1297,16 +1302,17 @@ async function splitTeams() {
       await scrollMobileToAiThought(pause);
       await animateMobileAiThought(thought, pause);
       await animateDesktopAiThought(thought, pause);
-      await pause(3000);
+      await pause(1500);
       swappingProcessingPlayerIds.value = new Set([swap.firstId, swap.secondId]);
       await nextTick();
-      await pause(2000);
+      await pause(1000);
       processingTeams.value = swapTeamsByPlayerIds(processingTeams.value, swap.firstId, swap.secondId);
       swappingProcessingPlayerIds.value = new Set();
       await nextTick();
-      await pause(2000);
+      await pause(1000);
     }
     teams.value = finalTeams;
+    teamSplitStep.value = 6;
     teamSplitComplete.value = true;
     await nextTick();
     await scrollMobileToFirstTeam(pause);
@@ -1373,7 +1379,7 @@ onBeforeUnmount(() => window.removeEventListener('resize', updateViewport));
 <style scoped>
 .selected-enter-active,
 .selected-leave-active {
-  transition: all 0.5s ease;
+  transition: all 0.25s ease;
 }
 .selected-enter-from {
   opacity: 0;
@@ -1387,7 +1393,7 @@ onBeforeUnmount(() => window.removeEventListener('resize', updateViewport));
 .split-chip-leave-active,
 .team-chip-enter-active,
 .team-chip-leave-active {
-  transition: all 0.55s cubic-bezier(0.22, 1, 0.36, 1);
+  transition: all 0.275s cubic-bezier(0.22, 1, 0.36, 1);
 }
 .split-chip-enter-from {
   opacity: 0;
@@ -1407,7 +1413,7 @@ onBeforeUnmount(() => window.removeEventListener('resize', updateViewport));
 }
 .ai-thought-enter-active,
 .ai-thought-leave-active {
-  transition: all 0.65s ease;
+  transition: all 0.325s ease;
 }
 .ai-thought-enter-from {
   opacity: 0;

@@ -125,8 +125,10 @@ export function generateBalancedTeams(
     }
   }
 
-  // Keep Tier 1/2 distribution fixed. Only Tier 3-6 may be used to balance
-  // averages when team sizes differ.
+  // Tier 1/2 stay locked during balancing so their even distribution is never
+  // undone. The balance pass below may still exchange a Tier 1/2 player with
+  // another Tier 1/2 player of the same tier, which keeps the T1+T2 spread
+  // intact while letting the averages converge.
   teams.flatMap((team) => team.players).filter((player) => player.tier <= 2)
     .forEach((player) => teams.find((team) => team.players.some((candidate) => candidate.id === player.id))?.lockedPlayers.add(player.id));
 
@@ -154,42 +156,145 @@ export function generateBalancedTeams(
       ? totals
       : totals.map((total, index) => total / teams[index].players.length);
   };
-  for (let iteration = 0; iteration < 100; iteration++) {
-    const totals = teams.map((team) => team.totalTier);
-    const spread = averageSpread(totals);
-    const variance = averageVariance(totals);
-    const values = balanceValues(totals);
-    const lowestValue = Math.min(...values);
-    const highestValue = Math.max(...values);
-    let best: { a: number; b: number; ai: number; bi: number; spread: number; variance: number } | null = null;
-    for (let a = 0; a < teams.length; a++) for (let b = a + 1; b < teams.length; b++) {
-      const comparesExtremes =
-        (Math.abs(values[a] - lowestValue) < 0.000001 && Math.abs(values[b] - highestValue) < 0.000001) ||
-        (Math.abs(values[b] - lowestValue) < 0.000001 && Math.abs(values[a] - highestValue) < 0.000001);
-      if (!comparesExtremes) continue;
-      for (let ai = 0; ai < teams[a].players.length; ai++) for (let bi = 0; bi < teams[b].players.length; bi++) {
-        const first = teams[a].players[ai]; const second = teams[b].players[bi];
-        if (teams[a].lockedPlayers.has(first.id) || teams[b].lockedPlayers.has(second.id) || isGoalkeeper(first) !== isGoalkeeper(second)) continue;
-        const next = [...totals];
-        next[a] += second.tier - first.tier; next[b] += first.tier - second.tier;
-        const nextSpread = averageSpread(next);
-        const nextVariance = averageVariance(next);
-        if (improvesBalance(nextSpread, nextVariance, spread, variance) &&
-          (!best || nextSpread < best.spread - 0.000001 ||
-            (Math.abs(nextSpread - best.spread) < 0.000001 && nextVariance < best.variance))) {
-          best = { a, b, ai, bi, spread: nextSpread, variance: nextVariance };
+
+  type TeamSnapshot = Array<{ players: TeamGenerationPlayer[]; totalTier: number }>;
+  const snapshotTeams = (): TeamSnapshot =>
+    teams.map((team) => ({ players: [...team.players], totalTier: team.totalTier }));
+  const restoreTeams = (snapshot: TeamSnapshot): void => {
+    teams.forEach((team, index) => {
+      team.players = [...snapshot[index].players];
+      team.totalTier = snapshot[index].totalTier;
+    });
+  };
+
+  /**
+   * Local search over every team pair. Pure best-improvement gets stuck in
+   * local minima (it will not move a Tier 3 out of the middle team even when
+   * that unlocks a better Tier 4 swap), so the search is restarted from the
+   * best state with a random kick whenever it stalls. The best state seen is
+   * restored at the end and the swap log is truncated to match, so the
+   * animation still reproduces the final teams exactly.
+   */
+  const balancePass = (
+    canSwap: (first: TeamGenerationPlayer, second: TeamGenerationPlayer) => boolean,
+  ): Array<{ firstId: string; secondId: string }> => {
+    const swapLog: Array<{ firstId: string; secondId: string }> = [];
+    const initialTotals = teams.map((team) => team.totalTier);
+    let bestSnapshot = snapshotTeams();
+    let bestSpread = averageSpread(initialTotals);
+    let bestVariance = averageVariance(initialTotals);
+    let bestLength = 0;
+
+    const lowTierCounts = (): number[] =>
+      teams.map((team) => team.players.filter((player) => player.tier <= 2).length);
+    const tierOneCounts = (): number[] =>
+      teams.map((team) => team.players.filter((player) => player.tier === 1).length);
+    const swappable = (a: number, b: number, ai: number, bi: number): boolean => {
+      const first = teams[a].players[ai];
+      const second = teams[b].players[bi];
+      if (!first || !second) return false;
+      if (isGoalkeeper(first) !== isGoalkeeper(second)) return false;
+      const firstLocked = teams[a].lockedPlayers.has(first.id);
+      const secondLocked = teams[b].lockedPlayers.has(second.id);
+      // Tier 1/2 are locked: they never move during balancing. Their even
+      // distribution is decided once, up front, and must not be disturbed.
+      if (firstLocked || secondLocked) return false;
+      // Never let a swap push the T1+T2 spread beyond one player.
+      const lows = lowTierCounts();
+      lows[a] += (second.tier <= 2 ? 1 : 0) - (first.tier <= 2 ? 1 : 0);
+      lows[b] += (first.tier <= 2 ? 1 : 0) - (second.tier <= 2 ? 1 : 0);
+      if (Math.max(...lows) - Math.min(...lows) > 1) return false;
+      // Tier 1 must stay evenly spread as well.
+      const tierOnes = tierOneCounts();
+      tierOnes[a] += (second.tier === 1 ? 1 : 0) - (first.tier === 1 ? 1 : 0);
+      tierOnes[b] += (first.tier === 1 ? 1 : 0) - (second.tier === 1 ? 1 : 0);
+      if (Math.max(...tierOnes) - Math.min(...tierOnes) > 1) return false;
+      return canSwap(first, second);
+    };
+    const applySwap = (a: number, b: number, ai: number, bi: number): void => {
+      const first = teams[a].players[ai];
+      const second = teams[b].players[bi];
+      teams[a].players[ai] = second;
+      teams[b].players[bi] = first;
+      teams[a].totalTier += second.tier - first.tier;
+      teams[b].totalTier += first.tier - second.tier;
+      swapLog.push({ firstId: first.id, secondId: second.id });
+    };
+    const recordBest = (): void => {
+      const totals = teams.map((team) => team.totalTier);
+      const spread = averageSpread(totals);
+      const variance = averageVariance(totals);
+      if (spread < bestSpread - 0.000001 ||
+        (Math.abs(spread - bestSpread) < 0.000001 && variance < bestVariance - 0.000001)) {
+        bestSpread = spread;
+        bestVariance = variance;
+        bestSnapshot = snapshotTeams();
+        bestLength = swapLog.length;
+      }
+    };
+
+    // Descend until no swap improves the balance.
+    const descend = (): void => {
+      for (let iteration = 0; iteration < 200; iteration++) {
+        const totals = teams.map((team) => team.totalTier);
+        const spread = averageSpread(totals);
+        const variance = averageVariance(totals);
+        let best: { a: number; b: number; ai: number; bi: number; spread: number; variance: number } | null = null;
+        for (let a = 0; a < teams.length; a++) for (let b = a + 1; b < teams.length; b++) {
+          for (let ai = 0; ai < teams[a].players.length; ai++) for (let bi = 0; bi < teams[b].players.length; bi++) {
+            if (!swappable(a, b, ai, bi)) continue;
+            const first = teams[a].players[ai];
+            const second = teams[b].players[bi];
+            const next = [...totals];
+            next[a] += second.tier - first.tier; next[b] += first.tier - second.tier;
+            const nextSpread = averageSpread(next);
+            const nextVariance = averageVariance(next);
+            if (!improvesBalance(nextSpread, nextVariance, spread, variance)) continue;
+            if (!best || nextSpread < best.spread - 0.000001 ||
+              (Math.abs(nextSpread - best.spread) < 0.000001 && nextVariance < best.variance)) {
+              best = { a, b, ai, bi, spread: nextSpread, variance: nextVariance };
+            }
+          }
+        }
+        if (!best) break;
+        applySwap(best.a, best.b, best.ai, best.bi);
+        recordBest();
+      }
+    };
+
+    descend();
+    // Escape local minima. A single random kick from the best state is not
+    // enough: the descent immediately undoes it. Instead, restart from a
+    // randomised copy of the best state and descend again, keeping the best
+    // result. Only Tier 3-6 move, so the locked Tier 1/2 layout is preserved.
+    for (let restart = 0; restart < 60; restart++) {
+      restoreTeams(bestSnapshot);
+      swapLog.length = bestLength;
+      const candidates: Array<{ a: number; b: number; ai: number; bi: number }> = [];
+      for (let a = 0; a < teams.length; a++) for (let b = a + 1; b < teams.length; b++) {
+        for (let ai = 0; ai < teams[a].players.length; ai++) for (let bi = 0; bi < teams[b].players.length; bi++) {
+          if (swappable(a, b, ai, bi)) candidates.push({ a, b, ai, bi });
         }
       }
+      if (!candidates.length) break;
+      // Apply a short random walk (2-4 swaps) so the descent starts from a
+      // genuinely different basin instead of the same local minimum.
+      const kicks = 2 + Math.floor(Math.random() * 3);
+      for (let kick = 0; kick < kicks; kick++) {
+        const pick = candidates[Math.floor(Math.random() * candidates.length)];
+        if (!swappable(pick.a, pick.b, pick.ai, pick.bi)) continue;
+        applySwap(pick.a, pick.b, pick.ai, pick.bi);
+      }
+      descend();
     }
-    if (!best) break;
-    const first = teams[best.a].players[best.ai];
-    const second = teams[best.b].players[best.bi];
-    teams[best.a].players[best.ai] = second;
-    teams[best.b].players[best.bi] = first;
-    teams[best.a].totalTier += second.tier - first.tier;
-    teams[best.b].totalTier += first.tier - second.tier;
-    trace?.swaps.push({ firstId: first.id, secondId: second.id });
-  }
+
+    restoreTeams(bestSnapshot);
+    swapLog.length = bestLength;
+    return swapLog;
+  };
+
+  // Balance Tier 3-6 across every team pair.
+  trace?.swaps.push(...balancePass(() => true));
 
   // A Battle pair must be on opposing teams. Do this after normal balancing
   // so it cannot disturb GK/Tier distribution unless an equivalent swap is
@@ -249,46 +354,15 @@ export function generateBalancedTeams(
   // A Battle separation can slightly disturb the tier balance. Make one final
   // balancing pass, but reject every swap that would put a Battle pair back
   // together.
-  for (let iteration = 0; iteration < 100; iteration++) {
-    const totals = teams.map((team) => team.totalTier);
-    const spread = averageSpread(totals);
-    const variance = averageVariance(totals);
-    const values = balanceValues(totals);
-    const lowestValue = Math.min(...values);
-    const highestValue = Math.max(...values);
-    let best: { a: number; b: number; ai: number; bi: number; spread: number; variance: number } | null = null;
-    for (let a = 0; a < teams.length; a++) for (let b = a + 1; b < teams.length; b++) {
-      const comparesExtremes =
-        (Math.abs(values[a] - lowestValue) < 0.000001 && Math.abs(values[b] - highestValue) < 0.000001) ||
-        (Math.abs(values[b] - lowestValue) < 0.000001 && Math.abs(values[a] - highestValue) < 0.000001);
-      if (!comparesExtremes) continue;
-      for (let ai = 0; ai < teams[a].players.length; ai++) for (let bi = 0; bi < teams[b].players.length; bi++) {
-        const first = teams[a].players[ai]; const second = teams[b].players[bi];
-        if (teams[a].lockedPlayers.has(first.id) || teams[b].lockedPlayers.has(second.id) || isGoalkeeper(first) !== isGoalkeeper(second)) continue;
-        const firstPartnerId = battlePartnerById.get(first.id);
-        const secondPartnerId = battlePartnerById.get(second.id);
-        if (firstPartnerId && teams[b].players.some((candidate) => candidate.id === firstPartnerId)) continue;
-        if (secondPartnerId && teams[a].players.some((candidate) => candidate.id === secondPartnerId)) continue;
-        const next = [...totals];
-        next[a] += second.tier - first.tier; next[b] += first.tier - second.tier;
-        const nextSpread = averageSpread(next);
-        const nextVariance = averageVariance(next);
-        if (improvesBalance(nextSpread, nextVariance, spread, variance) &&
-          (!best || nextSpread < best.spread - 0.000001 ||
-            (Math.abs(nextSpread - best.spread) < 0.000001 && nextVariance < best.variance))) {
-          best = { a, b, ai, bi, spread: nextSpread, variance: nextVariance };
-        }
-      }
-    }
-    if (!best) break;
-    const first = teams[best.a].players[best.ai];
-    const second = teams[best.b].players[best.bi];
-    teams[best.a].players[best.ai] = second;
-    teams[best.b].players[best.bi] = first;
-    teams[best.a].totalTier += second.tier - first.tier;
-    teams[best.b].totalTier += first.tier - second.tier;
-    trace?.swaps.push({ firstId: first.id, secondId: second.id });
-  }
+  // Final pass: rebalance after Battle separation, but never put a Battle pair
+  // back on the same team.
+  trace?.swaps.push(...balancePass((first, second) => {
+    const firstPartnerId = battlePartnerById.get(first.id);
+    const secondPartnerId = battlePartnerById.get(second.id);
+    if (firstPartnerId && teams.some((team) => team.players.some((candidate) => candidate.id === firstPartnerId) && team.players.some((candidate) => candidate.id === second.id))) return false;
+    if (secondPartnerId && teams.some((team) => team.players.some((candidate) => candidate.id === secondPartnerId) && team.players.some((candidate) => candidate.id === first.id))) return false;
+    return true;
+  }));
   teams.forEach((team) => {
     team.players.sort((first, second) => {
       const goalkeeperDifference = Number(isGoalkeeper(second)) - Number(isGoalkeeper(first));

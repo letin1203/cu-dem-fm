@@ -46,7 +46,7 @@ function smoothScrollTo(element: HTMLElement | null, alignment: 'start' | 'cente
   const to = Math.max(0, Math.min(container.scrollHeight - container.clientHeight, from + target));
   const distance = to - from;
   if (Math.abs(distance) < 2) return Promise.resolve();
-  const duration = Math.min(1100, Math.max(550, Math.abs(distance) * 1.25));
+  const duration = Math.min(550, Math.max(275, Math.abs(distance) * 0.625));
   const start = performance.now();
   return new Promise((resolve) => {
     const tick = (now: number) => {
@@ -63,6 +63,6 @@ defineExpose({ scrollToAiThought: () => smoothScrollTo(aiRef.value), scrollToEle
 </script>
 
 <style scoped>
-.team-split-ai-word { display: inline-block; margin-right: .25rem; animation: team-split-ai-word-reveal .22s ease-out both; }
+.team-split-ai-word { display: inline-block; margin-right: .25rem; animation: team-split-ai-word-reveal .11s ease-out both; }
 @keyframes team-split-ai-word-reveal { from { opacity: 0; transform: translateY(3px); } to { opacity: 1; transform: translateY(0); } }
 </style>

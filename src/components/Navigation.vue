@@ -478,7 +478,13 @@
           </div>
         </div>
         <div class="flex justify-end gap-3 border-t p-4">
-          <button @click="openFundContributionModal" class="btn-secondary">Góp quỹ</button>
+          <button
+            v-if="authStore.currentUser?.role !== 'guest'"
+            @click="openFundContributionModal"
+            class="btn-secondary"
+          >
+            Góp quỹ
+          </button>
           <button v-if="isStaff" @click="openFundExpenseModal" class="btn-secondary text-red-600">Chi quỹ</button>
           <button
             v-if="isStaff"

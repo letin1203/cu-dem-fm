@@ -741,7 +741,7 @@
                         >
                         <span
                           class="text-xs"
-                          :class="player.tier <= 3 ? 'font-bold' : ''"
+                          :class="player.tier <= 2 ? 'font-bold' : ''"
                           >T{{ player.tier }}</span
                         >
                       </div>
@@ -1959,7 +1959,7 @@
                                 getPositionLabel(player.positionSecond)
                               }}</template
                             ></span
-                          ><span class="text-xs">T{{ player.tier }}</span>
+                          ><span class="text-xs" :class="player.tier <= 2 ? 'font-bold text-gray-900' : ''">T{{ player.tier }}</span>
                         </div>
                       </div>
                     </div>
@@ -2364,7 +2364,7 @@
                           : ''
                       "
                       >{{ getPositionLabel(player.position) }}</span
-                    ><span class="text-xs">T{{ player.tier }}</span>
+                    ><span class="text-xs" :class="player.tier <= 2 ? 'font-bold text-gray-900' : ''">T{{ player.tier }}</span>
                   </div>
                 </div>
               </div>
@@ -2962,7 +2962,7 @@
                           >
                           <span
                             class="text-xs"
-                            :class="player.tier <= 3 ? 'font-bold' : ''"
+                            :class="player.tier <= 2 ? 'font-bold' : ''"
                             >T{{ player.tier }}</span
                           >
                         </div>
@@ -5842,7 +5842,7 @@
     max-width-class="max-w-7xl"
   >
     <template #groups>
-      <div class="grid gap-3 md:grid-cols-3">
+      <div class="grid gap-3 md:grid-cols-5">
         <div
           v-for="group in liveSplitProgressGroups"
           :key="group.label"
@@ -5851,11 +5851,12 @@
               setLiveTierGroupRef(group.label, element as HTMLElement | null)
           "
           class="rounded-lg border p-3"
-          :class="
+          :class="[
             liveTeamSplitStage >= group.step
               ? 'border-primary-300 bg-primary-50'
-              : 'border-gray-200 bg-gray-50 opacity-60'
-          "
+              : 'border-gray-200 bg-gray-50 opacity-60',
+            group.span === 2 ? 'md:col-span-2' : '',
+          ]"
         >
           <p class="mb-3 text-center text-sm font-semibold text-gray-800">
             {{ group.label }}
@@ -5939,7 +5940,7 @@
               </div>
               <span class="text-gray-600"
                 >{{ getPositionLabel(player.position) }} ·
-                <span :class="player.tier <= 3 ? 'font-bold text-gray-900' : ''"
+                <span :class="player.tier <= 2 ? 'font-bold text-gray-900' : ''"
                   >T{{ player.tier }}</span
                 ></span
               >
@@ -6054,7 +6055,7 @@
                 ><span class="text-gray-600"
                   >{{ getPositionLabel(player.position) }} ·
                   <span
-                    :class="player.tier <= 3 ? 'font-bold text-gray-900' : ''"
+                    :class="player.tier <= 2 ? 'font-bold text-gray-900' : ''"
                     >T{{ player.tier }}</span
                   ></span
                 >
@@ -10624,7 +10625,7 @@ const getLivePlayerStatsInsight = (player: any): string => {
     (!stats.wins && !stats.losses && !stats.contribution && !stats.attendance)
   )
     return "chưa có dữ liệu Stats từ các giải đã hoàn thành";
-  return `Thắng ${stats.wins} · thua ${stats.losses} · góp quỹ ${Math.round(stats.contribution / 1000).toLocaleString("vi-VN")}K · tham gia ${stats.attendance} giải`;
+  return `Thắng ${stats.wins} · thua ${stats.losses} · tham gia ${stats.attendance} giải`;
 };
 const loadLivePlayerStatsInsights = async (): Promise<void> => {
   if (Object.keys(livePlayerStatsInsights.value).length) return;
@@ -10671,11 +10672,13 @@ const liveSplitProgressGroups = computed(() => {
     {
       label: "GK",
       step: 1,
+      span: 1,
       players: visible((player) => isGoalkeeper(player.position)),
     },
     {
       label: "Tier 1–2",
       step: 2,
+      span: 1,
       players: visible(
         (player) => !isGoalkeeper(player.position) && player.tier <= 2,
       ),
@@ -10683,6 +10686,7 @@ const liveSplitProgressGroups = computed(() => {
     {
       label: "Tier 3–4",
       step: 3,
+      span: 2,
       players: visible(
         (player) =>
           !isGoalkeeper(player.position) &&
@@ -10693,6 +10697,7 @@ const liveSplitProgressGroups = computed(() => {
     {
       label: "Tier 5–6",
       step: 4,
+      span: 1,
       players: visible(
         (player) => !isGoalkeeper(player.position) && player.tier >= 5,
       ),

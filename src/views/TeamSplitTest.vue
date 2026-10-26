@@ -152,7 +152,11 @@
                 class="text-sm"
                 title="Ngôi sao hy vọng"
                 >⭐</span
-              ><span class="text-xs text-gray-500">T{{ player.tier }}</span>
+              ><span
+                class="text-xs text-gray-500"
+                :class="player.tier <= 2 ? 'font-bold text-gray-900' : ''"
+                >T{{ player.tier }}</span
+              >
             </button></TransitionGroup
           >
         </div>
@@ -160,17 +164,18 @@
     </div>
     <TeamSplitProgressModal ref="teamSplitProgressModalRef" v-if="showTeamSplitProgressModal" :model-value="true" :team-count="teamCount" :stage="teamSplitStep + 1" :title="teamSplitSteps[teamSplitStep]?.title || ''" :description="teamSplitSteps[teamSplitStep]?.description || ''" :is-assigning-goalkeeper="isAssigningGoalkeeper" :desktop-ai-words="desktopAiThoughtWords" :mobile-ai-words="mobileAiThoughtWords" :ai-sequence="aiThoughtSequence" max-width-class="max-w-6xl" :modal-style="teamSplitModalStyle">
           <template #groups>
-            <div class="grid gap-3 md:grid-cols-3">
+            <div class="grid gap-3 md:grid-cols-5">
               <div
                 v-for="group in splitProgressGroups"
                 :key="group.label"
                 :ref="(element) => setSplitTierGroupRef(group.label, element as HTMLElement | null)"
                 class="rounded-lg border p-3"
-                :class="
+                :class="[
                   teamSplitStep >= group.step
                     ? 'border-primary-300 bg-primary-50'
-                    : 'border-gray-200 bg-gray-50 opacity-60'
-                "
+                    : 'border-gray-200 bg-gray-50 opacity-60',
+                  group.span === 2 ? 'md:col-span-2' : '',
+                ]"
               >
                 <p class="mb-3 text-center text-sm font-semibold text-gray-800">
                   {{ group.label }}
@@ -238,7 +243,7 @@
                         v-else
                         class="mr-1.5 flex h-6 w-6 items-center justify-center rounded-full bg-gray-200 text-xs"
                         >{{ player.name[0] }}</span
-                      ><span class="truncate">{{ player.name }}</span><span v-if="battlePairNumberByPlayerId[player.id]" class="ml-1 shrink-0 text-xs text-red-600" :title="`Cặp Battle #${battlePairNumberByPlayerId[player.id]}`">⚔️ {{ battlePairNumberByPlayerId[player.id] }}</span><span v-if="hopeStarPlayerIds.has(player.id)" class="ml-1 shrink-0 text-sm" title="Ngôi sao hy vọng">⭐</span></div><span class="text-gray-600">{{ player.position }} · <span :class="player.tier <= 3 ? 'font-bold text-gray-900' : ''">T{{ player.tier }}</span></span>
+                      ><span class="truncate">{{ player.name }}</span><span v-if="battlePairNumberByPlayerId[player.id]" class="ml-1 shrink-0 text-xs text-red-600" :title="`Cặp Battle #${battlePairNumberByPlayerId[player.id]}`">⚔️ {{ battlePairNumberByPlayerId[player.id] }}</span><span v-if="hopeStarPlayerIds.has(player.id)" class="ml-1 shrink-0 text-sm" title="Ngôi sao hy vọng">⭐</span></div><span class="text-gray-600">{{ player.position }} · <span :class="player.tier <= 2 ? 'font-bold text-gray-900' : ''">T{{ player.tier }}</span></span>
                     </div></TransitionGroup
                   >
                   <p
@@ -390,8 +395,11 @@
                     </div>
                     <span
                       class="text-xs text-gray-600"
-                      :class="player.tier <= 3 ? 'font-bold' : ''"
-                      >{{ player.position }} · T{{ player.tier }}</span
+                      >{{ player.position }} ·
+                      <span
+                        :class="player.tier <= 2 ? 'font-bold text-gray-900' : ''"
+                        >T{{ player.tier }}</span
+                      ></span
                     >
                   </div>
                 </div>
@@ -596,7 +604,11 @@
                     ><span class="truncate font-normal">{{ player.name }}</span>
                   </div>
                   <span class="text-xs text-gray-500"
-                    >{{ player.position }} · T{{ player.tier }}</span
+                    >{{ player.position }} ·
+                    <span
+                      :class="player.tier <= 2 ? 'font-bold text-gray-900' : ''"
+                      >T{{ player.tier }}</span
+                    ></span
                   >
                 </div>
                 <div class="mt-2 space-y-1 border-t pt-2 text-xs">
@@ -841,13 +853,12 @@ const aiHealthReasons = [
   'tuần này có thói quen kéo giãn lưng sau giờ làm',
   'hôm qua phụ gia đình chuyển đồ nên vai hơi nặng',
 ];
-const formatShortCurrency = (amount: number) => `${Math.round(amount / 1000).toLocaleString('vi-VN')}K`;
 const getPlayerStatsInsight = (player: Player): string => {
   const stats = playerStatsInsights.value[player.id];
   if (!stats || (!stats.wins && !stats.losses && !stats.contribution && !stats.attendance)) {
     return 'chưa có dữ liệu Stats từ các giải đã hoàn thành';
   }
-  return `Thắng ${stats.wins} · thua ${stats.losses} · góp quỹ ${formatShortCurrency(stats.contribution)} · tham gia ${stats.attendance} giải`;
+  return `Thắng ${stats.wins} · thua ${stats.losses} · tham gia ${stats.attendance} giải`;
 };
 const normalize = (text: string) =>
   text
@@ -892,10 +903,23 @@ const isGoalkeeper = (player: Player) =>
   player.position === 'GK' || player.position === 'Goalkeeper';
 const splitProgressGroups = computed(() => [
   {
-    label: "Tier 1-2",
+    label: "GK",
     step: 1,
+    span: 1,
     players: selectedPlayers.value.filter(
       (player) =>
+        isGoalkeeper(player) &&
+        !assignedProcessingPlayerIds.value.has(player.id) &&
+        !departingProcessingPlayerIds.value.has(player.id),
+    ),
+  },
+  {
+    label: "Tier 1-2",
+    step: 2,
+    span: 1,
+    players: selectedPlayers.value.filter(
+      (player) =>
+        !isGoalkeeper(player) &&
         player.tier <= 2 &&
         !assignedProcessingPlayerIds.value.has(player.id) &&
         !departingProcessingPlayerIds.value.has(player.id),
@@ -903,9 +927,11 @@ const splitProgressGroups = computed(() => [
   },
   {
     label: "Tier 3-4",
-    step: 2,
+    step: 3,
+    span: 2,
     players: selectedPlayers.value.filter(
       (player) =>
+        !isGoalkeeper(player) &&
         player.tier >= 3 &&
         player.tier <= 4 &&
         !assignedProcessingPlayerIds.value.has(player.id) &&
@@ -914,9 +940,11 @@ const splitProgressGroups = computed(() => [
   },
   {
     label: "Tier 5-6",
-    step: 3,
+    step: 4,
+    span: 1,
     players: selectedPlayers.value.filter(
       (player) =>
+        !isGoalkeeper(player) &&
         player.tier >= 5 &&
         !assignedProcessingPlayerIds.value.has(player.id) &&
         !departingProcessingPlayerIds.value.has(player.id),

@@ -286,3 +286,167 @@ export function generateBalancedTeams(
   });
   return teams;
 }
+
+export interface TeamGenerationOptions {
+  /** Accepted challenges: the two players must end up on opposing teams. */
+  battlePairs?: TeamBattlePair[];
+  /** Accepted friend invites: the two players must end up on the same team. */
+  friendInvitePairs?: TeamBattlePair[];
+  /** Team id each player had in the previous weekly tournament. */
+  previousTeamByPlayer?: Map<string, string>;
+}
+
+export interface TeamGenerationResult {
+  teams: GeneratedTeam[];
+  /** Balancing swaps, in the order they were applied. */
+  swaps: Array<{ firstId: string; secondId: string }>;
+  /** Swaps made only to avoid repeating teammates from the previous week. */
+  repeatTeammateSwaps: Array<{ firstId: string; secondId: string }>;
+}
+
+const findTeamIndex = (teams: GeneratedTeam[], playerId: string): number =>
+  teams.findIndex((team) => team.players.some((player) => player.id === playerId));
+
+const sortTeamPlayers = (team: GeneratedTeam): void => {
+  team.players.sort((first, second) => {
+    const goalkeeperDifference = Number(isGoalkeeper(second)) - Number(isGoalkeeper(first));
+    if (goalkeeperDifference) return goalkeeperDifference;
+    return first.tier - second.tier || first.name.localeCompare(second.name, 'vi');
+  });
+};
+
+/**
+ * Single entry point for every team split in the app: the official
+ * "Chia đội", the "Test chia đội" preview inside the modal, and the
+ * "Test chia team" page all call this. Change the rules here once.
+ *
+ * Order of operations:
+ *  1. Balanced split (GK + Tier distribution, Battle pairs separated).
+ *  2. Avoid repeating too many teammates from the previous week.
+ *  3. Accepted challenges must be on opposing teams.
+ *  4. Accepted friend invites must share a team.
+ */
+export function buildBalancedTeams(
+  inputPlayers: TeamGenerationPlayer[],
+  teamCount: number,
+  options: TeamGenerationOptions = {},
+): TeamGenerationResult {
+  const battlePairs = options.battlePairs ?? [];
+  const friendInvitePairs = options.friendInvitePairs ?? [];
+  const previousTeamByPlayer = options.previousTeamByPlayer;
+
+  const trace: TeamGenerationTrace = { swaps: [] };
+  const teams = generateBalancedTeams(inputPlayers, teamCount, battlePairs, trace);
+  const repeatTeammateSwaps: Array<{ firstId: string; secondId: string }> = [];
+
+  // 2. Avoid keeping a player with two or more of the same teammates for a
+  // second consecutive weekly tournament. Swaps are same-tier and preserve GK
+  // distribution, so the tier balance established above cannot change.
+  if (previousTeamByPlayer && previousTeamByPlayer.size) {
+    const battlePartnerByPlayer = new Map<string, string>();
+    battlePairs.forEach((pair) => {
+      battlePartnerByPlayer.set(pair.firstId, pair.secondId);
+      battlePartnerByPlayer.set(pair.secondId, pair.firstId);
+    });
+    const repeatedTeammates = (player: TeamGenerationPlayer, team: GeneratedTeam): number => {
+      const previousTeam = previousTeamByPlayer.get(player.id);
+      if (!previousTeam) return 0;
+      return team.players.filter(
+        (mate) => mate.id !== player.id && previousTeamByPlayer.get(mate.id) === previousTeam,
+      ).length;
+    };
+    const wouldBreakBattle = (player: TeamGenerationPlayer, destination: GeneratedTeam): boolean => {
+      const partnerId = battlePartnerByPlayer.get(player.id);
+      return Boolean(partnerId && destination.players.some((mate) => mate.id === partnerId));
+    };
+
+    for (let pass = 0; pass < teams.length * inputPlayers.length; pass += 1) {
+      let swapped = false;
+      for (let sourceIndex = 0; sourceIndex < teams.length && !swapped; sourceIndex += 1) {
+        const source = teams[sourceIndex];
+        for (let playerIndex = 0; playerIndex < source.players.length && !swapped; playerIndex += 1) {
+          const player = source.players[playerIndex];
+          if (repeatedTeammates(player, source) < 2) continue;
+          for (let destinationIndex = 0; destinationIndex < teams.length && !swapped; destinationIndex += 1) {
+            if (destinationIndex === sourceIndex) continue;
+            const destination = teams[destinationIndex];
+            for (let replacementIndex = 0; replacementIndex < destination.players.length; replacementIndex += 1) {
+              const replacement = destination.players[replacementIndex];
+              if (isGoalkeeper(player) !== isGoalkeeper(replacement) || player.tier !== replacement.tier) continue;
+              if (wouldBreakBattle(player, destination) || wouldBreakBattle(replacement, source)) continue;
+              const sourceAfter: GeneratedTeam = {
+                ...source,
+                players: source.players.map((item, index) => (index === playerIndex ? replacement : item)),
+              };
+              const destinationAfter: GeneratedTeam = {
+                ...destination,
+                players: destination.players.map((item, index) => (index === replacementIndex ? player : item)),
+              };
+              if (repeatedTeammates(player, destinationAfter) > 1) continue;
+              if (repeatedTeammates(replacement, sourceAfter) > 1) continue;
+              source.players[playerIndex] = replacement;
+              destination.players[replacementIndex] = player;
+              repeatTeammateSwaps.push({ firstId: player.id, secondId: replacement.id });
+              swapped = true;
+              break;
+            }
+          }
+        }
+      }
+      if (!swapped) break;
+    }
+  }
+
+  // 3. Accepted challenges must always be on opposing teams. The generator
+  // already tries this; this pass is a safety net for pairs it could not
+  // separate. Same-tier, same-GK-type swaps keep the balance intact.
+  for (const pair of battlePairs) {
+    const firstTeamIndex = findTeamIndex(teams, pair.firstId);
+    const secondTeamIndex = findTeamIndex(teams, pair.secondId);
+    if (firstTeamIndex < 0 || secondTeamIndex < 0 || firstTeamIndex !== secondTeamIndex) continue;
+    const sourceTeam = teams[secondTeamIndex];
+    const targetIndex = sourceTeam.players.findIndex((player) => player.id === pair.secondId);
+    const target = sourceTeam.players[targetIndex];
+    const isCompatible = (player: TeamGenerationPlayer) =>
+      isGoalkeeper(player) === isGoalkeeper(target) &&
+      player.tier === target.tier &&
+      player.id !== pair.firstId &&
+      player.id !== pair.secondId;
+    const destinationIndex = teams.findIndex(
+      (team, index) => index !== secondTeamIndex && team.players.some(isCompatible),
+    );
+    if (destinationIndex < 0) continue;
+    const destination = teams[destinationIndex];
+    const replacementIndex = destination.players.findIndex(isCompatible);
+    const replacement = destination.players[replacementIndex];
+    sourceTeam.players[targetIndex] = replacement;
+    destination.players[replacementIndex] = target;
+    sourceTeam.totalTier += replacement.tier - target.tier;
+    destination.totalTier += target.tier - replacement.tier;
+  }
+
+  // 4. Accepted friend invites must share a team. Move the target beside the
+  // requester by exchanging a same-tier, same-GK-type player.
+  for (const pair of friendInvitePairs) {
+    const requesterTeamIndex = findTeamIndex(teams, pair.firstId);
+    const targetTeamIndex = findTeamIndex(teams, pair.secondId);
+    if (requesterTeamIndex < 0 || targetTeamIndex < 0 || requesterTeamIndex === targetTeamIndex) continue;
+    const requesterTeam = teams[requesterTeamIndex];
+    const targetTeam = teams[targetTeamIndex];
+    const targetIndex = targetTeam.players.findIndex((player) => player.id === pair.secondId);
+    const target = targetTeam.players[targetIndex];
+    const replacementIndex = requesterTeam.players.findIndex(
+      (player) =>
+        player.id !== pair.firstId &&
+        player.tier === target.tier &&
+        isGoalkeeper(player) === isGoalkeeper(target),
+    );
+    if (replacementIndex < 0) continue;
+    const replacement = requesterTeam.players[replacementIndex];
+    requesterTeam.players[replacementIndex] = target;
+    targetTeam.players[targetIndex] = replacement;
+  }
+
+  teams.forEach(sortTeamPlayers);
+  return { teams, swaps: trace.swaps, repeatTeammateSwaps };
+}

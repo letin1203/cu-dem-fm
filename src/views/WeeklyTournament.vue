@@ -10809,6 +10809,7 @@ const previewGenerateRandomTeams = async (): Promise<void> => {
     const response = await apiClient.post("/tournaments/preview-teams", {
       playerIds,
       teamCount: selectedTeamCount.value,
+      tournamentId,
     });
     if (!response.success || !response.data) {
       toast.error("Không thể tạo kết quả test");
@@ -10819,6 +10820,7 @@ const previewGenerateRandomTeams = async (): Promise<void> => {
     await playLiveTeamSplit(
       (response.data as any).teams || [],
       (response.data as any).swaps || [],
+      (response.data as any).repeatTeammateSwaps || [],
     );
     toast.info("Đây là kết quả test, chưa được lưu vào giải đấu.");
   } catch (err: any) {

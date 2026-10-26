@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { prisma } from '../lib/prisma';
 import { createTournamentSchema, updateTournamentSchema, paginationSchema, updateAttendanceSchema, updateTeamScoreSchema, updateTournamentScoresSchema } from '../schemas/validation';
 import { authenticate, authorize, AuthenticatedRequest } from '../middleware/auth';
-import { generateBalancedTeams } from '../services/teamGeneration';
+import { buildBalancedTeams } from '../services/teamGeneration';
 
 const router = Router();
 
@@ -2370,7 +2370,7 @@ router.put('/:id/scores', authenticate, authorize(['ADMIN', 'MOD']), async (req:
 // changing any tournament data. Used by the Test chia team page.
 router.post('/preview-teams', authenticate, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   try {
-    const { playerIds, teamCount, battlePairs = [] } = req.body || {};
+    const { playerIds, teamCount, battlePairs = [], friendInvitePairs = [], tournamentId } = req.body || {};
     if (!Array.isArray(playerIds) || playerIds.length < 10 || ![2, 3, 4].includes(teamCount)) {
       res.status(400).json({ success: false, error: 'Danh sách cầu thủ hoặc số đội không hợp lệ' });
       return;
@@ -2388,21 +2388,70 @@ router.post('/preview-teams', authenticate, async (req: AuthenticatedRequest, re
       return;
     }
     const validPlayerIds = new Set(uniqueIds);
-    const validBattlePairs = Array.isArray(battlePairs)
-      ? battlePairs.filter((pair: unknown): pair is { firstId: string; secondId: string } => {
-          if (!pair || typeof pair !== 'object') return false;
-          const candidate = pair as { firstId?: unknown; secondId?: unknown };
-          return typeof candidate.firstId === 'string' && typeof candidate.secondId === 'string' &&
-            candidate.firstId !== candidate.secondId && validPlayerIds.has(candidate.firstId) && validPlayerIds.has(candidate.secondId);
-        })
-      : [];
-    const trace = { swaps: [] as Array<{ firstId: string; secondId: string }> };
-    const generated = generateBalancedTeams(players, teamCount, validBattlePairs, trace);
-    res.json({ success: true, data: { teams: generated.map((team, index) => ({
-      name: `Team ${index + 1}`,
-      players: team.players,
-      totalTier: team.totalTier,
-    })), swaps: trace.swaps } });
+    const toPairs = (value: unknown) =>
+      Array.isArray(value)
+        ? value.filter((pair: unknown): pair is { firstId: string; secondId: string } => {
+            if (!pair || typeof pair !== 'object') return false;
+            const candidate = pair as { firstId?: unknown; secondId?: unknown };
+            return typeof candidate.firstId === 'string' && typeof candidate.secondId === 'string' &&
+              candidate.firstId !== candidate.secondId &&
+              validPlayerIds.has(candidate.firstId) && validPlayerIds.has(candidate.secondId);
+          })
+        : [];
+
+    // The preview must match the official split exactly, so it runs the same
+    // pipeline. When a tournament is supplied, its accepted challenges, friend
+    // invites and previous-week teams are applied too.
+    let previousTeamByPlayer: Map<string, string> | undefined;
+    let tournamentBattlePairs = toPairs(battlePairs);
+    let tournamentFriendInvitePairs = toPairs(friendInvitePairs);
+    if (typeof tournamentId === 'string' && tournamentId) {
+      const tournament = await prisma.tournament.findUnique({
+        where: { id: tournamentId },
+        select: { startDate: true },
+      });
+      if (tournament) {
+        const [previousTournament, acceptedChallenges, acceptedFriendInvites] = await Promise.all([
+          prisma.tournament.findFirst({
+            where: { type: 'WEEKLY', startDate: { lt: tournament.startDate }, teams: { some: {} } },
+            orderBy: { startDate: 'desc' },
+            include: { tournamentTeamPlayers: { select: { teamId: true, playerId: true } } },
+          }),
+          prisma.tournamentChallenge.findMany({
+            where: { tournamentId, status: 'ACCEPTED' },
+            select: { requesterPlayerId: true, targetPlayerId: true },
+          }),
+          prisma.tournamentFriendInvite.findMany({
+            where: { tournamentId, status: 'ACCEPTED' },
+            select: { requesterPlayerId: true, targetPlayerId: true },
+          }),
+        ]);
+        previousTeamByPlayer = new Map(
+          previousTournament?.tournamentTeamPlayers.map((item) => [item.playerId, item.teamId]) ?? [],
+        );
+        tournamentBattlePairs = acceptedChallenges
+          .map((pair) => ({ firstId: pair.requesterPlayerId, secondId: pair.targetPlayerId }))
+          .filter((pair) => validPlayerIds.has(pair.firstId) && validPlayerIds.has(pair.secondId));
+        tournamentFriendInvitePairs = acceptedFriendInvites
+          .map((pair) => ({ firstId: pair.requesterPlayerId, secondId: pair.targetPlayerId }))
+          .filter((pair) => validPlayerIds.has(pair.firstId) && validPlayerIds.has(pair.secondId));
+      }
+    }
+
+    const generation = buildBalancedTeams(players, teamCount, {
+      battlePairs: tournamentBattlePairs,
+      friendInvitePairs: tournamentFriendInvitePairs,
+      previousTeamByPlayer,
+    });
+    res.json({ success: true, data: {
+      teams: generation.teams.map((team, index) => ({
+        name: `Team ${index + 1}`,
+        players: team.players,
+        totalTier: team.totalTier,
+      })),
+      swaps: generation.swaps,
+      repeatTeammateSwaps: generation.repeatTeammateSwaps,
+    } });
   } catch (error) {
     console.error('Preview teams error:', error);
     res.status(500).json({ success: false, error: 'Không thể xem trước kết quả chia đội' });
@@ -2484,420 +2533,54 @@ router.post('/:id/generate-teams', authenticate, authorize(['ADMIN', 'MOD']), as
       .map(attendance => attendance.player)
       .sort((a, b) => a.tier - b.tier);
 
-    // Initialize teams
-    const teams: Array<{
-      name: string;
-      players: typeof sortedPlayers;
-      totalTier: number;
-      tier9Plus: number; // Count of strongest players (tier 1-2)
-      lockedPlayers: Set<string>; // GK players that can't be moved
-    }> = [];
-
-    // Generate unique team names using tournament start date
-    const startDate = new Date(tournament.startDate);
-    const dateStr = startDate.toISOString().split('T')[0]; // YYYY-MM-DD format
     // Team names are globally unique. A tournament can be recreated on the
     // same day, so include a short, stable tournament identifier to avoid a
     // collision with teams from an earlier tournament.
+    const dateStr = new Date(tournament.startDate).toISOString().split('T')[0];
     const teamNameSuffix = tournamentId.slice(-6);
-    for (let i = 0; i < teamCount; i++) {
-      teams.push({
-        name: `Team ${i + 1} - ${dateStr} (${teamNameSuffix})`,
-        players: [],
-        totalTier: 0,
-        tier9Plus: 0,
-        lockedPlayers: new Set(),
-      });
-    }
 
-    // Separate GK and non-GK players
-    const gkPlayers: typeof sortedPlayers = [];
-    const nonGkPlayers: typeof sortedPlayers = [];
-    
-    sortedPlayers.forEach((player: any) => {
-      if (player.position === 'GK') {
-        gkPlayers.push(player);
-      } else {
-        nonGkPlayers.push(player);
-      }
-    });
-
-
-    // First, distribute GK players (one per team if possible) - LOCK only the first GK per team
-    for (let i = 0; i < gkPlayers.length && i < teamCount; i++) {
-      const gkPlayer = gkPlayers[i];
-      const teamIndex = i % teamCount;
-      
-      teams[teamIndex].players.push(gkPlayer);
-      teams[teamIndex].totalTier += gkPlayer.tier;
-      teams[teamIndex].lockedPlayers.add(gkPlayer.id); // Lock the first (highest tier) GK per team
-      if (gkPlayer.tier <= 2) {
-        teams[teamIndex].tier9Plus++;
-        // T9/T10 GK players are automatically locked above, so no additional locking needed
-      }
-    }
-
-    // Add remaining GK players to teams with fewer GKs - DO NOT LOCK these additional GKs unless they're T9/T10
-    for (let i = teamCount; i < gkPlayers.length; i++) {
-      const gkPlayer = gkPlayers[i];
-      
-      // Find team with fewest GK players
-      let bestTeamIndex = 0;
-      let minGkCount = teams[0].players.filter((p: any) => p.position === 'GK').length;
-      
-      for (let j = 1; j < teams.length; j++) {
-        const gkCount = teams[j].players.filter((p: any) => p.position === 'GK').length;
-        if (gkCount < minGkCount) {
-          minGkCount = gkCount;
-          bestTeamIndex = j;
-        }
-      }
-      
-      teams[bestTeamIndex].players.push(gkPlayer);
-      teams[bestTeamIndex].totalTier += gkPlayer.tier;
-      // Lock Tier 1/2 GKs even if they're additional GKs
-      if (gkPlayer.tier <= 2) {
-        teams[bestTeamIndex].tier9Plus++;
-        teams[bestTeamIndex].lockedPlayers.add(gkPlayer.id);
-      }
-    }
-
-    // When there are not enough primary GKs, assign players whose secondary
-    // position is GK before the tier groups are distributed. Removing them
-    // from nonGkPlayers is essential: otherwise the same player would later
-    // be assigned a second time and violate the tournament-player uniqueness
-    // constraint when teams are saved.
-    const missingGkTeams = teams
-      .map((team, index) => ({ team, index }))
-      .filter(({ team }) => !team.players.some((player: any) => player.position === 'GK'));
-    const secondaryGkPlayers = nonGkPlayers.filter((player: any) => player.positionSecond === 'GK');
-    for (let i = 0; i < missingGkTeams.length && i < secondaryGkPlayers.length; i++) {
-      const secondaryGk = secondaryGkPlayers[i];
-      const team = missingGkTeams[i].team;
-      team.players.push(secondaryGk);
-      team.totalTier += secondaryGk.tier;
-      team.lockedPlayers.add(secondaryGk.id);
-      if (secondaryGk.tier <= 2) team.tier9Plus++;
-      nonGkPlayers.splice(nonGkPlayers.findIndex((player: any) => player.id === secondaryGk.id), 1);
-    }
-
-    // Calculate target players per team for balanced distribution
-    const targetPlayersPerTeam = Math.floor(playerCount / teamCount);
-    const teamsWithExtraPlayer = playerCount % teamCount;
-    
-    // Set target player count for each team
-    const teamTargets = teams.map((_, index) => ({
-      target: targetPlayersPerTeam + (index < teamsWithExtraPlayer ? 1 : 0),
-      current: teams[index].players.length // Already has GK players
-    }));
-
-    // Now distribute non-GK players by tier (starting from highest)
-    const tierGroups = new Map<number, typeof nonGkPlayers>();
-    
-    // Group non-GK players by tier
-    nonGkPlayers.forEach((player: any) => {
-      const tier = player.tier;
-      if (!tierGroups.has(tier)) {
-        tierGroups.set(tier, []);
-      }
-      tierGroups.get(tier)!.push(player);
-    });
-
-    // Distribute non-GK players tier by tier (1 to 6, strongest first)
-    for (let tier = 1; tier <= 6; tier++) {
-      const playersInTier = tierGroups.get(tier) || [];
-      
-      // Shuffle players in this tier for randomness
-      for (let i = playersInTier.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [playersInTier[i], playersInTier[j]] = [playersInTier[j], playersInTier[i]];
-      }
-
-      // Distribute players in this tier
-      for (let i = 0; i < playersInTier.length; i++) {
-        const player = playersInTier[i];
-        
-        // Find the best team to assign this player to
-        let bestTeamIndex = 0;
-        
-        if (tier === 2) {
-          // Tier 2 prefers the team with fewer Tier 1 players, but only among
-          // teams with the lowest current Tier 2 count. This hard constraint
-          // keeps Tier 2 distribution within one player between any two teams.
-          const eligibleTeams = teams
-            .map((team, index) => ({ team, index }))
-            .filter(({ team, index }) => team.players.length < teamTargets[index].target);
-          const minTierTwoCount = Math.min(...eligibleTeams.map(({ team }) =>
-            team.players.filter((assignedPlayer: any) => assignedPlayer.tier === 2).length
-          ));
-          let bestTierOneCount = Infinity;
-          let bestCapacityRatio = Infinity;
-
-          for (const { team, index } of eligibleTeams) {
-            const tierTwoCount = team.players.filter((assignedPlayer: any) => assignedPlayer.tier === 2).length;
-            if (tierTwoCount !== minTierTwoCount) continue;
-            const tierOneCount = team.players.filter((assignedPlayer: any) => assignedPlayer.tier === 1).length;
-            const capacityRatio = team.players.length / teamTargets[index].target;
-            if (tierOneCount < bestTierOneCount || (tierOneCount === bestTierOneCount && capacityRatio < bestCapacityRatio)) {
-              bestTeamIndex = index;
-              bestTierOneCount = tierOneCount;
-              bestCapacityRatio = capacityRatio;
-            }
-          }
-        } else if (tier === 1) {
-          // Tier 1 is balanced first across teams, then capacity breaks ties.
-          let bestTierPriority: number[] | null = null;
-          let bestCapacityRatio = Infinity;
-          
-          for (let j = 0; j < teams.length; j++) {
-            if (teams[j].players.length >= teamTargets[j].target) {
-              continue;
-            }
-
-            const tierPriority = Array.from({ length: tier }, (_, index) =>
-              teams[j].players.filter((assignedPlayer: any) => assignedPlayer.tier === index + 1).length
-            );
-            const capacityRatio = teams[j].players.length / teamTargets[j].target;
-            const hasBetterTierPriority = !bestTierPriority || tierPriority.some((count, index) =>
-              count !== bestTierPriority![index] &&
-              tierPriority.slice(0, index).every((previous, previousIndex) => previous === bestTierPriority![previousIndex]) &&
-              count < bestTierPriority![index]
-            );
-            const hasSameTierPriority = bestTierPriority !== null && tierPriority.every((count, index) => count === bestTierPriority![index]);
-
-            if (hasBetterTierPriority || (hasSameTierPriority && capacityRatio < bestCapacityRatio)) {
-              bestTierPriority = tierPriority;
-              bestCapacityRatio = capacityRatio;
-              bestTeamIndex = j;
-            }
-          }
-          
-          // Capacity should normally prevent this; retain a safe fallback.
-          if (!bestTierPriority) {
-            let minTierCount = teams[0].players.filter((assignedPlayer: any) => assignedPlayer.tier === tier).length;
-            for (let j = 1; j < teams.length; j++) {
-              const tierCount = teams[j].players.filter((assignedPlayer: any) => assignedPlayer.tier === tier).length;
-              if (tierCount < minTierCount) {
-                minTierCount = tierCount;
-                bestTeamIndex = j;
-              }
-            }
-          }
-        } else {
-          // For lower-tier players, prioritize teams with capacity first, then balance
-          let bestScore = Infinity;
-          
-          for (let j = 0; j < teams.length; j++) {
-            // Calculate score based on:
-            // 1. How close to capacity (heavily weighted)
-            // 2. Tier balance
-            // 3. Tier 9+ distribution
-            
-            const capacityRatio = teams[j].players.length / teamTargets[j].target;
-            const isOverCapacity = teams[j].players.length >= teamTargets[j].target;
-            
-            // Heavily penalize teams at or over capacity
-            let capacityScore = isOverCapacity ? 1000 : capacityRatio * 50;
-            
-            const totalTierAfter = teams[j].totalTier + tier;
-            const avgTotalTier = teams.reduce((sum, team) => sum + team.totalTier, 0) / teams.length;
-            const tierScore = Math.abs(totalTierAfter - avgTotalTier);
-            
-            const tier9PlusDiff = teams[j].tier9Plus - (teams.reduce((sum, team) => sum + team.tier9Plus, 0) / teams.length);
-            const tier9PlusScore = Math.abs(tier9PlusDiff) * 3;
-            
-            const totalScore = capacityScore + tierScore + tier9PlusScore;
-            
-            if (totalScore < bestScore) {
-              bestScore = totalScore;
-              bestTeamIndex = j;
-            }
-          }
-        }
-        
-        // Assign player to the best team
-        teams[bestTeamIndex].players.push(player);
-        teams[bestTeamIndex].totalTier += tier;
-        if (tier <= 2) {
-          teams[bestTeamIndex].tier9Plus++;
-          // Mark strong players for the initial distribution.
-          teams[bestTeamIndex].lockedPlayers.add(player.id);
-        }
-      }
-    }
-
-    // Final balancing pass: use average Tier, rather than total Tier. This
-    // keeps teams comparable even when the number of players is uneven (for
-    // example, 33 players split into teams of 9, 8, 8, and 8). Tier 1/2 and
-    // primary GK assignments stay locked; remaining goalkeepers may only swap
-    // with other goalkeepers, so each team keeps its GK allocation.
-    const getAverageTierSpread = (totals: number[]) => {
-      const averages = totals.map((total, index) => total / teams[index].players.length);
-      return Math.max(...averages) - Math.min(...averages);
-    };
-    for (let iteration = 0; iteration < 100; iteration++) {
-      const currentTotals = teams.map(team => team.totalTier);
-      const currentSpread = getAverageTierSpread(currentTotals);
-      let bestSwap: { firstTeam: number; secondTeam: number; firstPlayer: number; secondPlayer: number; spread: number } | null = null;
-
-      for (let firstTeam = 0; firstTeam < teams.length; firstTeam++) {
-        for (let secondTeam = firstTeam + 1; secondTeam < teams.length; secondTeam++) {
-          for (let firstPlayer = 0; firstPlayer < teams[firstTeam].players.length; firstPlayer++) {
-            const playerA = teams[firstTeam].players[firstPlayer];
-            if (teams[firstTeam].lockedPlayers.has(playerA.id)) continue;
-
-            for (let secondPlayer = 0; secondPlayer < teams[secondTeam].players.length; secondPlayer++) {
-              const playerB = teams[secondTeam].players[secondPlayer];
-              if (teams[secondTeam].lockedPlayers.has(playerB.id)) continue;
-              const playerAIsGoalkeeper = playerA.position === 'GK' || playerA.position === 'Goalkeeper';
-              const playerBIsGoalkeeper = playerB.position === 'GK' || playerB.position === 'Goalkeeper';
-              if (playerAIsGoalkeeper !== playerBIsGoalkeeper) continue;
-
-              const candidateTotals = [...currentTotals];
-              candidateTotals[firstTeam] += playerB.tier - playerA.tier;
-              candidateTotals[secondTeam] += playerA.tier - playerB.tier;
-              const candidateSpread = getAverageTierSpread(candidateTotals);
-
-              if (candidateSpread < currentSpread && (!bestSwap || candidateSpread < bestSwap.spread)) {
-                bestSwap = { firstTeam, secondTeam, firstPlayer, secondPlayer, spread: candidateSpread };
-              }
-            }
-          }
-        }
-      }
-
-      if (!bestSwap) break;
-
-      const teamA = teams[bestSwap.firstTeam];
-      const teamB = teams[bestSwap.secondTeam];
-      const playerA = teamA.players[bestSwap.firstPlayer];
-      const playerB = teamB.players[bestSwap.secondPlayer];
-      teamA.players[bestSwap.firstPlayer] = playerB;
-      teamB.players[bestSwap.secondPlayer] = playerA;
-      teamA.totalTier += playerB.tier - playerA.tier;
-      teamB.totalTier += playerA.tier - playerB.tier;
-    }
-
-    // Use the shared generator for the final result. The legacy setup above is
-    // retained temporarily for compatibility with this route's surrounding
-    // flow; persistence and the test preview both use this same result.
-    const generatedTeams = generateBalancedTeams(sortedPlayers, teamCount);
-    teams.splice(0, teams.length, ...generatedTeams.map((generated, index) => ({
-      name: `Team ${index + 1} - ${dateStr} (${teamNameSuffix})`,
-      players: generated.players,
-      totalTier: generated.totalTier,
-      tier9Plus: generated.players.filter(player => player.tier <= 2).length,
-      lockedPlayers: generated.lockedPlayers,
-    })));
-
-    // Avoid keeping a player with two or more of the same teammates for a
-    // second consecutive weekly tournament. Swaps are same-tier and preserve
-    // GK distribution, so this cannot change the tier balance established by
-    // the generator.
+    // Every split (official, modal preview and the Test chia team page) goes
+    // through buildBalancedTeams so the rules live in exactly one place.
     const previousTournament = await prisma.tournament.findFirst({
       where: { type: 'WEEKLY', startDate: { lt: tournament.startDate }, teams: { some: {} } },
       orderBy: { startDate: 'desc' },
       include: { tournamentTeamPlayers: { select: { teamId: true, playerId: true } } },
     });
-    const repeatTeammateSwaps: Array<{ firstId: string; secondId: string }> = [];
-    if (previousTournament) {
-      const previousTeamByPlayer = new Map(previousTournament.tournamentTeamPlayers.map((item) => [item.playerId, item.teamId]));
-      const battlePairs = await prisma.tournamentChallenge.findMany({
+    const previousTeamByPlayer = new Map<string, string>(
+      previousTournament?.tournamentTeamPlayers.map((item) => [item.playerId, item.teamId]) ?? [],
+    );
+
+    const [acceptedChallenges, acceptedFriendInvites] = await Promise.all([
+      prisma.tournamentChallenge.findMany({
         where: { tournamentId, status: 'ACCEPTED' },
         select: { requesterPlayerId: true, targetPlayerId: true },
-      });
-      const battlePartnerByPlayer = new Map<string, string>();
-      battlePairs.forEach((pair) => { battlePartnerByPlayer.set(pair.requesterPlayerId, pair.targetPlayerId); battlePartnerByPlayer.set(pair.targetPlayerId, pair.requesterPlayerId); });
-      const repeatedTeammates = (player: typeof sortedPlayers[number], team: typeof teams[number]) => {
-        const previousTeam = previousTeamByPlayer.get(player.id);
-        if (!previousTeam) return 0;
-        return team.players.filter((mate) => mate.id !== player.id && previousTeamByPlayer.get(mate.id) === previousTeam).length;
-      };
-      const wouldBreakBattle = (player: typeof sortedPlayers[number], destination: typeof teams[number]) => {
-        const partnerId = battlePartnerByPlayer.get(player.id);
-        return Boolean(partnerId && destination.players.some((mate) => mate.id === partnerId));
-      };
-      for (let pass = 0; pass < teams.length * sortedPlayers.length; pass += 1) {
-        let swapped = false;
-        for (let sourceIndex = 0; sourceIndex < teams.length && !swapped; sourceIndex += 1) {
-          const source = teams[sourceIndex];
-          for (let playerIndex = 0; playerIndex < source.players.length && !swapped; playerIndex += 1) {
-            const player = source.players[playerIndex];
-            if (repeatedTeammates(player, source) < 2) continue;
-            for (let destinationIndex = 0; destinationIndex < teams.length && !swapped; destinationIndex += 1) {
-              if (destinationIndex === sourceIndex) continue;
-              const destination = teams[destinationIndex];
-              for (let replacementIndex = 0; replacementIndex < destination.players.length; replacementIndex += 1) {
-                const replacement = destination.players[replacementIndex];
-                const sameType = (player.position === 'GK' || player.position === 'Goalkeeper') === (replacement.position === 'GK' || replacement.position === 'Goalkeeper');
-                if (!sameType || player.tier !== replacement.tier || wouldBreakBattle(player, destination) || wouldBreakBattle(replacement, source)) continue;
-                const sourceAfter = { ...source, players: source.players.map((item, index) => index === playerIndex ? replacement : item) };
-                const destinationAfter = { ...destination, players: destination.players.map((item, index) => index === replacementIndex ? player : item) };
-                if (repeatedTeammates(player, destinationAfter) > 1 || repeatedTeammates(replacement, sourceAfter) > 1) continue;
-                source.players[playerIndex] = replacement;
-                destination.players[replacementIndex] = player;
-                repeatTeammateSwaps.push({ firstId: player.id, secondId: replacement.id });
-                swapped = true;
-                break;
-              }
-            }
-          }
-        }
-        if (!swapped) break;
-      }
-    }
+      }),
+      prisma.tournamentFriendInvite.findMany({
+        where: { tournamentId, status: 'ACCEPTED' },
+        select: { requesterPlayerId: true, targetPlayerId: true },
+      }),
+    ]);
 
-    // Accepted challenges must always be on opposing teams. Resolve any pair
-    // that landed together after the balancing pass by swapping the target
-    // with a same-tier, position-compatible player from another team. Keeping
-    // the tier identical is critical: otherwise this late challenge step can
-    // undo the Tier 1/2 distribution established above.
-    const acceptedChallenges = await prisma.tournamentChallenge.findMany({
-      where: { tournamentId, status: 'ACCEPTED' },
-      select: { requesterPlayerId: true, targetPlayerId: true },
+    const generation = buildBalancedTeams(sortedPlayers, teamCount, {
+      battlePairs: acceptedChallenges.map((pair) => ({
+        firstId: pair.requesterPlayerId,
+        secondId: pair.targetPlayerId,
+      })),
+      friendInvitePairs: acceptedFriendInvites.map((pair) => ({
+        firstId: pair.requesterPlayerId,
+        secondId: pair.targetPlayerId,
+      })),
+      previousTeamByPlayer,
     });
-    for (const challenge of acceptedChallenges) {
-      const requesterTeamIndex = teams.findIndex(team => team.players.some(player => player.id === challenge.requesterPlayerId));
-      const targetTeamIndex = teams.findIndex(team => team.players.some(player => player.id === challenge.targetPlayerId));
-      if (requesterTeamIndex < 0 || targetTeamIndex < 0 || requesterTeamIndex !== targetTeamIndex) continue;
-      const sourceTeam = teams[targetTeamIndex];
-      const targetIndex = sourceTeam.players.findIndex(player => player.id === challenge.targetPlayerId);
-      const target = sourceTeam.players[targetIndex];
-      const targetIsGk = target.position === 'GK' || target.position === 'Goalkeeper';
-      const destinationIndex = teams.findIndex((team, index) => index !== targetTeamIndex && team.players.some(player => {
-        const playerIsGk = player.position === 'GK' || player.position === 'Goalkeeper';
-        return playerIsGk === targetIsGk && player.tier === target.tier && player.id !== challenge.requesterPlayerId && player.id !== challenge.targetPlayerId;
-      }));
-      if (destinationIndex < 0) throw new Error('Không thể tách hai cầu thủ thách đấu sang hai đội khác nhau');
-      const destination = teams[destinationIndex];
-      const replacementIndex = destination.players.findIndex(player => {
-        const playerIsGk = player.position === 'GK' || player.position === 'Goalkeeper';
-        return playerIsGk === targetIsGk && player.tier === target.tier && player.id !== challenge.requesterPlayerId && player.id !== challenge.targetPlayerId;
-      });
-      const replacement = destination.players[replacementIndex];
-      sourceTeam.players[targetIndex] = replacement;
-      destination.players[replacementIndex] = target;
-      sourceTeam.totalTier += replacement.tier - target.tier;
-      destination.totalTier += target.tier - replacement.tier;
-    }
+    const repeatTeammateSwaps = generation.repeatTeammateSwaps;
 
-    // Accepted friend invites must share a team. Move the target beside the
-    // requester by exchanging a same-tier, same-GK-type player so balance is
-    // preserved and Battle's opposing-team requirement remains intact.
-    const acceptedFriendInvites = await prisma.tournamentFriendInvite.findMany({ where: { tournamentId, status: 'ACCEPTED' } });
-    for (const invite of acceptedFriendInvites) {
-      const requesterTeamIndex = teams.findIndex(team => team.players.some(player => player.id === invite.requesterPlayerId));
-      const targetTeamIndex = teams.findIndex(team => team.players.some(player => player.id === invite.targetPlayerId));
-      if (requesterTeamIndex < 0 || targetTeamIndex < 0 || requesterTeamIndex === targetTeamIndex) continue;
-      const requesterTeam = teams[requesterTeamIndex]; const targetTeam = teams[targetTeamIndex];
-      const targetIndex = targetTeam.players.findIndex(player => player.id === invite.targetPlayerId);
-      const target = targetTeam.players[targetIndex];
-      const replacementIndex = requesterTeam.players.findIndex(player => player.id !== invite.requesterPlayerId && player.tier === target.tier && (player.position === 'GK' || player.position === 'Goalkeeper') === (target.position === 'GK' || target.position === 'Goalkeeper'));
-      if (replacementIndex < 0) continue;
-      const replacement = requesterTeam.players[replacementIndex];
-      requesterTeam.players[replacementIndex] = target;
-      targetTeam.players[targetIndex] = replacement;
-    }
+    const teams = generation.teams.map((generated, index) => ({
+      name: `Team ${index + 1} - ${dateStr} (${teamNameSuffix})`,
+      players: generated.players,
+      totalTier: generated.totalTier,
+      tier9Plus: generated.players.filter((player) => player.tier <= 2).length,
+      lockedPlayers: generated.lockedPlayers,
+    }));
 
     // Create teams in database
     const createdTeams = [];

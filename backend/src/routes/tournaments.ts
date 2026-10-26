@@ -2376,8 +2376,11 @@ router.post('/preview-teams', authenticate, async (req: AuthenticatedRequest, re
       return;
     }
     const uniqueIds = [...new Set(playerIds)];
+    // Friend-owned players take part in tournaments exactly like regular
+    // players, so they must not be filtered out here. Only inactive players
+    // are rejected.
     const players = await prisma.player.findMany({
-      where: { id: { in: uniqueIds }, isActive: true, friendOwnerId: null },
+      where: { id: { in: uniqueIds }, isActive: true },
       select: { id: true, name: true, position: true, positionSecond: true, tier: true, avatar: true },
     });
     if (players.length !== uniqueIds.length) {

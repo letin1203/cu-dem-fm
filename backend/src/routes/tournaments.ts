@@ -182,7 +182,9 @@ router.get('/:id/money-history', authenticate, async (req: AuthenticatedRequest,
   try {
     const history = await prisma.playerMoneyHistory.findMany({
       where: { tournamentId: req.params.id },
-      include: { player: { select: { id: true, name: true, position: true, tier: true } } },
+      // money is the player's current balance, used by the UI to decide
+      // whether the debt-settlement button still applies.
+      include: { player: { select: { id: true, name: true, position: true, tier: true, money: true } } },
       orderBy: { player: { name: 'asc' } },
     });
     res.json({ success: true, data: history });

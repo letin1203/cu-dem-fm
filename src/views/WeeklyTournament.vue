@@ -3510,7 +3510,8 @@
                   ></span
                 ><button
                   v-if="
-                    isCurrentUserPlayer(item.player.id) && item.balanceAfter < 0
+                    isCurrentUserPlayer(item.player.id) &&
+                    (item.player.money ?? 0) < 0
                   "
                   type="button"
                   class="rounded bg-red-600 px-2 py-1 font-medium text-white hover:bg-red-700"
@@ -6780,9 +6781,26 @@
           đấu.
         </p>
         <p>
-          Hai hàng chờ được ghép tự động theo thứ tự đăng ký. Khi kết thúc giải,
-          tất cả thành viên của đội điểm cao hơn +10.000 ₫; tất cả thành viên
-          của đội có điểm thấp hơn -10.000 ₫.
+          Mỗi cầu thủ chỉ được đăng ký một Deadmatch cho mỗi đội đối thủ, và
+          không thể tự ghép với chính đội của mình.
+        </p>
+        <p>
+          Hai hàng chờ được ghép tự động theo thứ tự đăng ký. Khi cả hai bên
+          đều có người chờ, cặp đăng ký sớm nhất của mỗi đội sẽ được ghép với
+          nhau; người vào sau tiếp tục chờ lượt.
+        </p>
+        <p>
+          Sau khi đã ghép cặp, hủy một bên sẽ đưa đối thủ trở lại hàng chờ để có
+          thể ghép với người khác.
+        </p>
+        <p>
+          Kết quả tính theo điểm của đội sau khi kết thúc giải. Cặp đấu chỉ được
+          tính tiền khi hai đội có điểm khác nhau; nếu hòa điểm thì không ai mất
+          hay được gì.
+        </p>
+        <p>
+          Khi kết thúc giải, tất cả thành viên của đội điểm cao hơn +10.000 ₫;
+          tất cả thành viên của đội có điểm thấp hơn -10.000 ₫.
         </p>
       </div>
       <div v-if="deadmatchLoading" class="p-8 text-center text-gray-500">
@@ -7477,7 +7495,7 @@ interface TournamentMoneyHistoryItem {
   balanceAfter: number;
   description: string;
   details?: Array<{ description: string; amount: number }> | null;
-  player: { id: string; name: string };
+  player: { id: string; name: string; money?: number };
 }
 const showTournamentMoneyHistoryModal = ref(false);
 const selectedMoneyHistoryTournament = ref<Tournament | null>(null);

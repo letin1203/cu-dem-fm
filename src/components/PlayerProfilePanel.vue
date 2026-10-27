@@ -190,6 +190,12 @@
               >
             </div>
             <p
+              v-if="moneyHistoryPaidForName(item.description)"
+              class="mt-1 text-xs text-gray-500"
+            >
+              Thanh toán cho bạn {{ moneyHistoryPaidForName(item.description) }}
+            </p>
+            <p
               v-if="moneyHistoryApproverName(item)"
               class="mt-1 text-xs text-gray-500"
             >
@@ -307,6 +313,12 @@
                   }}{{ formatMoney(item.amount) }}</strong
                 >
               </div>
+              <p
+                v-if="moneyHistoryPaidForName(item.description)"
+                class="mt-1 text-xs text-gray-500"
+              >
+                Thanh toán cho bạn {{ moneyHistoryPaidForName(item.description) }}
+              </p>
               <p
                 v-if="moneyHistoryApproverName(item)"
                 class="mt-1 text-xs text-gray-500"
@@ -801,6 +813,13 @@ const formatMoneyHistoryDescription = (description: string) => {
   }
   return value.replace(/(?:Giải hằng tuần|Weekly Tournament)\s*-\s*/gi, "");
 };
+/**
+ * A settlement row paid on behalf of a friend stores
+ * "(chi phí cho <player name>)" in the description. Split it out so the UI
+ * can show "Thanh toán cho bạn <name>" on its own smaller line.
+ */
+const moneyHistoryPaidForName = (description: string): string | null =>
+  String(description || "").match(/\(chi phí cho ([^)]+)\)/i)?.[1]?.trim() || null;
 const formatTeamName = (name?: string) =>
   name?.match(/Team\s*\d+/i)?.[0] || name || "Chưa chia đội";
 const teamName = (attendance: TournamentAttendanceHistory) =>

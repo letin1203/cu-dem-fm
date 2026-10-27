@@ -8,9 +8,9 @@
       <button
         v-if="authStore.hasPermission('canEditTournaments')"
         @click="handleCreateNew"
-        :disabled="loading || !canCreateNew"
+        :disabled="loading"
         class="btn-primary w-full sm:w-auto"
-        :class="{ 'opacity-50 cursor-not-allowed': loading || !canCreateNew }"
+        :class="{ 'opacity-50 cursor-not-allowed': loading }"
       >
         {{ loading ? "Đang tạo..." : "Tạo mới" }}
       </button>
@@ -25,7 +25,7 @@
           Chọn ngày tạo giải đấu
         </h2>
         <p class="mt-2 text-sm text-gray-600">
-          Tuần này đã có giải đấu kết thúc. Vui lòng chọn ngày cho giải đấu mới.
+          Chọn ngày cho giải đấu mới. Mặc định là thứ Hai gần nhất chưa có giải.
         </p>
         <div class="mt-5">
           <label for="new-tournament-date" class="form-label"
@@ -3277,8 +3277,7 @@
               đội sẽ hiển thị biểu tượng ⭐ bên cạnh tên.
             </li>
             <li>
-              • Ngôi sao hy vọng thắng: +10.000 ₫; Ngôi sao hy vọng thua:
-              -10.000 ₫.
+              • Ngôi sao hy vọng thắng: +20.000 ₫; Ngôi sao hy vọng thua: -10.000 ₫.
             </li>
           </ul>
         </section>
@@ -3383,8 +3382,7 @@
           </h4>
           <ul class="mt-2 space-y-1 leading-6">
             <li>
-              • Ngôi sao hy vọng thắng: +10.000 ₫; Ngôi sao hy vọng thua:
-              -10.000 ₫.
+              • Ngôi sao hy vọng thắng: +20.000 ₫; Ngôi sao hy vọng thua: -10.000 ₫.
             </li>
             <li>• Cầu thủ đội thua: -10.000 ₫.</li>
             <li>• Người chọn nước: -10.000 ₫; đội thắng được miễn phí nước.</li>
@@ -5475,7 +5473,7 @@
               • GK được giảm 50% chi phí giải đấu
             </li>
             <li v-if="!getTournamentById(endTournamentId)?.selfFunded && getTournamentById(endTournamentId)?.format !== 'LEAGUE'">
-              • Ngôi sao hy vọng thắng: +10.000 ₫
+              • Ngôi sao hy vọng thắng: +20.000 ₫
             </li>
             <li v-if="!getTournamentById(endTournamentId)?.selfFunded && getTournamentById(endTournamentId)?.format !== 'LEAGUE'">
               • Ngôi sao hy vọng thua: -10.000 ₫
@@ -7872,40 +7870,6 @@ const ongoingTournament = computed(() => {
     (tournament) =>
       tournament.status === "UPCOMING" || tournament.status === "ONGOING",
   );
-});
-
-// Check if we can create a new tournament
-const canCreateNew = computed(() => {
-  // Don't allow creating if there's an ongoing tournament
-  if (ongoingTournament.value) return false;
-
-  // A scheduled or ongoing tournament already occupies this date. A completed
-  // tournament may be followed by a new tournament on a different day.
-  const targetDate = nextMonday.value;
-  const targetDateStr = toLocalDateKey(targetDate);
-
-  const tournamentForNextMonday = weeklyTournaments.value.find((tournament) => {
-    const tournamentDateStr = toLocalDateKey(new Date(tournament.startDate));
-    return (
-      tournamentDateStr === targetDateStr &&
-      !["COMPLETED", "DELETED"].includes(tournament.status)
-    );
-  });
-
-  return !tournamentForNextMonday;
-});
-
-const completedTournamentForNextMonday = computed(() => {
-  const targetDateStr = toLocalDateKey(nextMonday.value);
-  return weeklyTournaments.value.find(
-    (tournament) =>
-      tournament.status === "COMPLETED" &&
-      toLocalDateKey(new Date(tournament.startDate)) === targetDateStr,
-  );
-});
-
-const minimumNewTournamentDate = computed(() => {
-  return toLocalDateKey(new Date());
 });
 
 const minimumSelectableDate = computed(() => toLocalDateKey(new Date()));
@@ -11127,14 +11091,31 @@ const generateRandomTeams = async (
   }
 };
 
-const handleCreateNew = () => {
-  const completedTournament = completedTournamentForNextMonday.value;
-  if (!completedTournament) {
-    createWeeklyTournament(nextMonday.value);
-    return;
+// The date preselected in the "Tạo mới" modal: the nearest Monday that runs in
+// the future and does not already have a tournament. If the nearest Monday is
+// taken (or already passed), move to the following Monday.
+const suggestedTournamentDate = computed(() => {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const candidate = new Date(nextMonday.value);
+  const takenDates = new Set(
+    weeklyTournaments.value
+      .filter((tournament) => tournament.status !== "DELETED")
+      .map((tournament) => toLocalDateKey(new Date(tournament.startDate))),
+  );
+  // Skip any Monday that is in the past or already has a tournament.
+  for (let week = 0; week < 104; week += 1) {
+    if (candidate.getTime() >= today.getTime() && !takenDates.has(toLocalDateKey(candidate))) {
+      return new Date(candidate);
+    }
+    candidate.setDate(candidate.getDate() + 7);
   }
+  return new Date(nextMonday.value);
+});
 
-  newTournamentDate.value = minimumNewTournamentDate.value;
+const handleCreateNew = () => {
+  // Always open the date picker; the create action itself validates the date.
+  newTournamentDate.value = toLocalDateKey(suggestedTournamentDate.value);
   showCreateTournamentModal.value = true;
 };
 
@@ -11150,12 +11131,16 @@ const createWeeklyTournamentFromSelectedDate = async () => {
 
 // Create new weekly tournament
 const createWeeklyTournament = async (tournamentDay: Date) => {
-  if (!canCreateNew.value || loading.value) return;
+  if (loading.value) return;
+  // The only real constraint is that a date can host one tournament. The date
+  // is validated here, so the picker can open even while another tournament is
+  // ongoing and the user may still schedule a later week.
   if (
     weeklyTournaments.value.some(
       (tournament) =>
+        tournament.status !== "DELETED" &&
         toLocalDateKey(new Date(tournament.startDate)) ===
-        toLocalDateKey(tournamentDay),
+          toLocalDateKey(tournamentDay),
     )
   ) {
     toast.error("Ngày đã chọn đã có giải đấu. Vui lòng chọn ngày khác.");
@@ -12358,7 +12343,8 @@ const getWaterCount = (tournamentId: string): number => {
 };
 
 // Helper function to calculate betting win amount based on number of teams
-const getBettingWinAmount = (): number => 10000;
+const getBettingWinAmount = (): number => 20000;
+const getBettingLossAmount = (): number => 10000;
 
 // Helper function to get attendance status for a player in a tournament
 const getAttendanceStatus = (
@@ -13236,7 +13222,7 @@ const getDetailedMoneyChange = (
       // Betting loser
       changes.push({
         type: "betting_loss",
-        amount: -10000,
+        amount: -getBettingLossAmount(),
         description: "Ngôi sao hy vọng thua",
       });
     }

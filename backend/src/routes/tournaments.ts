@@ -2821,8 +2821,8 @@ router.put('/:id/end', authenticate, authorize(['ADMIN', 'MOD']), async (req: Au
 
     // Get tournament settings
     const waterCostPerPlayer = 10000; // Water cost
-    const bettingWinAmount = 10000; // Fixed betting win amount
-    const bettingLossAmount = 10000; // Betting loss penalty
+    const bettingWinAmount = 20000; // Betting win bonus (own team wins)
+    const bettingLossAmount = 10000; // Betting loss penalty (own team does not win)
     const teamLoserPenalty = 10000; // Team loser penalty
 
     const bettingWinBonus = bettingWinAmount;

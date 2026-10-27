@@ -2560,12 +2560,6 @@
                       <h3 class="text-lg font-semibold text-gray-900">
                         {{ tournament.name }}
                       </h3>
-                      <p
-                        v-if="tournament.status === 'DELETED'"
-                        class="basis-full text-xs font-medium text-red-600"
-                      >
-                        Lý do: {{ tournament.deletedReason }}
-                      </p>
                       <span
                         class="inline-flex shrink-0 whitespace-nowrap rounded-full bg-primary-100 px-2 py-0.5 text-xs font-medium text-primary-700"
                         >{{
@@ -2605,27 +2599,41 @@
                   <div
                     class="flex flex-wrap items-center gap-2 mt-2 text-sm text-gray-600"
                   >
-                    <span
-                      class="inline-flex items-center rounded-full bg-primary-100 px-2 py-1 text-xs font-semibold text-primary-800"
-                      >{{ formatTournamentTimeRange(tournament) }}</span
-                    >
-                    <span
-                      class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium"
-                      :class="getStatusBadge(tournament.status)"
-                    >
-                      {{ tournament.status }}
-                    </span>
-                    <span
-                      v-if="tournament.selfFunded"
-                      class="inline-flex items-center rounded-full bg-violet-100 px-3 py-1 text-xs font-semibold uppercase text-violet-700"
-                      >🤝 Tự túc</span
-                    >
-                    <span
-                      v-if="tournament.winner"
-                      class="text-yellow-600 font-medium"
-                    >
-                      🏆 {{ tournament.winner.name }}
-                    </span>
+                    <template v-if="tournament.status === 'DELETED'">
+                      <!-- A cancelled tournament shows one badge, then its reason. -->
+                      <span
+                        class="inline-flex shrink-0 items-center rounded-full bg-red-100 px-2 py-1 text-xs font-semibold uppercase text-red-800"
+                        >CANCELED</span
+                      >
+                      <span
+                        v-if="tournament.deletedReason"
+                        class="min-w-0 text-xs font-medium text-red-600"
+                        >Lý do: {{ tournament.deletedReason }}</span
+                      >
+                    </template>
+                    <template v-else>
+                      <span
+                        class="inline-flex items-center rounded-full bg-primary-100 px-2 py-1 text-xs font-semibold text-primary-800"
+                        >{{ formatTournamentTimeRange(tournament) }}</span
+                      >
+                      <span
+                        class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium"
+                        :class="getStatusBadge(tournament.status)"
+                      >
+                        {{ tournament.status }}
+                      </span>
+                      <span
+                        v-if="tournament.selfFunded"
+                        class="inline-flex items-center rounded-full bg-violet-100 px-3 py-1 text-xs font-semibold uppercase text-violet-700"
+                        >🤝 Tự túc</span
+                      >
+                      <span
+                        v-if="tournament.winner"
+                        class="text-yellow-600 font-medium"
+                      >
+                        🏆 {{ displayTeamName(tournament.winner.name) }}
+                      </span>
+                    </template>
                   </div>
                   <!-- Financial Information or Postponed Status -->
                   <div

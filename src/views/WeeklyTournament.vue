@@ -260,17 +260,10 @@
                     >Max: {{ ongoingTournament.maxAttendance }} cháu</span
                   >
                   <button
-                    v-if="authStore.hasAnyRole(['admin', 'mod'])"
+                    v-if="authStore.hasAnyRole(['admin', 'mod']) && !ongoingTournament.isProtected"
                     type="button"
                     :aria-pressed="Boolean(ongoingTournament.selfFunded)"
-                    :disabled="
-                      selfFundedSaving || ongoingTournament.isProtected
-                    "
-                    :title="
-                      ongoingTournament.isProtected
-                        ? 'Giải đấu đã Protect, không thể thay đổi chế độ quỹ'
-                        : undefined
-                    "
+                    :disabled="selfFundedSaving"
                     @click="toggleSelfFunded(ongoingTournament)"
                     class="inline-flex items-center gap-2 rounded-full px-3 py-0.5 text-[10px] font-semibold uppercase transition-colors disabled:cursor-not-allowed disabled:opacity-50 sm:py-1 sm:text-xs"
                     :class="
@@ -290,17 +283,10 @@
                     {{ ongoingTournament.selfFunded ? "Tự túc" : "Dùng quỹ" }}
                   </button>
                   <button
-                    v-if="authStore.hasRole('admin')"
+                    v-if="authStore.hasRole('admin') && !ongoingTournament.isProtected"
                     type="button"
                     :aria-pressed="Boolean(ongoingTournament.isTest)"
-                    :disabled="
-                      testTournamentSaving || ongoingTournament.isProtected
-                    "
-                    :title="
-                      ongoingTournament.isProtected
-                        ? 'Giải đấu đã Protect, không thể thay đổi Test giải'
-                        : undefined
-                    "
+                    :disabled="testTournamentSaving"
                     @click="toggleTournamentTest(ongoingTournament)"
                     class="inline-flex items-center gap-2 rounded-full px-3 py-0.5 text-[10px] font-semibold uppercase transition-colors disabled:cursor-not-allowed disabled:opacity-50 sm:py-1 sm:text-xs"
                     :class="
@@ -317,8 +303,12 @@
                     ></span>
                     Test giải
                   </button>
+                  <!-- Read-only self-funded label for staff who cannot toggle it. -->
                   <span
-                    v-else-if="ongoingTournament.selfFunded"
+                    v-if="
+                      !authStore.hasAnyRole(['admin', 'mod']) &&
+                      ongoingTournament.selfFunded
+                    "
                     class="inline-flex items-center rounded-full bg-violet-100 px-3 py-0.5 text-[10px] font-semibold uppercase text-violet-700 sm:py-1 sm:text-xs"
                     >🤝 Tự túc</span
                   >

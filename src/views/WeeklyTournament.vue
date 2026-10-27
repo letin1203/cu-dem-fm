@@ -1551,14 +1551,6 @@
                 </span>
                 <span
                   v-if="
-                    authStore.hasPermission('canEditTournaments') &&
-                    getTournamentTeams(ongoingTournament).length === 0
-                  "
-                >
-                  Chọn số đội để chia cân bằng
-                </span>
-                <span
-                  v-if="
                     authStore.hasRole('admin') &&
                     ongoingTournament.status === 'ONGOING' &&
                     !canEndTournament(ongoingTournament.id)

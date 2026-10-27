@@ -1,0 +1,1068 @@
+<template>
+  <div v-if="loading" class="flex items-center justify-center py-8">
+    <div
+      class="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"
+    ></div>
+  </div>
+  <div v-else-if="error" class="text-center py-8">
+    <div class="text-red-600 mb-2">{{ error }}</div>
+    <button class="btn-secondary" @click="load">Thử lại</button>
+  </div>
+  <div v-else-if="!playerProfile" class="text-center py-8 text-gray-500">
+    <p class="text-lg font-medium">Chưa có hồ sơ cầu thủ</p>
+    <p class="mt-1 text-sm">
+      {{ isOwnProfile ? "Tài khoản của bạn chưa được liên kết với một cầu thủ." : "Không tìm thấy hồ sơ cầu thủ." }}
+    </p>
+    <p v-if="isOwnProfile" class="mt-4 text-sm text-gray-600">
+      Vui lòng liên hệ quản trị viên để được liên kết hồ sơ.
+    </p>
+  </div>
+
+  <div v-else class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <div class="lg:col-span-1">
+      <div class="rounded-lg border border-gray-200 p-5">
+        <div class="text-center">
+          <div
+            class="mx-auto h-20 w-20 rounded-full bg-gray-300 flex items-center justify-center mb-4"
+          >
+            <img
+              v-if="playerProfile.avatar"
+              :src="playerProfile.avatar"
+              :alt="playerProfile.name"
+              class="h-20 w-20 rounded-full object-cover"
+            />
+            <span v-else class="text-xl font-semibold text-primary-700">{{
+              playerProfile.name.charAt(0)
+            }}</span>
+          </div>
+          <button
+            v-if="isOwnProfile"
+            type="button"
+            class="mb-3 text-sm font-medium text-primary-600 hover:text-primary-700"
+            @click="openAvatarModal"
+          >
+            Đổi avatar
+          </button>
+          <h2 class="text-xl font-bold text-gray-900 mb-2">
+            {{ playerProfile.name }}
+          </h2>
+          <p class="text-gray-600 mb-4">
+            {{ displayPosition(playerProfile.position) }}<template
+              v-if="playerProfile.positionSecond"
+              > - {{ displayPosition(playerProfile.positionSecond) }}</template
+            >
+          </p>
+          <div class="flex justify-center items-center mb-4">
+            <span class="text-sm text-gray-500 mr-2">Tier:</span>
+            <div class="flex">
+              <span
+                v-for="star in 6"
+                :key="star"
+                class="w-4 h-4 flex items-center justify-center"
+                :class="
+                  star <= 7 - playerProfile.tier
+                    ? 'text-yellow-400'
+                    : 'text-gray-300'
+                "
+                >★</span
+              >
+            </div>
+            <span class="text-sm text-gray-600 ml-2"
+              >(Tier {{ playerProfile.tier }}/6)</span
+            >
+          </div>
+        </div>
+        <div class="border-t pt-4 space-y-3 text-sm">
+          <div class="flex justify-between">
+            <span class="text-gray-600">Năm sinh:</span>
+            <span class="flex items-center gap-2">
+              <button
+                v-if="isOwnProfile"
+                type="button"
+                class="text-primary-600 hover:text-primary-800"
+                title="Chỉnh sửa năm sinh"
+                @click="openYearOfBirthModal"
+              >
+                ✎
+              </button>
+              <span class="font-medium">{{ playerProfile.yearOfBirth }}</span>
+            </span>
+          </div>
+          <div class="flex justify-between">
+            <span class="text-gray-600">Tuổi:</span
+            ><span class="font-medium">{{ currentAge }} tuổi</span>
+          </div>
+          <div class="flex justify-between">
+            <span class="text-gray-600">Số dư:</span
+            ><span
+              class="font-medium"
+              :class="
+                playerProfile.money < 0 ? 'text-red-600' : 'text-green-600'
+              "
+              >{{ formatMoney(playerProfile.money) }}</span
+            >
+          </div>
+          <div
+            v-if="isOwnProfile && pendingTopUpTotal > 0"
+            class="rounded-lg bg-yellow-50 px-3 py-2 text-sm text-yellow-800"
+          >
+            <div>
+              Đang chờ duyệt:
+              <span class="font-semibold">{{ formatMoney(pendingTopUpTotal) }}</span>
+            </div>
+            <div
+              v-for="request in pendingTopUps"
+              :key="request.id"
+              class="mt-1 flex items-center justify-between gap-2 text-xs text-yellow-700"
+            >
+              <span
+                >+{{ formatMoney(request.amount) }} · Nạp lúc
+                {{ formatDateTime(request.requestedAt) }}</span
+              >
+              <button
+                type="button"
+                class="inline-flex shrink-0 items-center justify-center rounded p-0.5 text-yellow-700 hover:bg-yellow-200 disabled:cursor-not-allowed disabled:opacity-50"
+                :disabled="cancellingTopUpId === request.id"
+                title="Hủy yêu cầu nạp tiền"
+                aria-label="Hủy yêu cầu nạp tiền"
+                @click="cancelPendingTopUp(request.id)"
+              >
+                <svg
+                  class="h-4 w-4"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                  aria-hidden="true"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M6 6l12 12M18 6 6 18"
+                  />
+                </svg>
+              </button>
+            </div>
+          </div>
+          <button
+            v-if="isOwnProfile"
+            type="button"
+            class="btn-primary mt-1 w-full disabled:cursor-not-allowed disabled:opacity-50"
+            :disabled="isTopUpCooldownActive"
+            @click="openTopUpModal"
+          >
+            {{ isTopUpCooldownActive ? `Nạp lại sau ${topUpCooldownLabel}` : "Nạp tiền" }}
+          </button>
+          <p
+            v-if="isOwnProfile && pendingTopUps.length"
+            class="mt-2 text-center text-xs text-amber-700"
+          >
+            Yêu cầu của bạn đang được BQT kiểm tra quỹ MoMo và duyệt.
+          </p>
+        </div>
+      </div>
+
+      <div class="mt-6 rounded-lg border border-gray-200 p-5">
+        <h3 class="text-lg font-semibold text-gray-900 mb-4">
+          Lịch sử biến động tiền
+        </h3>
+        <div v-if="moneyHistoryLoading" class="text-sm text-gray-500">
+          Đang tải...
+        </div>
+        <div v-else-if="!moneyHistory.length" class="text-sm text-gray-500">
+          Chưa có biến động tiền.
+        </div>
+        <div v-else class="space-y-3">
+          <div
+            v-for="item in moneyHistory"
+            :key="item.id"
+            class="border-b border-gray-100 pb-3 last:border-0 last:pb-0"
+          >
+            <div class="flex justify-between gap-2 text-sm">
+              <span class="min-w-0 text-gray-700">{{
+                formatMoneyHistoryDescription(item.description)
+              }}</span>
+              <span
+                class="shrink-0 whitespace-nowrap font-semibold"
+                :class="item.amount >= 0 ? 'text-green-600' : 'text-red-600'"
+                >{{ item.amount >= 0 ? "+" : ""
+                }}{{ formatMoney(item.amount) }}</span
+              >
+            </div>
+            <p
+              v-if="moneyHistoryApproverName(item)"
+              class="mt-1 text-xs text-gray-500"
+            >
+              Duyệt bởi {{ moneyHistoryApproverName(item) }}
+            </p>
+            <p class="mt-1 text-xs text-gray-500">
+              {{ formatDateTime(item.createdAt) }}
+            </p>
+          </div>
+        </div>
+        <div
+          v-if="moneyHistoryPagination.pages > 1"
+          class="mt-4 flex items-center justify-between border-t pt-3"
+        >
+          <button
+            class="btn-secondary text-sm disabled:opacity-50"
+            :disabled="moneyHistoryPagination.page <= 1"
+            @click="loadMoneyHistory(moneyHistoryPagination.page - 1)"
+          >
+            Trước
+          </button>
+          <span class="text-xs text-gray-500"
+            >Trang {{ moneyHistoryPagination.page }} /
+            {{ moneyHistoryPagination.pages }}</span
+          >
+          <button
+            class="btn-secondary text-sm disabled:opacity-50"
+            :disabled="moneyHistoryPagination.page >= moneyHistoryPagination.pages"
+            @click="loadMoneyHistory(moneyHistoryPagination.page + 1)"
+          >
+            Sau
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div class="lg:col-span-2 space-y-6">
+      <div class="rounded-lg border border-gray-200 p-5">
+        <h3 class="text-lg font-semibold text-gray-900 mb-4">
+          Giải đấu gần nhất
+        </h3>
+        <div v-if="latestTournament" class="rounded-lg bg-gray-50 p-4 space-y-3">
+          <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2">
+            <div>
+              <p class="font-semibold text-gray-900">
+                {{ formatTournamentName(latestTournament.tournament) }}
+              </p>
+              <p class="text-sm text-gray-500">
+                {{ formatDate(latestTournament.tournament.startDate) }}
+              </p>
+            </div>
+            <span
+              class="inline-flex w-fit rounded-full px-2.5 py-1 text-xs font-medium"
+              :class="statusClass(latestTournament.tournament.status)"
+              >{{ statusLabel(latestTournament.tournament.status) }}</span
+            >
+          </div>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
+            <div>
+              <span class="text-gray-500">Đội của cầu thủ: </span
+              ><span class="font-medium">{{ teamName(latestTournament) }}</span>
+            </div>
+            <div>
+              <span class="text-gray-500">Đội vô địch: </span
+              ><span class="font-medium">{{
+                highestScoreTeamName(latestTournament)
+              }}</span>
+            </div>
+            <div>
+              <span class="text-gray-500">Đội thua: </span
+              ><span class="font-medium">{{
+                lowestScoreTeamName(latestTournament)
+              }}</span>
+            </div>
+            <div v-if="latestTournament.withWater" class="text-blue-600">
+              Có uống nước
+            </div>
+            <div v-if="latestTournament.bet" class="text-yellow-700">
+              Có Ngôi sao hy vọng
+            </div>
+          </div>
+          <div class="mt-4">
+            <h4 class="font-semibold text-gray-900 mb-2">Điểm các đội</h4>
+            <div class="space-y-2">
+              <div
+                v-for="entry in scoreSortedTeams(latestTournament)"
+                :key="entry.team.id"
+                class="flex justify-between rounded bg-white px-3 py-2 text-sm"
+              >
+                <span>{{ formatTeamName(entry.team.name) }}</span
+                ><strong>⚽ {{ entry.team.score }}</strong>
+              </div>
+            </div>
+          </div>
+          <div
+            v-if="getMoneyHistoryForTournament(latestTournament.tournament.id).length"
+            class="mt-4"
+          >
+            <h4 class="font-semibold text-gray-900 mb-2">
+              Lịch sử biến động tiền
+            </h4>
+            <div
+              v-for="item in getMoneyHistoryForTournament(latestTournament.tournament.id)"
+              :key="item.id"
+              class="rounded bg-white px-3 py-2 text-sm"
+            >
+              <div class="flex justify-between gap-3">
+                <span class="min-w-0">{{
+                  formatMoneyHistoryDescription(item.description)
+                }}</span>
+                <strong
+                  class="shrink-0 whitespace-nowrap"
+                  :class="item.amount >= 0 ? 'text-green-600' : 'text-red-600'"
+                  >{{ item.amount >= 0 ? "+" : ""
+                  }}{{ formatMoney(item.amount) }}</strong
+                >
+              </div>
+              <p
+                v-if="moneyHistoryApproverName(item)"
+                class="mt-1 text-xs text-gray-500"
+              >
+                Duyệt bởi {{ moneyHistoryApproverName(item) }}
+              </p>
+            </div>
+          </div>
+        </div>
+        <p v-else class="text-sm text-gray-500">
+          Cầu thủ chưa tham gia giải đấu nào.
+        </p>
+      </div>
+
+      <div class="rounded-lg border border-gray-200 p-5">
+        <h3 class="text-lg font-semibold text-gray-900 mb-4">
+          Lịch sử danh sách các giải đấu
+        </h3>
+        <div v-if="olderTournamentHistory.length" class="divide-y divide-gray-100">
+          <button
+            v-for="attendance in paginatedTournamentHistory"
+            :key="attendance.id"
+            type="button"
+            class="flex w-full flex-col justify-between gap-2 py-3 text-left first:pt-0 hover:bg-gray-50 sm:flex-row sm:items-center"
+            @click="selectedTournamentDetail = attendance"
+          >
+            <div>
+              <p class="font-medium text-gray-900">
+                {{ formatTournamentName(attendance.tournament) }}
+              </p>
+              <p class="mt-1 text-sm text-gray-500">
+                {{ formatDate(attendance.tournament.startDate) }} ·
+                {{ teamName(attendance) }}
+              </p>
+            </div>
+            <span
+              class="w-fit rounded-full px-2.5 py-1 text-xs font-medium"
+              :class="statusClass(attendance.tournament.status)"
+              >{{ statusLabel(attendance.tournament.status) }}</span
+            >
+          </button>
+        </div>
+        <p v-else class="text-sm text-gray-500">Chưa có giải đấu cũ hơn.</p>
+        <div
+          v-if="tournamentHistoryPages > 1"
+          class="mt-4 flex items-center justify-between border-t pt-3"
+        >
+          <button
+            class="btn-secondary text-sm disabled:opacity-50"
+            :disabled="tournamentHistoryPage <= 1"
+            @click="tournamentHistoryPage -= 1"
+          >
+            Trước
+          </button>
+          <span class="text-xs text-gray-500"
+            >Trang {{ tournamentHistoryPage }} / {{ tournamentHistoryPages }}</span
+          >
+          <button
+            class="btn-secondary text-sm disabled:opacity-50"
+            :disabled="tournamentHistoryPage >= tournamentHistoryPages"
+            @click="tournamentHistoryPage += 1"
+          >
+            Sau
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <Teleport to="body">
+    <div
+      v-if="selectedTournamentDetail"
+      class="fixed inset-0 z-[90] flex items-center justify-center overflow-y-auto overscroll-contain bg-black/50 p-4"
+    >
+      <div
+        class="flex max-h-[90vh] w-full max-w-lg flex-col overflow-hidden rounded-lg bg-white shadow-xl"
+      >
+        <div class="flex items-start justify-between border-b p-5">
+          <div>
+            <h2 class="text-lg font-semibold text-gray-900">
+              {{ formatTournamentName(selectedTournamentDetail.tournament) }}
+            </h2>
+            <p class="text-sm text-gray-500">
+              {{ formatDate(selectedTournamentDetail.tournament.startDate) }}
+            </p>
+          </div>
+          <button
+            class="text-2xl text-gray-400 hover:text-gray-700"
+            @click="selectedTournamentDetail = null"
+          >
+            ×
+          </button>
+        </div>
+        <div class="min-h-0 space-y-4 overflow-y-auto p-5">
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
+            <div>
+              <span class="text-gray-500">Trạng thái: </span
+              ><span class="font-medium">{{
+                statusLabel(selectedTournamentDetail.tournament.status)
+              }}</span>
+            </div>
+            <div>
+              <span class="text-gray-500">Đội của cầu thủ: </span
+              ><span class="font-medium">{{
+                teamName(selectedTournamentDetail)
+              }}</span>
+            </div>
+            <div>
+              <span class="text-gray-500">Đội vô địch: </span
+              ><span class="font-medium">{{
+                highestScoreTeamName(selectedTournamentDetail)
+              }}</span>
+            </div>
+            <div>
+              <span class="text-gray-500">Đội thua: </span
+              ><span class="font-medium">{{
+                lowestScoreTeamName(selectedTournamentDetail)
+              }}</span>
+            </div>
+          </div>
+          <div>
+            <h3 class="font-semibold text-gray-900 mb-2">Điểm các đội</h3>
+            <div class="space-y-2">
+              <div
+                v-for="entry in scoreSortedTeams(selectedTournamentDetail)"
+                :key="entry.team.id"
+                class="flex justify-between rounded bg-gray-50 px-3 py-2 text-sm"
+              >
+                <span>{{ formatTeamName(entry.team.name) }}</span
+                ><strong>⚽ {{ entry.team.score }}</strong>
+              </div>
+            </div>
+          </div>
+          <div class="flex gap-2 text-sm">
+            <span
+              v-if="selectedTournamentDetail.withWater"
+              class="rounded bg-blue-100 px-2 py-1 text-blue-700"
+              >Có uống nước</span
+            >
+            <span
+              v-if="selectedTournamentDetail.bet"
+              class="rounded bg-yellow-100 px-2 py-1 text-yellow-700"
+              >Có Ngôi sao hy vọng</span
+            >
+          </div>
+        </div>
+        <div class="flex justify-end border-t p-4">
+          <button class="btn-primary" @click="selectedTournamentDetail = null">
+            Đóng
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div
+      v-if="showTopUpModal"
+      class="fixed inset-0 z-[95] flex items-center justify-center overflow-y-auto overscroll-contain bg-gray-900/50 p-4"
+    >
+      <div
+        class="my-auto max-h-[90vh] w-full max-w-md overflow-y-auto rounded-lg bg-white p-6 shadow-xl"
+      >
+        <h2 class="text-lg font-semibold text-gray-900">Nạp tiền</h2>
+        <p class="text-sm text-gray-500 mt-1 mb-4">
+          Quét mã MoMo để nạp quỹ, sau đó chọn số tiền đã nạp. Yêu cầu sẽ chờ
+          quản trị viên duyệt.
+        </p>
+        <img
+          src="/quy-momo.jpg"
+          alt="Mã QR MoMo nạp quỹ"
+          class="w-full max-w-xs mx-auto rounded-lg border border-gray-200 mb-5"
+        />
+        <div class="grid grid-cols-2 gap-3">
+          <button
+            v-for="amount in topUpAmounts"
+            :key="amount"
+            class="rounded-lg border px-4 py-3 font-medium transition-colors"
+            :class="
+              selectedTopUpAmount === amount
+                ? 'border-primary-600 bg-primary-600 text-white'
+                : 'border-gray-200 text-gray-700 hover:bg-gray-50'
+            "
+            @click="selectedTopUpAmount = amount"
+          >
+            {{ formatMoney(amount) }}
+          </button>
+        </div>
+        <label for="profile-top-up" class="form-label mt-5 block"
+          >Hoặc nhập số tiền khác</label
+        >
+        <div class="mt-1 flex items-center gap-2">
+          <button
+            type="button"
+            class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-gray-100 text-xl font-semibold text-gray-700 hover:bg-gray-200"
+            @click="selectedTopUpAmount = Math.max(0, selectedTopUpAmount - 100000)"
+          >
+            −
+          </button>
+          <div class="relative flex-1">
+            <span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">₫</span>
+            <input
+              id="profile-top-up"
+              v-model.number="selectedTopUpAmount"
+              type="number"
+              min="0"
+              class="form-input pl-8"
+              placeholder="Nhập số tiền"
+            />
+          </div>
+          <button
+            type="button"
+            class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary-100 text-xl font-semibold text-primary-700 hover:bg-primary-200"
+            @click="selectedTopUpAmount += 100000"
+          >
+            +
+          </button>
+        </div>
+        <p class="mt-1 text-center text-xs text-gray-500">
+          Đang nhập: {{ formatMoney(selectedTopUpAmount) }}
+        </p>
+        <div class="flex justify-end gap-3 mt-6">
+          <button class="btn-secondary" @click="showTopUpModal = false">Hủy</button>
+          <button class="btn-primary" :disabled="submittingTopUp" @click="submitTopUp">
+            {{ submittingTopUp ? "Đang gửi..." : "Xác nhận" }}
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div
+      v-if="showAvatarModal"
+      class="fixed inset-0 z-[95] flex items-center justify-center overflow-y-auto overscroll-contain bg-gray-900/50 p-4"
+    >
+      <div class="flex max-h-[90vh] w-full max-w-lg flex-col rounded-lg bg-white shadow-xl">
+        <div class="flex items-center justify-between border-b p-5">
+          <div>
+            <h2 class="text-lg font-semibold text-gray-900">Chọn avatar</h2>
+            <p class="text-sm text-gray-500">Chọn một hình đại diện cho hồ sơ của bạn.</p>
+          </div>
+          <button
+            type="button"
+            class="text-2xl leading-none text-gray-400 hover:text-gray-700"
+            @click="showAvatarModal = false"
+          >
+            ×
+          </button>
+        </div>
+        <div class="border-b p-5">
+          <label class="btn-secondary inline-flex cursor-pointer">
+            <input
+              type="file"
+              accept="image/png,image/jpeg,image/webp"
+              class="hidden"
+              @change="uploadAvatar"
+            />Tải ảnh lên</label
+          >
+          <p class="mt-2 text-xs text-gray-500">PNG, JPG hoặc WebP, tối đa 5MB.</p>
+        </div>
+        <div class="grid grid-cols-4 gap-3 overflow-y-auto p-5 sm:grid-cols-6">
+          <button
+            v-for="avatar in avatarOptions"
+            :key="avatar"
+            type="button"
+            class="rounded-full border-2 p-0.5 transition-colors"
+            :class="
+              selectedAvatar === avatar
+                ? 'border-primary-600'
+                : 'border-transparent hover:border-primary-300'
+            "
+            @click="selectedAvatar = avatar"
+          >
+            <img
+              :src="avatar"
+              alt="Avatar"
+              class="aspect-square w-full rounded-full object-cover"
+            />
+          </button>
+        </div>
+        <div class="flex justify-end gap-3 border-t p-4">
+          <button type="button" class="btn-secondary" @click="showAvatarModal = false">
+            Hủy
+          </button>
+          <button
+            type="button"
+            class="btn-primary"
+            :disabled="savingAvatar || !selectedAvatar"
+            @click="saveAvatar"
+          >
+            {{ savingAvatar ? "Đang lưu..." : "Lưu avatar" }}
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div
+      v-if="showYearOfBirthModal"
+      class="fixed inset-0 z-[95] flex items-center justify-center overflow-y-auto overscroll-contain bg-gray-900/50 p-4"
+    >
+      <div class="my-auto max-h-[90vh] w-full max-w-md overflow-y-auto rounded-lg bg-white p-6 shadow-xl">
+        <div class="flex items-center justify-between">
+          <h3 class="text-lg font-semibold">Chỉnh sửa năm sinh</h3>
+          <button
+            type="button"
+            class="text-2xl text-gray-400"
+            @click="showYearOfBirthModal = false"
+          >
+            ×
+          </button>
+        </div>
+        <label class="form-label mt-5 block">Năm sinh</label>
+        <select v-model.number="selectedYearOfBirth" class="form-input mt-1">
+          <option v-for="year in yearOfBirthOptions" :key="year" :value="year">
+            {{ year }}
+          </option>
+        </select>
+        <div class="mt-6 flex justify-end gap-3">
+          <button class="btn-secondary" @click="showYearOfBirthModal = false">
+            Hủy
+          </button>
+          <button
+            class="btn-primary"
+            :disabled="savingYearOfBirth"
+            @click="saveYearOfBirth"
+          >
+            {{ savingYearOfBirth ? "Đang lưu..." : "Lưu" }}
+          </button>
+        </div>
+      </div>
+    </div>
+  </Teleport>
+</template>
+
+<script setup lang="ts">
+import { computed, onBeforeUnmount, onMounted, ref, watch } from "vue";
+import { useToast } from "vue-toastification";
+import { apiClient } from "../api/client";
+import { useAuthStore } from "../stores/auth";
+import { formatMoney } from "../utils/money";
+import type { Player, PlayerMoneyHistory } from "../types";
+
+/**
+ * Shared player profile: used by the "Hồ sơ cầu thủ của tôi" page and by the
+ * profile modal on the "Cầu thủ" page, so the two never drift apart.
+ * Pass `playerId` to view another player; omit it to view the signed-in user.
+ */
+const props = defineProps<{ playerId?: string | null }>();
+const emit = defineEmits<{ "update:loading": [value: boolean] }>();
+
+interface TournamentAttendanceHistory {
+  id: string;
+  withWater: boolean;
+  bet: boolean;
+  tournament: {
+    id: string;
+    name: string;
+    status: string;
+    startDate: string | Date;
+    winner?: { id: string; name: string } | null;
+    teams: Array<{ team: { id: string; name: string; score: number } }>;
+    tournamentTeamPlayers: Array<{ team: { id: string; name: string } }>;
+  };
+}
+
+const authStore = useAuthStore();
+const toast = useToast();
+
+const loading = ref(false);
+const error = ref<string | null>(null);const playerProfile = ref<Player | null>(null);
+const tournamentHistory = ref<TournamentAttendanceHistory[]>([]);
+const selectedTournamentDetail = ref<TournamentAttendanceHistory | null>(null);
+const tournamentHistoryPage = ref(1);
+const tournamentHistoryLimit = 10;
+const moneyHistory = ref<PlayerMoneyHistory[]>([]);
+const moneyHistoryLoading = ref(false);
+const moneyHistoryPagination = ref({ page: 1, pages: 0, total: 0 });
+
+const pendingTopUps = ref<Array<{ id: string; amount: number; requestedAt: string | Date }>>([]);
+const cancellingTopUpId = ref<string | null>(null);
+const showTopUpModal = ref(false);
+const submittingTopUp = ref(false);
+const selectedTopUpAmount = ref(100000);
+const standardTopUpAmounts = [50000, 100000, 200000, 500000];
+const topUpCooldownNow = ref(Date.now());
+let topUpCooldownTimer: number | undefined;
+
+const showAvatarModal = ref(false);
+const savingAvatar = ref(false);
+const selectedAvatar = ref("");
+const showYearOfBirthModal = ref(false);
+const savingYearOfBirth = ref(false);
+const selectedYearOfBirth = ref(1990);
+const yearOfBirthOptions = Array.from({ length: 2010 - 1975 + 1 }, (_, index) => 2010 - index);
+const avatarOptions = [
+  "/avatars/01-side-eye.png", "/avatars/01-sleepy.png", "/avatars/02-excited.png", "/avatars/02-worried.png",
+  "/avatars/03-masked.png", "/avatars/03-unimpressed.png", "/avatars/04-laughing.png", "/avatars/04-shouting.png",
+  "/avatars/05-popcorn.png", "/avatars/05-smile.png", "/avatars/06-heart.png", "/avatars/06-thinking.png",
+  "/avatars/07-bandana.png", "/avatars/07-gesture.png", "/avatars/08-crying.png", "/avatars/08-smirk.png",
+  "/avatars/09-annoyed.png", "/avatars/09-laughing-tears.png", "/avatars/10-cool.png", "/avatars/10-sunglasses.png",
+  "/avatars/11-kiss.png", "/avatars/11-score-10.png", "/avatars/12-confused.png", "/avatars/12-loser.png",
+  "/avatars/photo_6156896139660169801_y.jpg", "/avatars/photo_6156896139660169802_x.jpg",
+  "/avatars/photo_6156896139660169803_x.jpg", "/avatars/photo_6156896139660169804_x.jpg",
+  "/avatars/photo_6156896139660169805_x.jpg", "/avatars/photo_6156896139660169806_x.jpg",
+  "/avatars/photo_6156896139660169807_x.jpg", "/avatars/photo_6156896139660169809_x.jpg",
+  "/avatars/photo_6156896139660169810_x.jpg", "/avatars/photo_6156896139660169811_x.jpg",
+  "/avatars/photo_6156896139660169812_m.jpg", "/avatars/photo_6156896139660169813_x.jpg",
+  "/avatars/duy.jpg", "/avatars/photo_6165615567516144543_y.jpg",
+  "/avatars/quan.jpg", "/avatars/tuan.jpg",
+  ...Array.from({ length: 30 }, (_, index) => `/avatars/ami-${String(index + 1).padStart(2, "0")}.png`),
+];
+
+const ownPlayerId = computed(
+  () => authStore.currentUser?.player?.id || authStore.currentUser?.playerId || null,
+);
+const isOwnProfile = computed(() => {
+  const id = playerProfile.value?.id;
+  return Boolean(id && ownPlayerId.value === id);
+});
+const currentAge = computed(() =>
+  playerProfile.value ? new Date().getFullYear() - playerProfile.value.yearOfBirth : 0,
+);
+const pendingTopUpTotal = computed(() =>
+  pendingTopUps.value.reduce((total, request) => total + request.amount, 0),
+);
+const topUpCooldownRemainingSeconds = computed(() => {
+  const newestRequestAt = pendingTopUps.value.reduce((latest, request) => {
+    const requestedAt = new Date(request.requestedAt).getTime();
+    return Number.isNaN(requestedAt) ? latest : Math.max(latest, requestedAt);
+  }, 0);
+  return Math.max(0, Math.ceil((newestRequestAt + 5 * 60 * 1000 - topUpCooldownNow.value) / 1000));
+});
+const isTopUpCooldownActive = computed(() => topUpCooldownRemainingSeconds.value > 0);
+const topUpCooldownLabel = computed(() => {
+  const remaining = topUpCooldownRemainingSeconds.value;
+  return `${Math.floor(remaining / 60)}:${String(remaining % 60).padStart(2, "0")}`;
+});
+const debtSettlementAmount = computed(() => {
+  const balance = playerProfile.value?.money || 0;
+  return balance < 0 ? Math.abs(balance) : null;
+});
+const topUpAmounts = computed(() => {
+  const debtAmount = debtSettlementAmount.value;
+  return debtAmount && !standardTopUpAmounts.includes(debtAmount)
+    ? [debtAmount, ...standardTopUpAmounts]
+    : standardTopUpAmounts;
+});
+const latestTournament = computed(() => tournamentHistory.value[0] || null);
+const olderTournamentHistory = computed(() => tournamentHistory.value.slice(1));
+const tournamentHistoryPages = computed(() =>
+  Math.ceil(olderTournamentHistory.value.length / tournamentHistoryLimit),
+);
+const paginatedTournamentHistory = computed(() => {
+  const start = (tournamentHistoryPage.value - 1) * tournamentHistoryLimit;
+  return olderTournamentHistory.value.slice(start, start + tournamentHistoryLimit);
+});
+
+const positionLabels: Record<string, string> = {
+  GK: "GK - Thủ môn",
+  DEF: "DEF - Hậu vệ",
+  MID: "MID - Tiền vệ",
+  FWD: "FWD - Tiền đạo",
+  Goalkeeper: "Thủ môn",
+  Defender: "Hậu vệ",
+  Midfielder: "Tiền vệ",
+  Forward: "Tiền đạo",
+};
+const displayPosition = (position: string) => positionLabels[position] || position;
+const formatTournamentName = (tournament: any) =>
+  String(tournament?.name || "").replace(
+    /^(?:Giải hằng tuần|Weekly Tournament)\s*-\s*/i,
+    "",
+  ) || "Giải đấu";
+const moneyHistoryApproverName = (item: PlayerMoneyHistory): string | null =>
+  item.approvedByName || item.approvedByUsername || null;
+const formatMoneyHistoryDescription = (description: string) => {
+  const value = String(description || "");
+  const summary = value.match(/^Tổng kết giải đấu:\s*(?:Giải hằng tuần\s*-\s*)?(.+)$/i);
+  const date = summary?.[1].match(
+    /(Thứ\s+(?:Hai|Ba|Tư|Năm|Sáu|Bảy)|Chủ Nhật),?\s*(\d{1,2})\s+thg\s+(\d{1,2}),?\s*(\d{4})/i,
+  );
+  if (date) {
+    const weekday = (
+      {
+        "thứ hai": "T2",
+        "thứ ba": "T3",
+        "thứ tư": "T4",
+        "thứ năm": "T5",
+        "thứ sáu": "T6",
+        "thứ bảy": "T7",
+        "chủ nhật": "CN",
+      } as Record<string, string>
+    )[date[1].toLowerCase()];
+    return `Tổng kết: ${weekday || date[1]} ${date[2].padStart(2, "0")}/${date[3].padStart(2, "0")}/${date[4]}`;
+  }
+  return value.replace(/(?:Giải hằng tuần|Weekly Tournament)\s*-\s*/gi, "");
+};
+const formatTeamName = (name?: string) =>
+  name?.match(/Team\s*\d+/i)?.[0] || name || "Chưa chia đội";
+const teamName = (attendance: TournamentAttendanceHistory) =>
+  formatTeamName(attendance.tournament.tournamentTeamPlayers[0]?.team.name);
+const scoreSortedTeams = (attendance: TournamentAttendanceHistory) =>
+  [...attendance.tournament.teams].sort((first, second) => second.team.score - first.team.score);
+const highestScoreTeamName = (attendance: TournamentAttendanceHistory) =>
+  attendance.tournament.status === "ONGOING"
+    ? "Chưa xác định"
+    : scoreSortedTeams(attendance)[0]
+      ? formatTeamName(scoreSortedTeams(attendance)[0].team.name)
+      : "Chưa xác định";
+const lowestScoreTeamName = (attendance: TournamentAttendanceHistory) => {
+  if (attendance.tournament.status === "ONGOING") return "Chưa xác định";
+  const teams = scoreSortedTeams(attendance);
+  return teams.length
+    ? formatTeamName(teams[teams.length - 1].team.name)
+    : "Chưa xác định";
+};
+const formatDate = (date: Date | string) =>
+  new Date(date).toLocaleDateString("vi-VN", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  });
+const formatDateTime = (date: Date | string) =>
+  new Date(date).toLocaleString("vi-VN", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+const statusLabel = (status: string) =>
+  ({
+    UPCOMING: "Sắp diễn ra",
+    ONGOING: "Đang diễn ra",
+    COMPLETED: "Đã hoàn thành",
+    DELETED: "CANCELED",
+  })[status] || status;
+const statusClass = (status: string) =>
+  ({
+    UPCOMING: "bg-blue-100 text-blue-700",
+    ONGOING: "bg-yellow-100 text-yellow-700",
+    COMPLETED: "bg-green-100 text-green-700",
+    DELETED: "bg-red-100 text-red-700",
+  })[status] || "bg-gray-100 text-gray-700";
+const getMoneyHistoryForTournament = (tournamentId: string) =>
+  moneyHistory.value.filter((item) => item.tournamentId === tournamentId);
+
+const loadTournamentHistory = async (playerId: string) => {
+  const response = await apiClient.getPlayerTournamentHistory(playerId);
+  if (!response.success) throw new Error(response.error || "Không thể tải lịch sử giải đấu");
+  tournamentHistory.value = (response.data || []) as TournamentAttendanceHistory[];
+  tournamentHistoryPage.value = 1;
+};
+const loadMoneyHistory = async (page = 1) => {
+  if (!playerProfile.value) return;
+  moneyHistoryLoading.value = true;
+  try {
+    const response = await apiClient.getPlayerMoneyHistory(playerProfile.value.id, {
+      page,
+      limit: 10,
+    });
+    if (!response.success) throw new Error(response.error || "Không thể tải lịch sử biến động tiền");
+    const data = response.data as {
+      history?: PlayerMoneyHistory[];
+      pagination?: { page: number; pages: number; total: number };
+    };
+    moneyHistory.value = data?.history || [];
+    moneyHistoryPagination.value = data?.pagination || { page: 1, pages: 0, total: 0 };
+  } finally {
+    moneyHistoryLoading.value = false;
+  }
+};
+const loadPendingTopUps = async () => {
+  if (!isOwnProfile.value) {
+    pendingTopUps.value = [];
+    return;
+  }
+  const response = await apiClient.getMyPendingMoneyTopUps();
+  if (!response.success) throw new Error(response.error || "Không thể tải yêu cầu nạp tiền");
+  const data = response.data as {
+    totalPending?: number;
+    requests?: Array<{ id: string; amount: number; requestedAt: string | Date }>;
+  };
+  pendingTopUps.value = data?.requests || [];
+};
+const cancelPendingTopUp = async (id: string): Promise<void> => {
+  if (cancellingTopUpId.value) return;
+  try {
+    cancellingTopUpId.value = id;
+    const response = await apiClient.cancelMyMoneyTopUp(id);
+    if (!response.success) throw new Error(response.error || "Không thể hủy yêu cầu nạp tiền");
+    await loadPendingTopUps();
+    window.dispatchEvent(new Event("pending-money-top-ups-changed"));
+    toast.success("Đã hủy yêu cầu nạp tiền");
+  } catch (err) {
+    toast.error(err instanceof Error ? err.message : "Không thể hủy yêu cầu nạp tiền");
+  } finally {
+    cancellingTopUpId.value = null;
+  }
+};
+
+const load = async (): Promise<void> => {
+  loading.value = true;
+  emit("update:loading", true);
+  error.value = null;
+  try {
+    if (props.playerId) {
+      const response = await apiClient.getPlayer(props.playerId);
+      if (!response.success || !response.data)
+        throw new Error(response.error || "Không thể tải hồ sơ cầu thủ");
+      playerProfile.value = response.data as Player;
+    } else {
+      // Own profile: refresh first so a newly linked player shows immediately.
+      await authStore.getCurrentUser();
+      if (authStore.currentUser?.player) playerProfile.value = authStore.currentUser.player;
+      else if (authStore.currentUser?.playerId) {
+        const response = await apiClient.getPlayer(authStore.currentUser.playerId);
+        if (!response.success || !response.data)
+          throw new Error(response.error || "Không thể tải hồ sơ cầu thủ");
+        playerProfile.value = response.data as Player;
+      } else playerProfile.value = null;
+    }
+
+    if (playerProfile.value) {
+      // History widgets are supplementary and must never block the profile card.
+      void Promise.allSettled([
+        loadTournamentHistory(playerProfile.value.id),
+        loadPendingTopUps(),
+        loadMoneyHistory(1),
+      ]).catch((loadError) => console.error("Error loading player history:", loadError));
+    }
+  } catch (err) {
+    console.error("Error fetching player profile:", err);
+    error.value = err instanceof Error ? err.message : "Không thể tải hồ sơ cầu thủ. Vui lòng thử lại.";
+  } finally {
+    loading.value = false;
+    emit("update:loading", false);
+  }
+};
+
+const openAvatarModal = (): void => {
+  selectedAvatar.value = playerProfile.value?.avatar || avatarOptions[0];
+  showAvatarModal.value = true;
+};
+const openYearOfBirthModal = (): void => {
+  selectedYearOfBirth.value = playerProfile.value?.yearOfBirth || 1990;
+  showYearOfBirthModal.value = true;
+};
+const saveYearOfBirth = async (): Promise<void> => {
+  if (!playerProfile.value || savingYearOfBirth.value) return;
+  savingYearOfBirth.value = true;
+  try {
+    const response = await apiClient.updateMyPlayerYearOfBirth(
+      playerProfile.value.id,
+      selectedYearOfBirth.value,
+    );
+    if (!response.success) throw new Error(response.error || "Không thể cập nhật năm sinh");
+    playerProfile.value = { ...playerProfile.value, yearOfBirth: selectedYearOfBirth.value };
+    if (authStore.currentUser?.player) authStore.currentUser.player.yearOfBirth = selectedYearOfBirth.value;
+    showYearOfBirthModal.value = false;
+    toast.success("Đã cập nhật năm sinh");
+  } catch (err) {
+    toast.error(err instanceof Error ? err.message : "Không thể cập nhật năm sinh");
+  } finally {
+    savingYearOfBirth.value = false;
+  }
+};
+const openTopUpModal = (): void => {
+  if (isTopUpCooldownActive.value) {
+    toast.info(`Bạn có thể nạp tiếp sau ${topUpCooldownLabel.value}`);
+    return;
+  }
+  selectedTopUpAmount.value = debtSettlementAmount.value || 100000;
+  showTopUpModal.value = true;
+};
+const saveAvatar = async (): Promise<void> => {
+  if (!playerProfile.value || !selectedAvatar.value) return;
+  savingAvatar.value = true;
+  try {
+    const response = await apiClient.updateMyPlayerAvatar(playerProfile.value.id, selectedAvatar.value);
+    if (!response.success) throw new Error(response.error || "Không thể cập nhật avatar");
+    playerProfile.value = { ...playerProfile.value, avatar: selectedAvatar.value };
+    if (authStore.currentUser?.player) authStore.currentUser.player.avatar = selectedAvatar.value;
+    showAvatarModal.value = false;
+    toast.success("Đã cập nhật avatar");
+  } catch (err) {
+    toast.error(err instanceof Error ? err.message : "Không thể cập nhật avatar");
+  } finally {
+    savingAvatar.value = false;
+  }
+};
+const uploadAvatar = async (event: Event): Promise<void> => {
+  const file = (event.target as HTMLInputElement).files?.[0];
+  if (!file || !playerProfile.value) return;
+  if (file.size > 5 * 1024 * 1024) {
+    toast.error("Ảnh tối đa 5MB");
+    return;
+  }
+  savingAvatar.value = true;
+  try {
+    const image = await new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(String(reader.result));
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+    const response = await apiClient.uploadMyPlayerAvatar(playerProfile.value.id, image);
+    if (!response.success) throw new Error(response.error || "Không thể upload avatar");
+    selectedAvatar.value = (response.data as any).avatar;
+    playerProfile.value = { ...playerProfile.value, avatar: selectedAvatar.value };
+    if (authStore.currentUser?.player) authStore.currentUser.player.avatar = selectedAvatar.value;
+    showAvatarModal.value = false;
+    toast.success("Đã upload avatar lên Cloudinary");
+  } catch (err) {
+    toast.error(err instanceof Error ? err.message : "Không thể upload avatar");
+  } finally {
+    savingAvatar.value = false;
+  }
+};
+const submitTopUp = async (): Promise<void> => {
+  if (!Number.isInteger(selectedTopUpAmount.value) || selectedTopUpAmount.value <= 0) {
+    toast.error("Vui lòng nhập số tiền nạp hợp lệ");
+    return;
+  }
+  submittingTopUp.value = true;
+  try {
+    const response = await apiClient.createMoneyTopUp(selectedTopUpAmount.value);
+    if (!response.success) throw new Error(response.error || "Không thể gửi yêu cầu nạp tiền");
+    showTopUpModal.value = false;
+    await loadPendingTopUps();
+    toast.success("Yêu cầu nạp tiền đã được gửi và đang chờ duyệt");
+  } catch (err) {
+    toast.error(err instanceof Error ? err.message : "Không thể gửi yêu cầu nạp tiền");
+  } finally {
+    submittingTopUp.value = false;
+  }
+};
+
+// A top-up approval changes the balance and the pending list, so refresh both.
+const refreshAfterNotification = async (): Promise<void> => {
+  if (!props.playerId || isOwnProfile.value) await load();
+};
+const onCooldownTick = (): void => {
+  topUpCooldownNow.value = Date.now();
+};
+
+onMounted(() => {
+  void load();
+  topUpCooldownTimer = window.setInterval(onCooldownTick, 1_000);
+  window.addEventListener("pending-money-top-ups-changed", refreshAfterNotification);
+});
+onBeforeUnmount(() => {
+  if (topUpCooldownTimer) window.clearInterval(topUpCooldownTimer);
+  window.removeEventListener("pending-money-top-ups-changed", refreshAfterNotification);
+});
+watch(
+  () => props.playerId,
+  () => void load(),
+);
+
+defineExpose({ refresh: load });
+</script>

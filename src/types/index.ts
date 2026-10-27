@@ -64,6 +64,10 @@ export interface PlayerMoneyHistory {
   details?: Array<{ description: string; amount: number }> | null
   approvedByUsername?: string | null
   changedByUsername?: string | null
+  /** Player name of the staff member who approved, falls back to username. */
+  approvedByName?: string | null
+  /** Player name of the staff member who made the change, falls back to username. */
+  changedByName?: string | null
   createdAt: string | Date
   tournament?: { id: string; name: string } | null
 }

@@ -169,6 +169,12 @@
                   }}{{ formatMoney(item.amount) }}</span
                 >
               </div>
+              <p
+                v-if="moneyHistoryApproverName(item)"
+                class="mt-1 text-xs text-gray-500"
+              >
+                Duyệt bởi {{ moneyHistoryApproverName(item) }}
+              </p>
               <p class="mt-1 text-xs text-gray-500">
                 {{ formatDateTime(item.createdAt) }}
               </p>
@@ -305,6 +311,12 @@
                     }}{{ formatMoney(item.amount) }}</strong
                   >
                 </div>
+                <p
+                  v-if="moneyHistoryApproverName(item)"
+                  class="mt-1 text-xs text-gray-500"
+                >
+                  Duyệt bởi {{ moneyHistoryApproverName(item) }}
+                </p>
                 <div
                   v-if="item.details?.length"
                   class="mt-2 space-y-1 border-t pt-2 text-xs text-gray-600"
@@ -720,6 +732,9 @@ const formatTournamentName = (tournament: any) =>
     /^(?:Giải hằng tuần|Weekly Tournament)\s*-\s*/i,
     "",
   ) || "Giải đấu";
+// Prefer the approver's player name, falling back to the stored username.
+const moneyHistoryApproverName = (item: PlayerMoneyHistory): string | null =>
+  item.approvedByName || item.approvedByUsername || null;
 const formatMoneyHistoryDescription = (description: string) => {
   const value = String(description || "");
   const summary = value.match(
@@ -784,12 +799,14 @@ const statusLabel = (status: string) =>
     UPCOMING: "Sắp diễn ra",
     ONGOING: "Đang diễn ra",
     COMPLETED: "Đã hoàn thành",
+    DELETED: "CANCELED",
   })[status] || status;
 const statusClass = (status: string) =>
   ({
     UPCOMING: "bg-blue-100 text-blue-700",
     ONGOING: "bg-yellow-100 text-yellow-700",
     COMPLETED: "bg-green-100 text-green-700",
+    DELETED: "bg-red-100 text-red-700",
   })[status] || "bg-gray-100 text-gray-700";
 const getMoneyHistoryForTournament = (tournamentId: string) =>
   moneyHistory.value.filter((item) => item.tournamentId === tournamentId);

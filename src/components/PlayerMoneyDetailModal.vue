@@ -18,9 +18,9 @@
             <div class="flex flex-wrap items-start justify-between gap-2">
               <div>
                 <p class="font-medium text-gray-900">{{ getDescription(item) }}</p>
+                <p v-if="getApprovedByName(item)" class="mt-1 text-xs text-gray-500">Duyệt bởi {{ getApprovedByName(item) }}</p>
                 <p v-if="item.tournament" class="mt-1 text-sm text-primary-700">{{ item.tournament.name }}</p>
-                <p v-if="getApprovedByUsername(item)" class="mt-1 text-sm text-gray-600">Duyệt bởi: <strong class="text-gray-800">{{ getApprovedByUsername(item) }}</strong></p>
-                <p v-if="item.changedByUsername" class="mt-1 text-sm text-gray-600">Thay đổi bởi: <strong class="text-gray-800">{{ item.changedByUsername }}</strong></p>
+                <p v-if="getChangedByName(item)" class="mt-1 text-xs text-gray-500">Thay đổi bởi {{ getChangedByName(item) }}</p>
                 <p class="mt-1 text-xs text-gray-500">{{ formatDate(item.createdAt) }}</p>
               </div>
               <span class="font-semibold" :class="item.amount >= 0 ? 'text-green-600' : 'text-red-600'">
@@ -102,8 +102,13 @@ const submitDeduction = () => {
 }
 const formatMoney = (value: number) => formatCompactMoney(value)
 const formatDate = (value: string | Date) => new Date(value).toLocaleString('vi-VN')
-const getApprovedByUsername = (item: PlayerMoneyHistory) =>
-  item.approvedByUsername || item.description.match(/^Nạp tiền đã được duyệt bởi (.+)$/)?.[1] || null
+const getApprovedByName = (item: PlayerMoneyHistory) =>
+  item.approvedByName
+  || item.approvedByUsername
+  || item.description.match(/^Nạp tiền đã được duyệt bởi (.+)$/)?.[1]
+  || null
+const getChangedByName = (item: PlayerMoneyHistory) =>
+  item.changedByName || item.changedByUsername || null
 const getDescription = (item: PlayerMoneyHistory) =>
   item.approvedByUsername ? item.description : item.description.replace(/^Nạp tiền đã được duyệt bởi .+$/, 'Nạp tiền đã được duyệt')
 </script>

@@ -183,10 +183,36 @@ router.get('/:id/money-history', authenticate, async (req: AuthenticatedRequest,
       return { ...entry, approvedByUsername, changedByUsername };
     });
 
+    // The audit rows store the staff username. Resolve it to the linked player
+    // name so the UI can read "Duyệt bởi <tên cầu thủ>", falling back to the
+    // username when that staff account has no player.
+    const auditUsernames = [...new Set(
+      historyWithApprover
+        .flatMap((entry) => [entry.approvedByUsername, entry.changedByUsername])
+        .filter((value): value is string => typeof value === 'string' && value.length > 0),
+    )];
+    const auditUsers = auditUsernames.length
+      ? await prisma.user.findMany({
+          where: { username: { in: auditUsernames } },
+          select: { username: true, player: { select: { name: true } } },
+        })
+      : [];
+    const playerNameByUsername = new Map(
+      auditUsers.map((user) => [user.username, user.player?.name || user.username]),
+    );
+    const toDisplayName = (username: string | null) =>
+      username ? playerNameByUsername.get(username) || username : null;
+
+    const historyWithDisplayNames = historyWithApprover.map((entry) => ({
+      ...entry,
+      approvedByName: toDisplayName(entry.approvedByUsername),
+      changedByName: toDisplayName(entry.changedByUsername),
+    }));
+
     res.json({
       success: true,
       data: {
-        history: historyWithApprover,
+        history: historyWithDisplayNames,
         pagination: { page, limit, total, pages: Math.ceil(total / limit) },
       },
     });

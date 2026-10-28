@@ -11,7 +11,10 @@
     "db:push": "prisma db push",
     "db:migrate": "prisma migrate dev",
     "db:studio": "prisma studio",
-    "db:seed": "tsx src/scripts/seed.ts"
+    "db:seed": "tsx src/scripts/seed.ts",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit"
   },
   "keywords": [
     "football",
@@ -45,7 +48,8 @@
     "zod": "^3.22.4"
   },
   "devDependencies": {
-    "tsx": "^4.6.2"
+    "tsx": "^4.6.2",
+    "vitest": "^4.1.12"
   },
   "engines": {
     "node": "20.17.0"

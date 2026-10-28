@@ -1,6 +1,7 @@
 import { Router } from 'express'
 import { prisma } from '../lib/prisma'
-import { authenticate } from '../middleware/auth'
+import { authenticate, AuthenticatedRequest } from '../middleware/auth'
+import { validateAdminSql } from '../lib/adminSql'
 
 const router = Router()
 
@@ -126,7 +127,7 @@ router.get('/table/:tableName', async (req, res) => {
 })
 
 // Execute custom SQL query
-router.post('/query', async (req, res) => {
+router.post('/query', async (req: AuthenticatedRequest, res) => {
   try {
     const { query } = req.body
 
@@ -137,49 +138,24 @@ router.post('/query', async (req, res) => {
       })
     }
 
-    // Strip comments and trailing semicolons so the statement can be classified
-    // reliably, then reject stacked statements outright.
-    const normalized = query
-      .replace(/--[^\n]*/g, ' ')
-      .replace(/\/\*[\s\S]*?\*\//g, ' ')
-      .trim()
-      .replace(/;+\s*$/, '')
-
-    if (!normalized) {
-      return res.status(400).json({ success: false, error: 'Query is empty' })
-    }
-
-    if (normalized.includes(';')) {
-      return res.status(400).json({
+    // The console runs raw SQL, so a keyword blacklist is not enough. Every
+    // statement must be a single allowlisted query, and schema-destructive or
+    // side-effecting forms (data-modifying CTEs, SELECT ... INTO, DO blocks)
+    // are rejected outright.
+    const guard = validateAdminSql(query, process.env.DATABASE_ADMIN_ALLOW_WRITES === 'true')
+    if (!guard.ok || !guard.statement) {
+      return res.status(guard.error?.includes('Only read-only') ? 403 : 400).json({
         success: false,
-        error: 'Only a single statement is allowed'
+        error: guard.error || 'Query rejected'
       })
     }
 
-    const statement = normalized.toUpperCase()
-    const isReadOnly = /^(SELECT|WITH|EXPLAIN|SHOW)\b/.test(statement)
-    const allowWrites = process.env.DATABASE_ADMIN_ALLOW_WRITES === 'true'
+    const normalized = guard.statement
 
-    if (!isReadOnly && !allowWrites) {
-      return res.status(403).json({
-        success: false,
-        error: 'Only read-only queries are allowed. Set DATABASE_ADMIN_ALLOW_WRITES=true to enable writes.'
-      })
-    }
-
-    // Schema-destructive statements stay blocked even when writes are enabled.
-    const forbidden = [
-      'DROP DATABASE', 'DROP SCHEMA', 'TRUNCATE',
-      'ALTER ROLE', 'ALTER USER', 'CREATE ROLE', 'CREATE USER',
-      'GRANT ', 'REVOKE ', 'COPY ', 'PG_READ_FILE', 'PG_READ_BINARY_FILE',
-    ]
-    for (const keyword of forbidden) {
-      if (statement.includes(keyword)) {
-        return res.status(400).json({
-          success: false,
-          error: `Operation not allowed: ${keyword.trim()}`
-        })
-      }
+    if (!guard.isReadOnly) {
+      // Writes are opt-in. Log who ran them so an audit trail exists even
+      // outside the Prisma-managed tables.
+      console.warn('[database-admin] write query by %s: %s', req.user?.username ?? 'unknown', normalized.slice(0, 200))
     }
 
     // Execute raw SQL query

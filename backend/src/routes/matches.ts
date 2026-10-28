@@ -6,7 +6,7 @@ import { authenticate, authorize, AuthenticatedRequest } from '../middleware/aut
 const router = Router();
 
 // Get all matches with pagination and filters
-router.get('/', async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+router.get('/', authenticate, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   try {
     const { page, limit, tournamentId, teamId, status } = matchQuerySchema.parse(req.query);
     const skip = (page - 1) * limit;
@@ -95,7 +95,7 @@ router.get('/', async (req: AuthenticatedRequest, res: Response): Promise<void> 
 });
 
 // Get match by ID
-router.get('/:id', async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+router.get('/:id', authenticate, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   try {
     const { id } = req.params;
 

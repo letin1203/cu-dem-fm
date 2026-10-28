@@ -11,7 +11,7 @@ export const errorHandler = (
   res: Response,
   next: NextFunction
 ): void => {
-  let error = { ...err };
+  const error = { ...err };
   error.message = err.message;
 
   // Prisma errors

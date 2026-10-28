@@ -7,12 +7,21 @@ export interface ApiResponse<T = any> {
   message?: string;
 }
 
+/**
+ * Single source of truth for the backend URL.
+ *
+ * Set `VITE_API_BASE_URL` in the environment (Vercel project settings or the
+ * deploy workflow) — never hardcode a deployment host in the repo.
+ */
+export const API_BASE_URL =
+  import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001/api';
+
 class ApiClient {
   private client: any;
 
   constructor() {
     this.client = axios.create({
-      baseURL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001/api',
+      baseURL: API_BASE_URL,
       timeout: 30000, // Increased timeout to 30 seconds for cold starts
       headers: {
         'Content-Type': 'application/json',
@@ -62,8 +71,11 @@ class ApiClient {
         }
         
         if (error.response?.status === 401) {
-          // Clear token and redirect to login
+          // Clear the whole session, not just the token: the auth store keeps
+          // `current_user` and `isAuthenticated` in memory, so leaving it behind
+          // leaves the UI "logged in" with a dead token.
           localStorage.removeItem('auth_token');
+          localStorage.removeItem('current_user');
           // Redirect to login page
           if (typeof window !== 'undefined' && window.location.pathname !== '/login') {
             window.location.href = '/login';

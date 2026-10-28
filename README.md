@@ -23,6 +23,7 @@ A comprehensive Vue 3 TypeScript web application for managing football organizat
 - **Excel export**: SheetJS (`xlsx`, loaded on demand)
 - **Backend**: Express + Prisma + PostgreSQL
 - **Auth**: JWT with per-user token versioning (logout revokes tokens)
+- **Tests**: Vitest (backend domain logic)
 
 ## 📁 Project Structure
 
@@ -30,23 +31,36 @@ A comprehensive Vue 3 TypeScript web application for managing football organizat
 src/
 ├── components/          # Reusable UI components
 │   ├── Navigation.vue   # Main navigation component
-│   └── StatsCard.vue    # Statistics display card
-├── views/              # Page components (lazy-loaded)
+│   ├── tournament/      # Tournament modals and cards
+│   └── ...
+├── composables/         # Extracted stateful feature slices
+│   ├── usePinnedPoll.ts
+│   ├── useDeadmatches.ts
+│   ├── useOldTournaments.ts
+│   └── useTournamentCostEstimate.ts
+├── views/               # Page components (lazy-loaded)
 │   ├── WeeklyTournament.vue  # Main attendance/settlement screen
 │   ├── Teams.vue        # Team management
 │   ├── Players.vue      # Player management
 │   ├── Tournaments.vue  # Tournament management
 │   ├── Matches.vue      # Match management
 │   └── Stats.vue        # Statistics and analytics
-├── stores/             # Pinia stores for state management
-│   ├── players.ts       # Player data management
-│   ├── teams.ts         # Team data management
-│   ├── tournaments.ts   # Tournament data management
-│   └── matches.ts       # Match data management
-├── types/              # TypeScript type definitions
-│   └── index.ts         # Main type definitions
-└── router/             # Vue Router configuration
-    └── index.ts         # Route definitions
+├── stores/              # Pinia stores for state management
+├── types/               # TypeScript type definitions
+├── api/client.ts        # Single Axios instance + endpoint helpers
+└── router/              # Vue Router configuration
+
+backend/src/
+├── routes/
+│   ├── tournaments.ts             # CRUD, teams, list/detail
+│   ├── tournamentAttendance.ts    # Attendance + friend attendance
+│   ├── tournamentSocial.ts        # Swap, challenge, invite, deadmatch
+│   ├── tournamentSplit.ts         # Team-split preview + generation
+│   └── tournamentSettlement.ts    # Scores + end tournament
+├── services/
+│   ├── teamGeneration.ts          # Balanced team algorithm (+ tests)
+│   └── settlement.ts              # Pure settlement math (+ tests)
+└── lib/                           # prisma, tournament rules, SQL guard
 ```
 
 ## 🚀 Getting Started
@@ -73,8 +87,17 @@ src/
 ### Available Scripts
 
 - `npm run dev` - Start development server
-- `npm run build` - Build for production
+- `npm run build` - Type-check (`vue-tsc`) and build for production
 - `npm run preview` - Preview production build
+- `npm run lint` - ESLint
+- `npm run typecheck` - Type-check without building
+- `npm test` - Run backend unit tests with Vitest
+
+### Frontend environment
+
+The API base URL is read from `VITE_API_BASE_URL` (see `.env.example`). It
+defaults to `http://localhost:3001/api`, so no local `.env` is required unless
+you point the app at a different backend.
 
 ## 📊 Features Overview
 

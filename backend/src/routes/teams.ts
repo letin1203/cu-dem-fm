@@ -6,7 +6,7 @@ import { authenticate, authorize, AuthenticatedRequest } from '../middleware/aut
 const router = Router();
 
 // Get all teams with pagination
-router.get('/', async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+router.get('/', authenticate, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   try {
     const { page, limit } = paginationSchema.parse(req.query);
     const skip = (page - 1) * limit;

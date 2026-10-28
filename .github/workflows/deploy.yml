@@ -27,6 +27,22 @@ jobs:
         cd backend
         npm ci
 
+    - name: Lint
+      run: npm run lint
+
+    - name: Type check Frontend
+      run: npm run typecheck
+
+    - name: Type check Backend
+      run: |
+        cd backend
+        npm run typecheck
+
+    - name: Unit tests (Backend)
+      run: |
+        cd backend
+        npm test
+
     - name: Type check and build Frontend
       run: npm run build
 

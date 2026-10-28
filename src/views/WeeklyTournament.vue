@@ -7270,10 +7270,16 @@ import type {
   TournamentPlayerAttendance,
   TournamentAttendanceStats,
   TournamentAttendanceDetails,
-  TournamentEndResponse,
 } from "../types";
 import { apiClient } from "../api/client";
 import { formatMoney } from "../utils/money";
+import { usePinnedPoll } from "../composables/usePinnedPoll";
+import { useDeadmatches } from "../composables/useDeadmatches";
+import {
+  toLocalDateKey,
+  useOldTournaments,
+} from "../composables/useOldTournaments";
+import { useTournamentCostEstimate } from "../composables/useTournamentCostEstimate";
 import TeamSplitProgressModal from "../components/TeamSplitProgressModal.vue";
 
 const toast = useToast();
@@ -7331,22 +7337,9 @@ const friendInviteTournamentId = ref<string | null>(null);
 const friendInviteReceived = ref(false);
 const friendInviteSaving = ref(false);
 const autoOpenedIncomingChallengeIds = new Set<string>();
-const showDeadmatchModal = ref(false);
-const showDeadmatchHistoryModal = ref(false);
-const deadmatchHistoryLoading = ref(false);
-const deadmatchHistoryPairs = ref<any[]>([]);
 const showChallengeBattleDetailsModal = ref(false);
-const showPinnedPollModal = ref(false);
-const pinnedPoll = ref<any | null>(null);
-const pinnedPollSelectedOptionIds = ref<string[]>([]);
-const pinnedPollSaving = ref(false);
 const challengeBattleDetailsLoading = ref(false);
 const challengeBattleTournament = ref<Tournament | null>(null);
-const deadmatchTournament = ref<Tournament | null>(null);
-const deadmatchOpponentTeam = ref<any | null>(null);
-const deadmatchEntries = ref<any[]>([]);
-const deadmatchLoading = ref(false);
-const deadmatchSaving = ref(false);
 const friendsLoading = ref(false);
 const friendRegistrationSaving = ref(false);
 const friendSwapMode = ref(false);
@@ -7726,125 +7719,7 @@ const isFormValid = computed(() => {
   return descriptionValid && amountValid;
 });
 
-// Helper functions for tournament-specific additional costs
-const getTournamentAdditionalCosts = (tournamentId: string) => {
-  const tournament = getTournamentById(tournamentId);
-  if (tournament?.selfFunded) return [];
-  return systemStore.additionalCosts.filter(
-    (cost) => cost.tournamentId === tournamentId,
-  );
-};
 
-const getTournamentById = (
-  tournamentId: string | null,
-): Tournament | undefined => {
-  if (!tournamentId) return undefined;
-  return (
-    weeklyTournaments.value.find((item) => item.id === tournamentId) ||
-    oldTournaments.value.find((item) => item.id === tournamentId)
-  );
-};
-
-const isSelfFundedTournament = (tournamentId: string | null): boolean =>
-  Boolean(getTournamentById(tournamentId)?.selfFunded);
-
-const getTournamentAdditionalCostsTotal = (tournamentId: string) => {
-  return getTournamentAdditionalCosts(tournamentId).reduce(
-    (total, cost) => total + cost.amount,
-    0,
-  );
-};
-
-// Financial calculation functions
-const calculateTournamentNet = (tournamentId: string) => {
-  if (!systemStore.currentSettings) return 0;
-  const tournament = weeklyTournaments.value.find(
-    (item) => item.id === tournamentId,
-  );
-  const sponsor = tournament
-    ? getTournamentSponsorMoney(tournament)
-    : systemStore.currentSettings.sponsorMoney;
-  const stadium = tournament
-    ? getTournamentStadiumCost(tournament)
-    : systemStore.currentSettings.stadiumCost;
-  const additionalCosts = getTournamentAdditionalCostsTotal(tournamentId);
-  return (
-    stadium -
-    sponsor +
-    additionalCosts -
-    (tournament ? getTournamentFundContribution(tournament) : 0)
-  );
-};
-
-const calculateCostPerPlayerForCount = (
-  tournamentId: string,
-  divisor: number,
-) => {
-  const net = calculateTournamentNet(tournamentId);
-  if (divisor <= 0) return 0;
-  const baseCost = net / divisor;
-  const tournament = getTournamentById(tournamentId);
-  if (tournament?.selfFunded) return Math.round(baseCost);
-  return Math.ceil(baseCost / 5000) * 5000;
-};
-
-const getCostEstimateInfo = (tournamentId: string) => {
-  const stats = getAttendanceStats(tournamentId);
-  const attendingCount = stats?.attendingCount || 0;
-  const field5Count = stats?.field5Count ?? attendingCount;
-  const field7Count = stats?.field7Count ?? attendingCount;
-  const useField5 = field5Count >= field7Count;
-  const registered = useField5 ? field5Count : field7Count;
-  const minimum = useField5 ? 12 : 16;
-  return { registered, minimum, divisor: Math.max(registered, minimum) };
-};
-
-const calculateCostPerPlayer = (tournamentId: string) => {
-  const { divisor } = getCostEstimateInfo(tournamentId);
-  return calculateCostPerPlayerForCount(tournamentId, divisor);
-};
-
-// This adjustment is intentionally display-only. The persisted end-tournament calculation is unchanged.
-const getEstimateAdditionalCost = (tournamentId: string): number => {
-  const tournament = getTournamentById(tournamentId);
-  if (
-    tournament?.selfFunded ||
-    getTournamentAdditionalCostsTotal(tournamentId) > 0
-  )
-    return 0;
-  return 120000;
-};
-
-const calculateDisplayEstimateNet = (tournamentId: string) =>
-  calculateTournamentNet(tournamentId) +
-  getEstimateAdditionalCost(tournamentId);
-
-const calculateDisplayEstimateCostForCount = (
-  tournamentId: string,
-  divisor: number,
-) => {
-  const estimateAdditionalCost = getEstimateAdditionalCost(tournamentId);
-  if (estimateAdditionalCost === 0)
-    return calculateCostPerPlayerForCount(tournamentId, divisor);
-  if (divisor <= 0) return 0;
-  return (
-    Math.ceil(calculateDisplayEstimateNet(tournamentId) / divisor / 5000) * 5000
-  );
-};
-
-const calculateDisplayEstimateCost = (tournamentId: string) => {
-  const { divisor } = getCostEstimateInfo(tournamentId);
-  return calculateDisplayEstimateCostForCount(tournamentId, divisor);
-};
-
-const shouldShowMaxCostRange = (tournament: Tournament): boolean => {
-  const { divisor } = getCostEstimateInfo(tournament.id);
-  return Boolean(
-    tournament.maxAttendance && tournament.maxAttendance > divisor,
-  );
-};
-
-// Get next Monday (or today if today is Monday)
 const nextMonday = computed(() => {
   const today = new Date();
   const dayOfWeek = today.getDay(); // 0 = Sunday, 1 = Monday, etc.
@@ -7872,6 +7747,19 @@ const weeklyTournaments = computed(() => {
   );
 });
 
+const getTournamentById = (
+  tournamentId: string | null,
+): Tournament | undefined => {
+  if (!tournamentId) return undefined;
+  return (
+    weeklyTournaments.value.find((item) => item.id === tournamentId) ||
+    oldTournaments.value.find((item) => item.id === tournamentId)
+  );
+};
+
+const isSelfFundedTournament = (tournamentId: string | null): boolean =>
+  Boolean(getTournamentById(tournamentId)?.selfFunded);
+
 // Get ongoing tournament (filter by status = 'UPCOMING' or 'ONGOING')
 const ongoingTournament = computed(() => {
   return weeklyTournaments.value.find(
@@ -7881,135 +7769,6 @@ const ongoingTournament = computed(() => {
 });
 
 const minimumSelectableDate = computed(() => toLocalDateKey(new Date()));
-
-// Get old tournaments (completed or past)
-const oldTournaments = ref<Tournament[]>([]);
-const oldTournamentIndex = ref(0);
-const oldTournamentDateFilter = ref("");
-const oldTournamentDateDraft = ref("");
-const showOldTournamentDateModal = ref(false);
-const oldTournamentCalendarMonth = ref(
-  new Date(new Date().getFullYear(), new Date().getMonth(), 1),
-);
-const completedTournamentDates = ref<Set<string>>(new Set());
-const oldTournamentCalendarLoading = ref(false);
-const oldTournamentWeekdays = ["CN", "T2", "T3", "T4", "T5", "T6", "T7"];
-const filteredOldTournaments = computed(() => {
-  const filterDate = oldTournamentDateFilter.value;
-  return weeklyTournaments.value
-    .filter((tournament) =>
-      ["COMPLETED", "DELETED"].includes(tournament.status),
-    )
-    .filter(
-      (tournament) =>
-        !filterDate ||
-        toLocalDateKey(new Date(tournament.startDate)) === filterDate,
-    )
-    .sort(
-      (first, second) =>
-        new Date(second.startDate).getTime() -
-        new Date(first.startDate).getTime(),
-    );
-});
-const selectedOldTournament = computed(
-  () => filteredOldTournaments.value[oldTournamentIndex.value] || null,
-);
-
-// Helper functions
-const toLocalDateKey = (date: Date): string => {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
-  return `${year}-${month}-${day}`;
-};
-
-const oldTournamentCalendarLabel = computed(() =>
-  oldTournamentCalendarMonth.value.toLocaleDateString("vi-VN", {
-    month: "long",
-    year: "numeric",
-  }),
-);
-
-const oldTournamentCalendarDays = computed(() => {
-  const month = oldTournamentCalendarMonth.value;
-  const firstDay = new Date(month.getFullYear(), month.getMonth(), 1);
-  const dayCount = new Date(
-    month.getFullYear(),
-    month.getMonth() + 1,
-    0,
-  ).getDate();
-  const days: Array<Date | null> = Array.from(
-    { length: firstDay.getDay() },
-    () => null,
-  );
-  for (let day = 1; day <= dayCount; day++)
-    days.push(new Date(month.getFullYear(), month.getMonth(), day));
-  while (days.length % 7 !== 0) days.push(null);
-  return days;
-});
-
-const fetchCompletedTournamentDates = async (): Promise<void> => {
-  try {
-    oldTournamentCalendarLoading.value = true;
-    const month = oldTournamentCalendarMonth.value;
-    const response = await apiClient.get<string[]>(
-      `/tournaments/completed-dates?year=${month.getFullYear()}&month=${month.getMonth() + 1}`,
-    );
-    if (!response.success)
-      throw new Error(response.error || "Không thể tải lịch giải đấu");
-    completedTournamentDates.value = new Set(response.data || []);
-  } catch (error) {
-    completedTournamentDates.value = new Set();
-    toast.error(
-      error instanceof Error ? error.message : "Không thể tải lịch giải đấu",
-    );
-  } finally {
-    oldTournamentCalendarLoading.value = false;
-  }
-};
-
-const openOldTournamentDateModal = async (): Promise<void> => {
-  oldTournamentDateDraft.value = oldTournamentDateFilter.value;
-  const sourceDate = oldTournamentDateDraft.value
-    ? new Date(`${oldTournamentDateDraft.value}T00:00:00`)
-    : new Date();
-  oldTournamentCalendarMonth.value = new Date(
-    sourceDate.getFullYear(),
-    sourceDate.getMonth(),
-    1,
-  );
-  showOldTournamentDateModal.value = true;
-  await fetchCompletedTournamentDates();
-};
-
-const changeOldTournamentCalendarMonth = async (
-  offset: number,
-): Promise<void> => {
-  const current = oldTournamentCalendarMonth.value;
-  oldTournamentCalendarMonth.value = new Date(
-    current.getFullYear(),
-    current.getMonth() + offset,
-    1,
-  );
-  await fetchCompletedTournamentDates();
-};
-
-const getTournamentSponsorMoney = (tournament: Tournament) => {
-  if (tournament.selfFunded) return 0;
-  return tournament.sponsorMoney !== null &&
-    tournament.sponsorMoney !== undefined
-    ? tournament.sponsorMoney
-    : systemStore.currentSettings?.sponsorMoney || 0;
-};
-
-const getTournamentStadiumCost = (tournament: Tournament) => {
-  return tournament.stadiumCost !== null && tournament.stadiumCost !== undefined
-    ? tournament.stadiumCost
-    : systemStore.currentSettings?.stadiumCost || 0;
-};
-
-const getTournamentFundContribution = (tournament: Tournament) =>
-  tournament.fundContribution || 0;
 
 const isAttendanceLimitReached = (tournament: Tournament): boolean => {
   const limit = tournament.maxAttendance;
@@ -8099,7 +7858,8 @@ const formatCancellationDeadline = (
 };
 
 const getCancellationDeadlineBadgeText = (tournament: Tournament): string => {
-  currentTimestamp.value;
+  // Reading the ref registers a dependency so the label updates every tick.
+  void currentTimestamp.value;
   const deadline = new Date(
     tournament.cancellationDeadline ||
       getDefaultCancellationDeadline(tournament.startDate),
@@ -8114,7 +7874,8 @@ const isUserCancellationLocked = (tournament: Tournament): boolean => {
 };
 
 const isCancellationDeadlinePassed = (tournament: Tournament): boolean => {
-  currentTimestamp.value;
+  // Reading the ref registers a dependency so the label updates every tick.
+  void currentTimestamp.value;
   return (
     new Date(
       tournament.cancellationDeadline ||
@@ -8124,7 +7885,8 @@ const isCancellationDeadlinePassed = (tournament: Tournament): boolean => {
 };
 
 const hasTournamentStarted = (tournamentId: string): boolean => {
-  currentTimestamp.value;
+  // Reading the ref registers a dependency so the label updates every tick.
+  void currentTimestamp.value;
   const tournament = getTournamentById(tournamentId);
   if (!tournament || tournament.status === "COMPLETED") return false;
   return new Date(tournament.startDate).getTime() < Date.now();
@@ -9425,6 +9187,56 @@ const getAttendanceStats = (
   return attendanceStats.value.get(tournamentId);
 };
 
+const {
+  getTournamentSponsorMoney,
+  getTournamentStadiumCost,
+  getTournamentFundContribution,
+  getTournamentAdditionalCosts,
+  getTournamentAdditionalCostsTotal,
+  calculateTournamentNet,
+  getCostEstimateInfo,
+  calculateCostPerPlayer,
+  getEstimateAdditionalCost,
+  calculateDisplayEstimateNet,
+  calculateDisplayEstimateCostForCount,
+  shouldShowMaxCostRange,
+  calculateDisplayEstimateCost,
+} = useTournamentCostEstimate({ getTournamentById, getAttendanceStats });
+
+const {
+  oldTournaments,
+  oldTournamentIndex,
+  oldTournamentDateFilter,
+  oldTournamentDateDraft,
+  showOldTournamentDateModal,
+  completedTournamentDates,
+  oldTournamentCalendarLoading,
+  oldTournamentWeekdays,
+  filteredOldTournaments,
+  selectedOldTournament,
+  oldTournamentCalendarLabel,
+  oldTournamentCalendarDays,
+  openOldTournamentDateModal,
+  changeOldTournamentCalendarMonth,
+  loadOldTournaments,
+  navigateOldTournament,
+  applyOldTournamentDateFilter,
+  clearOldTournamentDateFilter,
+  formatOldTournamentFilterDate,
+} = useOldTournaments({
+  weeklyTournaments: () => weeklyTournaments.value,
+  loadAttendanceData: (tournaments) => loadAttendanceData(tournaments),
+});
+
+const {
+  showPinnedPollModal,
+  pinnedPoll,
+  pinnedPollSelectedOptionIds,
+  pinnedPollSaving,
+  loadPinnedPoll,
+  submitPinnedPollVote,
+} = usePinnedPoll();
+
 const getAttendancePercentage = (tournamentId: string): number => {
   const stats = attendanceStats.value.get(tournamentId);
   if (!stats || stats.totalPlayers === 0) return 0;
@@ -10286,123 +10098,23 @@ const isTournamentLoserTeam = (tournament: Tournament, team: any): boolean => {
   );
 };
 
-const getCurrentPlayerTeam = (tournament: Tournament): any | null => {
-  const playerId = getCurrentPlayerId();
-  if (!playerId) return null;
-  return (
-    getTournamentTeams(tournament).find((team) =>
-      team.players.some((player: any) => player.id === playerId),
-    ) || null
-  );
-};
-
-const canOpenDeadmatch = (tournament: Tournament, team: any): boolean => {
-  const currentTeam = getCurrentPlayerTeam(tournament);
-  return Boolean(
-    !hidesSideGames(tournament) &&
-    currentTeam &&
-    currentTeam.id !== team.id &&
-    getTournamentTeams(tournament).length > 1 &&
-    tournament.status !== "COMPLETED",
-  );
-};
-
-const deadmatchTeams = computed(() => {
-  if (!deadmatchTournament.value || !deadmatchOpponentTeam.value) return [];
-  const ownTeam = getCurrentPlayerTeam(deadmatchTournament.value);
-  return [ownTeam, deadmatchOpponentTeam.value].filter(Boolean);
-});
-
-const currentDeadmatchEntry = computed(() => {
-  const playerId = getCurrentPlayerId();
-  return deadmatchEntries.value.find(
-    (entry) => entry.playerId === playerId && entry.status !== "CANCELLED",
-  );
-});
-
-const canManageDeadmatch = computed(() =>
-  Boolean(
-    deadmatchTournament.value &&
-    Date.now() < new Date(deadmatchTournament.value.startDate).getTime(),
-  ),
-);
-
-const getDeadmatchTeamEntries = (teamId: string): any[] =>
-  deadmatchEntries.value
-    .filter((entry) => entry.teamId === teamId)
-    .sort((first, second) => {
-      const firstWaiting = first.status === "WAITING" ? 0 : 1;
-      const secondWaiting = second.status === "WAITING" ? 0 : 1;
-      return (
-        firstWaiting - secondWaiting || first.queueNumber - second.queueNumber
-      );
-    });
-
-const getDeadmatchOpponentName = (entry: any): string | null => {
-  if (!entry.matchKey) return null;
-  return (
-    deadmatchEntries.value.find(
-      (candidate) =>
-        candidate.id !== entry.id && candidate.matchKey === entry.matchKey,
-    )?.player?.name || null
-  );
-};
-
-const loadDeadmatches = async (): Promise<void> => {
-  if (!deadmatchTournament.value || !deadmatchOpponentTeam.value) return;
-  deadmatchLoading.value = true;
-  try {
-    const response = await apiClient.getTournamentDeadmatches(
-      deadmatchTournament.value.id,
-      deadmatchOpponentTeam.value.id,
-    );
-    if (!response.success)
-      throw new Error(response.error || "Không thể tải Deadmatch");
-    deadmatchEntries.value = (response.data as any)?.entries || [];
-  } catch (error: any) {
-    toast.error(
-      error.response?.data?.error || error.message || "Không thể tải Deadmatch",
-    );
-  } finally {
-    deadmatchLoading.value = false;
-  }
-};
-
-const openDeadmatchModal = async (
-  tournament: Tournament,
-  opponentTeam: any,
-): Promise<void> => {
-  deadmatchTournament.value = tournament;
-  deadmatchOpponentTeam.value = opponentTeam;
-  deadmatchEntries.value = [];
-  showDeadmatchModal.value = true;
-  await loadDeadmatches();
-};
-
-const openDeadmatchHistoryModal = async (
-  tournament: Tournament,
-): Promise<void> => {
-  showDeadmatchHistoryModal.value = true;
-  deadmatchHistoryLoading.value = true;
-  deadmatchHistoryPairs.value = [];
-  try {
-    const response = await apiClient.getTournamentDeadmatchHistory(
-      tournament.id,
-    );
-    if (!response.success) {
-      throw new Error(response.error || "Không thể tải lịch sử Deadmatch");
-    }
-    deadmatchHistoryPairs.value = (response.data as any)?.pairs || [];
-  } catch (error: any) {
-    toast.error(
-      error.response?.data?.error ||
-        error.message ||
-        "Không thể tải lịch sử Deadmatch",
-    );
-  } finally {
-    deadmatchHistoryLoading.value = false;
-  }
-};
+const {
+  showDeadmatchModal,
+  showDeadmatchHistoryModal,
+  deadmatchHistoryLoading,
+  deadmatchHistoryPairs,
+  deadmatchLoading,
+  deadmatchSaving,
+  deadmatchTeams,
+  currentDeadmatchEntry,
+  canManageDeadmatch,
+  getDeadmatchTeamEntries,
+  getDeadmatchOpponentName,
+  openDeadmatchModal,
+  openDeadmatchHistoryModal,
+  joinDeadmatch,
+  cancelDeadmatch,
+} = useDeadmatches({ getCurrentPlayerId, getTournamentTeams });
 
 const challengeBattlePairs = computed(() => {
   const tournament = challengeBattleTournament.value;
@@ -10489,62 +10201,26 @@ const openChallengeBattleDetailsModal = async (
   }
 };
 
-const joinDeadmatch = async (): Promise<void> => {
-  if (
-    !deadmatchTournament.value ||
-    !deadmatchOpponentTeam.value ||
-    deadmatchSaving.value
-  )
-    return;
-  deadmatchSaving.value = true;
-  try {
-    const response = await apiClient.joinTournamentDeadmatch(
-      deadmatchTournament.value.id,
-      deadmatchOpponentTeam.value.id,
-    );
-    if (!response.success)
-      throw new Error(response.error || "Không thể tham gia Deadmatch");
-    await loadDeadmatches();
-    toast.success(
-      (response.data as any)?.matched
-        ? "Đã ghép cặp Deadmatch"
-        : "Đã vào hàng chờ Deadmatch",
-    );
-  } catch (error: any) {
-    toast.error(
-      error.response?.data?.error ||
-        error.message ||
-        "Không thể tham gia Deadmatch",
-    );
-  } finally {
-    deadmatchSaving.value = false;
-  }
+
+const getCurrentPlayerTeam = (tournament: Tournament): any | null => {
+  const playerId = getCurrentPlayerId();
+  if (!playerId) return null;
+  return (
+    getTournamentTeams(tournament).find((team) =>
+      team.players.some((player: any) => player.id === playerId),
+    ) || null
+  );
 };
 
-const cancelDeadmatch = async (): Promise<void> => {
-  if (
-    !deadmatchTournament.value ||
-    !deadmatchOpponentTeam.value ||
-    deadmatchSaving.value
-  )
-    return;
-  deadmatchSaving.value = true;
-  try {
-    const response = await apiClient.cancelTournamentDeadmatch(
-      deadmatchTournament.value.id,
-      deadmatchOpponentTeam.value.id,
-    );
-    if (!response.success)
-      throw new Error(response.error || "Không thể hủy Deadmatch");
-    await loadDeadmatches();
-    toast.success("Đã hủy tham gia Deadmatch");
-  } catch (error: any) {
-    toast.error(
-      error.response?.data?.error || error.message || "Không thể hủy Deadmatch",
-    );
-  } finally {
-    deadmatchSaving.value = false;
-  }
+const canOpenDeadmatch = (tournament: Tournament, team: any): boolean => {
+  const currentTeam = getCurrentPlayerTeam(tournament);
+  return Boolean(
+    !hidesSideGames(tournament) &&
+    currentTeam &&
+    currentTeam.id !== team.id &&
+    getTournamentTeams(tournament).length > 1 &&
+    tournament.status !== "COMPLETED",
+  );
 };
 
 const getPositionLabel = (position: string): string =>
@@ -11190,53 +10866,6 @@ const createWeeklyTournament = async (tournamentDay: Date) => {
   }
 };
 
-// Load old tournaments with pagination
-const loadOldTournaments = async () => {
-  try {
-    oldTournaments.value = weeklyTournaments.value
-      .filter((t) => ["COMPLETED", "DELETED"].includes(t.status))
-      .sort(
-        (a, b) =>
-          new Date(b.startDate).getTime() - new Date(a.startDate).getTime(),
-      );
-    oldTournamentIndex.value = 0;
-  } catch (err: any) {
-    console.error("Load old tournaments error:", err);
-    toast.error("Không thể tải giải đấu cũ");
-  }
-};
-
-const navigateOldTournament = async (direction: -1 | 1): Promise<void> => {
-  const nextIndex = oldTournamentIndex.value + direction;
-  if (nextIndex < 0 || nextIndex >= filteredOldTournaments.value.length) return;
-  oldTournamentIndex.value = nextIndex;
-  if (selectedOldTournament.value)
-    await loadAttendanceData([selectedOldTournament.value]);
-};
-
-const applyOldTournamentDateFilter = async (): Promise<void> => {
-  oldTournamentDateFilter.value = oldTournamentDateDraft.value;
-  oldTournamentIndex.value = 0;
-  showOldTournamentDateModal.value = false;
-  if (selectedOldTournament.value)
-    await loadAttendanceData([selectedOldTournament.value]);
-};
-
-const clearOldTournamentDateFilter = async (): Promise<void> => {
-  oldTournamentDateDraft.value = "";
-  oldTournamentDateFilter.value = "";
-  oldTournamentIndex.value = 0;
-  showOldTournamentDateModal.value = false;
-  if (selectedOldTournament.value)
-    await loadAttendanceData([selectedOldTournament.value]);
-};
-
-const formatOldTournamentFilterDate = (value: string): string => {
-  const [year, month, day] = value.split("-");
-  return `${day}/${month}/${year}`;
-};
-
-// Tournament actions
 const editTournament = (tournament: Tournament) => {
   // Navigate to regular tournaments page with edit functionality
   // Since we're reusing tournament functionality
@@ -12558,44 +12187,6 @@ const handleChallengeVisibilityChange = (): void => {
   if (document.visibilityState === "visible") void pollIncomingChallenges();
 };
 
-const loadPinnedPoll = async (): Promise<void> => {
-  try {
-    const response = await apiClient.get<any>("/polls/pinned");
-    if (!response.success || !response.data) return;
-    pinnedPoll.value = response.data;
-    pinnedPollSelectedOptionIds.value = response.data.options
-      .filter((option: any) => option.selected)
-      .map((option: any) => option.id);
-    showPinnedPollModal.value = pinnedPollSelectedOptionIds.value.length === 0;
-  } catch {
-    // A poll must never block the weekly tournament page from loading.
-  }
-};
-
-const submitPinnedPollVote = async (): Promise<void> => {
-  if (!pinnedPoll.value || pinnedPollSaving.value) return;
-  pinnedPollSaving.value = true;
-  try {
-    const response = await apiClient.post<any>(
-      `/polls/${pinnedPoll.value.id}/vote`,
-      { optionIds: pinnedPollSelectedOptionIds.value },
-    );
-    if (!response.success)
-      throw new Error(response.error || "Không thể gửi bình chọn");
-    pinnedPoll.value = response.data;
-    pinnedPollSelectedOptionIds.value = response.data.options
-      .filter((option: any) => option.selected)
-      .map((option: any) => option.id);
-    showPinnedPollModal.value = false;
-    toast.success("Đã ghi nhận bình chọn");
-  } catch (error: any) {
-    toast.error(error?.message || "Không thể gửi bình chọn");
-  } finally {
-    pinnedPollSaving.value = false;
-  }
-};
-
-// Initialize
 onMounted(async () => {
   await fetchData();
   void loadPinnedPoll();

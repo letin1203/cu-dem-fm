@@ -53,7 +53,8 @@ function smoothScrollTo(element: HTMLElement | null, alignment: 'start' | 'cente
       const progress = Math.min(1, (now - start) / duration);
       const eased = progress < 0.5 ? 4 * progress ** 3 : 1 - (-2 * progress + 2) ** 3 / 2;
       container.scrollTop = from + distance * eased;
-      progress < 1 ? requestAnimationFrame(tick) : resolve();
+      if (progress < 1) requestAnimationFrame(tick);
+      else resolve();
     };
     requestAnimationFrame(tick);
   });

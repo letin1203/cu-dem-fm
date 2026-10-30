@@ -79,6 +79,12 @@
             >
               Chia team ngẫu nhiên</button
             ><button
+              class="order-2 hidden w-full items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-fuchsia-600 to-violet-600 px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-fuchsia-500/25 transition hover:from-fuchsia-500 hover:to-violet-500 disabled:cursor-not-allowed disabled:opacity-50 sm:order-none sm:w-auto lg:inline-flex"
+              :disabled="selectedPlayers.length < 10"
+              @click="openAiSplitModal"
+            >
+              🕷 AI chia team
+            </button><button
               type="button"
               class="order-1 flex h-9 w-9 items-center justify-center rounded-lg border border-red-200 bg-red-50 text-lg text-red-600 transition hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-50 sm:order-none"
               :disabled="selectedPlayers.length < 2"
@@ -665,9 +671,18 @@
       </div>
     </Teleport>
   </div>
+
+  <AiTeamSplitModal
+    v-if="showAiSplitModal"
+    :player-ids="selectedPlayers.map((player) => player.id)"
+    :battle-pairs="battlePairs"
+    :initial-team-count="teamCount"
+    @close="showAiSplitModal = false"
+  />
 </template>
 <script setup lang="ts">
 import TeamSplitProgressModal from '../components/TeamSplitProgressModal.vue';
+import AiTeamSplitModal from '../components/ai/AiTeamSplitModal.vue';
 import { computed, nextTick, onBeforeUnmount, onMounted, ref } from "vue";
 import { apiClient } from "../api/client";
 type Player = {
@@ -717,6 +732,7 @@ const players = ref<Player[]>([]),
   aiThoughtBlockRef = ref<HTMLElement | null>(null),
   showTeamResultModal = ref(false),
   showBattlePairsModal = ref(false),
+  showAiSplitModal = ref(false),
   showTestMoneyModal = ref(false),
   simulatedScores = ref<number[]>([]),
   battlePairs = ref<Array<{ firstId: string; secondId: string }>>([]),
@@ -1371,6 +1387,10 @@ async function splitTeams() {
   } finally {
     teamSplitRunning.value = false;
   }
+}
+function openAiSplitModal() {
+  if (selectedPlayers.value.length < 10) return;
+  showAiSplitModal.value = true;
 }
 function openTeamResultFromProgress() {
   showTeamSplitProgressModal.value = false;

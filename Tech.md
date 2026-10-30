@@ -20,6 +20,9 @@
 ### **Data Visualization & UX**
 - **Vue Toastification** `v2.0.0-rc.5` - Toast notifications
 - **SheetJS (`xlsx`)** - Excel export, imported on demand
+- **Vue Flow** `@vue-flow/core` + `@vue-flow/background` - Execution-graph
+  canvas for the "AI chia team" modal (custom nodes/edges, pan/zoom, spider
+  agent overlay)
 
 ### **HTTP Client**
 - **Axios** `v1.20.x` - Promise-based HTTP client
@@ -75,7 +78,7 @@
   `matches`, `system`)
 - `src/composables/` for stateful feature slices extracted out of large views
   (`usePinnedPoll`, `useDeadmatches`, `useOldTournaments`,
-  `useTournamentCostEstimate`)
+  `useTournamentCostEstimate`, `useAiGraphPlayback`, `useSpiderAgent`)
 - One Axios instance in `src/api/client.ts`; the base URL comes from
   `VITE_API_BASE_URL`
 
@@ -84,8 +87,8 @@
 - Express middleware stack: helmet → cors → compression → morgan → rate limit
   → body parsing → routes → error handler
 - `authenticate` / `authorize(roles)` guards on every non-public route
-- Pure domain logic in `src/services/` (`teamGeneration.ts`, `settlement.ts`)
-  so it can be unit tested without a database
+- Pure domain logic in `src/services/` (`teamGeneration.ts`, `settlement.ts`,
+  `aiTeamSplit.ts`) so it can be unit tested without a database
 - Shared route helpers in `src/lib/` (`tournamentRules.ts`, `adminSql.ts`)
 
 ---
@@ -97,6 +100,7 @@ cu-dem-fm/
 ├── src/                       # Vue 3 frontend
 │   ├── api/client.ts          # Single Axios instance + endpoint helpers
 │   ├── components/            # Reusable UI (incl. tournament/ modals)
+│   ├── components/ai/         # AI chia team: graph nodes, edges, modal, SpiderAgent
 │   ├── composables/           # Extracted stateful feature slices
 │   ├── router/index.ts        # Lazy-loaded routes + permission guard
 │   ├── stores/                # Pinia stores
@@ -126,18 +130,19 @@ cu-dem-fm/
 ## 🧪 **Tests**
 
 ```bash
-cd backend
-npm test        # vitest run
-npm run test:watch
+npm test                 # frontend layout tests + backend domain tests
+cd backend && npm run test:watch   # backend watch mode
 ```
 
 Covered: settlement math (cost per player, GK discount, bets, water,
-deadmatch/battle stakes, league standings) and team generation invariants
+deadmatch/battle stakes, league standings), team generation invariants
 (GK pairing, Tier 1–2 spread, battle separation, friend invites, no input
-mutation).
+mutation), the admin SQL guard, and the AI execution-graph shape/layout
+(node kinds, edge endpoints, no node overlap, replay ordering).
 
-The frontend build is type-checked by `vue-tsc` in `npm run build`, and ESLint
-runs in CI.
+`npm test` at the repo root runs the frontend suite and then the backend
+suite. The frontend build is type-checked by `vue-tsc` in `npm run build`, and
+ESLint runs in CI.
 
 ---
 
@@ -146,7 +151,8 @@ runs in CI.
 - **Frontend**: Vercel (`vercel.json`); `VITE_API_BASE_URL` is supplied by the
   Vercel project env or the `deploy.yml` secret, never hardcoded.
 - **Backend**: Render; `CORS_ORIGIN` must list each allowed frontend origin
-  (comma separated).
+  (comma separated). The AI split graph is computed by
+  `POST /api/tournaments/ai-split` with the same pipeline as the real split.
 - **Database**: Supabase PostgreSQL via `DATABASE_URL`.
 
 Required backend env vars: `DATABASE_URL`, `JWT_SECRET`, `CORS_ORIGIN` (or

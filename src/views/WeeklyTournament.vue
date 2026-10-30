@@ -5793,9 +5793,9 @@
               selectedTeamField,
             )
           "
-          @click="previewGenerateRandomTeams"
+          @click="openAiTeamSplit(false)"
         >
-          Test chia đội
+          🕷 AI test chia đội
         </button>
         <button
           type="button"
@@ -5807,13 +5807,29 @@
               selectedTeamField,
             )
           "
-          @click="confirmGenerateRandomTeams"
+          @click="openAiTeamSplit(true)"
         >
-          {{ teamGenerationLoading ? "Đang chia..." : "Chia đội" }}
+          🕷 {{ teamGenerationLoading ? "Đang chia..." : "AI chia đội" }}
         </button>
       </div>
     </div>
   </div>
+
+  <!--
+    Shared "AI chia team" modal. The same component is used by this page and by
+    the Test chia team page; `apply-tournament-id` switches it between the real
+    split (with "Áp dụng") and a read-only test.
+  -->
+  <AiTeamSplitModal
+    v-if="showAiTeamSplitModal"
+    :player-ids="aiTeamSplitPlayerIds"
+    :battle-pairs="aiTeamSplitBattlePairs"
+    :initial-team-count="selectedTeamCount"
+    :apply-tournament-id="aiTeamSplitApplyTournamentId"
+    :apply-field="aiTeamSplitApplyField"
+    @applied="handleAiTeamsApplied"
+    @close="showAiTeamSplitModal = false"
+  />
 
   <!-- Team Split Progress Modal -->
   <TeamSplitProgressModal
@@ -7281,6 +7297,7 @@ import {
 } from "../composables/useOldTournaments";
 import { useTournamentCostEstimate } from "../composables/useTournamentCostEstimate";
 import TeamSplitProgressModal from "../components/TeamSplitProgressModal.vue";
+import AiTeamSplitModal from "../components/ai/AiTeamSplitModal.vue";
 
 const toast = useToast();
 const tournamentsStore = useTournamentsStore();
@@ -7650,6 +7667,17 @@ const permanentDeleteSaving = ref(false);
 const showClearTeamsModal = ref(false);
 const clearTeamsModalTournamentId = ref<string | null>(null);
 const showTeamCountModal = ref(false);
+/**
+ * The shared "AI chia team" modal.
+ *
+ * One component instance serves both actions: `applyTournamentId` decides
+ * whether it offers "Áp dụng" (the real split) or stays read-only (the test).
+ */
+const showAiTeamSplitModal = ref(false);
+const aiTeamSplitPlayerIds = ref<string[]>([]);
+const aiTeamSplitBattlePairs = ref<Array<{ firstId: string; secondId: string }>>([]);
+const aiTeamSplitApplyTournamentId = ref<string | null>(null);
+const aiTeamSplitApplyField = ref<'FIELD_5' | 'FIELD_7' | null>(null);
 const teamCountModalTournamentId = ref<string | null>(null);
 const selectedTeamCount = ref<2 | 3 | 4>(2);
 const teamCountOptions: Array<2 | 3 | 4> = [2, 3, 4];
@@ -10449,16 +10477,19 @@ const closeTeamCountModal = (): void => {
   teamCountModalTournamentId.value = null;
 };
 
-const confirmGenerateRandomTeams = async (): Promise<void> => {
-  if (!teamCountModalTournamentId.value) return;
-  await generateRandomTeams(
-    teamCountModalTournamentId.value,
-    selectedTeamCount.value,
-    selectedTeamField.value,
-  );
+/** Refresh after the AI modal has persisted a split. */
+const handleAiTeamsApplied = async (): Promise<void> => {
+  showAiTeamSplitModal.value = false;
+  await fetchData();
 };
 
-const previewGenerateRandomTeams = async (): Promise<void> => {
+/**
+ * Open the shared AI split modal for the tournament selected in the team-count
+ * dialog.
+ *
+ * @param apply true for the real split (offers "Áp dụng"), false for the test.
+ */
+const openAiTeamSplit = async (apply: boolean): Promise<void> => {
   const tournamentId = teamCountModalTournamentId.value;
   if (
     !tournamentId ||
@@ -10466,33 +10497,26 @@ const previewGenerateRandomTeams = async (): Promise<void> => {
     !canGenerateTeams(tournamentId, selectedTeamField.value)
   )
     return;
+
   try {
     teamGenerationLoading.value = true;
     if (!attendanceDetailsMap.value.has(tournamentId))
       await fetchAttendanceDetails(tournamentId);
-    const playerIds = getTeamPreviewPlayers(
+
+    // The AI endpoint builds the same roster the preview uses, so send the ids
+    // and let the auth pair-filters come from the server.
+    aiTeamSplitPlayerIds.value = getTeamPreviewPlayers(
       tournamentId,
       selectedTeamField.value,
     ).map((player: any) => player.id);
-    const response = await apiClient.post("/tournaments/preview-teams", {
-      playerIds,
-      teamCount: selectedTeamCount.value,
-      tournamentId,
-    });
-    if (!response.success || !response.data) {
-      toast.error("Không thể tạo kết quả test");
-      return;
-    }
-    livePreviewMode.value = true;
+    aiTeamSplitBattlePairs.value = [];
+
+    aiTeamSplitApplyTournamentId.value = apply ? tournamentId : null;
+    aiTeamSplitApplyField.value = apply ? selectedTeamField.value : null;
     closeTeamCountModal();
-    await playLiveTeamSplit(
-      (response.data as any).teams || [],
-      (response.data as any).swaps || [],
-      (response.data as any).repeatTeammateSwaps || [],
-    );
-    toast.info("Đây là kết quả test, chưa được lưu vào giải đấu.");
+    showAiTeamSplitModal.value = true;
   } catch (err: any) {
-    toast.error(err.response?.data?.error || "Không thể test chia đội");
+    toast.error(err.response?.data?.error || 'Không thể mở AI chia team');
   } finally {
     teamGenerationLoading.value = false;
   }
@@ -10730,51 +10754,6 @@ const playLiveTeamSplit = async (
   await nextTick();
   liveTeamSplitDone.value = true;
 };
-
-const generateRandomTeams = async (
-  tournamentId: string,
-  teamCount: 2 | 3 | 4,
-  field: "FIELD_5" | "FIELD_7",
-): Promise<void> => {
-  if (!canGenerateTeams(tournamentId, field) || teamGenerationLoading.value)
-    return;
-
-  const stats = attendanceStats.value.get(tournamentId);
-  if (!stats) return;
-
-  try {
-    teamGenerationLoading.value = true;
-    livePreviewMode.value = false;
-
-    const response = await apiClient.post(
-      `/tournaments/${tournamentId}/generate-teams`,
-      { teamCount, field },
-    );
-
-    if (response.success) {
-      // Show success message with team details
-      const data = response.data as any;
-      closeTeamCountModal();
-      await playLiveTeamSplit(
-        data.teams || [],
-        [],
-        data.repeatTeammateSwaps || [],
-      );
-      toast.success(
-        `Đã chia ${data.playerCount} cầu thủ Sân ${field === "FIELD_5" ? "5" : "7"} thành ${data.teamCount} đội!`,
-      );
-
-      // Refresh tournament data
-      await fetchData();
-    }
-  } catch (err: any) {
-    console.error("Generate teams error:", err);
-    toast.error(err.response?.data?.error || "Không thể chia đội");
-  } finally {
-    teamGenerationLoading.value = false;
-  }
-};
-
 // The date preselected in the "Tạo mới" modal: the nearest Monday that runs in
 // the future and does not already have a tournament. If the nearest Monday is
 // taken (or already passed), move to the following Monday.

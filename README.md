@@ -21,9 +21,11 @@ A comprehensive Vue 3 TypeScript web application for managing football organizat
 - **Icons**: Heroicons
 - **Notifications**: vue-toastification
 - **Excel export**: SheetJS (`xlsx`, loaded on demand)
+- **Graph canvas**: Vue Flow (`@vue-flow/core`) for the AI chia team modal,
+  including an interactive spider agent that crawls between the real cards
 - **Backend**: Express + Prisma + PostgreSQL
 - **Auth**: JWT with per-user token versioning (logout revokes tokens)
-- **Tests**: Vitest (backend domain logic)
+- **Tests**: Vitest (frontend graph layout + backend domain logic)
 
 ## 📁 Project Structure
 
@@ -91,7 +93,7 @@ backend/src/
 - `npm run preview` - Preview production build
 - `npm run lint` - ESLint
 - `npm run typecheck` - Type-check without building
-- `npm test` - Run backend unit tests with Vitest
+- `npm test` - Run the frontend and backend unit tests with Vitest
 
 ### Frontend environment
 

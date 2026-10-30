@@ -38,6 +38,9 @@ jobs:
         cd backend
         npm run typecheck
 
+    - name: Unit tests (Frontend)
+      run: npx vitest run
+
     - name: Unit tests (Backend)
       run: |
         cd backend

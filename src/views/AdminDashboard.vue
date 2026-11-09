@@ -443,7 +443,7 @@ const loadSummary = async (): Promise<void> => {
 const approveTopUp = async (id: string): Promise<void> => {
   approvingId.value = id;
   try {
-    const response = await apiClient.post(`/money-top-ups/${id}/approve`, {});
+    const response = await apiClient.approveMoneyTopUp(id);
     if (!response.success) throw new Error(response.error || 'Không thể duyệt');
     toast.success('Đã duyệt nạp tiền');
     pendingTopUps.value = pendingTopUps.value.filter((item) => item.id !== id);
@@ -457,7 +457,7 @@ const approveTopUp = async (id: string): Promise<void> => {
 const approveFund = async (id: string): Promise<void> => {
   approvingId.value = id;
   try {
-    const response = await apiClient.post(`/fund-contributions/${id}/approve`, {});
+    const response = await apiClient.approveFundContribution(id);
     if (!response.success) throw new Error(response.error || 'Không thể duyệt');
     toast.success('Đã duyệt góp quỹ');
     pendingFunds.value = pendingFunds.value.filter((item) => item.id !== id);

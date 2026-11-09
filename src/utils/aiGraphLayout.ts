@@ -31,6 +31,13 @@ export interface SpiderLayoutOptions {
    * guarantee the column never overlaps.
    */
   measuredHeights?: Map<string, number>;
+  /**
+   * Card size multiplier, matching the one the cards render with.
+   *
+   * Widths and heights must scale together, otherwise the layout would place
+   * scaled cards using unscaled bounds and they would overlap.
+   */
+  cardScale?: number;
 }
 
 export interface SpiderPosition {
@@ -86,7 +93,7 @@ const HEIGHT_SAFETY = 46;
  * needs more vertical room; a fixed lane gap would let neighbours overlap.
  * These are intentionally generous estimates of the real rendered heights.
  */
-export const estimateNodeHeight = (node: AiGraphNode): number => {
+export const estimateNodeHeight = (node: AiGraphNode, scale = 1): number => {
   /*
    * Fitted by least squares to six measured tier cards (2..20 chips):
    *   header + padding = 94px, 19px per badge row.
@@ -95,8 +102,8 @@ export const estimateNodeHeight = (node: AiGraphNode): number => {
    */
   const ROW_HEIGHT = 19;
   const BASE_HEIGHT = 94;
-  if (node.kind === 'CORE') return 108;
-  if (node.kind === 'THINKING') return 159;
+  if (node.kind === 'CORE') return 108 * scale;
+  if (node.kind === 'THINKING') return 159 * scale;
 
   /*
    * A team card starts empty and fills up during the replay, so reserve the
@@ -104,12 +111,15 @@ export const estimateNodeHeight = (node: AiGraphNode): number => {
    * matches the thinking card's minimum height (132), which the CSS enforces.
    */
   const playerCount = node.players?.length ?? 0;
-  const perRow = chipsPerRow(node.kind === 'TIER' ? TIER_CARD_WIDTH : TEAM_CARD_WIDTH);
+  // A wider card (when scaled up) fits more badges per row, so the row count
+  // must be computed from the scaled width.
+  const cardWidth = (node.kind === 'TIER' ? TIER_CARD_WIDTH : TEAM_CARD_WIDTH) * scale;
+  const perRow = chipsPerRow(cardWidth);
   const rows = Math.max(1, Math.ceil(playerCount / perRow));
-  const height = BASE_HEIGHT + rows * ROW_HEIGHT + HEIGHT_SAFETY;
+  const height = (BASE_HEIGHT + rows * ROW_HEIGHT + HEIGHT_SAFETY) * scale;
   // Only team cards are padded to the thinking card's height; tier cards size
   // to their content, so forcing a minimum inflated short ones.
-  return node.kind === 'TEAM' ? Math.max(159, height) : height;
+  return node.kind === 'TEAM' ? Math.max(159 * scale, height) : height;
 };
 
 /**
@@ -132,16 +142,24 @@ export const layoutSpiderGraph = (
   const rowGap = options.laneGap ?? 90;
   const cardGap = options.teamGap ?? 28;
   const measured = options.measuredHeights;
+  /*
+   * Measured heights are already in flow units and include the card scale, so
+   * only the fallback estimate and the widths need multiplying.
+   */
+  const scale = options.cardScale ?? 1;
 
   const positions = new Map<string, SpiderPosition>();
 
   const heightOf = (node: AiGraphNode): number =>
-    measured?.get(node.id) ?? estimateNodeHeight(node);
+    measured?.get(node.id) ?? estimateNodeHeight(node, scale);
 
   const widthOf = (node: AiGraphNode): number => {
-    if (node.kind === 'TIER') return TIER_CARD_WIDTH;
-    if (node.kind === 'TEAM') return TEAM_CARD_WIDTH;
-    return THINKING_CARD_WIDTH;
+    const base = node.kind === 'TIER'
+      ? TIER_CARD_WIDTH
+      : node.kind === 'TEAM'
+        ? TEAM_CARD_WIDTH
+        : THINKING_CARD_WIDTH;
+    return base * scale;
   };
 
   const byLane = (kind: AiGraphNode['kind']) =>
@@ -194,7 +212,7 @@ export const layoutSpiderGraph = (
   if (thinking) {
     // The thinking card is centred horizontally under the tier band.
     positions.set(thinking.id, {
-      x: -THINKING_CARD_WIDTH / 2,
+      x: (-THINKING_CARD_WIDTH * scale) / 2,
       y,
     });
     y += thinkingHeight + rowGap;

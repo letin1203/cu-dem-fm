@@ -1,5 +1,10 @@
 <template>
-  <div class="min-h-screen bg-gradient-to-br from-primary-50 via-secondary-50 to-primary-100">
+  <div
+    class="min-h-screen"
+    :class="isAdminDashboard
+      ? 'bg-[#050308]'
+      : 'bg-gradient-to-br from-primary-50 via-secondary-50 to-primary-100'"
+  >
     <div v-if="isWakingBackend" class="fixed inset-0 z-[100] flex items-center justify-center bg-white/85 p-6 backdrop-blur-sm">
       <div class="w-full max-w-sm text-center">
         <div class="relative mx-auto h-12 w-12">
@@ -18,10 +23,13 @@
       </div>
     </div>
     <Navigation v-if="isAuthenticated && $route.name !== 'login'" />
-    <main 
+    <main
       :class="[
-        'w-full mx-auto',
-        isAuthenticated && $route.name !== 'login' ? 'py-4 px-4 sm:py-6 sm:px-6 lg:px-8 max-w-7xl' : '' 
+        'w-full',
+        isAdminDashboard ? '' : 'mx-auto',
+        isAuthenticated && $route.name !== 'login' && !isAdminDashboard
+          ? 'py-4 px-4 sm:py-6 sm:px-6 lg:px-8 max-w-7xl'
+          : '',
       ]"
     >
       <RouterView />
@@ -41,6 +49,11 @@ const authStore = useAuthStore()
 const router = useRouter()
 const toast = useToast()
 const isAuthenticated = computed(() => authStore.isAuthenticated)
+/**
+ * The admin dashboard draws its own full-bleed dark surface, so it must not be
+ * boxed inside the standard padded, max-width container.
+ */
+const isAdminDashboard = computed(() => router.currentRoute.value.name === 'adminDashboard')
 const isWakingBackend = ref(false)
 const wakeProgress = ref(0)
 const BACKEND_WAKE_AFTER_MS = 5 * 60 * 1000

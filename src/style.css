@@ -3,6 +3,16 @@
 @tailwind utilities;
 
 @layer base {
+  :root {
+    /*
+     * Neon accent tokens. Lavender/pink so the glow belongs to this app's
+     * palette instead of the stock cyan neon look.
+     */
+    --neon-accent: #9d6eff;
+    --neon-accent-strong: #8347ff;
+    --neon-accent-bright: #ff6ecb;
+  }
+
   body {
     font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
     @apply bg-gradient-to-br from-primary-50 to-secondary-50;
@@ -34,11 +44,9 @@
   .card {
     @apply bg-white rounded-lg shadow-md p-4 sm:p-6 border border-primary-200 backdrop-blur-sm;
   }
-  
-  .form-input {
-    @apply block w-full px-3 py-2 border border-primary-200 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 text-sm sm:text-base;
-  }
-  
+
+  /* .form-input is defined with the neon glow rules further down this file. */
+
   .form-label {
     @apply block text-sm font-medium text-primary-700 mb-2;
   }
@@ -73,6 +81,124 @@
     @apply px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider;
   }
   
+
+  /*
+   * Neon Glow inputs
+   * -----------------
+   * Reference: codefronts.com "Tailwind Neon Glow Input".
+   *
+   * Applied globally so every field shares one treatment: a dark input surface,
+   * a lavender border, and a soft outer glow that intensifies on focus. The
+   * accent stays inside the app's lavender/pink palette rather than the usual
+   * cyan neon, so it matches the rest of the UI.
+   *
+   * Checkboxes, radios, files and ranges are excluded: they are native controls
+   * whose appearance is not driven by these properties, and a glow ring around
+   * a tiny box looks broken rather than neon.
+   */
+  .form-input,
+  .form-textarea,
+  .form-select,
+  input[type='text'],
+  input[type='search'],
+  input[type='email'],
+  input[type='password'],
+  input[type='number'],
+  input[type='tel'],
+  input[type='url'],
+  input[type='date'],
+  input[type='datetime-local'],
+  input[type='time'],
+  input[type='month'],
+  input[type='week'],
+  textarea,
+  select {
+    @apply w-full rounded-lg border px-3 py-2 text-sm transition-all duration-200 outline-none sm:text-base;
+    border-color: color-mix(in srgb, var(--neon-accent) 45%, transparent);
+    background-color: rgba(255, 255, 255, 0.92);
+    color: #2a1b3d;
+    box-shadow:
+      0 0 0 1px color-mix(in srgb, var(--neon-accent) 22%, transparent),
+      0 0 10px -2px color-mix(in srgb, var(--neon-accent) 40%, transparent);
+  }
+
+  .form-input:hover:not(:focus):not(:disabled),
+  .form-textarea:hover:not(:focus):not(:disabled),
+  .form-select:hover:not(:focus):not(:disabled),
+  input[type='text']:hover:not(:focus):not(:disabled),
+  input[type='search']:hover:not(:focus):not(:disabled),
+  input[type='email']:hover:not(:focus):not(:disabled),
+  input[type='password']:hover:not(:focus):not(:disabled),
+  input[type='number']:hover:not(:focus):not(:disabled),
+  input[type='tel']:hover:not(:focus):not(:disabled),
+  input[type='url']:hover:not(:focus):not(:disabled),
+  input[type='date']:hover:not(:focus):not(:disabled),
+  textarea:hover:not(:focus):not(:disabled),
+  select:hover:not(:focus):not(:disabled) {
+    border-color: color-mix(in srgb, var(--neon-accent) 70%, transparent);
+    box-shadow:
+      0 0 0 1px color-mix(in srgb, var(--neon-accent) 35%, transparent),
+      0 0 16px -2px color-mix(in srgb, var(--neon-accent) 55%, transparent);
+  }
+
+  /*
+   * Focus is the strong state: a brighter border plus a two-layer glow, so the
+   * active field is obvious without a colour that clashes with the theme.
+   */
+  .form-input:focus,
+  .form-textarea:focus,
+  .form-select:focus,
+  input[type='text']:focus,
+  input[type='search']:focus,
+  input[type='email']:focus,
+  input[type='password']:focus,
+  input[type='number']:focus,
+  input[type='tel']:focus,
+  input[type='url']:focus,
+  input[type='date']:focus,
+  input[type='datetime-local']:focus,
+  input[type='time']:focus,
+  input[type='month']:focus,
+  input[type='week']:focus,
+  textarea:focus,
+  select:focus {
+    border-color: var(--neon-accent-strong);
+    box-shadow:
+      0 0 0 2px color-mix(in srgb, var(--neon-accent-strong) 35%, transparent),
+      0 0 18px -2px color-mix(in srgb, var(--neon-accent-strong) 65%, transparent),
+      inset 0 0 10px -6px color-mix(in srgb, var(--neon-accent-strong) 60%, transparent);
+  }
+
+  /* Disabled fields stay flat: a glow would imply they are interactive. */
+  .form-input:disabled,
+  .form-textarea:disabled,
+  .form-select:disabled,
+  input:disabled,
+  textarea:disabled,
+  select:disabled {
+    @apply cursor-not-allowed opacity-60;
+    box-shadow: none;
+  }
+
+  /* Invalid state overrides the accent so errors read as errors. */
+  .form-input.is-invalid,
+  .form-input[aria-invalid='true'],
+  input[aria-invalid='true'],
+  textarea[aria-invalid='true'],
+  select[aria-invalid='true'] {
+    border-color: #f87171;
+    box-shadow:
+      0 0 0 2px rgba(248, 113, 113, 0.3),
+      0 0 18px -2px rgba(248, 113, 113, 0.6);
+  }
+
+  /* Placeholder stays legible on the light input surface. */
+  .form-input::placeholder,
+  textarea::placeholder,
+  input::placeholder {
+    color: #9d8fb3;
+  }
+
   /* Smooth scrolling utilities */
   .smooth-scroll {
     scroll-behavior: smooth;

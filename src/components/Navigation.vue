@@ -1,7 +1,10 @@
 <template>
   <nav
     v-if="authStore.currentUser"
-    class="relative z-50 bg-white/80 backdrop-blur-md shadow-lg border-b border-primary-200"
+    class="relative z-50 shadow-lg border-b"
+    :class="isAdminDashboard
+      ? 'bg-[#0a0612]/95 backdrop-blur-md border-white/10'
+      : 'bg-white/80 backdrop-blur-md border-primary-200'"
   >
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
       <div class="relative flex justify-between h-16">
@@ -25,10 +28,13 @@
               />
             </svg>
             <span
-              class="text-lg sm:text-xl font-bold text-primary-900 hidden xs:block"
+              class="text-lg sm:text-xl font-bold hidden xs:block"
+              :class="isAdminDashboard ? 'text-white' : 'text-primary-900'"
               >Cú Đêm</span
             >
-            <span class="text-lg font-bold text-primary-900 xs:hidden"
+            <span
+              class="text-lg font-bold xs:hidden"
+              :class="isAdminDashboard ? 'text-white' : 'text-primary-900'"
               >Cú Đêm</span
             >
           </router-link>
@@ -130,10 +136,16 @@
             v-for="item in desktopNavigationItems"
             :key="item.name"
             :to="item.path"
-            class="text-primary-700 hover:text-primary-800 hover:bg-primary-100/50 px-2 lg:px-3 py-2 rounded-md text-sm font-medium transition-colors flex items-center space-x-1 whitespace-nowrap"
-            :class="{
-              'text-primary-800 bg-primary-200/50': $route.path === item.path,
-            }"
+            class="px-2 lg:px-3 py-2 rounded-md text-sm font-medium transition-colors flex items-center space-x-1 whitespace-nowrap"
+            :class="isAdminDashboard
+              ? {
+                  'text-white/60 hover:text-white hover:bg-white/10': $route.path !== item.path,
+                  'text-white bg-white/15': $route.path === item.path,
+                }
+              : {
+                  'text-primary-700 hover:text-primary-800 hover:bg-primary-100/50': $route.path !== item.path,
+                  'text-primary-800 bg-primary-200/50': $route.path === item.path,
+                }"
           >
             <component
               :is="item.icon"
@@ -534,7 +546,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onBeforeUnmount, onMounted } from "vue";
-import { useRouter } from "vue-router";
+import { useRoute, useRouter } from "vue-router";
 import { useAuthStore } from "../stores/auth";
 import { usePlayersStore } from "../stores/players";
 import { useSystemStore } from "../stores/system";
@@ -552,6 +564,15 @@ import {
 import type { UserRole } from "../types";
 
 const router = useRouter();
+/*
+ * Resolve the route composable during setup.
+ *
+ * Calling useRoute() inside a computed callback runs it after setup has
+ * finished, where inject() has no active instance and returns undefined —
+ * which threw "Cannot read properties of undefined (reading 'name')" on every
+ * navigation.
+ */
+const route = useRoute();
 const authStore = useAuthStore();
 const playersStore = usePlayersStore();
 const systemStore = useSystemStore();
@@ -572,6 +593,9 @@ const selectedFundExpenseAmount = ref(0);
 const fundExpenseReason = ref("");
 const fundExpenseAmounts = [30000, 400000];
 const isStaff = computed(() => authStore.hasAnyRole(["admin", "mod"]));
+
+/** The admin dashboard uses its own dark palette, so the header follows it. */
+const isAdminDashboard = computed(() => route.name === "adminDashboard");
 const fundHistoryLoading = ref(false);
 const exportingFundHistory = ref(false);
 const fundHistoryEstimatedFund = ref(0);
@@ -623,6 +647,12 @@ const navigationItems = [
     path: "/users",
     icon: CogIcon,
     permission: "canManageUsers",
+  },
+  {
+    name: "Quản trị",
+    path: "/admin",
+    icon: CircleStackIcon,
+    roles: ["admin", "mod"],
   },
   {
     name: "Duyệt",

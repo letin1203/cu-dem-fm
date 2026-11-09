@@ -18,6 +18,7 @@ const Login = () => import('../components/Login.vue')
 const ResetPassword = () => import('../components/ResetPassword.vue')
 const Stats = () => import('../views/Stats.vue')
 const TeamSplitTest = () => import('../views/TeamSplitTest.vue')
+const AdminDashboard = () => import('../views/AdminDashboard.vue')
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -37,6 +38,12 @@ const router = createRouter({
       name: 'resetPassword',
       component: ResetPassword,
       meta: { requiresGuest: true }
+    },
+    {
+      path: '/admin',
+      name: 'adminDashboard',
+      component: AdminDashboard,
+      meta: { requiresAuth: true, roles: ['admin', 'mod'] }
     },
     {
       path: '/matches',

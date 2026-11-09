@@ -10,7 +10,7 @@
         'is-agent-focus': agentFocused,
       },
     ]"
-    :style="{ '--node-accent': accent }"
+    :style="{ '--node-accent': accent, '--card-scale': cardScale }"
   >
     <!-- Target handle on the TOP edge: flow comes down into this card. -->
     <Handle
@@ -144,6 +144,14 @@ import { statusColor } from '../../utils/aiGraphLayout';
 
 const props = defineProps<{
   data: AiGraphNode;
+  /**
+   * Card size multiplier.
+   *
+   * The graph renders at zoom 1 on large screens, which left the fixed-size
+   * cards and text looking tiny on a 2560px display. The modal derives this
+   * from the canvas width so every size scales together.
+   */
+  cardScale?: number;
   selected?: boolean;
   /** Player ids that have already been placed during the replay. */
   revealedPlayerIds?: Set<string>;
@@ -174,6 +182,8 @@ const props = defineProps<{
 }>();
 
 const accent = computed(() => statusColor[props.data.status]);
+
+const cardScale = computed(() => props.cardScale ?? 1);
 
 const revealedPlayerIds = computed(() => props.revealedPlayerIds ?? new Set<string>());
 
@@ -367,7 +377,8 @@ const teamAverageTier = computed(() => {
 
 <style scoped>
 .spider-node {
-  width: 400px;
+  /* Set by the modal from the canvas width; 1 is the 1920px baseline. */
+  width: calc(400px * var(--card-scale, 1));
   border-radius: 16px;
   border: 1px solid color-mix(in srgb, var(--node-accent) 45%, transparent);
   background: linear-gradient(150deg, rgba(22, 14, 34, 0.96), rgba(12, 8, 20, 0.98));
@@ -390,11 +401,11 @@ const teamAverageTier = computed(() => {
  * distribution, so their badges need more horizontal room.
  */
 .spider-node--tier {
-  width: 480px;
+  width: calc(480px * var(--card-scale, 1));
 }
 
 .spider-node--team {
-  width: 400px;
+  width: calc(400px * var(--card-scale, 1));
 }
 
 /*
@@ -448,17 +459,17 @@ const teamAverageTier = computed(() => {
 .spider-node__badge {
   display: grid;
   place-items: center;
-  width: 30px;
-  height: 30px;
-  flex: 0 0 30px;
+  width: calc(30px * var(--card-scale, 1));
+  height: calc(30px * var(--card-scale, 1));
+  flex: 0 0 calc(30px * var(--card-scale, 1));
   border-radius: 10px;
   background: color-mix(in srgb, var(--node-accent) 22%, transparent);
   color: var(--node-accent);
-  font-size: 15px;
+  font-size: calc(15px * var(--card-scale, 1));
 }
 
 .spider-node__label {
-  font-size: 13px;
+  font-size: calc(13px * var(--card-scale, 1));
   font-weight: 700;
   letter-spacing: 0.02em;
   color: #fff;
@@ -467,16 +478,16 @@ const teamAverageTier = computed(() => {
 
 .spider-node__sub {
   margin: 0;
-  font-size: 11px;
+  font-size: calc(11px * var(--card-scale, 1));
   /* Lifted from #a99cc4 for legibility against the card background. */
   color: #cfc4e6;
 }
 
 .spider-node__dot {
   margin-left: auto;
-  width: 8px;
-  height: 8px;
-  flex: 0 0 8px;
+  width: calc(8px * var(--card-scale, 1));
+  height: calc(8px * var(--card-scale, 1));
+  flex: 0 0 calc(8px * var(--card-scale, 1));
   border-radius: 999px;
   background: var(--node-accent);
   box-shadow: 0 0 10px var(--node-accent);
@@ -508,9 +519,9 @@ const teamAverageTier = computed(() => {
   border-radius: 999px;
   border: 1px solid rgba(255, 255, 255, 0.12);
   background: rgba(255, 255, 255, 0.06);
-  /* All badges are 1.5x their original size. */
-  padding: 2px 11px 2px 3px;
-  font-size: 15px;
+  /* All badges are 1.5x their original size, then follow the card scale. */
+  padding: calc(2px * var(--card-scale, 1)) calc(11px * var(--card-scale, 1)) calc(2px * var(--card-scale, 1)) calc(3px * var(--card-scale, 1));
+  font-size: calc(15px * var(--card-scale, 1));
   line-height: 1.5;
   color: #cfc2e6;
   transition: background 200ms ease, border-color 200ms ease, color 200ms ease;
@@ -523,9 +534,9 @@ const teamAverageTier = computed(() => {
 
 /* Player avatar inside a badge. Sized to the badge's text height. */
 .spider-chip__avatar {
-  width: 18px;
-  height: 18px;
-  flex: 0 0 18px;
+  width: calc(18px * var(--card-scale, 1));
+  height: calc(18px * var(--card-scale, 1));
+  flex: 0 0 calc(18px * var(--card-scale, 1));
   border-radius: 999px;
   object-fit: cover;
   background: rgba(255, 255, 255, 0.12);
@@ -535,7 +546,7 @@ const teamAverageTier = computed(() => {
 .spider-chip__avatar--initial {
   display: grid;
   place-items: center;
-  font-size: 10px;
+  font-size: calc(10px * var(--card-scale, 1));
   font-weight: 700;
   color: rgba(255, 255, 255, 0.75);
   text-transform: uppercase;
@@ -622,7 +633,7 @@ const teamAverageTier = computed(() => {
   border-radius: 4px;
   background: rgba(255, 255, 255, 0.14);
   padding: 0 5px;
-  font-size: 13px;
+  font-size: calc(13px * var(--card-scale, 1));
   font-style: normal;
   font-weight: 600;
   letter-spacing: 0.02em;
@@ -680,7 +691,7 @@ const teamAverageTier = computed(() => {
 }
 
 .spider-node__head-stats dt {
-  font-size: 8px;
+  font-size: calc(8px * var(--card-scale, 1));
   letter-spacing: 0.03em;
   text-transform: uppercase;
   /* Was 38% white, which was hard to read on the dark card. */
@@ -689,7 +700,7 @@ const teamAverageTier = computed(() => {
 
 .spider-node__head-stats dd {
   margin: 0;
-  font-size: 12px;
+  font-size: calc(12px * var(--card-scale, 1));
   font-weight: 700;
   color: #fff;
   font-variant-numeric: tabular-nums;
@@ -712,7 +723,7 @@ const teamAverageTier = computed(() => {
 
 /* Thinking: real pipeline steps */
 .spider-node--thinking {
-  width: 340px;
+  width: calc(340px * var(--card-scale, 1));
 }
 
 .spider-node__phases {
@@ -731,7 +742,7 @@ const teamAverageTier = computed(() => {
   gap: 6px;
   border-radius: 6px;
   padding: 2px 4px;
-  font-size: 10px;
+  font-size: calc(10px * var(--card-scale, 1));
   color: rgba(255, 255, 255, 0.42);
   transition: background 180ms ease, color 180ms ease;
 }
@@ -771,14 +782,14 @@ const teamAverageTier = computed(() => {
 
 .spider-node__phase-text strong {
   display: block;
-  font-size: 10px;
+  font-size: calc(10px * var(--card-scale, 1));
   font-weight: 600;
   color: inherit;
 }
 
 .spider-node__phase-text span {
   display: block;
-  font-size: 9px;
+  font-size: calc(9px * var(--card-scale, 1));
   color: rgba(255, 255, 255, 0.32);
   overflow: hidden;
   text-overflow: ellipsis;
@@ -787,7 +798,7 @@ const teamAverageTier = computed(() => {
 
 .spider-node__phase-ms {
   flex: 0 0 auto;
-  font-size: 9px;
+  font-size: calc(9px * var(--card-scale, 1));
   font-variant-numeric: tabular-nums;
   color: rgba(255, 255, 255, 0.3);
 }

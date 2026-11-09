@@ -96,6 +96,7 @@
                 :processing-player-id="processingPlayerId"
                 :delivered-player-id="deliveredPlayerId"
                 :agent-focused="agentTargetNodeId === data.id"
+                :card-scale="cardScale"
                 :completed-phase-ids="completedPhaseIds"
                 :active-phase-id="activePhaseId"
                 :carried-player-id="carriedPlayerId"
@@ -336,6 +337,19 @@ const measuredHeights = ref<Map<string, number>>(new Map());
  * Runs once per render; the layout then re-stacks with exact heights. The guard
  * stops it looping when nothing actually changed.
  */
+/**
+ * Card size multiplier derived from the canvas width.
+ *
+ * 1400px is the width the cards were designed at (2560/1920 wide window minus
+ * the side panel), so anything narrower keeps 1 and wider screens scale up.
+ * Capped so a 4K monitor does not produce absurdly large cards.
+ */
+const cardScale = computed(() => {
+  const width = dimensions.value.width || 0;
+  if (!width) return 1;
+  return Math.min(1.45, Math.max(1, +(width / 1400).toFixed(2)));
+});
+
 const captureCardHeights = async (): Promise<void> => {
   await nextTick();
   const canvas = canvasRef.value;
@@ -369,6 +383,7 @@ const flowNodes = computed(() => {
   // own structure; the status shown is the replay position, not a canned one.
   const positions = layoutSpiderGraph(graph.value.nodes, {
     measuredHeights: measuredHeights.value,
+    cardScale: cardScale.value,
   });
 
   return graph.value.nodes.map((node) => ({

@@ -152,7 +152,6 @@
               class="w-4 h-4 lg:w-5 lg:h-5 flex-shrink-0"
             />
             <span class="hidden lg:block">{{ item.name }}</span>
-            <span v-if="item.name === 'Duyệt' && pendingTopUpCount > 0" class="ml-1 inline-flex min-w-5 items-center justify-center rounded-full bg-red-500 px-1.5 py-0.5 text-xs font-bold text-white">{{ pendingTopUpCount }}</span>
           </router-link>
 
           <!-- User Menu -->
@@ -288,7 +287,6 @@
         >
           <component :is="item.icon" class="w-5 h-5" />
           <span>{{ item.name }}</span>
-          <span v-if="item.name === 'Duyệt' && pendingTopUpCount > 0" class="ml-1 inline-flex min-w-5 items-center justify-center rounded-full bg-red-500 px-1.5 py-0.5 text-xs font-bold text-white">{{ pendingTopUpCount }}</span>
         </router-link>
 
         <!-- Mobile User Info -->
@@ -651,12 +649,6 @@ const navigationItems = [
   {
     name: "Quản trị",
     path: "/admin",
-    icon: CircleStackIcon,
-    roles: ["admin", "mod"],
-  },
-  {
-    name: "Duyệt",
-    path: "/duyet-nap-tien",
     icon: CircleStackIcon,
     roles: ["admin", "mod"],
   },

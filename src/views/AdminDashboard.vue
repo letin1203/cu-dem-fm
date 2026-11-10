@@ -124,14 +124,37 @@
 
           <article v-if="isAdmin" class="admin-card">
             <h3 class="admin-card__title">Yêu cầu quên mật khẩu</h3>
-            <p v-if="!passwordRequests.length" class="admin-empty">
-              Không có yêu cầu nào.
+            <!--
+              The full user list is hidden by default: it is long and only
+              needed when an admin actually has to hand out a reset link.
+              Searching reveals matching accounts.
+            -->
+            <div class="admin-field">
+              <input
+                v-model="passwordSearch"
+                type="search"
+                class="form-input"
+                placeholder="Tìm theo tên cầu thủ hoặc tên người dùng…"
+                aria-label="Tìm người dùng để lấy link đặt lại mật khẩu"
+              />
+            </div>
+
+            <p v-if="!passwordSearch.trim()" class="admin-empty">
+              Nhập tên cầu thủ hoặc người dùng để tìm.
+            </p>
+            <p v-else-if="!filteredPasswordRequests.length" class="admin-empty">
+              Không tìm thấy người dùng phù hợp.
             </p>
             <ul v-else class="admin-list">
-              <li v-for="user in passwordRequests" :key="user.id" class="admin-row">
+              <li v-for="user in filteredPasswordRequests" :key="user.id" class="admin-row">
                 <span class="admin-row__main">
-                  <strong>{{ user.username }}</strong>
-                  <em>{{ user.player?.name || 'Chưa liên kết cầu thủ' }}</em>
+                  <strong>{{ user.player?.name || user.username }}</strong>
+                  <em>
+                    {{ user.username }}
+                    <template v-if="user.passwordResetLinkCreatedAt">
+                      · Tạo link lần cuối {{ formatDate(user.passwordResetLinkCreatedAt) }}
+                    </template>
+                  </em>
                 </span>
                 <button
                   type="button"
@@ -246,6 +269,8 @@ const linkLoadingId = ref<string | null>(null);
 const pendingTopUps = ref<any[]>([]);
 const pendingFunds = ref<any[]>([]);
 const passwordRequests = ref<any[]>([]);
+/** Search query for the password-reset section; the list stays hidden until typed. */
+const passwordSearch = ref('');
 const inactivePlayers = ref<any[]>([]);
 const polls = ref<any[]>([]);
 
@@ -481,6 +506,37 @@ const activatePlayer = async (id: string): Promise<void> => {
     activatingId.value = null;
   }
 };
+
+/**
+ * Strip Vietnamese diacritics so "dat huynh" matches "Đạt Huỳnh".
+ *
+ * Same normalisation the Users page uses: lower-case, decompose to NFD, drop the
+ * combining marks, then map đ -> d.
+ */
+const normalizeSearchText = (value: string): string =>
+  value
+    .toLocaleLowerCase('vi')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/đ/g, 'd')
+    .trim();
+
+/**
+ * Password-reset results.
+ *
+ * Empty until the admin searches, and then matched against BOTH the linked
+ * player's name and the account username, so either name finds the account.
+ */
+const filteredPasswordRequests = computed(() => {
+  const query = normalizeSearchText(passwordSearch.value);
+  if (!query) return [];
+
+  return passwordRequests.value.filter((user) => {
+    const playerName = normalizeSearchText(user.player?.name || '');
+    const username = normalizeSearchText(user.username || '');
+    return playerName.includes(query) || username.includes(query);
+  });
+});
 
 const copyResetLink = async (userId: string): Promise<void> => {
   linkLoadingId.value = userId;
@@ -844,6 +900,10 @@ onMounted(loadSummary);
   font-weight: 700;
   color: #37e0a0;
   font-variant-numeric: tabular-nums;
+}
+
+.admin-field {
+  margin-bottom: 10px;
 }
 
 .admin-empty {

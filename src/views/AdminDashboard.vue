@@ -74,6 +74,20 @@
 
         <!-- Pending approvals -->
         <section v-else-if="activeSection === 'approvals'" class="admin-stack">
+          <div class="admin-card__head">
+            <p class="admin-main__desc">
+              {{ pendingApprovalTotal }} yêu cầu đang chờ duyệt
+            </p>
+            <button
+              type="button"
+              class="admin-btn"
+              :disabled="!pendingApprovalTotal || approvingAll"
+              @click="approveAll"
+            >
+              {{ approvingAll ? 'Đang duyệt…' : 'Duyệt tất cả' }}
+            </button>
+          </div>
+
           <article class="admin-card">
             <h3 class="admin-card__title">Yêu cầu nạp tiền</h3>
             <p v-if="!pendingTopUps.length" class="admin-empty">
@@ -490,6 +504,61 @@ const approveFund = async (id: string): Promise<void> => {
     toast.error(error.response?.data?.error || error.message || 'Không thể duyệt');
   } finally {
     approvingId.value = null;
+  }
+};
+
+/** True while a bulk approve is running, so the button cannot double-fire. */
+const approvingAll = ref(false);
+
+/** Total pending approvals shown in the section header. */
+const pendingApprovalTotal = computed(
+  () => pendingTopUps.value.length + pendingFunds.value.length,
+);
+
+/**
+ * Approve every pending request.
+ *
+ * Requests are approved one by one because the backend exposes single-item
+ * endpoints; running them sequentially (rather than in parallel) keeps load
+ * predictable and lets a partial failure leave the successful approvals applied
+ * instead of rolling the whole batch back.
+ */
+const approveAll = async (): Promise<void> => {
+  if (approvingAll.value || !pendingApprovalTotal.value) return;
+  approvingAll.value = true;
+
+  const topUpIds = pendingTopUps.value.map((item) => item.id);
+  const fundIds = pendingFunds.value.map((item) => item.id);
+  let approved = 0;
+  let failed = 0;
+
+  try {
+    for (const id of topUpIds) {
+      try {
+        const response = await apiClient.approveMoneyTopUp(id);
+        if (!response.success) throw new Error(response.error || 'failed');
+        approved += 1;
+        pendingTopUps.value = pendingTopUps.value.filter((item) => item.id !== id);
+      } catch {
+        failed += 1;
+      }
+    }
+
+    for (const id of fundIds) {
+      try {
+        const response = await apiClient.approveFundContribution(id);
+        if (!response.success) throw new Error(response.error || 'failed');
+        approved += 1;
+        pendingFunds.value = pendingFunds.value.filter((item) => item.id !== id);
+      } catch {
+        failed += 1;
+      }
+    }
+
+    if (approved) toast.success(`Đã duyệt ${approved} yêu cầu`);
+    if (failed) toast.error(`${failed} yêu cầu không duyệt được`);
+  } finally {
+    approvingAll.value = false;
   }
 };
 

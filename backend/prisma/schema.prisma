@@ -49,6 +49,11 @@ model Player {
   money       Int      @default(0)
   isActive    Boolean  @default(true)
   avatar      String?
+  // Automatic weekly registration. Off by default; the player opts in from
+  // their profile and picks at least one pitch for it to take effect.
+  autoRegisterEnabled Boolean @default(false)
+  autoRegisterField5  Boolean @default(false)
+  autoRegisterField7  Boolean @default(false)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 

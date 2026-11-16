@@ -180,6 +180,28 @@ class ApiClient {
     return this.post('/auth/reset-password', { token, password });
   }
 
+  /** Automatic weekly registration preference for the caller's own player. */
+  async getPlayerAutoRegistration(playerId: string) {
+    return this.get<{ enabled: boolean; field5: boolean; field7: boolean }>(`/players/${playerId}/auto-registration`);
+  }
+
+  async updatePlayerAutoRegistration(
+    playerId: string,
+    payload: { enabled: boolean; field5: boolean; field7: boolean },
+  ) {
+    return this.put<{ enabled: boolean; field5: boolean; field7: boolean }>(
+      `/players/${playerId}/auto-registration`,
+      payload,
+    );
+  }
+
+  /** Register every opted-in player for a tournament (idempotent). */
+  async runAutoRegistration(tournamentId: string) {
+    return this.post<{ registered: string[]; skippedNegativeBalance: string[]; skippedOther: string[] }>(
+      `/tournaments/${tournamentId}/auto-register`,
+    );
+  }
+
   async getPasswordResetRequests() {
     return this.get<Array<{ id: string; username: string; email: string; passwordResetLinkCreatedAt: string | Date | null; player?: { name: string } | null }>>('/auth/password-reset-requests');
   }

@@ -12134,6 +12134,48 @@ const fetchData = async () => {
 let challengePollTimer: number | undefined;
 let challengePollInFlight = false;
 
+/*
+ * Automatic weekly registration.
+ *
+ * The server decides who to register (opted-in players with a non-negative
+ * balance); this page only prompts it regularly so a player whose balance
+ * becomes positive while the page is open still gets registered.
+ */
+let autoRegisterPollTimer: number | undefined;
+let autoRegisterPollInFlight = false;
+
+const runAutoRegistrationForVisibleTournaments = async (): Promise<void> => {
+  if (autoRegisterPollInFlight || document.visibilityState === "hidden") return;
+  autoRegisterPollInFlight = true;
+  try {
+    /*
+     * Only future weekly tournaments are candidates: registering for a
+     * tournament that already started (or ended) would be meaningless and the
+     * server rejects it anyway.
+     */
+    const targets = weeklyTournaments.value.filter(
+      (tournament) =>
+        ["UPCOMING", "ONGOING"].includes(tournament.status)
+        && new Date(tournament.startDate).getTime() > Date.now(),
+    );
+
+    let added = false;
+    for (const tournament of targets) {
+      const response = await apiClient.runAutoRegistration(tournament.id);
+      if (response.success && (response.data as any)?.registered?.length) {
+        added = true;
+      }
+    }
+
+    // Refresh so a newly auto-registered player appears without a manual reload.
+    if (added) await fetchData();
+  } catch {
+    // Automatic registration must never interrupt normal use of the page.
+  } finally {
+    autoRegisterPollInFlight = false;
+  }
+};
+
 const pollIncomingChallenges = async (): Promise<void> => {
   if (
     challengePollInFlight ||
@@ -12181,6 +12223,13 @@ onMounted(async () => {
     () => void pollIncomingChallenges(),
     5_000,
   );
+  // Check fairly often: a balance can flip positive at any moment (an approved
+  // top-up, a refund), and the player expects to be registered shortly after.
+  void runAutoRegistrationForVisibleTournaments();
+  autoRegisterPollTimer = window.setInterval(
+    () => void runAutoRegistrationForVisibleTournaments(),
+    20_000,
+  );
 });
 
 const cancellationDeadlineTimer = window.setInterval(() => {
@@ -12190,6 +12239,7 @@ const cancellationDeadlineTimer = window.setInterval(() => {
 onBeforeUnmount(() => {
   window.clearInterval(cancellationDeadlineTimer);
   if (challengePollTimer) window.clearInterval(challengePollTimer);
+  if (autoRegisterPollTimer) window.clearInterval(autoRegisterPollTimer);
   document.removeEventListener(
     "visibilitychange",
     handleChallengeVisibilityChange,

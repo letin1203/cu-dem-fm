@@ -479,6 +479,108 @@ router.put('/:id/year-of-birth', authenticate, async (req: AuthenticatedRequest,
   }
 });
 
+/**
+ * Read the automatic-registration preference of the caller's own player.
+ *
+ * Values are returned even when the player does not exist yet, so the profile
+ * page can render a stable form state.
+ */
+router.get('/:id/auto-registration', authenticate, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  try {
+    const { id } = req.params;
+    const player = await prisma.player.findUnique({
+      where: { id },
+      select: {
+        user: { select: { id: true } },
+        autoRegisterEnabled: true,
+        autoRegisterField5: true,
+        autoRegisterField7: true,
+      },
+    });
+    if (!player) {
+      res.status(404).json({ success: false, error: 'Không tìm thấy cầu thủ' });
+      return;
+    }
+    if (player.user?.id !== req.user!.id) {
+      res.status(403).json({ success: false, error: 'Bạn chỉ có thể xem cài đặt của chính mình' });
+      return;
+    }
+    res.json({
+      success: true,
+      data: {
+        enabled: player.autoRegisterEnabled,
+        field5: player.autoRegisterField5,
+        field7: player.autoRegisterField7,
+      },
+    });
+  } catch {
+    res.status(500).json({ success: false, error: 'Không thể tải cài đặt tự động đăng ký' });
+  }
+});
+
+/**
+ * Update the automatic-registration preference.
+ *
+ * Enabling with no pitch selected is rejected: the feature is defined as
+ * "register on the chosen pitches", so an enabled switch with nothing chosen
+ * would silently do nothing and look broken.
+ */
+router.put('/:id/auto-registration', authenticate, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  try {
+    const { id } = req.params;
+    const enabled = Boolean(req.body?.enabled);
+    const field5 = Boolean(req.body?.field5);
+    const field7 = Boolean(req.body?.field7);
+
+    const player = await prisma.player.findUnique({
+      where: { id },
+      select: { user: { select: { id: true } } },
+    });
+    if (!player) {
+      res.status(404).json({ success: false, error: 'Không tìm thấy cầu thủ' });
+      return;
+    }
+    if (player.user?.id !== req.user!.id) {
+      res.status(403).json({ success: false, error: 'Bạn chỉ có thể chỉnh sửa cài đặt của chính mình' });
+      return;
+    }
+    if (enabled && !field5 && !field7) {
+      res.status(400).json({
+        success: false,
+        error: 'Vui lòng chọn ít nhất một sân (Sân 5 hoặc Sân 7) để bật tự động đăng ký',
+      });
+      return;
+    }
+
+    const updated = await prisma.player.update({
+      where: { id },
+      data: {
+        autoRegisterEnabled: enabled,
+        // Turning the feature off clears the pitches too, so re-enabling never
+        // silently reuses a stale choice.
+        autoRegisterField5: enabled ? field5 : false,
+        autoRegisterField7: enabled ? field7 : false,
+      },
+      select: {
+        autoRegisterEnabled: true,
+        autoRegisterField5: true,
+        autoRegisterField7: true,
+      },
+    });
+
+    res.json({
+      success: true,
+      data: {
+        enabled: updated.autoRegisterEnabled,
+        field5: updated.autoRegisterField5,
+        field7: updated.autoRegisterField7,
+      },
+    });
+  } catch {
+    res.status(500).json({ success: false, error: 'Không thể cập nhật cài đặt tự động đăng ký' });
+  }
+});
+
 // Update player
 router.put('/:id', authenticate, authorize(['ADMIN', 'MOD']), async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   try {

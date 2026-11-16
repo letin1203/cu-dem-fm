@@ -159,6 +159,37 @@
           >
             Yêu cầu của bạn đang được BQT kiểm tra quỹ MoMo và duyệt.
           </p>
+
+          <!--
+            Automatic weekly registration.
+            Off by default; enabling opens a dialog to choose the pitches.
+            Turning it on without a pitch is rejected, because an enabled switch
+            with nothing selected would never register anything.
+          -->
+          <label
+            v-if="isOwnProfile"
+            class="mt-3 flex cursor-pointer items-start gap-3 rounded-lg border border-primary-200 bg-white/60 px-3 py-2"
+          >
+            <input
+              type="checkbox"
+              class="mt-1 h-4 w-4 shrink-0 rounded border-primary-300 text-primary-600 focus:ring-primary-500"
+              :checked="autoRegistration.enabled"
+              :disabled="autoRegistrationLoading || !playerProfile.id"
+              @change="onAutoRegistrationToggle(($event.target as HTMLInputElement).checked)"
+            />
+            <span class="min-w-0">
+              <span class="block text-sm font-medium text-gray-800">
+                Tự động đăng ký đá hằng tuần
+              </span>
+              <span class="block text-xs text-gray-500">
+                {{
+                  autoRegistration.enabled
+                    ? `Đang bật: ${autoRegistrationPitchLabel}`
+                    : 'Hệ thống tự điểm danh khi số dư không âm'
+                }}
+              </span>
+            </span>
+          </label>
         </div>
       </div>
 
@@ -474,6 +505,86 @@
     </div>
 
     <div
+      v-if="showAutoRegistrationModal"
+      class="fixed inset-0 z-[95] flex items-center justify-center overflow-y-auto overscroll-contain bg-gray-900/50 p-4"
+    >
+      <div
+        class="my-auto max-h-[90vh] w-full max-w-md overflow-y-auto rounded-lg bg-white p-6 shadow-xl"
+      >
+        <h2 class="text-lg font-semibold text-gray-900">
+          Tự động đăng ký đá hằng tuần
+        </h2>
+        <p class="mt-2 text-sm text-gray-600">
+          Khi bật, hệ thống sẽ tự điểm danh bạn cho giải hằng tuần sắp tới nếu
+          <strong>số dư không âm</strong> — bao gồm cả tiền đang chờ duyệt.
+        </p>
+        <p class="mt-2 text-sm text-gray-600">
+          Chọn sân bạn muốn tham gia. Nếu không chọn sân nào, hệ thống sẽ
+          <strong>không</strong> tự đăng ký.
+        </p>
+
+        <div class="mt-4 space-y-2">
+          <label
+            v-for="pitch in autoRegisterPitchOptions"
+            :key="pitch.value"
+            class="flex cursor-pointer items-center justify-between gap-3 rounded-lg border px-3 py-3 transition"
+            :class="
+              autoRegistrationDraft[pitch.value]
+                ? 'border-primary-400 bg-primary-50'
+                : 'border-gray-200'
+            "
+          >
+            <span class="text-sm font-medium text-gray-800">{{ pitch.label }}</span>
+            <button
+              type="button"
+              role="switch"
+              :aria-checked="autoRegistrationDraft[pitch.value]"
+              :aria-label="pitch.label"
+              class="relative h-6 w-11 shrink-0 rounded-full transition"
+              :class="
+                autoRegistrationDraft[pitch.value]
+                  ? 'bg-primary-600'
+                  : 'bg-gray-300'
+              "
+              @click="autoRegistrationDraft[pitch.value] = !autoRegistrationDraft[pitch.value]"
+            >
+              <span
+                class="absolute top-1 h-4 w-4 rounded-full bg-white transition"
+                :class="autoRegistrationDraft[pitch.value] ? 'left-6' : 'left-1'"
+              />
+            </button>
+          </label>
+        </div>
+
+        <p
+          v-if="!autoRegistrationDraft.field5 && !autoRegistrationDraft.field7"
+          class="mt-3 rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-800"
+        >
+          Chưa chọn sân nào — hệ thống sẽ không tự đăng ký.
+        </p>
+
+        <div class="mt-6 flex justify-end gap-3">
+          <button
+            type="button"
+            class="btn-secondary"
+            :disabled="autoRegistrationSaving"
+            @click="cancelAutoRegistration"
+          >
+            Hủy
+          </button>
+          <button
+            type="button"
+            class="btn-primary disabled:cursor-not-allowed disabled:opacity-50"
+            :disabled="autoRegistrationSaving"
+            @click="saveAutoRegistration()"
+          >
+            {{ autoRegistrationSaving ? "Đang lưu..." : "Lưu" }}
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div
       v-if="showTopUpModal"
       class="fixed inset-0 z-[95] flex items-center justify-center overflow-y-auto overscroll-contain bg-gray-900/50 p-4"
     >
@@ -697,6 +808,30 @@ const moneyHistoryPagination = ref({ page: 1, pages: 0, total: 0 });
 const pendingTopUps = ref<Array<{ id: string; amount: number; requestedAt: string | Date }>>([]);
 const cancellingTopUpId = ref<string | null>(null);
 const showTopUpModal = ref(false);
+
+/*
+ * Automatic weekly registration.
+ *
+ * `autoRegistration` mirrors what the server has stored; the draft is what the
+ * dialog edits, so cancelling leaves the saved settings untouched.
+ */
+const autoRegistration = ref({ enabled: false, field5: false, field7: false });
+const autoRegistrationDraft = ref({ field5: false, field7: false });
+const autoRegistrationLoading = ref(false);
+const autoRegistrationSaving = ref(false);
+const showAutoRegistrationModal = ref(false);
+
+const autoRegisterPitchOptions = [
+  { value: "field5" as const, label: "Sân 5" },
+  { value: "field7" as const, label: "Sân 7" },
+];
+
+const autoRegistrationPitchLabel = computed(() => {
+  const chosen: string[] = [];
+  if (autoRegistration.value.field5) chosen.push("Sân 5");
+  if (autoRegistration.value.field7) chosen.push("Sân 7");
+  return chosen.length ? chosen.join(" + ") : "chưa chọn sân";
+});
 const submittingTopUp = ref(false);
 const selectedTopUpAmount = ref(100000);
 const standardTopUpAmounts = [50000, 100000, 200000, 500000];
@@ -998,6 +1133,90 @@ const openTopUpModal = (): void => {
   selectedTopUpAmount.value = debtSettlementAmount.value || 100000;
   showTopUpModal.value = true;
 };
+/** Load the saved auto-registration preference for the profile being viewed. */
+const loadAutoRegistration = async (): Promise<void> => {
+  const id = playerProfile.value?.id;
+  if (!isOwnProfile.value || !id) {
+    autoRegistration.value = { enabled: false, field5: false, field7: false };
+    return;
+  }
+  autoRegistrationLoading.value = true;
+  try {
+    const response = await apiClient.getPlayerAutoRegistration(id);
+    const data = response.data as
+      | { enabled: boolean; field5: boolean; field7: boolean }
+      | undefined;
+    if (response.success && data) autoRegistration.value = { ...data };
+  } catch {
+    // A failed read must not break the profile; the switch simply shows off.
+    autoRegistration.value = { enabled: false, field5: false, field7: false };
+  } finally {
+    autoRegistrationLoading.value = false;
+  }
+};
+
+/**
+ * Handle the checkbox.
+ *
+ * Turning it on opens the dialog instead of saving straight away, because a
+ * pitch has to be chosen. Turning it off saves immediately.
+ */
+const onAutoRegistrationToggle = (next: boolean): void => {
+  if (autoRegistrationSaving.value) return;
+  if (next) {
+    autoRegistrationDraft.value = {
+      field5: autoRegistration.value.field5,
+      field7: autoRegistration.value.field7,
+    };
+    showAutoRegistrationModal.value = true;
+    return;
+  }
+  void saveAutoRegistration({ enabled: false, field5: false, field7: false });
+};
+
+const cancelAutoRegistration = (): void => {
+  showAutoRegistrationModal.value = false;
+};
+
+/** Persist the preference; the server rejects "enabled with no pitch". */
+const saveAutoRegistration = async (
+  override?: { enabled: boolean; field5: boolean; field7: boolean },
+): Promise<void> => {
+  const id = playerProfile.value?.id;
+  if (!id || autoRegistrationSaving.value) return;
+
+  const payload = override ?? {
+    enabled: true,
+    field5: autoRegistrationDraft.value.field5,
+    field7: autoRegistrationDraft.value.field7,
+  };
+
+  if (payload.enabled && !payload.field5 && !payload.field7) {
+    toast.error("Vui lòng chọn ít nhất một sân để bật tự động đăng ký");
+    return;
+  }
+
+  autoRegistrationSaving.value = true;
+  try {
+    const response = await apiClient.updatePlayerAutoRegistration(id, payload);
+    const data = response.data as
+      | { enabled: boolean; field5: boolean; field7: boolean }
+      | undefined;
+    if (!response.success || !data) {
+      throw new Error(response.error || "Không thể lưu cài đặt");
+    }
+    autoRegistration.value = { ...data };
+    showAutoRegistrationModal.value = false;
+    toast.success(
+      data.enabled ? "Đã bật tự động đăng ký" : "Đã tắt tự động đăng ký",
+    );
+  } catch (err) {
+    toast.error(err instanceof Error ? err.message : "Không thể lưu cài đặt");
+  } finally {
+    autoRegistrationSaving.value = false;
+  }
+};
+
 const saveAvatar = async (): Promise<void> => {
   if (!playerProfile.value || !selectedAvatar.value) return;
   savingAvatar.value = true;

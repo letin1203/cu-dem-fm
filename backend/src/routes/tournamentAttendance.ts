@@ -7,6 +7,7 @@ import {
   hasAttendanceCapacity,
   hasNonNegativeAvailableBalance,
 } from '../lib/tournamentRules';
+import { runAutoRegistration } from '../services/autoRegistration';
 
 const router = Router();
 
@@ -746,6 +747,26 @@ router.get('/:id/attendance-details', authenticate, async (req: AuthenticatedReq
       success: false,
       error: 'Failed to get attendance details',
     });
+  }
+});
+
+/**
+ * Run automatic weekly registration for one tournament.
+ *
+ * Called repeatedly by the weekly page while it is open. It is idempotent, so a
+ * player is registered at most once and a manual cancellation is never undone.
+ * Any authenticated user may trigger it: it only ever acts on players who
+ * explicitly opted in, and the result never reveals their identity to other
+ * users.
+ */
+router.post('/:id/auto-register', authenticate, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  try {
+    const { id: tournamentId } = req.params;
+    const result = await runAutoRegistration(tournamentId);
+    res.json({ success: true, data: result });
+  } catch (error) {
+    console.error('Auto registration error:', error);
+    res.status(500).json({ success: false, error: 'Không thể tự động đăng ký' });
   }
 });
 

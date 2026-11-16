@@ -1087,6 +1087,9 @@ const load = async (): Promise<void> => {
         loadTournamentHistory(playerProfile.value.id),
         loadPendingTopUps(),
         loadMoneyHistory(1),
+        // The saved auto-registration preference is part of the wallet card, so
+        // it must load with the profile rather than stay at its default.
+        loadAutoRegistration(),
       ]).catch((loadError) => console.error("Error loading player history:", loadError));
     }
   } catch (err) {

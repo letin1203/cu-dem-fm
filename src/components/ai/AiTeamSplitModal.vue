@@ -1175,18 +1175,38 @@ const canApply = computed(
 const applying = ref(false);
 
 /**
+ * The team rosters exactly as displayed.
+ *
+ * Taken from the graph's TEAM nodes, so what is persisted is what the user saw.
+ * Sending nothing would make the server rerun the pipeline, which shuffles
+ * randomly and produces a different split.
+ */
+const displayedTeams = computed<string[][]>(() => {
+  if (!graph.value) return [];
+  return graph.value.nodes
+    .filter((node) => node.kind === 'TEAM')
+    .sort((first, second) => first.lane - second.lane)
+    .map((node) => (node.players ?? []).map((player) => player.id));
+});
+
+/**
  * Persist the split the user just reviewed.
  *
- * The server re-derives the roster and reruns the pipeline, so the stored teams
- * are always valid for the tournament — the client never uploads a team layout.
+ * The displayed rosters are sent so the stored teams match the preview; the
+ * server validates them against the tournament's attendance before writing.
  */
 const applyAiTeams = async (): Promise<void> => {
   if (!props.applyTournamentId || !props.applyField || applying.value) return;
+  const teams = displayedTeams.value;
+  if (!teams.length || teams.some((team) => !team.length)) {
+    toast.error('Chưa có đội nào để áp dụng');
+    return;
+  }
   applying.value = true;
   try {
     const response = await apiClient.post(
       `/tournaments/${props.applyTournamentId}/apply-ai-teams`,
-      { teamCount: teamCount.value, field: props.applyField },
+      { teamCount: teams.length, field: props.applyField, teams },
     );
     if (!response.success) throw new Error(response.error || 'Không thể áp dụng');
     toast.success('Đã áp dụng kết quả AI chia team');

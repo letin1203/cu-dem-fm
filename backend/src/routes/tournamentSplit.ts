@@ -468,7 +468,9 @@ router.post(
         where: {
           tournamentId,
           status: 'ATTEND',
-          ...(selectedField === 'FIELD_5' ? { field5: true } : { field7: true }),
+          ...(selectedField === 'FIELD_5'
+            ? { field5: { not: false } }
+            : { field7: { not: false } }),
         },
         include: {
           player: {
@@ -501,43 +503,71 @@ router.post(
         else teamCount = 4;
       }
 
-      const sortedPlayers = attendingPlayers
-        .map((attendance) => attendance.player)
-        .sort((a, b) => a.tier - b.tier);
+      /*
+       * Validate the rosters sent by the client.
+       *
+       * This used to re-run buildBalancedTeams, but that pipeline shuffles with
+       * Math.random(), so the stored teams differed from the ones on screen.
+       * The submitted layout is now authoritative: it must contain every
+       * attending player exactly once, in the requested number of teams.
+       */
+      const submittedTeams: unknown = req.body?.teams;
+      if (!Array.isArray(submittedTeams) || submittedTeams.length !== teamCount) {
+        res.status(400).json({ success: false, error: 'Danh sách đội không hợp lệ' });
+        return;
+      }
 
-      const previousTournament = await prisma.tournament.findFirst({
-        where: { type: 'WEEKLY', startDate: { lt: tournament.startDate }, teams: { some: {} } },
-        orderBy: { startDate: 'desc' },
-        include: { tournamentTeamPlayers: { select: { teamId: true, playerId: true } } },
-      });
-      const previousTeamByPlayer = new Map<string, string>(
-        previousTournament?.tournamentTeamPlayers.map((item) => [item.playerId, item.teamId]) ?? [],
+      const attendingIds = new Set(attendingPlayers.map((attendance) => attendance.playerId));
+      const byId = new Map(
+        attendingPlayers.map((attendance) => [attendance.playerId, attendance.player]),
       );
 
-      const [acceptedChallenges, acceptedFriendInvites] = await Promise.all([
-        prisma.tournamentChallenge.findMany({
-          where: { tournamentId, status: 'ACCEPTED' },
-          select: { requesterPlayerId: true, targetPlayerId: true },
-        }),
-        prisma.tournamentFriendInvite.findMany({
-          where: { tournamentId, status: 'ACCEPTED' },
-          select: { requesterPlayerId: true, targetPlayerId: true },
-        }),
-      ]);
+      const submittedIds: string[] = [];
+      const normalized: GeneratedTeamInput[] = [];
 
-      const generation = buildBalancedTeams(sortedPlayers, teamCount, {
-        battlePairs: acceptedChallenges.map((pair) => ({
-          firstId: pair.requesterPlayerId,
-          secondId: pair.targetPlayerId,
-        })),
-        friendInvitePairs: acceptedFriendInvites.map((pair) => ({
-          firstId: pair.requesterPlayerId,
-          secondId: pair.targetPlayerId,
-        })),
-        previousTeamByPlayer,
-      });
+      for (const team of submittedTeams) {
+        const ids = Array.isArray(team)
+          ? team
+          : Array.isArray((team as any)?.playerIds)
+            ? (team as any).playerIds
+            : [];
+        const cleanIds: string[] = [];
+        for (const id of ids) {
+          if (typeof id !== 'string' || !attendingIds.has(id)) {
+            res.status(400).json({
+              success: false,
+              error: 'Đội hình gửi lên có cầu thủ không đăng ký cho giải này',
+            });
+            return;
+          }
+          cleanIds.push(id);
+          submittedIds.push(id);
+        }
+        const players = cleanIds.map((id) => byId.get(id)!).filter(Boolean);
+        normalized.push({
+          players,
+          totalTier: players.reduce((sum, player) => sum + player.tier, 0),
+        });
+      }
 
-      const createdTeams = await persistTeams(tournamentId, tournament, generation.teams, true);
+      // Every attending player must appear exactly once: a duplicate or a
+      // missing player would silently change who the tournament charges.
+      if (submittedIds.length !== attendingIds.size) {
+        res.status(400).json({
+          success: false,
+          error: 'Đội hình gửi lên không bao gồm đầy đủ cầu thủ đang điểm danh',
+        });
+        return;
+      }
+      if (new Set(submittedIds).size !== submittedIds.length) {
+        res.status(400).json({
+          success: false,
+          error: 'Đội hình gửi lên có cầu thủ bị lặp lại',
+        });
+        return;
+      }
+
+      const createdTeams = await persistTeams(tournamentId, tournament, normalized, true);
 
       await prisma.tournament.update({
         where: { id: tournamentId },
@@ -550,7 +580,6 @@ router.post(
           teams: createdTeams,
           playerCount,
           teamCount,
-          repeatTeammateSwaps: generation.repeatTeammateSwaps,
         },
       });
     } catch (error) {

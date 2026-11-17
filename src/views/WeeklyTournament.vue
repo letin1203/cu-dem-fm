@@ -3985,7 +3985,18 @@
               <!-- Player Name Row with Water Toggle Button -->
               <div class="flex items-center justify-between">
                 <h4 class="font-semibold text-gray-900">
-                  {{ attendance.player.name }}
+                  <!--
+                    The name opens the shared player profile, matching the old
+                    tournament list. It is a button so it is keyboard-reachable.
+                  -->
+                  <button
+                    type="button"
+                    class="text-left text-gray-900 underline-offset-2 hover:text-primary-600 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-400 rounded"
+                    :title="`Xem hồ sơ ${attendance.player.name}`"
+                    @click="openAttendancePlayerProfile(attendance.player.id)"
+                  >
+                    {{ attendance.player.name }}
+                  </button>
                 </h4>
 
                 <!-- Water Toggle Button (Admin/Mod only) - Shows same as water status -->
@@ -4180,6 +4191,46 @@
             Đóng
           </button>
         </div>
+      </div>
+    </div>
+  </div>
+
+  <!--
+    Player profile opened from the attendance list.
+    Same panel as the "Hồ sơ cầu thủ của tôi" page and the Players list, so the
+    content stays consistent everywhere.
+  -->
+  <div
+    v-if="showPlayerProfileModal"
+    class="fixed inset-0 z-[70] flex items-center justify-center overflow-y-auto overscroll-contain bg-black/50 p-4"
+  >
+    <div class="flex max-h-[90vh] w-full max-w-5xl flex-col overflow-hidden rounded-lg bg-white shadow-xl">
+      <div class="flex items-center justify-between border-b p-5">
+        <div>
+          <h2 class="text-lg font-semibold text-gray-900">Hồ sơ cầu thủ</h2>
+          <p class="mt-1 text-sm text-gray-500">
+            Thông tin, lịch sử tiền và các giải đấu đã tham gia.
+          </p>
+        </div>
+        <button
+          type="button"
+          class="text-2xl leading-none text-gray-400 hover:text-gray-700"
+          aria-label="Đóng hồ sơ cầu thủ"
+          @click="closePlayerProfileModal"
+        >
+          ×
+        </button>
+      </div>
+      <div class="min-h-0 overflow-y-auto p-5">
+        <PlayerProfilePanel
+          v-if="selectedProfilePlayerId"
+          :player-id="selectedProfilePlayerId"
+        />
+      </div>
+      <div class="flex justify-end border-t p-4">
+        <button type="button" class="btn-primary" @click="closePlayerProfileModal">
+          Đóng
+        </button>
       </div>
     </div>
   </div>
@@ -7298,6 +7349,7 @@ import {
 import { useTournamentCostEstimate } from "../composables/useTournamentCostEstimate";
 import TeamSplitProgressModal from "../components/TeamSplitProgressModal.vue";
 import AiTeamSplitModal from "../components/ai/AiTeamSplitModal.vue";
+import PlayerProfilePanel from "../components/PlayerProfilePanel.vue";
 
 const toast = useToast();
 const tournamentsStore = useTournamentsStore();
@@ -7413,6 +7465,15 @@ const betLoading = ref<Set<string>>(new Set());
 
 // Modal for attendance details
 const showAttendanceModal = ref(false);
+/**
+ * Player profile opened from the attendance list.
+ *
+ * Reuses the same panel as the "Hồ sơ cầu thủ của tôi" page and the Players
+ * list, so a name in the attendee list can be inspected without leaving the
+ * tournament.
+ */
+const showPlayerProfileModal = ref(false);
+const selectedProfilePlayerId = ref<string | null>(null);
 const attendanceModalData = ref<TournamentAttendanceDetails[]>([]);
 const attendanceDetailsMap = ref<Map<string, TournamentAttendanceDetails[]>>(
   new Map(),
@@ -9454,6 +9515,18 @@ const openAttendanceModal = async (
   selectedPendingPlayerIds.value = new Set();
 
   await fetchAttendanceDetails(tournamentId);
+};
+
+/** Open the shared player-profile panel for someone in the attendance list. */
+const openAttendancePlayerProfile = (playerId: string): void => {
+  if (!playerId) return;
+  selectedProfilePlayerId.value = playerId;
+  showPlayerProfileModal.value = true;
+};
+
+const closePlayerProfileModal = (): void => {
+  showPlayerProfileModal.value = false;
+  selectedProfilePlayerId.value = null;
 };
 
 const closeAttendanceModal = (): void => {

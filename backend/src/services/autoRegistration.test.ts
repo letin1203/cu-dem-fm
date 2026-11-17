@@ -114,6 +114,31 @@ describe('runAutoRegistration', () => {
     expect(prismaMock.tournamentPlayerAttendance.upsert).not.toHaveBeenCalled();
   });
 
+  it('never re-registers a player who withdrew themselves', async () => {
+    // NOT_ATTEND means the player chose not to play; auto-registration must not
+    // undo that decision.
+    prismaMock.tournamentPlayerAttendance.findMany.mockResolvedValue([
+      { playerId: 'p1', status: 'NOT_ATTEND' },
+    ]);
+
+    const result = await runAutoRegistration('t1');
+
+    expect(result.registered).toEqual([]);
+    expect(prismaMock.tournamentPlayerAttendance.upsert).not.toHaveBeenCalled();
+  });
+
+  it('fills in a player who has only a placeholder row', async () => {
+    // A NULL row means "never registered either way", so it is eligible.
+    prismaMock.tournamentPlayerAttendance.findMany.mockResolvedValue([
+      { playerId: 'p1', status: 'NULL' },
+    ]);
+
+    const result = await runAutoRegistration('t1');
+
+    expect(result.registered).toEqual(['p1']);
+    expect(prismaMock.tournamentPlayerAttendance.upsert).toHaveBeenCalled();
+  });
+
   it('does nothing for a tournament that already started', async () => {
     prismaMock.tournament.findUnique.mockResolvedValue(
       futureTournament({ startDate: new Date(Date.now() - 1000) }),

@@ -91,12 +91,25 @@ export const runAutoRegistration = async (
     where: { tournamentId, playerId: { in: candidates.map((player) => player.id) } },
     select: { playerId: true, status: true },
   });
-  const alreadyRegistered = new Set(
-    existing.filter((row) => row.status === 'ATTEND').map((row) => row.playerId),
+
+  /*
+   * Players whose registration must not be touched.
+   *
+   * ATTEND       - already registered, nothing to do.
+   * NOT_ATTEND   - the player deliberately withdrew. Re-registering them would
+   *                silently undo their own decision (and re-add them to a
+   *                tournament they said they are not playing), so it is skipped.
+   *
+   * Only a NULL row — never registered either way — is eligible to be filled in.
+   */
+  const doNotTouch = new Set(
+    existing
+      .filter((row) => row.status === 'ATTEND' || row.status === 'NOT_ATTEND')
+      .map((row) => row.playerId),
   );
 
   for (const player of candidates) {
-    if (alreadyRegistered.has(player.id)) continue;
+    if (doNotTouch.has(player.id)) continue;
 
     // A self-funded tournament never charges players, so the balance gate does
     // not apply there; otherwise the sign-up is refused when the balance is

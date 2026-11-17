@@ -58,22 +58,8 @@
           </button>
         </header>
 
-        <!-- Overview -->
-        <section v-if="activeSection === 'overview'" class="admin-grid">
-          <article
-            v-for="card in summaryCards"
-            :key="card.label"
-            class="admin-card admin-card--stat"
-            :style="{ '--card-accent': card.color }"
-          >
-            <p class="admin-card__label">{{ card.label }}</p>
-            <p class="admin-card__value">{{ card.value }}</p>
-            <p class="admin-card__hint">{{ card.hint }}</p>
-          </article>
-        </section>
-
         <!-- Pending approvals -->
-        <section v-else-if="activeSection === 'approvals'" class="admin-stack">
+        <section v-if="activeSection === 'approvals'" class="admin-stack">
           <div class="admin-card__head">
             <p class="admin-main__desc">
               {{ pendingApprovalTotal }} yêu cầu đang chờ duyệt
@@ -258,7 +244,6 @@ import { computed, onMounted, ref } from 'vue';
 import { useToast } from 'vue-toastification';
 import { apiClient } from '../api/client';
 import { useAuthStore } from '../stores/auth';
-import { useSystemStore } from '../stores/system';
 
 interface NavSection {
   id: string;
@@ -270,11 +255,11 @@ interface NavSection {
 
 const toast = useToast();
 const authStore = useAuthStore();
-const systemStore = useSystemStore();
 
 const isAdmin = computed(() => authStore.currentUser?.role === 'admin');
 
-const activeSection = ref('overview');
+/** Approvals is the landing section: it is the daily-use screen for staff. */
+const activeSection = ref('approvals');
 const loadingSummary = ref(false);
 const approvingId = ref<string | null>(null);
 const activatingId = ref<string | null>(null);
@@ -290,12 +275,6 @@ const polls = ref<any[]>([]);
 
 const sections = computed<NavSection[]>(() => {
   const list: NavSection[] = [
-    {
-      id: 'overview',
-      label: 'Tổng quan',
-      description: 'Số liệu nhanh về giải đấu, quỹ và cầu thủ.',
-      glyph: '◈',
-    },
     {
       id: 'approvals',
       label: 'Duyệt yêu cầu',
@@ -351,12 +330,6 @@ const tools = computed(() => {
       description: 'Quản lý hồ sơ và chỉ số cầu thủ.',
       path: '/players',
     },
-    {
-      glyph: '◫',
-      label: 'Đội',
-      description: 'Danh sách đội và thành viên.',
-      path: '/teams',
-    },
   ];
 
   if (isAdmin.value) {
@@ -378,35 +351,6 @@ const tools = computed(() => {
 
   return list;
 });
-
-const summaryCards = computed(() => [
-  {
-    label: 'Giải đang diễn ra',
-    value: String(ongoingCount.value),
-    hint: 'Tuần này',
-    color: '#ff2fb3',
-  },
-  {
-    label: 'Chờ duyệt',
-    value: String(pendingTopUps.value.length + pendingFunds.value.length),
-    hint: 'Nạp tiền + góp quỹ',
-    color: '#ffb020',
-  },
-  {
-    label: 'Cầu thủ inactive',
-    value: String(inactivePlayers.value.length),
-    hint: 'Có thể kích hoạt lại',
-    color: '#b13bff',
-  },
-  {
-    label: 'Quỹ câu lạc bộ',
-    value: formatMoney(systemStore.currentSettings?.clubFund ?? 0),
-    hint: 'Số dư hiện tại',
-    color: '#37e0a0',
-  },
-]);
-
-const ongoingCount = ref(0);
 
 const formatMoney = (amount: number | null | undefined): string =>
   `${Number(amount || 0).toLocaleString('vi-VN')} ₫`;
@@ -454,17 +398,6 @@ const loadSummary = async (): Promise<void> => {
     settle('bình chọn', async () => {
       const response = await apiClient.get<any[]>('/polls');
       if (response.success) polls.value = response.data || [];
-    }),
-    settle('giải đấu', async () => {
-      const response = await apiClient.get<any>('/tournaments', {
-        params: { status: 'ONGOING', limit: 50 },
-      });
-      if (response.success) {
-        ongoingCount.value = response.data?.tournaments?.length ?? 0;
-      }
-    }),
-    settle('quỹ', async () => {
-      await systemStore.fetchSystemSettings();
     }),
   ]);
 
@@ -822,11 +755,6 @@ onMounted(loadSummary);
   border-radius: 14px;
   background: rgba(14, 9, 22, 0.85);
   padding: 14px;
-}
-
-.admin-card--stat {
-  border-color: color-mix(in srgb, var(--card-accent) 40%, transparent);
-  box-shadow: inset 0 0 30px color-mix(in srgb, var(--card-accent) 10%, transparent);
 }
 
 .admin-card__label {

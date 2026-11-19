@@ -15,6 +15,8 @@
             Chọn hết
           </button><button class="btn-secondary" @click="showRandomModal = true">
             Chọn random
+          </button><button class="btn-secondary" @click="openOldWeekPicker">
+            Chọn tuần cũ
           </button>
         </div>
         <div v-if="loading" class="py-12 text-center text-gray-500">
@@ -303,6 +305,108 @@
         </div>
       </div></Teleport
     >
+    <!--
+      Chọn cầu thủ từ một giải đấu cũ.
+      Lịch inline đánh dấu những ngày đã có giải hoàn thành; chọn một ngày sẽ
+      chọn toàn bộ cầu thủ đã điểm danh giải đó.
+    -->
+    <Teleport to="body">
+      <div
+        v-if="showOldWeekModal"
+        class="fixed inset-0 z-[80] flex items-center justify-center overflow-y-auto overscroll-contain bg-black/50 p-4"
+      >
+        <div class="w-full max-w-md rounded-xl bg-white shadow-xl">
+          <div class="border-b p-5">
+            <div class="flex items-start justify-between gap-3">
+              <div>
+                <h2 class="text-lg font-semibold">Chọn cầu thủ giải đấu cũ</h2>
+                <p class="mt-1 text-sm text-gray-500">
+                  Chọn ngày có giải đấu để chọn tất cả cầu thủ của giải đó.
+                </p>
+              </div>
+              <button
+                type="button"
+                class="text-2xl leading-none text-gray-400 hover:text-gray-700"
+                aria-label="Đóng"
+                @click="closeOldWeekPicker"
+              >
+                ×
+              </button>
+            </div>
+          </div>
+
+          <div class="p-5">
+            <div class="mb-3 flex items-center justify-between">
+              <button
+                type="button"
+                class="rounded p-2 text-lg hover:bg-gray-100"
+                aria-label="Tháng trước"
+                :disabled="oldWeekCalendar.loading.value"
+                @click="oldWeekCalendar.changeMonth(-1)"
+              >
+                ‹
+              </button>
+              <p class="text-center font-semibold capitalize text-gray-900">
+                {{ oldWeekCalendar.label.value }}
+              </p>
+              <button
+                type="button"
+                class="rounded p-2 text-lg hover:bg-gray-100"
+                aria-label="Tháng sau"
+                :disabled="oldWeekCalendar.loading.value"
+                @click="oldWeekCalendar.changeMonth(1)"
+              >
+                ›
+              </button>
+            </div>
+
+            <div
+              class="grid grid-cols-7 gap-1 text-center text-xs font-medium text-gray-500"
+            >
+              <span v-for="weekday in oldWeekCalendar.weekdays" :key="weekday" class="py-1">
+                {{ weekday }}
+              </span>
+            </div>
+
+            <div class="mt-1 grid grid-cols-7 gap-1">
+              <div
+                v-for="(day, index) in oldWeekCalendar.days.value"
+                :key="day ? toLocalDateKey(day) : `empty-${index}`"
+                class="aspect-square"
+              >
+                <button
+                  v-if="day"
+                  type="button"
+                  class="h-full w-full rounded-md text-sm transition-colors"
+                  :class="
+                    oldWeekCalendar.completedDates.value.has(toLocalDateKey(day))
+                      ? 'font-bold text-primary-700 hover:bg-primary-600 hover:text-white'
+                      : 'cursor-default text-gray-300'
+                  "
+                  :disabled="!oldWeekCalendar.completedDates.value.has(toLocalDateKey(day))"
+                  :title="
+                    oldWeekCalendar.completedDates.value.has(toLocalDateKey(day))
+                      ? 'Chọn cầu thủ của giải này'
+                      : undefined
+                  "
+                  @click="selectOldWeek(toLocalDateKey(day))"
+                >
+                  {{ day.getDate() }}
+                </button>
+              </div>
+            </div>
+
+            <p v-if="oldWeekCalendar.loading.value" class="mt-3 text-xs text-gray-500">
+              Đang tải lịch…
+            </p>
+            <p v-else class="mt-3 text-xs text-gray-500">
+              <strong class="text-primary-700">Ngày in đậm</strong> có giải đấu cũ.
+            </p>
+            <p v-if="oldWeekError" class="mt-2 text-xs text-red-600">{{ oldWeekError }}</p>
+          </div>
+        </div>
+      </div>
+    </Teleport>
     <Teleport to="body"
       ><div
         v-if="showTeamResultModal"
@@ -685,6 +789,10 @@ import TeamSplitProgressModal from '../components/TeamSplitProgressModal.vue';
 import AiTeamSplitModal from '../components/ai/AiTeamSplitModal.vue';
 import { computed, nextTick, onBeforeUnmount, onMounted, ref } from "vue";
 import { apiClient } from "../api/client";
+import { useToast } from "vue-toastification";
+import { toLocalDateKey, useTournamentCalendar } from "../composables/useTournamentCalendar";
+
+const toast = useToast();
 type Player = {
   id: string;
   name: string;
@@ -700,11 +808,17 @@ type PlayerStatsInsight = {
   attendance: number;
 };
 const players = ref<Player[]>([]),
+  /** Giải đấu cũ, dùng cho bộ chọn "Chọn tuần cũ". */
+  tournaments = ref<Array<{ id: string; name: string; status: string; startDate: string }>>([]),
   selected = ref<Player[]>([]),
   loading = ref(true),
   playerStatsInsights = ref<Record<string, PlayerStatsInsight>>({}),
   query = ref(""),
   showRandomModal = ref(false),
+  showOldWeekModal = ref(false),
+  oldWeekSelecting = ref(false),
+  oldWeekError = ref(""),
+  oldWeekCalendar = useTournamentCalendar(),
   randomCount = ref<number | null>(null),
   randomizing = ref(false),
   teams = ref<Player[][]>([]),
@@ -1219,6 +1333,94 @@ function clearAll() {
   battlePairs.value = [];
   hopeStarPlayerIds.value = new Set();
 }
+/**
+ * Mở modal chọn tuần cũ.
+ *
+ * Lịch bắt đầu ở tháng của giải hoàn thành gần nhất (hoặc tháng hiện tại nếu
+ * chưa có), để người dùng thấy ngay những ngày có thể chọn.
+ */
+async function openOldWeekPicker() {
+  oldWeekError.value = "";
+  showOldWeekModal.value = true;
+
+  const latestCompleted = tournaments.value
+    .filter((tournament) => ['COMPLETED', 'DELETED'].includes(tournament.status))
+    .sort(
+      (first, second) =>
+        new Date(second.startDate).getTime() - new Date(first.startDate).getTime(),
+    )[0];
+
+  await oldWeekCalendar.focusMonth(
+    latestCompleted ? new Date(latestCompleted.startDate) : new Date(),
+  );
+}
+
+function closeOldWeekPicker() {
+  showOldWeekModal.value = false;
+}
+
+/**
+ * Chọn toàn bộ cầu thủ của giải diễn ra vào `dateKey`.
+ *
+ * Chỉ những cầu thủ có mặt trong danh sách của trang (còn hoạt động, không phải
+ * cầu thủ của người khác) mới được chọn — giống điều kiện của "Chọn hết".
+ */
+async function selectOldWeek(dateKey: string) {
+  if (oldWeekSelecting.value) return;
+  oldWeekError.value = "";
+  oldWeekSelecting.value = true;
+
+  try {
+    const tournament = tournaments.value.find(
+      (item) =>
+        ['COMPLETED', 'DELETED'].includes(item.status) &&
+        toLocalDateKey(new Date(item.startDate)) === dateKey,
+    );
+    if (!tournament) {
+      oldWeekError.value = "Không tìm thấy giải đấu cho ngày này.";
+      return;
+    }
+
+    const response = await apiClient.get<Array<{ playerId: string; status: string }>>(
+      `/tournaments/${tournament.id}/attendance-details`,
+    );
+    if (!response.success) {
+      throw new Error(response.error || "Không thể tải danh sách cầu thủ");
+    }
+
+    const attendedIds = new Set(
+      (response.data || [])
+        .filter((row) => row.status === 'ATTEND')
+        .map((row) => row.playerId),
+    );
+
+    // Chỉ lấy người có trong danh sách của trang, để không chọn nhầm cầu thủ
+    // đã ngừng hoạt động hoặc không thể chia đội.
+    const roster = players.value.filter((player) => attendedIds.has(player.id));
+    if (!roster.length) {
+      oldWeekError.value =
+        "Giải này không có cầu thủ nào còn hoạt động trong danh sách hiện tại.";
+      return;
+    }
+
+    selected.value = roster;
+    teams.value = [];
+    battlePairs.value = [];
+    hopeStarPlayerIds.value = new Set();
+    showOldWeekModal.value = false;
+    const [year, month, day] = dateKey.split('-');
+    const displayDate = `${day}/${month}/${year}`;
+    toast.success(`Đã chọn ${roster.length} cầu thủ từ giải ${displayDate}`);
+  } catch (error: any) {
+    oldWeekError.value =
+      error?.response?.data?.error ||
+      error?.message ||
+      "Không thể tải danh sách cầu thủ của giải";
+  } finally {
+    oldWeekSelecting.value = false;
+  }
+}
+
 async function selectRandom() {
   if (!randomCount.value) return;
   const candidates = [...availablePlayers.value];
@@ -1419,11 +1621,21 @@ const updateViewport = () => {
 onMounted(async () => {
   window.addEventListener('resize', updateViewport);
   try {
-    const [response, leaderboardResponse] = await Promise.all([
+    const [response, leaderboardResponse, tournamentsResponse] = await Promise.all([
       apiClient.getPlayers({ page: 1, limit: 200 }),
       apiClient.getPlayerLeaderboard(),
+      // Danh sách giải để bộ chọn "Chọn tuần cũ" biết ngày nào có giải.
+      apiClient.getTournaments({ limit: 200 }),
     ]);
     const data = response.data as any;
+    tournaments.value = ((tournamentsResponse.data as any)?.tournaments || []).map(
+      (item: any) => ({
+        id: item.id,
+        name: item.name,
+        status: item.status,
+        startDate: item.startDate,
+      }),
+    );
     players.value = (data?.players || []).filter(
       (p: any) => p.isActive !== false && !p.friendOwnerId,
     );

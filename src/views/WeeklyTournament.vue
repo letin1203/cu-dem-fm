@@ -3848,18 +3848,6 @@
             type="button"
             class="rounded-lg px-4 py-2 text-sm font-medium"
             :class="
-              attendanceFieldTab === 'FIELD_5'
-                ? 'bg-primary-600 text-white'
-                : 'bg-gray-100 text-gray-700'
-            "
-            @click="attendanceFieldTab = 'FIELD_5'"
-          >
-            Sân 5
-          </button>
-          <button
-            type="button"
-            class="rounded-lg px-4 py-2 text-sm font-medium"
-            :class="
               attendanceFieldTab === 'FIELD_7'
                 ? 'bg-primary-600 text-white'
                 : 'bg-gray-100 text-gray-700'
@@ -3867,6 +3855,18 @@
             @click="attendanceFieldTab = 'FIELD_7'"
           >
             Sân 7
+          </button>
+          <button
+            type="button"
+            class="rounded-lg px-4 py-2 text-sm font-medium"
+            :class="
+              attendanceFieldTab === 'FIELD_5'
+                ? 'bg-primary-600 text-white'
+                : 'bg-gray-100 text-gray-700'
+            "
+            @click="attendanceFieldTab = 'FIELD_5'"
+          >
+            Sân 5
           </button>
         </div>
         <div v-if="attendanceModalType === 'pending'" class="mb-4">
@@ -7488,7 +7488,7 @@ const attendancePlayerNameFilter = ref("");
 const attendancePlayerTierFilter = ref<number | null>(null);
 const attendanceSortByTier = ref(false);
 const teamPreviewSortByTier = ref(true);
-const attendanceFieldTab = ref<"FIELD_5" | "FIELD_7">("FIELD_5");
+const attendanceFieldTab = ref<"FIELD_5" | "FIELD_7">("FIELD_7");
 const attendanceExclusiveField = ref(false);
 const attendanceModalTournamentId = ref<string | null>(null);
 const selectedPendingPlayerIds = ref<Set<string>>(new Set());
@@ -9486,7 +9486,8 @@ const confirmFieldRegistration = async (): Promise<void> => {
 const openAttendanceModal = async (
   tournamentId: string,
   type: "attending" | "not-attending" | "betting" | "water" | "pending",
-  field: "FIELD_5" | "FIELD_7" = "FIELD_5",
+  // Matches the tab order: Sân 7 is listed first, so it is also the default.
+  field: "FIELD_5" | "FIELD_7" = "FIELD_7",
   exclusiveField = false,
 ): Promise<void> => {
   attendanceModalType.value = type;

@@ -1301,17 +1301,31 @@
                     getUserAttendanceStatus(ongoingTournament.id) !== 'ATTEND'
                   "
                 >
-                  <button
-                    v-for="request in getIncomingSwapRequests(
-                      ongoingTournament.id,
-                    )"
-                    :key="request.id"
-                    type="button"
-                    class="bg-blue-600 px-4 py-2 text-center rounded-lg font-medium text-white transition-colors hover:bg-blue-700"
-                    @click="openSwapAcceptance(request)"
-                  >
-                    Swap với {{ request.requester.name }}
-                  </button>
+                   <button
+                     v-for="request in getIncomingSwapRequests(
+                       ongoingTournament.id,
+                     )"
+                     :key="request.id"
+                     type="button"
+                     class="px-4 py-2 text-center rounded-lg font-medium text-white transition-colors"
+                     :class="
+                       request.canAccept
+                         ? 'bg-blue-600 hover:bg-blue-700'
+                         : 'cursor-not-allowed bg-gray-400'
+                     "
+                     :disabled="!request.canAccept"
+                     :title="
+                       request.canAccept
+                         ? `Swap với ${request.requester.name}`
+                         : `Đang chờ ${request.requester.name} (người đăng ký trước) được swap`
+                     "
+                     @click="openSwapAcceptance(request)"
+                   >
+                     Swap với {{ request.requester.name
+                     }}<span v-if="!request.canAccept" class="ml-1 text-xs">
+                       (chờ lượt)</span
+                     >
+                   </button>
                 </template>
                 <button
                   v-if="getSwapWaitlistPosition(ongoingTournament.id)"
@@ -7531,6 +7545,10 @@ interface IncomingSwapRequest {
   id: string;
   tournamentId: string;
   requester: SwapCandidate;
+  /** 1-based position in the swap queue; 1 is served first. */
+  queuePosition?: number;
+  /** False for everyone behind the head of the queue. */
+  canAccept?: boolean;
 }
 const showSwapModal = ref(false);
 const swapTournament = ref<Tournament | null>(null);

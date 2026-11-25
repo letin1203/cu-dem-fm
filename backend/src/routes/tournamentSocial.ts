@@ -5,6 +5,11 @@ import {
   getTournamentCancellationDeadline,
   hasNonNegativeAvailableBalance,
 } from '../lib/tournamentRules';
+import {
+  findSwapQueueBlocker,
+  orderSwapQueue,
+  swapQueueBlockMessage,
+} from '../services/swapQueue';
 
 const router = Router();
 
@@ -230,7 +235,20 @@ router.get('/:id/swap-requests/mine', authenticate, async (req: AuthenticatedReq
     const waitingPosition = waitlistEntries.findIndex((entry) => entry.requesterPlayerId === user.playerId) + 1;
     const isRegisteredForSelectedField = ownAttendance?.status === 'ATTEND' && (!tournament?.pitchType || (tournament.pitchType === 'FIELD_5' ? ownAttendance.field5 : ownAttendance.field7));
     const waitlistRetryAt = lastWaitlistCancellation?.resolvedAt ? new Date(lastWaitlistCancellation.resolvedAt.getTime() + 5 * 60 * 1000) : null;
-    res.json({ success: true, data: { requests: isRegisteredForSelectedField ? [] : requests, myPending: Boolean(myPending), waitingPosition, waitlistRetryAt: waitlistRetryAt && waitlistRetryAt.getTime() > Date.now() ? waitlistRetryAt : null } });
+    /*
+     * Only the head of the queue is actionable.
+     *
+     * The list is ordered oldest-first, and the accept endpoint refuses any
+     * other entry, so showing later requests would offer a button that always
+     * fails. Each remaining request is still returned with its queue position so
+     * the UI can explain who is next.
+     */
+    const queue = requests.map((request, index) => ({
+      ...request,
+      queuePosition: index + 1,
+      canAccept: index === 0,
+    }));
+    res.json({ success: true, data: { requests: isRegisteredForSelectedField ? [] : queue, myPending: Boolean(myPending), waitingPosition, waitlistRetryAt: waitlistRetryAt && waitlistRetryAt.getTime() > Date.now() ? waitlistRetryAt : null } });
   } catch (_error) {
     res.status(500).json({ success: false, error: 'Không thể tải yêu cầu swap' });
   }
@@ -259,6 +277,35 @@ router.put('/:id/swap-requests/:requestId/accept', authenticate, async (req: Aut
       if (!(await hasNonNegativeAvailableBalance(user.player!.id, user.player!.money))) {
         throw new Error('Số dư hiện tại cộng tiền nạp chờ duyệt vẫn âm, vui lòng thanh toán trước khi swap');
       }
+
+      /*
+       * Queue discipline: only the request that has waited longest may be
+       * served. Without this a newcomer could pick a later request and leave
+       * the earliest registrant stuck at the head of the queue forever.
+       */
+      const pendingQueue = await tx.tournamentSwapRequest.findMany({
+        where: { tournamentId: tournament.id, status: 'PENDING' },
+        orderBy: { createdAt: 'asc' },
+        select: {
+          id: true,
+          requesterPlayerId: true,
+          requester: { select: { name: true } },
+          createdAt: true,
+        },
+      });
+      const queue = orderSwapQueue(
+        pendingQueue.map((entry) => ({
+          id: entry.id,
+          requesterPlayerId: entry.requesterPlayerId,
+          requesterName: entry.requester.name,
+          createdAt: entry.createdAt,
+        })),
+      );
+      const blocker = findSwapQueueBlocker(queue, request.id);
+      if (blocker.block) {
+        throw new Error(swapQueueBlockMessage(blocker.head.requesterName));
+      }
+
       const [requesterAttendance, targetAttendance] = await Promise.all([
         tx.tournamentPlayerAttendance.findUnique({ where: { tournamentId_playerId: { tournamentId: tournament.id, playerId: request.requesterPlayerId } } }),
         tx.tournamentPlayerAttendance.findUnique({ where: { tournamentId_playerId: { tournamentId: tournament.id, playerId: targetPlayerId } } }),
@@ -267,10 +314,35 @@ router.put('/:id/swap-requests/:requestId/accept', authenticate, async (req: Aut
       const requesterHasSelectedField = requesterAttendance?.status === 'ATTEND' && (!selectedField || (selectedField === 'FIELD_5' ? requesterAttendance.field5 : requesterAttendance.field7));
       const targetHasSelectedField = targetAttendance?.status === 'ATTEND' && (!selectedField || (selectedField === 'FIELD_5' ? targetAttendance.field5 : targetAttendance.field7));
       if (!requesterHasSelectedField || targetHasSelectedField) throw new Error('Không thể thực hiện swap vì trạng thái điểm danh đã thay đổi');
-      const replacementField5 = selectedField === 'FIELD_5' ? true : (targetAttendance?.field5 ?? field5);
-      const replacementField7 = selectedField === 'FIELD_7' ? true : (targetAttendance?.field7 ?? field7);
-      const requesterField5 = selectedField === 'FIELD_5' ? false : requesterAttendance!.field5;
-      const requesterField7 = selectedField === 'FIELD_7' ? false : requesterAttendance!.field7;
+
+      /*
+       * A swap trades the requester's spot for the target's absence, so the
+       * requester must actually give up the pitch being handed over.
+       *
+       * With no tournament pitchType the swap covers BOTH pitches: the target
+       * takes the requester's whole slot and the requester leaves the
+       * tournament entirely. Previously the requester kept both field flags,
+       * so after "swap" both players were still attending.
+       *
+       * `??` was also wrong here: the target's record always exists with
+       * `field5/field7 = false`, so the value from the request was never used.
+       */
+      const replacementField5 = selectedField === 'FIELD_5'
+        ? true
+        : selectedField === 'FIELD_7'
+          ? (targetAttendance?.field5 ?? false)
+          : field5 || Boolean(requesterAttendance?.field5);
+      const replacementField7 = selectedField === 'FIELD_7'
+        ? true
+        : selectedField === 'FIELD_5'
+          ? (targetAttendance?.field7 ?? false)
+          : field7 || Boolean(requesterAttendance?.field7);
+      const requesterField5 = selectedField === 'FIELD_5' || !selectedField
+        ? false
+        : requesterAttendance!.field5;
+      const requesterField7 = selectedField === 'FIELD_7' || !selectedField
+        ? false
+        : requesterAttendance!.field7;
       const requesterRemainsRegistered = requesterField5 || requesterField7;
       const replacementAttendance = await tx.tournamentPlayerAttendance.upsert({
         where: { tournamentId_playerId: { tournamentId: tournament.id, playerId: targetPlayerId } },

@@ -185,6 +185,11 @@ class ApiClient {
     return this.get<{ enabled: boolean; field5: boolean; field7: boolean }>(`/players/${playerId}/auto-registration`);
   }
 
+  /** Every player who opted into automatic weekly registration (admin/mod). */
+  async getAutoRegistrationPlayers(params?: { page?: number; limit?: number }) {
+    return this.get<{ players: any[]; pagination: any }>('/players/auto-registration', { params });
+  }
+
   async updatePlayerAutoRegistration(
     playerId: string,
     payload: { enabled: boolean; field5: boolean; field7: boolean },

@@ -142,6 +142,74 @@ router.get('/inactive', authenticate, authorize(['ADMIN', 'MOD']), async (req: A
   }
 });
 
+/**
+ * Players who opted into automatic weekly registration.
+ *
+ * Declared before `/:id` so "auto-registration" is not parsed as a player id.
+ * Returns every opted-in player, including those whose pitch selection is
+ * empty — that is exactly the misconfiguration staff needs to see.
+ */
+router.get('/auto-registration', authenticate, authorize(['ADMIN', 'MOD']), async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  try {
+    const page = Math.max(1, Number.parseInt(String(req.query.page || '1'), 10) || 1);
+    const limit = Math.min(200, Math.max(1, Number.parseInt(String(req.query.limit || '100'), 10) || 100));
+    const skip = (page - 1) * limit;
+    const where = { autoRegisterEnabled: true };
+
+    const [players, total] = await Promise.all([
+      prisma.player.findMany({
+        where,
+        skip,
+        take: limit,
+        select: {
+          id: true,
+          name: true,
+          position: true,
+          tier: true,
+          money: true,
+          isActive: true,
+          avatar: true,
+          autoRegisterField5: true,
+          autoRegisterField7: true,
+          updatedAt: true,
+          user: { select: { username: true } },
+        },
+        orderBy: { name: 'asc' },
+      }),
+      prisma.player.count({ where }),
+    ]);
+
+    // Pending top-ups are part of "available balance", so the list shows what
+    // auto-registration will actually see when it decides to sign a player up.
+    const pendingTopUps = await prisma.playerMoneyTopUp.groupBy({
+      by: ['playerId'],
+      where: { playerId: { in: players.map((player) => player.id) }, status: 'PENDING' },
+      _sum: { amount: true },
+    });
+    const pendingByPlayerId = new Map(
+      pendingTopUps.map((entry) => [entry.playerId, entry._sum.amount || 0]),
+    );
+
+    res.json({
+      success: true,
+      data: {
+        players: players.map((player) => {
+          const pendingTopUp = pendingByPlayerId.get(player.id) ?? 0;
+          return {
+            ...player,
+            pendingTopUp,
+            availableBalance: player.money + pendingTopUp,
+          };
+        }),
+        pagination: { page, limit, total, pages: Math.ceil(total / limit) },
+      },
+    });
+  } catch (error) {
+    console.error('Get auto-registration players error:', error);
+    res.status(500).json({ success: false, error: 'Không thể tải danh sách đăng ký tự động' });
+  }
+});
+
 router.put('/inactive/:id/activate', authenticate, authorize(['ADMIN', 'MOD']), async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   try {
     const player = await prisma.player.update({ where: { id: req.params.id }, data: { isActive: true }, include: { stats: true } });

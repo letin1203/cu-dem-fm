@@ -169,6 +169,74 @@
           </article>
         </section>
 
+        <!-- Automatic registration opt-ins -->
+        <section v-else-if="activeSection === 'auto-registration'" class="admin-card">
+          <div class="admin-card__head">
+            <h3 class="admin-card__title">
+              Đăng ký tự động đá hằng tuần
+              <span class="admin-panel-count">{{ autoRegistrationPlayers.length }}</span>
+            </h3>
+            <button
+              type="button"
+              class="admin-btn admin-btn--ghost"
+              :disabled="loadingAutoRegistration"
+              @click="loadAutoRegistrationPlayers"
+            >
+              {{ loadingAutoRegistration ? 'Đang tải…' : '↻ Tải lại' }}
+            </button>
+          </div>
+
+          <p class="admin-hint">
+            Cầu thủ bật tự động sẽ được điểm danh khi số dư khả dụng (gồm tiền
+            đang chờ duyệt) không âm.
+          </p>
+
+          <p v-if="!autoRegistrationPlayers.length" class="admin-empty">
+            Chưa có cầu thủ nào đăng ký tự động.
+          </p>
+          <ul v-else class="admin-list">
+            <li
+              v-for="player in autoRegistrationPlayers"
+              :key="player.id"
+              class="admin-row"
+            >
+              <span class="admin-row__main">
+                <strong>
+                  {{ player.name }}
+                  <span v-if="!player.isActive" class="admin-pill is-muted">inactive</span>
+                </strong>
+                <em>
+                  {{ player.position }} · Tier {{ player.tier }}
+                  <template v-if="player.user?.username"> · {{ player.user.username }}</template>
+                </em>
+              </span>
+
+              <span class="admin-pitch-list">
+                <span
+                  v-for="pitch in playerPitches(player)"
+                  :key="pitch"
+                  class="admin-pill is-pitch"
+                >
+                  {{ pitch }}
+                </span>
+                <span v-if="!playerPitches(player).length" class="admin-pill is-warn">
+                  chưa chọn sân
+                </span>
+              </span>
+
+              <span
+                class="admin-row__amount"
+                :class="player.availableBalance < 0 ? 'is-negative' : ''"
+              >
+                {{ formatMoney(player.availableBalance) }}
+                <small v-if="player.pendingTopUp > 0">
+                  (+{{ formatMoney(player.pendingTopUp) }} chờ duyệt)
+                </small>
+              </span>
+            </li>
+          </ul>
+        </section>
+
         <!-- Inactive players -->
         <section v-else-if="activeSection === 'inactive'" class="admin-card">
           <h3 class="admin-card__title">Cầu thủ đang inactive</h3>
@@ -271,6 +339,9 @@ const passwordRequests = ref<any[]>([]);
 /** Search query for the password-reset section; the list stays hidden until typed. */
 const passwordSearch = ref('');
 const inactivePlayers = ref<any[]>([]);
+/** Players who opted into automatic weekly registration. */
+const autoRegistrationPlayers = ref<any[]>([]);
+const loadingAutoRegistration = ref(false);
 const polls = ref<any[]>([]);
 
 const sections = computed<NavSection[]>(() => {
@@ -288,6 +359,13 @@ const sections = computed<NavSection[]>(() => {
       description: 'Kích hoạt lại cầu thủ đã ngừng tham gia.',
       glyph: '☾',
       badge: () => inactivePlayers.value.length,
+    },
+    {
+      id: 'auto-registration',
+      label: 'Đăng ký tự động',
+      description: 'Cầu thủ tự động điểm danh khi số dư không âm.',
+      glyph: '⚡',
+      badge: () => autoRegistrationPlayers.value.length,
     },
     {
       id: 'polls',
@@ -362,6 +440,14 @@ const formatDate = (value: string | Date | undefined): string => {
   return date.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' });
 };
 
+/** Pitch labels for a player, in the order the app lists them. */
+const playerPitches = (player: any): string[] => {
+  const pitches: string[] = [];
+  if (player.autoRegisterField7) pitches.push('Sân 7');
+  if (player.autoRegisterField5) pitches.push('Sân 5');
+  return pitches;
+};
+
 /**
  * Load every widget this page shows.
  *
@@ -398,6 +484,12 @@ const loadSummary = async (): Promise<void> => {
     settle('bình chọn', async () => {
       const response = await apiClient.get<any[]>('/polls');
       if (response.success) polls.value = response.data || [];
+    }),
+    settle('đăng ký tự động', async () => {
+      const response = await apiClient.getAutoRegistrationPlayers();
+      if (response.success && response.data) {
+        autoRegistrationPlayers.value = response.data.players || [];
+      }
     }),
   ]);
 
@@ -492,6 +584,20 @@ const approveAll = async (): Promise<void> => {
     if (failed) toast.error(`${failed} yêu cầu không duyệt được`);
   } finally {
     approvingAll.value = false;
+  }
+};
+
+/** Reload the automatic-registration list, keeping its own spinner separate. */
+const loadAutoRegistrationPlayers = async (): Promise<void> => {
+  loadingAutoRegistration.value = true;
+  try {
+    const response = await apiClient.getAutoRegistrationPlayers({ limit: 200 });
+    if (!response.success) throw new Error(response.error || 'Không thể tải');
+    autoRegistrationPlayers.value = (response.data as any)?.players || [];
+  } catch (error: any) {
+    toast.error(error.response?.data?.error || error.message || 'Không thể tải danh sách');
+  } finally {
+    loadingAutoRegistration.value = false;
   }
 };
 
@@ -921,6 +1027,56 @@ onMounted(loadSummary);
 .admin-pill.is-pinned {
   background: rgba(255, 176, 32, 0.22);
   color: #ffd28a;
+}
+
+/* Automatic-registration list */
+.admin-panel-count {
+  border-radius: 999px;
+  background: rgba(255, 47, 179, 0.18);
+  padding: 1px 7px;
+  font-size: 10px;
+  font-weight: 700;
+  color: #ffd0f2;
+}
+
+.admin-hint {
+  margin: 0 0 10px;
+  font-size: 11.5px;
+  color: rgba(255, 255, 255, 0.45);
+}
+
+.admin-pill.is-pitch {
+  border: 1px solid rgba(255, 110, 220, 0.45);
+  background: rgba(255, 47, 179, 0.16);
+  color: #ffb3e6;
+}
+
+.admin-pill.is-warn {
+  background: rgba(255, 176, 32, 0.22);
+  color: #ffd28a;
+}
+
+.admin-pill.is-muted {
+  background: rgba(255, 255, 255, 0.12);
+  color: rgba(255, 255, 255, 0.6);
+  margin-left: 6px;
+}
+
+.admin-pitch-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.admin-row__amount.is-negative {
+  color: #ff8ea3;
+}
+
+.admin-row__amount small {
+  display: block;
+  font-size: 9.5px;
+  font-weight: 400;
+  color: rgba(255, 255, 255, 0.4);
 }
 
 @media (max-width: 900px) {
